@@ -1,13 +1,15 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Observable } from 'rxjs';
 import { ActionReducer } from '@ngrx/store';
 
 @Injectable()
-export class MockReducerManager extends BehaviorSubject<
-  ActionReducer<any, any>
-> {
-  constructor() {
-    super(() => undefined);
+export class MockReducerManager {
+  private readonly reducer$ = new BehaviorSubject<ActionReducer<any, any>>(
+    () => undefined
+  );
+
+  asObservable(): Observable<ActionReducer<any, any>> {
+    return this.reducer$.asObservable();
   }
 
   addFeature(feature: any) {

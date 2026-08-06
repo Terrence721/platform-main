@@ -324,7 +324,7 @@ function _addSymbolToNgModuleMetadata(
     const newMetadataImport = insertImport(
       source,
       ngModulePath,
-      symbolName.replace(/\..*$/, ''),
+      symbolName.split('.', 1)[0],
       importPath
     );
 
@@ -380,7 +380,13 @@ function _addSymbolToNgModuleMetadata(
       ) {
         const effectsElements = (effectsArgs as ts.ArrayLiteralExpression)
           .elements;
-        const [, effectsSymbol] = (<any>symbolName).match(/\[(.*)\]/);
+        // Extract the content between the first `[` and the last `]` without
+        // an unanchored regex - `symbolName.match(/\[(.*)\]/)` costs O(n^2)
+        // on a string with no `[`, since the engine retries the `.*` scan
+        // from every position before giving up (CodeQL js/polynomial-redos).
+        const bracketStart = symbolName.indexOf('[');
+        const bracketEnd = symbolName.lastIndexOf(']');
+        const effectsSymbol = symbolName.slice(bracketStart + 1, bracketEnd);
 
         let epos;
         if (effectsElements.length === 0) {
@@ -448,7 +454,7 @@ function _addSymbolToNgModuleMetadata(
   const importInsert: Change = insertImport(
     source,
     ngModulePath,
-    symbolName.replace(/\..*$/, ''),
+    symbolName.split('.', 1)[0],
     importPath
   );
 
@@ -521,7 +527,7 @@ function _addSymbolToComponentMetadata(
     const newMetadataImport = insertImport(
       source,
       componentPath,
-      symbolName.replace(/\..*$/, ''),
+      symbolName.split('.', 1)[0],
       importPath
     );
 
@@ -600,7 +606,7 @@ function _addSymbolToComponentMetadata(
   const importInsert: Change = insertImport(
     source,
     componentPath,
-    symbolName.replace(/\..*$/, ''),
+    symbolName.split('.', 1)[0],
     importPath
   );
 

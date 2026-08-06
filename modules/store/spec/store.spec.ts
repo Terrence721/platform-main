@@ -12,7 +12,6 @@ import {
   ReducerManager,
   Store,
   StoreModule,
-  select,
   ReducerManagerDispatcher,
   UPDATE,
   ActionReducer,
@@ -177,7 +176,7 @@ describe('ngRx Store', () => {
     function testStoreValue(expected: any, done: any) {
       store = TestBed.inject(Store);
 
-      store.pipe(take(1)).subscribe({
+      store.state$.pipe(take(1)).subscribe({
         next(val) {
           expect(val).toEqual(expected);
         },
@@ -190,7 +189,7 @@ describe('ngRx Store', () => {
   describe('basic store actions', () => {
     beforeEach(() => setup());
 
-    it('should provide an Observable Store', () => {
+    it('should provide a Store', () => {
       expect(store).toBeDefined();
     });
 
@@ -208,7 +207,7 @@ describe('ngRx Store', () => {
 
       counterSteps.subscribe((action) => store.dispatch(action));
 
-      const counterStateWithString = store.pipe(select('counter1'));
+      const counterStateWithString = store.select('counter1');
 
       const stateSequence = 'i-v--w--x--y--z';
       const counter1Values = { i: 0, v: 1, w: 2, x: 1, y: 0, z: 1 };
@@ -223,7 +222,7 @@ describe('ngRx Store', () => {
 
       counterSteps.subscribe((action) => store.dispatch(action));
 
-      const counterStateWithFunc = store.pipe(select((s) => s.counter1));
+      const counterStateWithFunc = store.select((s) => s.counter1);
 
       const stateSequence = 'i-v--w--x--y--z';
       const counter1Values = { i: 0, v: 1, w: 2, x: 1, y: 0, z: 1 };
@@ -233,18 +232,12 @@ describe('ngRx Store', () => {
       );
     });
 
-    it('should correctly lift itself', () => {
-      const result = store.pipe(select('counter1'));
-
-      expect(result instanceof Store).toBe(true);
-    });
-
     it('should increment and decrement counter1', () => {
       const counterSteps = hot(actionSequence, actionValues);
 
       counterSteps.subscribe((action) => store.dispatch(action));
 
-      const counterState = store.pipe(select('counter1'));
+      const counterState = store.select('counter1');
 
       const stateSequence = 'i-v--w--x--y--z';
       const counter1Values = { i: 0, v: 1, w: 2, x: 1, y: 0, z: 1 };
@@ -257,7 +250,7 @@ describe('ngRx Store', () => {
 
       counterSteps.subscribe((action) => dispatcher.next(action));
 
-      const counterState = store.pipe(select('counter1'));
+      const counterState = store.select('counter1');
 
       const stateSequence = 'i-v--w--x--y--z';
       const counter1Values = { i: 0, v: 1, w: 2, x: 1, y: 0, z: 1 };
@@ -270,8 +263,8 @@ describe('ngRx Store', () => {
 
       counterSteps.subscribe((action) => store.dispatch(action));
 
-      const counter1State = store.pipe(select('counter1'));
-      const counter2State = store.pipe(select('counter2'));
+      const counter1State = store.select('counter1');
+      const counter2State = store.select('counter2');
 
       const stateSequence = 'i-v--w--x--y--z';
       const counter2Values = { i: 1, v: 2, w: 3, x: 2, y: 0, z: 1 };
@@ -279,30 +272,22 @@ describe('ngRx Store', () => {
       expect(counter2State).toBeObservable(hot(stateSequence, counter2Values));
     });
 
-    it('should implement the observer interface forwarding actions and errors to the dispatcher', () => {
-      vi.spyOn(dispatcher, 'next').mockImplementationOnce(() => void 0);
-      vi.spyOn(dispatcher, 'error').mockImplementationOnce(() => void 0);
-
-      store.next(<any>1);
-      store.error(2);
-
-      expect(dispatcher.next).toHaveBeenCalledWith(1);
-      expect(dispatcher.error).toHaveBeenCalledWith(2);
-    });
+    // The two tests that lived here ("should implement the observer
+    // interface forwarding actions and errors to the dispatcher") tested
+    // Store.next()/Store.error() - part of Store implementing RxJS's
+    // Observer<Action> interface, which this redesign deliberately
+    // removes (see the @remarks on the Store class). Not adapted, since
+    // the capability itself is gone, not just its implementation.
 
     it('should not be completable', () => {
-      const storeSubscription = store.subscribe();
       const dispatcherSubscription = dispatcher.subscribe();
 
-      store.complete();
       dispatcher.complete();
 
-      expect(storeSubscription.closed).toBe(false);
       expect(dispatcherSubscription.closed).toBe(false);
     });
 
     it('should complete if the dispatcher is destroyed', () => {
-      const storeSubscription = store.subscribe();
       const dispatcherSubscription = dispatcher.subscribe();
 
       dispatcher.ngOnDestroy();
@@ -337,13 +322,13 @@ describe('ngRx Store', () => {
     it(`should work with added / removed reducers`, () =>
       new Promise<void>((done) => {
         store.addReducer(key, counterReducer);
-        store.pipe(take(1)).subscribe((val) => {
+        store.state$.pipe(take(1)).subscribe((val) => {
           expect(val.counter4).toBe(0);
         });
 
         store.removeReducer(key);
         store.dispatch({ type: INCREMENT });
-        store.pipe(take(1)).subscribe((val) => {
+        store.state$.pipe(take(1)).subscribe((val) => {
           expect(val.counter4).toBeUndefined();
           done();
         });
@@ -543,7 +528,7 @@ describe('ngRx Store', () => {
 
         const mockStore = TestBed.inject(Store);
 
-        mockStore.pipe(take(1)).subscribe({
+        mockStore.state$.pipe(take(1)).subscribe({
           next(val: any) {
             expect(val['counterState'].counter).toEqual(counterInitialState);
           },
@@ -586,7 +571,7 @@ describe('ngRx Store', () => {
 
         const mockStore = TestBed.inject(Store);
 
-        mockStore.pipe(take(1)).subscribe({
+        mockStore.state$.pipe(take(1)).subscribe({
           next(val: any) {
             expect(val[featureKey]).toEqual(initialState);
           },
@@ -635,7 +620,7 @@ describe('ngRx Store', () => {
 
         const mockStore = TestBed.inject(Store);
 
-        mockStore.pipe(take(1)).subscribe({
+        mockStore.state$.pipe(take(1)).subscribe({
           next(val: any) {
             expect(val[featureKey]).toEqual(initialState);
             expect(val[featureKey2]).toEqual(initialState2);

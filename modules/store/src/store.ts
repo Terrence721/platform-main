@@ -10,7 +10,7 @@ import {
   Signal,
   untracked,
 } from '@angular/core';
-import { Observable, Observer, Operator } from 'rxjs';
+import { Observable } from 'rxjs';
 import { distinctUntilChanged, map, pluck } from 'rxjs/operators';
 
 import { ActionsSubject } from './actions_subject';
@@ -55,15 +55,26 @@ import { assertDefined } from './helpers';
  * }
  * ```
  *
+ * @remarks
+ * Composes an internal state Observable and an ActionsSubject instead of
+ * Store itself extending Observable<T>/implementing Observer<Action> (the
+ * real ngrx Store's design). Extending would hand every consumer of Store
+ * the entire RxJS operator surface - `pipe`, `lift`, `toPromise`,
+ * `forEach` - none of which is this class's actual contract: dispatch
+ * actions, select state. `select()` returns a plain Observable derived
+ * from the internal `state$` field; `state$` itself is exposed directly
+ * for callers that want the raw stream without a selector.
  */
-export class Store<T = object>
-  extends Observable<T>
-  implements Observer<Action>
-{
+export class Store<T = object> {
   /**
    * @internal
    */
   readonly state: Signal<T>;
+
+  /**
+   * Raw observable view of the full state tree.
+   */
+  readonly state$: Observable<T>;
 
   constructor(
     state$: StateObservable,
@@ -71,9 +82,7 @@ export class Store<T = object>
     private reducerManager: ReducerManager,
     private injector?: Injector
   ) {
-    super();
-
-    this.source = state$;
+    this.state$ = state$;
     this.state = state$.state;
   }
 
@@ -168,7 +177,7 @@ export class Store<T = object>
     pathOrMapFn: ((state: T, props?: Props) => K) | string,
     ...paths: string[]
   ): Observable<any> {
-    return (select as any).call(null, pathOrMapFn, ...paths)(this);
+    return (select as any).call(null, pathOrMapFn, ...paths)(this.state$);
   }
 
   /**
@@ -200,13 +209,6 @@ export class Store<T = object>
     return computed(() => selector(this.state()), options);
   }
 
-  override lift<R>(operator: Operator<T, R>): Store<R> {
-    const store = new Store<R>(this, this.actionsObserver, this.reducerManager);
-    store.operator = operator;
-
-    return store;
-  }
-
   dispatch<V extends Action>(action: V & CreatorsNotAllowedCheck<V>): void;
   dispatch<V extends () => Action>(
     dispatchFn: V & CreatorsNotAllowedCheck<V>,
@@ -222,18 +224,6 @@ export class Store<T = object>
       return this.processDispatchFn(actionOrDispatchFn, config);
     }
     this.actionsObserver.next(actionOrDispatchFn);
-  }
-
-  next(action: Action) {
-    this.actionsObserver.next(action);
-  }
-
-  error(err: any) {
-    this.actionsObserver.error(err);
-  }
-
-  complete() {
-    this.actionsObserver.complete();
   }
 
   addReducer<State, Actions extends Action = Action>(

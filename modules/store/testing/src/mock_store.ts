@@ -31,13 +31,13 @@ export class MockStore<T = object> extends Store<T> {
   private lastState?: T;
 
   constructor(
-    private state$: MockState<T>,
+    private mockState$: MockState<T>,
     actionsObserver: ActionsSubject,
     reducerManager: ReducerManager,
     @Inject(INITIAL_STATE) private initialState: T,
     @Inject(MOCK_SELECTORS) mockSelectors: MockSelector[] = []
   ) {
-    super(state$, actionsObserver, reducerManager);
+    super(mockState$, actionsObserver, reducerManager);
     this.resetSelectors();
     this.setState(this.initialState);
     this.scannedActions$ = actionsObserver.asObservable();
@@ -47,7 +47,7 @@ export class MockStore<T = object> extends Store<T> {
   }
 
   setState(nextState: T): void {
-    this.state$.next(nextState);
+    this.mockState$.next(nextState);
     this.lastState = nextState;
   }
 

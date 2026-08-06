@@ -6,7 +6,7 @@ This document records the architectural decisions made in this repo that deviate
 
 ## Composition over inheritance: `Store`, `ActionsSubject`, `ReducerManager`, `State`, `ScannedActionsSubject`
 
-**Status:** Done — [`99612ab`](https://github.com/Terrence721/platform-main/commit/99612ab) (`ActionsSubject`), [`7c200db`](https://github.com/Terrence721/platform-main/commit/7c200db) (`ReducerManager`), [`374e658`](https://github.com/Terrence721/platform-main/commit/374e658) (`Store`), [`1f5f83d`](https://github.com/Terrence721/platform-main/commit/1f5f83d) (`State`/`StateObservable`, `MockState`, `MockReducerManager`), [`da316f4`](https://github.com/Terrence721/platform-main/commit/da316f4) (`ScannedActionsSubject`). Confirmed via a full-module audit — every `extends` in every `.ts` file under `modules/store`, not a spot-check — that no other production class in the module extends an RxJS type.
+**Status:** Done — [`3228385`](https://github.com/Terrence721/platform-main/commit/3228385) (`ActionsSubject`), [`060ea01`](https://github.com/Terrence721/platform-main/commit/060ea01) (`ReducerManager`), [`0a92ba9`](https://github.com/Terrence721/platform-main/commit/0a92ba9) (`Store`), [`2a47a33`](https://github.com/Terrence721/platform-main/commit/2a47a33) (`State`/`StateObservable`, `MockState`, `MockReducerManager`), [`a6cb76a`](https://github.com/Terrence721/platform-main/commit/a6cb76a) (`ScannedActionsSubject`). Confirmed via a full-module audit — every `extends` in every `.ts` file under `modules/store`, not a spot-check — that no other production class in the module extends an RxJS type.
 
 ### Context
 

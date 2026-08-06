@@ -14,7 +14,15 @@ import { ReducerObservable } from './reducer_manager';
 import { ScannedActionsSubject } from './scanned_actions_subject';
 import { INITIAL_STATE } from './tokens';
 
-export abstract class StateObservable extends Observable<any> {
+/**
+ * Composes an Observable + Signal internally instead of extending
+ * Observable, for the same reason as Store/ActionsSubject/ReducerManager:
+ * the real contract here is "expose the current state as a stream and as a
+ * signal," not the full RxJS operator surface that extending Observable
+ * would hand every consumer of this DI token.
+ */
+export abstract class StateObservable {
+  abstract readonly state$: Observable<any>;
   /**
    * @internal
    */
@@ -22,15 +30,22 @@ export abstract class StateObservable extends Observable<any> {
 }
 
 @Injectable()
-export class State<T> extends BehaviorSubject<any> implements OnDestroy {
+export class State<T> implements OnDestroy {
   static readonly INIT = INIT;
 
+  private readonly stateSubject: BehaviorSubject<any>;
   private stateSubscription: Subscription;
+
+  readonly state$: Observable<any>;
 
   /**
    * @internal
    */
   public state: Signal<T>;
+
+  get value(): T {
+    return this.stateSubject.value;
+  }
 
   constructor(
     actions$: ActionsSubject,
@@ -38,7 +53,8 @@ export class State<T> extends BehaviorSubject<any> implements OnDestroy {
     scannedActions: ScannedActionsSubject,
     @Inject(INITIAL_STATE) initialState: any
   ) {
-    super(initialState);
+    this.stateSubject = new BehaviorSubject<any>(initialState);
+    this.state$ = this.stateSubject.asObservable();
 
     const actionsOnQueue$: Observable<Action> = actions$
       .asObservable()
@@ -58,16 +74,19 @@ export class State<T> extends BehaviorSubject<any> implements OnDestroy {
     );
 
     this.stateSubscription = stateAndAction$.subscribe(({ state, action }) => {
-      this.next(state);
+      this.stateSubject.next(state);
       scannedActions.next(action as Action);
     });
 
-    this.state = toSignal(this, { manualCleanup: true, requireSync: true });
+    this.state = toSignal(this.state$, {
+      manualCleanup: true,
+      requireSync: true,
+    });
   }
 
   ngOnDestroy() {
     this.stateSubscription.unsubscribe();
-    this.complete();
+    this.stateSubject.complete();
   }
 }
 

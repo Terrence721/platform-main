@@ -378,7 +378,7 @@ describe('Mock Store with Injector', () => {
         const mockState: MockState<typeof initialState> =
           injector.get(MockState);
 
-        mockState.pipe(take(1)).subscribe((state) => {
+        mockState.state$.pipe(take(1)).subscribe((state) => {
           expect(state).toEqual({});
           done();
         });
@@ -388,7 +388,7 @@ describe('Mock Store with Injector', () => {
       new Promise<void>((done) => {
         const stateObservable = injector.get(StateObservable);
 
-        stateObservable.pipe(take(1)).subscribe((state) => {
+        stateObservable.state$.pipe(take(1)).subscribe((state) => {
           expect(state).toEqual({});
           done();
         });

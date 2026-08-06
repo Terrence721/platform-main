@@ -77,13 +77,13 @@ export class Store<T = object> {
   readonly state$: Observable<T>;
 
   constructor(
-    state$: StateObservable,
+    state: StateObservable,
     private actionsObserver: ActionsSubject,
     private reducerManager: ReducerManager,
     private injector?: Injector
   ) {
-    this.state$ = state$;
-    this.state = state$.state;
+    this.state$ = state.state$;
+    this.state = state.state;
   }
 
   select<K>(mapFn: (state: T) => K): Observable<K>;

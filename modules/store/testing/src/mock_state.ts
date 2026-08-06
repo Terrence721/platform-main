@@ -1,17 +1,32 @@
 import { Injectable, Signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Observable } from 'rxjs';
 
 @Injectable()
-export class MockState<T> extends BehaviorSubject<T> {
+export class MockState<T> {
+  private readonly stateSubject: BehaviorSubject<T>;
+
+  readonly state$: Observable<T>;
+
   /**
    * @internal
    */
   readonly state: Signal<T>;
 
-  constructor() {
-    super(<T>{});
+  get value(): T {
+    return this.stateSubject.value;
+  }
 
-    this.state = toSignal(this, { manualCleanup: true, requireSync: true });
+  constructor() {
+    this.stateSubject = new BehaviorSubject<T>(<T>{});
+    this.state$ = this.stateSubject.asObservable();
+    this.state = toSignal(this.state$, {
+      manualCleanup: true,
+      requireSync: true,
+    });
+  }
+
+  next(state: T) {
+    this.stateSubject.next(state);
   }
 }

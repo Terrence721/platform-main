@@ -44,7 +44,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ngrx/platform.git"
+    "url": "https://github.com/Terrence721/platform-main.git"
   },
   "nyc": {
     "extension": [

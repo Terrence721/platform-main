@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { select, Store, StoreModule } from '..';
+import { Store, StoreModule } from '..';
 
 import { todoCount, todos } from './fixtures/edge_todos';
 
@@ -34,12 +34,12 @@ describe('ngRx Store', () => {
         let todosNextCount = 0;
         let todosCountNextCount = 0;
 
-        store.pipe(select('todos')).subscribe((todos) => {
+        store.select('todos').subscribe((todos) => {
           todosNextCount++;
           store.dispatch({ type: 'SET_COUNT', payload: todos.length });
         });
 
-        store.pipe(select('todoCount')).subscribe((count) => {
+        store.select('todoCount').subscribe((count) => {
           todosCountNextCount++;
         });
 

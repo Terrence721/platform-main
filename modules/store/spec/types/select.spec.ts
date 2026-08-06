@@ -93,29 +93,30 @@ describe('select()', () => {
   describe('as operator', () => {
     describe('with strings', () => {
       it('should enforce that properties exists on state (root)', () => {
-        expectSnippet(`const selector = store.pipe(select('mia'));`).toFail(
+        expectSnippet(
+          `const selector = store.state$.pipe(select('mia'));`
+        ).toFail(
           /Argument of type '"mia"' is not assignable to parameter of type '"foo"'/
         );
       });
 
       it('should enforce that properties exists on state (nested)', () => {
         expectSnippet(
-          `const selector = store.pipe(select('foo', 'bar', 'mia'));`
+          `const selector = store.state$.pipe(select('foo', 'bar', 'mia'));`
         ).toFail(
           /Argument of type '"mia"' is not assignable to parameter of type '"baz"'/
         );
       });
 
       it('should infer correctly (root)', () => {
-        expectSnippet(`const selector = store.pipe(select('foo'));`).toInfer(
-          'selector',
-          'Observable<{ bar: { baz: []; }; }>'
-        );
+        expectSnippet(
+          `const selector = store.state$.pipe(select('foo'));`
+        ).toInfer('selector', 'Observable<{ bar: { baz: []; }; }>');
       });
 
       it('should infer correctly (nested)', () => {
         expectSnippet(
-          `const selector = store.pipe(select('foo', 'bar'));`
+          `const selector = store.state$.pipe(select('foo', 'bar'));`
         ).toInfer('selector', 'Observable<{ baz: []; }>');
       });
     });
@@ -123,25 +124,25 @@ describe('select()', () => {
     describe('with functions', () => {
       it('should enforce that properties exists on state (root)', () => {
         expectSnippet(
-          `const selector = store.pipe(select(s => s.mia));`
+          `const selector = store.state$.pipe(select(s => s.mia));`
         ).toFail(/Property 'mia' does not exist on type 'State'/);
       });
 
       it('should enforce that properties exists on state (nested)', () => {
         expectSnippet(
-          `const selector = store.pipe(select(s => s.foo.bar.mia));`
+          `const selector = store.state$.pipe(select(s => s.foo.bar.mia));`
         ).toFail(/Property 'mia' does not exist on type '\{ baz: \[\]; \}'/);
       });
 
       it('should infer correctly (root)', () => {
         expectSnippet(
-          `const selector = store.pipe(select(s => s.foo));`
+          `const selector = store.state$.pipe(select(s => s.foo));`
         ).toInfer('selector', 'Observable<{ bar: { baz: []; }; }>');
       });
 
       it('should infer correctly (nested)', () => {
         expectSnippet(
-          `const selector = store.pipe(select(s => s.foo.bar));`
+          `const selector = store.state$.pipe(select(s => s.foo.bar));`
         ).toInfer('selector', 'Observable<{ baz: []; }>');
       });
     });
@@ -149,11 +150,11 @@ describe('select()', () => {
     describe('with selectors', () => {
       it('should infer correctly', () => {
         expectSnippet(
-          `const selector = store.pipe(select(fooSelector));`
+          `const selector = store.state$.pipe(select(fooSelector));`
         ).toInfer('selector', 'Observable<{ bar: { baz: []; }; }>');
 
         expectSnippet(
-          `const selector = store.pipe(select(barSelector));`
+          `const selector = store.state$.pipe(select(barSelector));`
         ).toInfer('selector', 'Observable<{ baz: []; }>');
       });
     });

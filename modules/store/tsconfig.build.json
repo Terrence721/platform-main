@@ -25,6 +25,7 @@
     "annotateForClosureCompiler": true,
     "compilationMode": "partial",
     "flatModuleOutFile": "index.js",
-    "flatModuleId": "@ngrx/store"
+    "flatModuleId": "@ngrx/store",
+    "strictTemplates": true
   }
 }

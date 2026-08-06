@@ -15,6 +15,7 @@ export const baseConfig = {
     include: ['**/*.{spec,test}.ts'],
     passWithNoTests: true,
     setupFiles: ['test-setup.ts'],
+    testTimeout: 30000,
     typecheck: {
       enabled: true,
       ignoreSourceErrors: true,

@@ -56,7 +56,8 @@ __build__/**
 *.iml
 *.swp
 !/typings/custom.d.ts
-.vscode/
+.vscode/*
+!.vscode/extensions.json
 .vim/
 
 # Build Artifacts #

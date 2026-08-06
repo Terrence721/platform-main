@@ -66,6 +66,9 @@
     "**/*/node_modules",
     "modules/schematics/src/*/files/**/*"
   ],
+  "angularCompilerOptions": {
+    "strictTemplates": true
+  },
   "compileOnSave": false,
   "buildOnSave": false,
   "atom": {

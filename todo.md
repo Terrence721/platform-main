@@ -10,8 +10,8 @@ A phase-by-phase log of what's been done on this repo and what's still open. Thi
 
 **Done, in full:**
 
-| Item                                     | Detail                                                                                                                                |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Item                                     | Detail                                                                                                                                | Phases       |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
 | Repo bootstrap                           | Root-only layout → yarn, dependency refresh (same-major + coordinated majors), Husky/lint-staged wired to actually run                | Phases 1–8   |
 | De-affiliation from upstream             | package.json, README, CONTRIBUTING, CODE_OF_CONDUCT rewritten; CHANGELOG.md/MIGRATION.md removed; LICENSE copyright deliberately kept | Phases 9–12  |
 | `@ngrx/store` + `schematics-core` ported | Real source, 794/794 tests passing, 0 lint errors, build-package succeeds                                                             | Phases 13–15 |

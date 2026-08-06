@@ -1,4 +1,4 @@
-# ⚙️ platform-main (NgRx Rebuilt) — Senior Frontend Engineering Demonstration
+# ⚙️ Senior Frontend Engineering Demonstration
 
 [![Quality](https://github.com/Terrence721/platform-main/actions/workflows/quality.yml/badge.svg)](https://github.com/Terrence721/platform-main/actions/workflows/quality.yml)
 [![CodeQL](https://github.com/Terrence721/platform-main/actions/workflows/codeql.yml/badge.svg)](https://github.com/Terrence721/platform-main/actions/workflows/codeql.yml)

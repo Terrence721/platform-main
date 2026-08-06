@@ -22,7 +22,7 @@ Anyone can `cp -r` a well-known open-source library. The more useful exercise �
 
 **Porting real source where fidelity matters.** `modules/store`'s implementation, tests, and schematics are the actual ngrx source, adapted where necessary (package metadata, build tooling, editor config) and left alone everywhere else. It's a large, battle-tested surface; rewriting it for its own sake would trade correctness for no real benefit.
 
-**Redesigning where the tradeoff earns naming out loud.** The real `Store`, `ActionsSubject`, and `ReducerManager` classes extend RxJS's `Observable`/`Subject` types directly — a real Interface Segregation violation, not a style nitpick, since it hands every consumer the entire RxJS operator surface (`pipe`, `lift`, `toPromise`, ...) when the actual contract is much narrower. This repo replaces that with composition, one class at a time, each fully verified before moving to the next, with the reasoning for the change written down in the commit that makes it — see `todo.md`'s "`Store` composition-over-inheritance redesign" section.
+**Redesigning where the tradeoff earns naming out loud.** Five of the real ngrx `store` classes — `Store`, `ActionsSubject`, `ReducerManager`, `State`, `ScannedActionsSubject` — extend RxJS's `Observable`/`Subject` types directly. That's a real Interface Segregation violation, not a style nitpick: it hands every consumer the entire RxJS operator surface (`pipe`, `lift`, `toPromise`, ...) when each class's actual contract is much narrower. Finding them wasn't a one-pass job — the first sweep caught the three obvious ones; a second pass, re-running the same check after the first landed, caught two more; a third pass audited every `extends` in every file in the module, not only the classes already under suspicion, to confirm none were missed. This repo replaces each one with composition, one class at a time, fully verified before moving to the next, with the reasoning — and what was left alone on purpose, like the DI-token classes that don't have this problem — recorded in `docs/architecture.md` and the commit that makes each change. The discipline generalizes past this one module: re-auditing the whole surface instead of trusting the first pass is the approach this repo applies wherever fidelity to the real source isn't the point.
 
 ## 🏗 What's Here So Far
 
@@ -30,8 +30,8 @@ An [Nx](https://nx.dev/) workspace (`modules/` for libraries, `projects/` for ap
 
 ```text
 modules/
-  store/              ← ported (real source); Store/ActionsSubject/ReducerManager
-                         mid-redesign to composition over inheritance
+  store/              ← ported (real source); 5 classes redesigned to
+                         composition over inheritance, see docs/architecture.md
   schematics-core/     ← ported (real source), shared schematic/AST utilities
 ```
 

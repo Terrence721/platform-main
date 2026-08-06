@@ -1,0 +1,74 @@
+{
+  "compilerOptions": {
+    "importHelpers": true,
+    "sourceMap": true,
+    "declaration": false,
+    "experimentalDecorators": true,
+    "ignoreDeprecations": "6.0",
+    "emitDecoratorMetadata": true,
+    "noImplicitOverride": true,
+    "useDefineForClassFields": false,
+    "lib": ["ES2022", "dom"],
+    "outDir": "../out-tsc/app",
+    "target": "ES2022",
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "baseUrl": ".",
+    "rootDir": ".",
+    "strict": true,
+    "paths": {
+      "@example-app/*": ["./projects/example-app/src/app/*"],
+      "@ngrx-io/*": ["./projects/www/src/*"],
+      "@ngrx/component": ["./modules/component"],
+      "@ngrx/component-store": ["./modules/component-store"],
+      "@ngrx/component-store/schematics-core": [
+        "./modules/component-store/schematics-core"
+      ],
+      "@ngrx/component/schematics-core": [
+        "./modules/component/schematics-core"
+      ],
+      "@ngrx/data": ["./modules/data"],
+      "@ngrx/data/schematics-core": ["./modules/data/schematics-core"],
+      "@ngrx/effects": ["./modules/effects"],
+      "@ngrx/effects/schematics-core": ["./modules/effects/schematics-core"],
+      "@ngrx/effects/testing": ["./modules/effects/testing"],
+      "@ngrx/entity": ["./modules/entity"],
+      "@ngrx/entity/schematics-core": ["./modules/entity/schematics-core"],
+      "@ngrx/operators": ["./modules/operators"],
+      "@ngrx/router-store": ["./modules/router-store"],
+      "@ngrx/router-store/schematics-core": [
+        "./modules/router-store/schematics-core"
+      ],
+      "@ngrx/schematics": ["./modules/schematics"],
+      "@ngrx/schematics-core/*": ["./modules/schematics-core/*"],
+      "@ngrx/schematics/schematics-core": [
+        "./modules/schematics/schematics-core"
+      ],
+      "@ngrx/signals": ["./modules/signals"],
+      "@ngrx/signals/entities": ["./modules/signals/entities"],
+      "@ngrx/signals/events": ["./modules/signals/events"],
+      "@ngrx/signals/resource": ["./modules/signals/resource"],
+      "@ngrx/signals/rxjs-interop": ["./modules/signals/rxjs-interop"],
+      "@ngrx/signals/schematics-core": ["./modules/signals/schematics-core"],
+      "@ngrx/signals/testing": ["./modules/signals/testing"],
+      "@ngrx/store": ["./modules/store"],
+      "@ngrx/store-devtools": ["./modules/store-devtools"],
+      "@ngrx/store-devtools/schematics-core": [
+        "./modules/store-devtools/schematics-core"
+      ],
+      "@ngrx/store/schematics-core": ["./modules/store/schematics-core"],
+      "@ngrx/store/testing": ["./modules/store/testing"]
+    }
+  },
+  "exclude": [
+    "dist",
+    "node_modules",
+    "**/*/node_modules",
+    "modules/schematics/src/*/files/**/*"
+  ],
+  "compileOnSave": false,
+  "buildOnSave": false,
+  "atom": {
+    "rewriteTsconfig": false
+  }
+}

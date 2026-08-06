@@ -158,7 +158,11 @@ If source used Jest: change import to `@testing-library/jest-dom/vitest` in test
 Add to `tsconfig.base.json` (single-framework) or per-project (mixed):
 
 ```json
-{ "jsx": "preserve", "jsxImportSource": "vue", "resolveJsonModule": true }
+{
+  "jsx": "preserve",
+  "jsxImportSource": "vue",
+  "resolveJsonModule": true
+}
 ```
 
 ### `vue-shims.d.ts`
@@ -199,7 +203,10 @@ export default [
   ...vue.configs['flat/recommended'],
   {
     files: ['**/*.vue'],
-    languageOptions: { parser: vueParser, parserOptions: { parser: tsParser } },
+    languageOptions: {
+      parser: vueParser,
+      parserOptions: { parser: tsParser },
+    },
   },
   {
     files: ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx', '**/*.vue'],
@@ -233,7 +240,10 @@ When both frameworks coexist, several settings become per-project.
 ```json
 {
   "plugins": [
-    { "plugin": "@nx/eslint/plugin", "options": { "targetName": "lint" } },
+    {
+      "plugin": "@nx/eslint/plugin",
+      "options": { "targetName": "lint" }
+    },
     {
       "plugin": "@nx/vite/plugin",
       "options": {

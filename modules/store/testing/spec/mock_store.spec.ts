@@ -93,7 +93,7 @@ describe('Mock Store with TestBed', () => {
         counter3: 25,
       };
       mockStore.setState(fixedState);
-      mockStore.pipe(take(1)).subscribe({
+      mockStore.state$.pipe(take(1)).subscribe({
         next(val) {
           expect(val).toEqual(fixedState);
         },
@@ -126,10 +126,10 @@ describe('Mock Store with TestBed', () => {
       .subscribe((result) => expect(result).toBe(expectedValue));
   });
 
-  it('should allow mocking of store.pipe(select()) with a memoized selector using provideMockStore', () => {
+  it('should allow mocking of store.state$.pipe(select()) with a memoized selector using provideMockStore', () => {
     const expectedValue = 98;
 
-    mockStore
+    mockStore.state$
       .pipe(select(memoizedSelector))
       .subscribe((result) => expect(result).toBe(expectedValue));
   });
@@ -142,10 +142,10 @@ describe('Mock Store with TestBed', () => {
       .subscribe((result) => expect(result).toBe(expectedValue));
   });
 
-  it('should allow mocking of store.pipe(select()) with a memoized selector with Prop using provideMockStore', () => {
+  it('should allow mocking of store.state$.pipe(select()) with a memoized selector with Prop using provideMockStore', () => {
     const expectedValue = 99;
 
-    mockStore
+    mockStore.state$
       .pipe(select(selectorWithPropMocked, 200))
       .subscribe((result) => expect(result).toBe(expectedValue));
   });
@@ -174,7 +174,7 @@ describe('Mock Store with TestBed', () => {
       .subscribe((result) => expect(result).toBe(mockValue));
   });
 
-  it('should allow mocking of store.pipe(select()) with a memoized selector using overrideSelector', () => {
+  it('should allow mocking of store.state$.pipe(select()) with a memoized selector using overrideSelector', () => {
     const mockValue = 5;
     const selector = createSelector(
       () => initialState,
@@ -183,7 +183,7 @@ describe('Mock Store with TestBed', () => {
 
     mockStore.overrideSelector(selector, mockValue);
 
-    mockStore
+    mockStore.state$
       .pipe(select(selector))
       .subscribe((result) => expect(result).toBe(mockValue));
   });
@@ -198,23 +198,23 @@ describe('Mock Store with TestBed', () => {
       .subscribe((result) => expect(result).toBe(mockValue));
   });
 
-  it('should allow mocking of store.pipe(select()) with a memoized selector with Prop using overrideSelector', () => {
+  it('should allow mocking of store.state$.pipe(select()) with a memoized selector with Prop using overrideSelector', () => {
     const mockValue = 1000;
 
     mockStore.overrideSelector(selectorWithProp, mockValue);
 
-    mockStore
+    mockStore.state$
       .pipe(select(selectorWithProp, 200))
       .subscribe((result) => expect(result).toBe(mockValue));
   });
 
-  it('should pass through unmocked selectors with Props using store.pipe(select())', () => {
+  it('should pass through unmocked selectors with Props using store.state$.pipe(select())', () => {
     const selectorWithProp = createSelector(
       () => initialState,
       (state: typeof initialState, add: number) => state.counter4 + add
     );
 
-    mockStore
+    mockStore.state$
       .pipe(select(selectorWithProp, 6))
       .subscribe((result) => expect(result).toBe(9));
   });
@@ -248,10 +248,10 @@ describe('Mock Store with TestBed', () => {
 
     mockStore.overrideSelector(selector, mockValue);
 
-    mockStore
+    mockStore.state$
       .pipe(select(selector2))
       .subscribe((result) => expect(result).toBe(1));
-    mockStore
+    mockStore.state$
       .pipe(select(selector3))
       .subscribe((result) => expect(result).toBe(6));
   });
@@ -272,7 +272,7 @@ describe('Mock Store with TestBed', () => {
       (sel1, sel2) => sel1 + sel2
     );
 
-    mockStore
+    mockStore.state$
       .pipe(select(selector3))
       .subscribe((result) => expect(result).toBe(1));
 
@@ -280,14 +280,14 @@ describe('Mock Store with TestBed', () => {
     mockStore.overrideSelector(selector2, mockValue);
     selector3.release();
 
-    mockStore
+    mockStore.state$
       .pipe(select(selector3))
       .subscribe((result) => expect(result).toBe(10));
 
     mockStore.resetSelectors();
     selector3.release();
 
-    mockStore
+    mockStore.state$
       .pipe(select(selector3))
       .subscribe((result) => expect(result).toBe(1));
   });
@@ -316,7 +316,7 @@ describe('Mock Store with Injector', () => {
       new Promise<void>((done) => {
         const store: Store<typeof initialState> = injector.get(Store);
 
-        store.pipe(take(1)).subscribe((state) => {
+        store.state$.pipe(take(1)).subscribe((state) => {
           expect(state).toBe(initialState);
           done();
         });
@@ -327,7 +327,7 @@ describe('Mock Store with Injector', () => {
         const mockStore: MockStore<typeof initialState> =
           injector.get(MockStore);
 
-        mockStore.pipe(take(1)).subscribe((state) => {
+        mockStore.state$.pipe(take(1)).subscribe((state) => {
           expect(state).toBe(initialState);
           done();
         });
@@ -364,10 +364,13 @@ describe('Mock Store with Injector', () => {
       new Promise<void>((done) => {
         const actionsSubject = injector.get(ActionsSubject);
 
-        actionsSubject.pipe(take(1)).subscribe((action) => {
-          expect(action.type).toBe(INIT);
-          done();
-        });
+        actionsSubject
+          .asObservable()
+          .pipe(take(1))
+          .subscribe((action) => {
+            expect(action.type).toBe(INIT);
+            done();
+          });
       }));
 
     it('should provide MockState', () =>
@@ -429,7 +432,7 @@ describe('Mock Store with Injector', () => {
 
     it('should create MockStore', () =>
       new Promise<void>((done) => {
-        mockStore.pipe(take(1)).subscribe((state) => {
+        mockStore.state$.pipe(take(1)).subscribe((state) => {
           expect(state).toBe(initialState);
           done();
         });
@@ -479,7 +482,7 @@ describe('Refreshing state', () => {
     imports: [AsyncPipe],
   })
   class TodosComponent {
-    todos: Observable<any[]> = this.store.pipe(select(todos));
+    todos: Observable<any[]> = this.store.state$.pipe(select(todos));
     todosSelect: Observable<any[]> = this.store.select(todos);
 
     constructor(private store: Store<{}>) {}

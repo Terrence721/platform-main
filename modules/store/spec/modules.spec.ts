@@ -105,7 +105,7 @@ describe(`Store Modules`, () => {
         store.dispatch({ type: 'fruit', payload: 'banana' });
         store.dispatch({ type: 'a', payload: 42 });
 
-        store.pipe(take(1)).subscribe((s: any) => {
+        store.state$.pipe(take(1)).subscribe((s: any) => {
           expect(s).toEqual({
             fruit: 'banana',
             a: 4,
@@ -135,7 +135,7 @@ describe(`Store Modules`, () => {
 
       it('should have initial state', () =>
         new Promise<void>((done) => {
-          store.pipe(take(1)).subscribe((s: any) => {
+          store.state$.pipe(take(1)).subscribe((s: any) => {
             expect(s).toEqual(initialState);
             done();
           });
@@ -201,7 +201,7 @@ describe(`Store Modules`, () => {
 
     it('should nest the child module in the root store object', () =>
       new Promise<void>((done) => {
-        store.pipe(take(1)).subscribe((state: State) => {
+        store.state$.pipe(take(1)).subscribe((state: State) => {
           expect(state).toEqual({
             fruit: 'apple',
             a: 5,
@@ -242,7 +242,7 @@ describe(`Store Modules`, () => {
 
     it('should set up a feature state', () =>
       new Promise<void>((done) => {
-        store.pipe(take(1)).subscribe((state: State) => {
+        store.state$.pipe(take(1)).subscribe((state: State) => {
           expect(state).toEqual({
             a: 5,
           } as State);

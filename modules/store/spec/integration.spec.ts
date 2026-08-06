@@ -2,7 +2,6 @@ import { TestBed } from '@angular/core/testing';
 import {
   ActionReducer,
   ActionReducerMap,
-  select,
   Store,
   StoreModule,
   createFeatureSelector,
@@ -11,7 +10,7 @@ import {
 import { combineLatest } from 'rxjs';
 import { first, toArray, take, map } from 'rxjs/operators';
 
-import { INITIAL_STATE, ReducerManager, State } from '../src/private_export';
+import { INITIAL_STATE, ReducerObservable, State } from '../src/private_export';
 import {
   ADD_TODO,
   COMPLETE_ALL_TODOS,
@@ -70,7 +69,7 @@ describe('ngRx Integration spec', () => {
     it('should combine reducers automatically if a key/value map is provided', () =>
       new Promise<void>((done) => {
         const action = { type: 'Test Action' };
-        const reducer$ = TestBed.inject(ReducerManager);
+        const reducer$ = TestBed.inject(ReducerObservable);
 
         reducer$.pipe(first()).subscribe((reducer: ActionReducer<any, any>) => {
           expect(reducer).toBeDefined();
@@ -277,10 +276,7 @@ describe('ngRx Integration spec', () => {
 
         let currentlyVisibleTodos: Todo[] = [];
 
-        combineLatest([
-          store.pipe(select('visibilityFilter')),
-          store.pipe(select('todos')),
-        ])
+        combineLatest([store.select('visibilityFilter'), store.select('todos')])
           .pipe(map(([filter, todos]) => filterVisibleTodos(filter, todos)))
           .subscribe((visibleTodos) => {
             currentlyVisibleTodos = visibleTodos;
@@ -330,7 +326,7 @@ describe('ngRx Integration spec', () => {
             (todos, id) => todos.find((todo) => todo.id === id)
           );
 
-          const todo$ = store.pipe(select(getTodosById, 2));
+          const todo$ = store.select(getTodosById, 2);
           todo$.pipe(take(3), toArray()).subscribe((res) => {
             expect(res).toEqual([
               undefined,
@@ -360,7 +356,7 @@ describe('ngRx Integration spec', () => {
               todos.find((todo) => todo.id === id)
           );
 
-          const todo$ = store.pipe(select(getTodosById, { id: 2 }));
+          const todo$ = store.select(getTodosById, { id: 2 });
           todo$.pipe(take(3), toArray()).subscribe((res) => {
             expect(res).toEqual([
               undefined,
@@ -427,9 +423,11 @@ describe('ngRx Integration spec', () => {
         },
       ];
 
-      store.pipe(select((state) => state)).subscribe((state) => {
-        expect(state).toEqual(expected.shift());
-      });
+      store
+        .select((state) => state)
+        .subscribe((state) => {
+          expect(state).toEqual(expected.shift());
+        });
     });
 
     it('should initialize properly with a partial state', () => {
@@ -462,9 +460,11 @@ describe('ngRx Integration spec', () => {
         items: [{ id: 1, completed: false, text: 'Item' }],
       };
 
-      store.pipe(select((state) => state)).subscribe((state) => {
-        expect(state).toEqual(expected);
-      });
+      store
+        .select((state) => state)
+        .subscribe((state) => {
+          expect(state).toEqual(expected);
+        });
     });
 
     it('throws if forRoot() is used more than once', () =>

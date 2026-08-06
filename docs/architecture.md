@@ -58,3 +58,21 @@ A third pass — this time a deliberate full-module audit (`grep extends` across
 ### Consequences going forward
 
 `entity`, `effects`, `router-store`, `store-devtools`, and `data` — all still unported as of this writing — consume `Store`/`ActionsSubject`/`ReducerManager`/`State` directly. This redesign is finished, end to end, before porting any of them, specifically so their own ports target the final shape once rather than needing a second pass. Anything in their source that relied on `Store extends Observable` or `State extends BehaviorSubject` (unlikely, but not yet verified) will surface as a build/test failure when each is ported, the same way this redesign's own blast radius did — checked via the same discipline: grep first, verify with the real build/test/lint, fix what grep missed. That discipline is what caught `State`/`StateObservable` in the first place — a second `grep 'extends' modules/store` pass after the first round of fixes landed, not something planned upfront.
+
+**This prediction came true the moment `effects` was ported** — see the next section.
+
+## Composition over inheritance, continued: `EffectSources` (`@ngrx/effects`)
+
+**Status:** Done — [`ab855b7`](https://github.com/Terrence721/platform-main/commit/ab855b7).
+
+Porting `effects` against this repo's already-composed `Store` surfaced real build/test failures immediately, exactly as predicted above:
+
+- `effects_runner.ts` called `.subscribe(this.store)`, relying on `Store` implementing RxJS's `Observer<Action>` interface — removed in the `Store` redesign. Fixed to `.subscribe((action) => this.store.dispatch(action))`.
+- `actions.ts`'s public `Actions` service injected `ScannedActionsSubject` directly and typed it as `Observable<V>`, which only worked because `ScannedActionsSubject` used to extend `Subject`. Fixed to call `.asObservable()` explicitly, guarded by `instanceof ScannedActionsSubject` so the testing package's `provideMockActions` (which constructs `Actions` directly with a plain `Observable`, bypassing DI entirely) still works with either shape.
+- The real ngrx test suite calls `dispatcher.complete()` directly on an injected `ScannedActionsSubject`, expecting it to genuinely terminate the stream. This did **not** fit `ActionsSubject`'s pattern (whose `complete()` is an intentional no-op, so external code can't prematurely end the app's action bus) — checked against the real ngrx source before assuming that pattern applied here too, and confirmed `ScannedActionsSubject` never overrides `Subject.complete()` at all in the original. Added a real, working `complete()`.
+
+Beyond adapting to `Store`'s already-finished redesign, the same composition-over-inheritance audit applied to `store` found a new instance of the same problem in `effects` itself: `EffectSources extends Subject<any>`, with its own domain methods (`addEffects()`) bolted onto the full inherited Subject surface, even though nothing external ever calls `.next()`/`.subscribe()`/`.pipe()` on an injected `EffectSources` — every consumer goes through `addEffects()`/`toActions()` only. Same fix as `store`'s classes: composes a private `Subject`, exposes `addEffects()`/`toActions()` as its actual contract.
+
+`Actions extends Observable<V>` was deliberately left alone, for the same reason `ReducerObservable` was: its entire contract _is_ being pipeable — every consumer calls `.pipe()` on it, that's the whole point — with no unrelated method bolted on top. No ISP violation, nothing to fix.
+
+Adapting `effect_sources.spec.ts` needed more than call-site renames: one test spied on `effectSources.next` directly (testing an implementation detail that's now a private field, removed since every test in the adjacent suite already covers `addEffects()` behaviorally), and the `toActions()` test helper rebound `this` to a synthetic marble-diagram Observable so the old `this.pipe(...)` worked directly — updated to wrap the synthetic source as `{ sources$: source, errorHandler, effectsErrorHandler }` to match the new internal shape.

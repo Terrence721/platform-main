@@ -26,7 +26,7 @@ Anyone can `cp -r` a well-known open-source library. The more useful exercise �
 
 ## 🏗 What's Here So Far
 
-An [Nx](https://nx.dev/) workspace (`modules/` for libraries, `projects/` for apps — none ported yet), using yarn, Vitest, and ESLint's flat config.
+An [Nx](https://nx.dev/) workspace (`modules/` for libraries, `projects/` for apps — none added yet), using yarn, Vitest, and ESLint's flat config.
 
 ```text
 modules/
@@ -35,9 +35,11 @@ modules/
   schematics-core/     ← added (real source), shared schematic/AST utilities
   entity/              ← added (real source); audited clean, no RxJS-extending
                          classes to redesign
+  effects/             ← added (real source); EffectSources redesigned to
+                         composition, 1 spec excluded pending @ngrx/operators
 ```
 
-10 more modules (`effects`, `router-store`, `store-devtools`, `data`, `operators`, `component-store`, `signals`, `component`, `eslint-plugin`, `schematics`) come next — see `todo.md`'s "Still to do" table for sequencing and why.
+9 more modules (`router-store`, `store-devtools`, `data`, `operators`, `component-store`, `signals`, `component`, `eslint-plugin`, `schematics`) come next — see `todo.md`'s "Still to do" table for sequencing and why.
 
 ## 🖥 Getting Started
 

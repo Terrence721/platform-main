@@ -45,20 +45,35 @@
   "$schema": "./node_modules/nx/schemas/nx-schema.json",
   "targetDefaults": {
     "build": {
-      "dependsOn": ["^build"],
-      "inputs": ["production", "^production"],
+      "dependsOn": [
+        "^build"
+      ],
+      "inputs": [
+        "production",
+        "^production"
+      ],
       "cache": true
     },
     "e2e": {
-      "inputs": ["default", "^production"],
+      "inputs": [
+        "default",
+        "^production"
+      ],
       "cache": true
     },
     "test": {
-      "inputs": ["default", "^production", "{workspaceRoot}/vitest.config.mts"],
+      "inputs": [
+        "default",
+        "^production",
+        "{workspaceRoot}/vitest.config.mts"
+      ],
       "cache": true
     },
     "lint": {
-      "inputs": ["default", "{workspaceRoot}/eslint.config.mjs"],
+      "inputs": [
+        "default",
+        "{workspaceRoot}/eslint.config.mjs"
+      ],
       "cache": true
     },
     "build-package": {
@@ -66,7 +81,10 @@
     }
   },
   "namedInputs": {
-    "default": ["{projectRoot}/**/*", "sharedGlobals"],
+    "default": [
+      "{projectRoot}/**/*",
+      "sharedGlobals"
+    ],
     "sharedGlobals": [
       "{workspaceRoot}/angular.json",
       "{workspaceRoot}/nx.json",
@@ -83,5 +101,6 @@
   },
   "nxCloudAccessToken": "NTlmOGIxYmItZjM0OC00YzAxLTgzZTgtZDNiZmExMzcwZTA4fHJlYWQ=",
   "defaultBase": "main",
-  "analytics": false
+  "analytics": false,
+  "nxCloudId": "682c47fdf4b89e409c43e20e"
 }

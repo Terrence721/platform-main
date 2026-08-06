@@ -1,7 +1,8 @@
 {
-  "name": "@ngrx/platform",
-  "version": "22.0.0-rc.0",
-  "description": "monorepo for ngrx development",
+  "name": "platform-main",
+  "version": "0.0.0",
+  "description": "Demonstration NgRx + Nx workspace, not affiliated with the upstream @ngrx/platform project",
+  "private": true,
   "scripts": {
     "ng": "ng",
     "build": "nx run-many --target=build --all",
@@ -12,7 +13,6 @@
     "copy:dist": "ncp dist/ ./node_modules/@ngrx/",
     "ci": "yarn test && nyc report --reporter=text-lcov | coveralls",
     "prettier": "prettier --write \"**/*.ts\"",
-    "postinstall": "opencollective postinstall",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s",
     "copy:schematics": "npx tsx ./build/copy-schematics-core.ts",
     "schematics:check": "git diff --name-only --exit-code ./modules",
@@ -40,11 +40,11 @@
     "angular",
     "rxjs"
   ],
-  "author": "Rob Wormald <robwormald@gmail.com>",
+  "author": "Terrence Daniels",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ngrx/platform.git"
+    "url": "https://github.com/Terrence721/platform-main.git"
   },
   "nyc": {
     "extension": [
@@ -86,7 +86,6 @@
     "marked-highlight": "^2.2.3",
     "marked-mangle": "^1.1.12",
     "marked-shiki": "^1.2.1",
-    "opencollective": "^1.0.3",
     "rxjs": "7.8.2",
     "semver": "^7.7.2",
     "shiki": "^1.29.2",
@@ -163,10 +162,5 @@
     "vite-tsconfig-paths": "^5.1.4",
     "vitest": "4.1.10",
     "yaml": "^2.4.5"
-  },
-  "collective": {
-    "type": "opencollective",
-    "url": "https://opencollective.com/ngrx",
-    "logo": "https://opencollective.com/opencollective/logo.txt"
   }
 }

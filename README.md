@@ -30,12 +30,14 @@ An [Nx](https://nx.dev/) workspace (`modules/` for libraries, `projects/` for ap
 
 ```text
 modules/
-  store/              ← ported (real source); 5 classes redesigned to
+  store/              ← added (real source); 5 classes redesigned to
                          composition over inheritance, see docs/architecture.md
-  schematics-core/     ← ported (real source), shared schematic/AST utilities
+  schematics-core/     ← added (real source), shared schematic/AST utilities
+  entity/              ← added (real source); audited clean, no RxJS-extending
+                         classes to redesign
 ```
 
-11 more modules (`entity`, `effects`, `router-store`, `store-devtools`, `data`, `operators`, `component-store`, `signals`, `component`, `eslint-plugin`, `schematics`) come next — see `todo.md`'s "Still to do" table for sequencing and why.
+10 more modules (`effects`, `router-store`, `store-devtools`, `data`, `operators`, `component-store`, `signals`, `component`, `eslint-plugin`, `schematics`) come next — see `todo.md`'s "Still to do" table for sequencing and why.
 
 ## 🖥 Getting Started
 

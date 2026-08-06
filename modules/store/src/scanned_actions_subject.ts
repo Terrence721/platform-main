@@ -22,12 +22,22 @@ export class ScannedActionsSubject implements OnDestroy {
     this.scannedActions$.error(err);
   }
 
+  /**
+   * Unlike ActionsSubject.complete() (an intentional no-op, so external code
+   * can't prematurely end the app's action bus), this genuinely completes
+   * the stream - the real ngrx source doesn't override Subject.complete()
+   * here, so this is a working terminator, not a neutered one.
+   */
+  complete(): void {
+    this.scannedActions$.complete();
+  }
+
   asObservable(): Observable<Action> {
     return this.scannedActions$.asObservable();
   }
 
   ngOnDestroy() {
-    this.scannedActions$.complete();
+    this.complete();
   }
 }
 

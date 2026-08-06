@@ -1,0 +1,125 @@
+import { EMPTY, noop, Observable, of, throwError } from 'rxjs';
+import { tapResponse } from '..';
+import { concatMap, finalize } from 'rxjs/operators';
+import { vi } from 'vitest';
+
+describe('tapResponse', () => {
+  it('should invoke next callback on next', () => {
+    const nextCallback = vi.fn<(value: number) => void>();
+
+    of(1, 2, 3)
+      .pipe(tapResponse({ next: nextCallback, error: noop }))
+      .subscribe();
+
+    expect(nextCallback.mock.calls).toEqual([[1], [2], [3]]);
+  });
+
+  it('should invoke error callback on error', () => {
+    const errorCallback = vi.fn<() => [{ message: string }]>();
+    const error = { message: 'error' };
+
+    throwError(() => error)
+      .pipe(tapResponse({ next: noop, error: errorCallback }))
+      .subscribe();
+
+    expect(errorCallback).toHaveBeenCalledWith(error);
+  });
+
+  it('should invoke error callback on the exception thrown in next', () => {
+    const errorCallback = vi.fn<() => [{ message: string }]>();
+    const error = { message: 'error' };
+
+    function producesError() {
+      throw error;
+    }
+
+    of(1)
+      .pipe(tapResponse({ next: producesError, error: errorCallback }))
+      .subscribe();
+
+    expect(errorCallback).toHaveBeenCalledWith(error);
+  });
+
+  it('should invoke complete callback on complete', () => {
+    const completeCallback = vi.fn<() => void>();
+
+    EMPTY.pipe(
+      tapResponse({ next: noop, error: noop, complete: completeCallback })
+    ).subscribe();
+
+    expect(completeCallback).toHaveBeenCalledWith();
+  });
+
+  it('should invoke finalize callback after next and complete', () => {
+    const executionOrder: number[] = [];
+
+    of('ngrx')
+      .pipe(
+        tapResponse({
+          next: () => executionOrder.push(1),
+          error: () => executionOrder.push(-1),
+          complete: () => executionOrder.push(2),
+          finalize: () => executionOrder.push(3),
+        })
+      )
+      .subscribe();
+
+    expect(executionOrder).toEqual([1, 2, 3]);
+  });
+
+  it('should invoke finalize callback after error', () => {
+    const executionOrder: number[] = [];
+
+    throwError(() => 'error!')
+      .pipe(
+        tapResponse({
+          next: () => executionOrder.push(-1),
+          error: () => executionOrder.push(1),
+          complete: () => executionOrder.push(-1),
+          finalize: () => executionOrder.push(2),
+        })
+      )
+      .subscribe();
+
+    expect(executionOrder).toEqual([1, 2]);
+  });
+
+  it('should invoke finalize callback after error when exception is thrown in next', () => {
+    const executionOrder: number[] = [];
+
+    of('ngrx')
+      .pipe(
+        tapResponse({
+          next: () => {
+            throw new Error('error!');
+          },
+          error: () => executionOrder.push(1),
+          complete: () => executionOrder.push(-1),
+          finalize: () => executionOrder.push(2),
+        })
+      )
+      .subscribe();
+
+    expect(executionOrder).toEqual([1, 2]);
+  });
+
+  it('should not unsubscribe from outer observable on inner observable error', () => {
+    const innerCompleteCallback = vi.fn<() => void>();
+    const outerCompleteCallback = vi.fn<() => void>();
+
+    new Observable((subscriber) => subscriber.next(1))
+      .pipe(
+        concatMap(() =>
+          throwError(() => 'error').pipe(
+            tapResponse({ next: noop, error: noop }),
+            finalize(innerCompleteCallback)
+          )
+        ),
+        finalize(outerCompleteCallback)
+      )
+      .subscribe();
+
+    expect(innerCompleteCallback).toHaveBeenCalled();
+    expect(outerCompleteCallback).not.toHaveBeenCalled();
+  });
+});

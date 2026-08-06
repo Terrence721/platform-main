@@ -20,9 +20,9 @@ This repo is **not affiliated with, and not published by, the upstream [@ngrx/pl
 
 Anyone can `cp -r` a well-known open-source library. The more useful exercise — and the point of this repo — is knowing _which_ parts of a mature codebase to leave alone and _which_ to challenge.
 
-**Porting real source where fidelity matters.** `modules/store`'s implementation, tests, and schematics are the actual ngrx source, adapted where necessary (package metadata, build tooling, editor config) and left alone everywhere else. It's a large, battle-tested surface; rewriting it for its own sake would trade correctness for no real benefit.
+**Porting real source where fidelity matters.** Every added module's implementation, tests, and schematics are the actual ngrx source, adapted where necessary (package metadata, build tooling, editor config) and left alone everywhere else. It's a large, battle-tested surface; rewriting it for its own sake would trade correctness for no real benefit.
 
-**Redesigning where the tradeoff earns naming out loud.** Five of the real ngrx `store` classes — `Store`, `ActionsSubject`, `ReducerManager`, `State`, `ScannedActionsSubject` — extend RxJS's `Observable`/`Subject` types directly. That's a real Interface Segregation violation, not a style nitpick: it hands every consumer the entire RxJS operator surface (`pipe`, `lift`, `toPromise`, ...) when each class's actual contract is much narrower. Finding them wasn't a one-pass job — the first sweep caught the three obvious ones; a second pass, re-running the same check after the first landed, caught two more; a third pass audited every `extends` in every file in the module, not only the classes already under suspicion, to confirm none were missed. This repo replaces each one with composition, one class at a time, fully verified before moving to the next, with the reasoning — and what was left alone on purpose, like the DI-token classes that don't have this problem — recorded in `docs/architecture.md` and the commit that makes each change. The discipline generalizes past this one module: re-auditing the whole surface instead of trusting the first pass is the approach this repo applies wherever fidelity to the real source isn't the point.
+**Redesigning where the tradeoff earns naming out loud.** Six real ngrx classes across `store` and `effects` — `Store`, `ActionsSubject`, `ReducerManager`, `State`, `ScannedActionsSubject`, `EffectSources` — extend RxJS's `Observable`/`Subject` types directly. That's a real Interface Segregation violation, not a style nitpick: it hands every consumer the entire RxJS operator surface (`pipe`, `lift`, `toPromise`, ...) when each class's actual contract is much narrower. Finding them wasn't a one-pass job — the first sweep caught the three obvious ones; a second pass, re-running the same check after the first landed, caught two more; a third pass audited every `extends` in every file in the module, not only the classes already under suspicion, to confirm none were missed. This repo replaces each one with composition, one class at a time, fully verified before moving to the next, with the reasoning — and what was left alone on purpose, like the DI-token classes that don't have this problem — recorded in `docs/architecture.md` and the commit that makes each change. The discipline generalizes past this one module: re-auditing the whole surface instead of trusting the first pass is the approach this repo applies wherever fidelity to the real source isn't the point.
 
 ## 🏗 What's Here So Far
 
@@ -36,10 +36,11 @@ modules/
   entity/              ← added (real source); audited clean, no RxJS-extending
                          classes to redesign
   effects/             ← added (real source); EffectSources redesigned to
-                         composition, 1 spec excluded pending @ngrx/operators
+                         composition
+  operators/            ← added (real source); pure functions, audited clean
 ```
 
-9 more modules (`router-store`, `store-devtools`, `data`, `operators`, `component-store`, `signals`, `component`, `eslint-plugin`, `schematics`) come next — see `todo.md`'s "Still to do" table for sequencing and why.
+8 more modules (`router-store`, `store-devtools`, `data`, `component-store`, `signals`, `component`, `eslint-plugin`, `schematics`) come next — see `todo.md`'s "Still to do" table for sequencing and why.
 
 ## 🖥 Getting Started
 

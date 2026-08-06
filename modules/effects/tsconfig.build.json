@@ -26,6 +26,7 @@
     "annotateForClosureCompiler": true,
     "compilationMode": "partial",
     "flatModuleOutFile": "index.js",
-    "flatModuleId": "@ngrx/effects"
+    "flatModuleId": "@ngrx/effects",
+    "strictTemplates": true
   }
 }

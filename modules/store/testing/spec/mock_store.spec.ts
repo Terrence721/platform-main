@@ -364,10 +364,13 @@ describe('Mock Store with Injector', () => {
       new Promise<void>((done) => {
         const actionsSubject = injector.get(ActionsSubject);
 
-        actionsSubject.pipe(take(1)).subscribe((action) => {
-          expect(action.type).toBe(INIT);
-          done();
-        });
+        actionsSubject
+          .asObservable()
+          .pipe(take(1))
+          .subscribe((action) => {
+            expect(action.type).toBe(INIT);
+            done();
+          });
       }));
 
     it('should provide MockState', () =>

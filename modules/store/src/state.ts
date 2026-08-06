@@ -40,9 +40,9 @@ export class State<T> extends BehaviorSubject<any> implements OnDestroy {
   ) {
     super(initialState);
 
-    const actionsOnQueue$: Observable<Action> = actions$.pipe(
-      observeOn(queueScheduler)
-    );
+    const actionsOnQueue$: Observable<Action> = actions$
+      .asObservable()
+      .pipe(observeOn(queueScheduler));
     const withLatestReducer$: Observable<[Action, ActionReducer<any, Action>]> =
       actionsOnQueue$.pipe(withLatestFrom(reducer$));
 

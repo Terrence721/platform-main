@@ -1,20 +1,26 @@
 import { Injectable, OnDestroy, Provider } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Observable, Observer, Subscription } from 'rxjs';
 
 import { Action } from './models';
 
 export const INIT = '@ngrx/store/init' as const;
 
+/**
+ * The internal action bus: actions are pushed in via `next()` and observed
+ * via `subscribe()`/`asObservable()`.
+ *
+ * Composes a BehaviorSubject instead of extending it. Extending would also
+ * inherit the full RxJS Observable/Subject operator surface (`pipe`, `lift`,
+ * `toPromise`, `forEach`, ...), which isn't part of this class's actual
+ * contract - push actions in, let things observe them, terminate on
+ * destroy. Callers that need operator chaining go through `asObservable()`
+ * explicitly rather than getting it implicitly from `ActionsSubject` itself.
+ */
 @Injectable()
-export class ActionsSubject
-  extends BehaviorSubject<Action>
-  implements OnDestroy
-{
-  constructor() {
-    super({ type: INIT });
-  }
+export class ActionsSubject implements OnDestroy {
+  private readonly actions$ = new BehaviorSubject<Action>({ type: INIT });
 
-  override next(action: Action): void {
+  next(action: Action): void {
     if (typeof action === 'function') {
       throw new TypeError(`
         Dispatch expected an object, instead it received a function.
@@ -25,15 +31,33 @@ export class ActionsSubject
     } else if (typeof action.type === 'undefined') {
       throw new TypeError(`Actions must have a type property`);
     }
-    super.next(action);
+    this.actions$.next(action);
   }
 
-  override complete() {
+  error(err: any): void {
+    this.actions$.error(err);
+  }
+
+  complete(): void {
     /* noop */
   }
 
+  subscribe(observer?: Partial<Observer<Action>>): Subscription;
+  subscribe(next: (value: Action) => void): Subscription;
+  subscribe(
+    next?: ((value: Action) => void) | Partial<Observer<Action>> | null,
+    error?: ((error: any) => void) | null,
+    complete?: (() => void) | null
+  ): Subscription {
+    return (this.actions$.subscribe as any)(next, error, complete);
+  }
+
+  asObservable(): Observable<Action> {
+    return this.actions$.asObservable();
+  }
+
   ngOnDestroy() {
-    super.complete();
+    this.actions$.complete();
   }
 }
 

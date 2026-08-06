@@ -1,5 +1,5 @@
 # @ngrx/store
 
-The sources for this package are in the main [NgRx](https://github.com/ngrx/platform) repo. Please file issues and pull requests against that repo.
+Ported from the real [NgRx](https://github.com/ngrx/platform) project into this demo workspace. Not affiliated with, and not published by, the upstream project — see the root [README.md](../../README.md).
 
 License: MIT

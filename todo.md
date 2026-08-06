@@ -2,7 +2,7 @@
 
 **Last Updated: August 6, 2026**
 
-A phase-by-phase log of what's been done on this repo and what's still open. This is the source of truth for progress — the [GitHub Project board](https://github.com/users/Terrence721/projects) is a lighter-weight view of the same work, kept in sync with this file, not a separate source of truth.
+A phase-by-phase log of what's been done on this repo and what's still open. This is the source of truth for progress — the [GitHub Project board](https://github.com/users/Terrence721/projects/2) is a lighter-weight view of the same work, kept in sync with this file, not a separate source of truth.
 
 **What this repo is:** a personal demonstration workspace, not a fork or continuation of the real [@ngrx/platform](https://github.com/ngrx/platform) project. It started as a copy of that project's root-level config, then built out module by module from there — porting the real, MIT-licensed source where fidelity to a battle-tested implementation matters, and deliberately redesigning specific pieces where the goal is to demonstrate a different, defensible architectural call. See [README.md](README.md) for the non-affiliation note and [LICENSE](LICENSE) for why the original copyright notice stays intact.
 

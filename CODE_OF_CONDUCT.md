@@ -19,11 +19,11 @@ community include:
 
 - Demonstrating empathy and kindness toward other people
 - Being respectful of differing opinions, viewpoints, and experiences
-- Giving and gracefully accepting constructive feedback
+- Giving and accepting constructive feedback
 - Accepting responsibility and apologizing to those affected by our mistakes,
   and learning from the experience
-- Focusing on what is best not just for us as individuals, but for the
-  overall community
+- Prioritizing the wellbeing of the community alongside our own interests as
+  individuals
 
 Examples of unacceptable behavior include:
 
@@ -33,8 +33,7 @@ Examples of unacceptable behavior include:
 - Public or private harassment
 - Publishing others' private information, such as a physical or email
   address, without their explicit permission
-- Other conduct which could reasonably be considered inappropriate in a
-  professional setting
+- Other conduct reasonably viewed as inappropriate in a professional setting
 
 ## Enforcement Responsibilities
 
@@ -61,10 +60,11 @@ representative at an online or offline event.
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
 reported to the community leaders responsible for enforcement by opening
 an issue on this repository.
-All complaints will be reviewed and investigated promptly and fairly.
+Community leaders will review and investigate all complaints without delay
+and without bias.
 
-All community leaders are obligated to respect the privacy and security of the
-reporter of any incident.
+Community leaders must respect the privacy and security of anyone who reports
+an incident.
 
 ## Enforcement Guidelines
 
@@ -78,7 +78,7 @@ unprofessional or unwelcome in the community.
 
 **Consequence**: A private, written warning from community leaders, providing
 clarity around the nature of the violation and an explanation of why the
-behavior was inappropriate. A public apology may be requested.
+behavior was inappropriate. Community leaders may request a public apology.
 
 ### 2. Warning
 
@@ -100,7 +100,7 @@ sustained inappropriate behavior.
 **Consequence**: A temporary ban from any sort of interaction or public
 communication with the community for a specified period of time. No public or
 private interaction with the people involved, including unsolicited interaction
-with those enforcing the Code of Conduct, is allowed during this period.
+with those enforcing the Code of Conduct, for this period.
 Violating these terms may lead to a permanent ban.
 
 ### 4. Permanent Ban
@@ -114,12 +114,12 @@ the community.
 
 ## Attribution
 
-This Code of Conduct is adapted from the [Contributor Covenant][homepage],
-version 2.0, available at
+This Code of Conduct adapts the [Contributor Covenant][homepage], version 2.0,
+available at
 <https://www.contributor-covenant.org/version/2/0/code_of_conduct.html>.
 
-Community Impact Guidelines were inspired by [Mozilla's code of conduct
-enforcement ladder](https://github.com/mozilla/diversity).
+[Mozilla's code of conduct enforcement ladder](https://github.com/mozilla/diversity)
+inspired the Community Impact Guidelines.
 
 [homepage]: https://www.contributor-covenant.org
 

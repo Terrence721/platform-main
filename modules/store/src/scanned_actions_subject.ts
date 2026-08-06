@@ -18,6 +18,10 @@ export class ScannedActionsSubject implements OnDestroy {
     this.scannedActions$.next(action);
   }
 
+  error(err: any): void {
+    this.scannedActions$.error(err);
+  }
+
   asObservable(): Observable<Action> {
     return this.scannedActions$.asObservable();
   }

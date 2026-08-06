@@ -37,4 +37,17 @@ describe(ScannedActionsSubject.name, () => {
 
     expect(completed).toBe(true);
   });
+
+  it('should forward error() to asObservable() subscribers', () => {
+    const scannedActionsSubject = new ScannedActionsSubject();
+    const failure = new Error('boom');
+    let seenError: unknown;
+
+    scannedActionsSubject.asObservable().subscribe({
+      error: (err) => (seenError = err),
+    });
+    scannedActionsSubject.error(failure);
+
+    expect(seenError).toBe(failure);
+  });
 });

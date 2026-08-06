@@ -380,6 +380,10 @@ function _addSymbolToNgModuleMetadata(
       ) {
         const effectsElements = (effectsArgs as ts.ArrayLiteralExpression)
           .elements;
+        // Extract the content between the first `[` and the last `]` without
+        // an unanchored regex - `symbolName.match(/\[(.*)\]/)` costs O(n^2)
+        // on a string with no `[`, since the engine retries the `.*` scan
+        // from every position before giving up (CodeQL js/polynomial-redos).
         const bracketStart = symbolName.indexOf('[');
         const bracketEnd = symbolName.lastIndexOf(']');
         const effectsSymbol = symbolName.slice(bracketStart + 1, bracketEnd);

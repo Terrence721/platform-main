@@ -21,11 +21,21 @@ export abstract class ReducerObservable extends Observable<
 export abstract class ReducerManagerDispatcher extends ActionsSubject {}
 export const UPDATE = '@ngrx/store/update-reducers' as const;
 
+/**
+ * Composes a BehaviorSubject internally instead of extending it, for the
+ * same reason as ActionsSubject: extending would pull in the full RxJS
+ * Observable/Subject operator surface (pipe, lift, toPromise, ...) as part
+ * of ReducerManager's own public contract, when the actual contract is
+ * "track the combined reducer, let it be observed, react to
+ * feature (un)registration." Consumers that need the Observable view go
+ * through the separate `ReducerObservable` DI token (see
+ * REDUCER_MANAGER_PROVIDERS below), which already existed before this
+ * change and continues to resolve to a real Observable.
+ */
 @Injectable()
-export class ReducerManager
-  extends BehaviorSubject<ActionReducer<any, any>>
-  implements OnDestroy
-{
+export class ReducerManager implements OnDestroy {
+  private readonly reducer$: BehaviorSubject<ActionReducer<any, any>>;
+
   get currentReducers(): ActionReducerMap<any, any> {
     return this.reducers;
   }
@@ -37,7 +47,11 @@ export class ReducerManager
     @Inject(REDUCER_FACTORY)
     private reducerFactory: ActionReducerFactory<any, any>
   ) {
-    super(reducerFactory(reducers, initialState));
+    this.reducer$ = new BehaviorSubject(reducerFactory(reducers, initialState));
+  }
+
+  asObservable(): Observable<ActionReducer<any, any>> {
+    return this.reducer$.asObservable();
   }
 
   addFeature(feature: StoreFeature<any, any>) {
@@ -96,7 +110,7 @@ export class ReducerManager
   }
 
   private updateReducers(featureKeys: string[]) {
-    this.next(this.reducerFactory(this.reducers, this.initialState));
+    this.reducer$.next(this.reducerFactory(this.reducers, this.initialState));
     this.dispatcher.next(<Action>{
       type: UPDATE,
       features: featureKeys,
@@ -104,12 +118,17 @@ export class ReducerManager
   }
 
   ngOnDestroy() {
-    this.complete();
+    this.reducer$.complete();
   }
 }
 
 export const REDUCER_MANAGER_PROVIDERS: Provider[] = [
   ReducerManager,
-  { provide: ReducerObservable, useExisting: ReducerManager },
+  {
+    provide: ReducerObservable,
+    useFactory: (reducerManager: ReducerManager) =>
+      reducerManager.asObservable(),
+    deps: [ReducerManager],
+  },
   { provide: ReducerManagerDispatcher, useExisting: ActionsSubject },
 ];

@@ -11,7 +11,7 @@ import {
 import { combineLatest } from 'rxjs';
 import { first, toArray, take, map } from 'rxjs/operators';
 
-import { INITIAL_STATE, ReducerManager, State } from '../src/private_export';
+import { INITIAL_STATE, ReducerObservable, State } from '../src/private_export';
 import {
   ADD_TODO,
   COMPLETE_ALL_TODOS,
@@ -70,7 +70,7 @@ describe('ngRx Integration spec', () => {
     it('should combine reducers automatically if a key/value map is provided', () =>
       new Promise<void>((done) => {
         const action = { type: 'Test Action' };
-        const reducer$ = TestBed.inject(ReducerManager);
+        const reducer$ = TestBed.inject(ReducerObservable);
 
         reducer$.pipe(first()).subscribe((reducer: ActionReducer<any, any>) => {
           expect(reducer).toBeDefined();

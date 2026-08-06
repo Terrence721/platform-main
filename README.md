@@ -13,6 +13,7 @@ This repo is **not affiliated with, and not published by, the upstream [@ngrx/pl
 
 - **[`todo.md`](todo.md)** — the phase-by-phase log of everything done and everything still open. This is the source of truth for progress.
 - **[GitHub Project board](https://github.com/users/Terrence721/projects/2)** — a lighter-weight, at-a-glance view of the same work, kept in sync with `todo.md`.
+- **[`docs/architecture.md`](docs/architecture.md)** — the reasoning behind this repo's architectural decisions (context, alternatives, what each one actually cost), not just what changed.
 - **[CONTRIBUTING.md](./CONTRIBUTING.md)** — development setup, testing commands, commit conventions.
 
 ## 🧭 Why This Matters

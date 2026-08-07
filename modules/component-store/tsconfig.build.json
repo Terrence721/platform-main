@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "declaration": true,
+    "stripInternal": true,
+    "experimentalDecorators": true,
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "noEmitOnError": false,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "ignoreDeprecations": "6.0",
+    "outDir": "../../dist/modules/component-store",
+    "rootDir": ".",
+    "sourceMap": true,
+    "inlineSources": true,
+    "lib": ["ES2022", "dom"],
+    "target": "ES2022",
+    "useDefineForClassFields": false,
+    "skipLibCheck": true
+  },
+  "files": ["public_api.ts"],
+  "angularCompilerOptions": {
+    "annotateForClosureCompiler": true,
+    "compilationMode": "partial",
+    "flatModuleOutFile": "index.js",
+    "flatModuleId": "@ngrx/component-store",
+    "strictTemplates": true
+  }
+}

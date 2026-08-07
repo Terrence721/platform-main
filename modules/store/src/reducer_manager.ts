@@ -54,6 +54,10 @@ export class ReducerManager implements OnDestroy {
     return this.reducer$.asObservable();
   }
 
+  error(err: any): void {
+    this.reducer$.error(err);
+  }
+
   addFeature(feature: StoreFeature<any, any>) {
     this.addFeatures([feature]);
   }

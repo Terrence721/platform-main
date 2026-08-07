@@ -1,5 +1,5 @@
 import { TestBed, fakeAsync, flush } from '@angular/core/testing';
-import { INIT, Store, StoreModule, Action } from '..';
+import { INIT, State, Store, StoreModule, Action } from '..';
 
 describe('ngRx State', () => {
   it('should call the reducer to scan over the dispatcher', () => {
@@ -41,4 +41,21 @@ describe('ngRx State', () => {
       flush();
     }).toThrow();
   }));
+
+  it('should forward error() to state$ subscribers', () => {
+    TestBed.configureTestingModule({
+      imports: [StoreModule.forRoot({})],
+    });
+
+    const state = TestBed.inject(State);
+    const failure = new Error('boom');
+    let seenError: unknown;
+
+    state.state$.subscribe({
+      error: (err) => (seenError = err),
+    });
+    state.error(failure);
+
+    expect(seenError).toBe(failure);
+  });
 });

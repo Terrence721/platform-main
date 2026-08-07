@@ -51,6 +51,10 @@ export class EffectSources {
     this.sources$.next(effectSourceInstance);
   }
 
+  error(err: any): void {
+    this.sources$.error(err);
+  }
+
   /**
    * @internal
    */

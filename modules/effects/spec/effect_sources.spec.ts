@@ -510,6 +510,23 @@ describe('EffectSources', () => {
     });
   });
 
+  it('should forward error() to toActions() subscribers', () => {
+    // A fresh instance, not the shared `effectSources` from beforeEach -
+    // that one already has EffectsRunner subscribed via the shorthand
+    // next-only form (real code, effects_runner.ts), which has no error
+    // handler and would turn this into an unrelated unhandled rejection.
+    const isolated = new EffectSources(mockErrorReporter, effectsErrorHandler);
+    const failure = new Error('boom');
+    let seenError: unknown;
+
+    isolated.toActions().subscribe({
+      error: (err) => (seenError = err),
+    });
+    isolated.error(failure);
+
+    expect(seenError).toBe(failure);
+  });
+
   function alwaysOf<T>(value: T) {
     return concat(of(value), NEVER);
   }

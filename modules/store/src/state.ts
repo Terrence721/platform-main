@@ -47,6 +47,10 @@ export class State<T> implements OnDestroy {
     return this.stateSubject.value;
   }
 
+  error(err: any): void {
+    this.stateSubject.error(err);
+  }
+
   constructor(
     actions$: ActionsSubject,
     reducer$: ReducerObservable,

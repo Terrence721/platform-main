@@ -1,0 +1,53 @@
+# Case Study: Rebuilding NgRx's Core Libraries
+
+Last updated: August 7, 2026
+
+## Problem
+
+Most portfolio repos are toy CRUD apps — easy to build, hard to use as evidence of senior or principal-level judgment, because there's no existing architecture to evaluate, push back on, or extend. There's nothing to _decide_.
+
+The exercise here was different: take a real, widely-used, battle-tested open-source library — [NgRx](https://github.com/ngrx/platform), Angular's dominant state-management ecosystem — and rebuild its core packages (`store`, `entity`, `effects`, `operators`, and their shared `schematics-core` utilities) module by module, from the real source. The goal wasn't to reproduce NgRx; it was to demonstrate the harder skill: knowing which parts of a mature codebase to port faithfully because they're already right, and which parts to challenge because they aren't — and being able to defend that call, in writing, the way it would need to be defended in a real architecture review.
+
+This repo is explicitly **not** a fork or continuation of the real `@ngrx/platform` project, and says so in its own README — it's a from-scratch personal workspace that started as a copy of that project's root-level config and got built out from there.
+
+## Constraints
+
+- **Solo effort, no existing team conventions to inherit.** Every piece of tooling — Nx task graph, CI/CD, dependency-security scanning, test infrastructure — had to be stood up from a bare, root-only layout, not handed down.
+- **MIT license obligations.** The ported source is real, copyrighted code (`Copyright Google Inc.` still appears in some files, e.g. `ast-utils.ts`, ported from Angular CLI). De-affiliating branding (README, `package.json`, CONTRIBUTING) while deliberately **keeping** the original license's copyright notice intact was a non-negotiable, not a style choice.
+- **Fidelity vs. judgment, decided per-module, not globally.** The default posture is "port real source verbatim" — rewriting a large, battle-tested surface for its own sake trades correctness for no real benefit. Deviating from that default had to be earned case by case, not applied as a blanket "I know better" pass.
+- **Everything had to actually run green, not just look plausible.** Every module port required a real build (`ng-packagr`), a real test run, and a real lint pass before being called done — and later, a real CI pipeline (GitHub Actions) confirming the same on infrastructure this repo doesn't control.
+
+## Architecture
+
+The single architectural decision that carries this repo is documented in full in [`docs/architecture.md`](architecture.md): six real NgRx classes across `store` and `effects` — `Store`, `ActionsSubject`, `ReducerManager`, `State`, `ScannedActionsSubject`, `EffectSources` — extend RxJS's `Observable`/`Subject` types directly in the real upstream source. That's a genuine Interface Segregation Principle violation, not a style nitpick: it hands every consumer the entire RxJS operator surface (`pipe`, `lift`, `toPromise`, ...) when each class's actual contract is much narrower ("dispatch actions," "track the combined reducer"). `Store` even has to override `lift()` in the real source purely to stop RxJS's own internal machinery from silently downgrading a `Store` back to a plain `Observable` mid-chain — direct evidence the inheritance doesn't fit, not a feature of it.
+
+Finding all six wasn't a one-pass job, and that's the part worth surfacing here over the fix itself: the first sweep caught the three obvious ones (`Store`, `ActionsSubject`, `ReducerManager`). A second pass — re-running the same grep after the first round landed — caught two more (`State`, its DI-token `StateObservable`). A third pass, this time a deliberate full-module audit of every `extends` occurrence in every file (191 occurrences, 19 files), not a spot-check of classes already under suspicion, caught the last one (`ScannedActionsSubject`, a multi-line declaration the earlier single-line grep pattern didn't match). The same discipline — grep first, verify with the real build/test/lint, treat "the fix barely moved the number" as a reason to keep digging rather than a stopping point — repeats through the rest of this repo's history, most recently in a test-infrastructure debugging session (below).
+
+The other architectural strand is Nx workspace and CI engineering: real task-dependency graph fixes (two intermittent CI failures traced to undeclared Nx `dependsOn` edges, not flaky infrastructure), and consolidating four duplicated `schematics-core` copies into one shared module after confirming the reason for the original duplication (independent npm publishing) doesn't apply to a repo that never publishes — a consolidation that hit two real technical obstacles (a TypeScript `rootDir` emit boundary, an npm `package.json` `exports`-field runtime restriction) and had to solve both properly rather than revert.
+
+## Tradeoffs
+
+**Composition over inheritance costs real capability, and the writeup says so.** `Store` no longer implements RxJS's `Observer<Action>` interface once redesigned — `next()`, `error()`, `complete()`, `subscribe()`, `pipe()` are gone from its public surface. That's not a refactor with no downside: ~40 call sites across 6 spec files needed rewriting, and 2 tests were deleted outright because the capability they tested no longer exists to test, not adapted around. The alternative — keeping the RxJS inheritance for backward compatibility — was rejected because it would have preserved the exact ISP violation the redesign exists to fix.
+
+**Chased the obvious fix first, and treated "it barely helped" as a signal, not an answer.** A recent test-infrastructure session started from a live-deployed report flagging ~100 "slow" tests. The first move was the cheap one — raise Vitest's `slowTestThreshold`. It was implemented wrong twice (set on the wrong config scope, so it silently had no effect), and once genuinely fixed, the number barely moved. Rather than declare the config change "done" and move on, that non-result was treated as evidence the real problem was somewhere else — which it was: `createWorkspace()` (a test helper that runs four full `@schematics/angular` generators) was being re-run in `beforeEach` instead of `beforeAll` across 9 spec files, paying full generator cost before every single test. Fixed at the source, not the symptom: an 18x/4.5x real speedup, not a hidden threshold.
+
+**Deferred a design decision on `schematics-core` instead of guessing upfront.** The real NgRx source duplicates `schematics-core` once per module because each module publishes to npm independently and needs its own self-contained copy. This repo doesn't publish anything — but rather than "obviously" consolidating on day one, the duplication was ported faithfully first, and only consolidated once it was confirmed unnecessary for how this repo actually works. The eventual consolidation cost real engineering (two genuine TypeScript/npm obstacles, not a find-and-replace), which is exactly why deferring the decision until it could be made on real evidence — not a hunch — was the right call.
+
+## Results / Impact
+
+- **1,411 tests passing, 159 files, 0 lint errors**, across the 4 modules ported so far (`store`, `entity`, `effects`, `operators`) — real `ng-packagr` builds, not "it compiles."
+- **18x / 4.5x reduction** in genuinely slow test suites (schematics: 52.8s → 2.9s; migrations: 51.5s → 11.4s) from one root-cause fix, found by refusing to accept a reporting-config change that didn't actually move the number.
+- **12,453 lines removed** consolidating four duplicated `schematics-core` copies into one, with zero loss of the runtime behavior the duplication was originally protecting.
+- **6 real CodeQL security findings fixed** (5x ReDoS via unanchored regex, 1x prototype pollution) in ported, pre-existing Angular CLI source — found by CodeQL, not introduced by this repo, but fixed here regardless, landed through a real branch + PR rather than a direct-to-`main` shortcut.
+- **2 intermittent CI race conditions eliminated** by declaring real Nx task dependencies instead of shelling out — verified by deliberately stress-testing with a fully clean cache and `--parallel=4`, not just "it passed once."
+- **A live, self-updating test-observability dashboard** ([deployed to GitHub Pages](https://terrence721.github.io/platform-main/) on every push to `main`) — a per-module test-composition chart built from first principles against the project's own validated color/accessibility system, not a third-party widget.
+
+## What I'd change now
+
+- **Decide the `schematics-core` duplication question in the module-porting checklist, not three modules later.** Deferring it until there was real evidence was the right call this time, but by the time it got resolved, four modules had already carried the duplicate — worth making "duplicate vs. shared" an explicit checkpoint the first time a second module needs the same shared code, not the fourth.
+- **Set up the Nx task-dependency graph correctly before the first module port, not after two intermittent CI failures surfaced it.** The fix itself was straightforward once found; finding it required real CI failures first because local runs didn't reproduce the race reliably.
+- **Sequence the remaining 8 modules for parallelism, not just dependency order.** `router-store` and `store-devtools` only depend on `store` and could theoretically be ported independently of each other — worth revisiting whether strict phase-by-phase sequencing is still the right call once the composition-over-inheritance redesign (the actual blocking dependency) is fully done.
+
+---
+
+_This case study covers `platform-main` specifically. For the full phase-by-phase build log, see [`todo.md`](../todo.md); for the architectural reasoning in full, see [`docs/architecture.md`](architecture.md)._

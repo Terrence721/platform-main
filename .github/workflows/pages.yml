@@ -1,4 +1,4 @@
-name: Deploy Test Report
+name: Deploy Pages
 
 on:
   push:
@@ -39,6 +39,9 @@ jobs:
 
       - name: Generate summary page
         run: yarn test:summary
+
+      - name: Copy static portfolio page
+        run: cp portfolio.html test-results/portfolio.html
 
       - name: Upload report artifact
         uses: actions/upload-pages-artifact@v3

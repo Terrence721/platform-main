@@ -41,6 +41,10 @@ export default defineConfig({
     reporters: [
       'default',
       ['html', { outputFile: './test-results/index.html' }],
+      // Plain JSON alongside the interactive report - scripts/generate-
+      // test-summary.ts reads this to render the pie-chart summary page,
+      // rather than decoding the html reporter's flatted-serialized data.
+      ['json', { outputFile: './test-results/results.json' }],
     ],
     // The html reporter's dashboard "Slow" stat is computed client-side
     // against this single root-level value, not each project's own

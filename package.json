@@ -10,6 +10,7 @@
     "test": "nx run-many --target=test --all",
     "test:report": "vitest run",
     "test:report:view": "vite preview --outDir test-results",
+    "test:summary": "npx tsx scripts/generate-test-summary.ts",
     "clean": "git clean -xdf",
     "coverage:html": "nyc report --reporter=html",
     "copy:dist": "ncp dist/ ./node_modules/@ngrx/",

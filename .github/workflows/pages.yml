@@ -37,6 +37,9 @@ jobs:
       - name: Generate HTML test report
         run: yarn test:report
 
+      - name: Generate summary page
+        run: yarn test:summary
+
       - name: Upload report artifact
         uses: actions/upload-pages-artifact@v3
         with:

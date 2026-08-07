@@ -5,7 +5,7 @@
 [![Quality](https://github.com/Terrence721/platform-main/actions/workflows/quality.yml/badge.svg)](https://github.com/Terrence721/platform-main/actions/workflows/quality.yml)
 [![CodeQL](https://github.com/Terrence721/platform-main/actions/workflows/codeql.yml/badge.svg)](https://github.com/Terrence721/platform-main/actions/workflows/codeql.yml)
 
-Last updated: August 6, 2026
+Last updated: August 7, 2026
 
 This repository is a personal demonstration workspace: real, MIT-licensed NgRx source added module by module, with specific pieces **redesigned by choice** — not copied verbatim — where the goal is to show a defensible, different architectural call instead of reproducing an existing one.
 
@@ -41,9 +41,12 @@ modules/
   effects/             ← added (real source); EffectSources redesigned to
                          composition
   operators/            ← added (real source); pure functions, audited clean
+  router-store/         ← added (real source); audited clean, adapted 3 call
+                           sites in production code + specs to the composed
+                           Store/ActionsSubject surface (state$/asObservable())
 ```
 
-8 more modules (`router-store`, `store-devtools`, `data`, `component-store`, `signals`, `component`, `eslint-plugin`, `schematics`) come next — see `todo.md`'s "Still to do" table for sequencing and why.
+7 more modules (`store-devtools`, `data`, `component-store`, `signals`, `component`, `eslint-plugin`, `schematics`) come next — see `todo.md`'s "Still to do" table for sequencing and why.
 
 ## 🖥 Getting Started
 

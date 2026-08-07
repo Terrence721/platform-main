@@ -1,0 +1,63 @@
+{
+  "name": "router-store",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "modules/router-store/src",
+  "prefix": "ngrx",
+  "tags": [],
+  "generators": {},
+  "targets": {
+    "build-package": {
+      "executor": "@angular/build:ng-packagr",
+      "dependsOn": ["^build"],
+      "options": {
+        "tsConfig": "modules/router-store/tsconfig.build.json",
+        "project": "modules/router-store/ng-package.json"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build-package"],
+      "options": {
+        "parallel": false,
+        "commands": [
+          {
+            "command": "tsc -p modules/router-store/tsconfig.schematics.json"
+          },
+          {
+            "command": "rimraf node_modules/@ngrx/router-store"
+          },
+          {
+            "command": "mkdirp node_modules/@ngrx/router-store"
+          },
+          {
+            "command": "ncp dist/modules/router-store node_modules/@ngrx/router-store"
+          },
+          {
+            "command": "cpy LICENSE dist/modules/router-store"
+          }
+        ]
+      },
+      "outputs": [
+        "{workspaceRoot}/dist/modules/router-store",
+        "{workspaceRoot}/dist/modules/schematics-core",
+        "{workspaceRoot}/node_modules/@ngrx/router-store"
+      ]
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": [
+          "modules/router-store/*/**/*.ts",
+          "modules/router-store/*/**/*.html"
+        ]
+      },
+      "outputs": ["{options.outputFile}"]
+    },
+    "test": {
+      "executor": "@analogjs/vitest-angular:test",
+      "dependsOn": ["build"],
+      "outputs": ["{workspaceRoot}/coverage/modules/router-store"]
+    }
+  }
+}

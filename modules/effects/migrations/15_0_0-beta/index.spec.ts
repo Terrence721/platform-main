@@ -13,10 +13,15 @@ describe('Effects Migration 15_0_0-beta', () => {
   );
   const schematicRunner = new SchematicTestRunner('schematics', collectionPath);
 
+  let baseTree: UnitTestTree;
   let appTree: UnitTestTree;
 
-  beforeEach(async () => {
-    appTree = await createWorkspace(schematicRunner, appTree);
+  beforeAll(async () => {
+    baseTree = await createWorkspace(schematicRunner, appTree);
+  });
+
+  beforeEach(() => {
+    appTree = new UnitTestTree(baseTree.branch());
   });
 
   it('replace array in provideEffects', async () => {

@@ -17,10 +17,15 @@ describe('Effects Migration 13_0_0', () => {
       collectionPath
     );
 
+    let baseTree: UnitTestTree;
     let appTree: UnitTestTree;
 
-    beforeEach(async () => {
-      appTree = await createWorkspace(schematicRunner, appTree);
+    beforeAll(async () => {
+      baseTree = await createWorkspace(schematicRunner, appTree);
+    });
+
+    beforeEach(() => {
+      appTree = new UnitTestTree(baseTree.branch());
     });
 
     it('migrates to createEffect for dispatching effects', async () => {

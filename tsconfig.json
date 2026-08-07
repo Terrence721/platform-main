@@ -16,6 +16,7 @@
     "baseUrl": ".",
     "rootDir": ".",
     "strict": true,
+    "skipLibCheck": true,
     "paths": {
       "@example-app/*": ["./projects/example-app/src/app/*"],
       "@ngrx-io/*": ["./projects/www/src/*"],

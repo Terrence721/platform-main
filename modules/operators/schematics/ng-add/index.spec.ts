@@ -18,10 +18,15 @@ describe('Operators ng-add Schematic', () => {
     skipPackageJson: false,
   };
 
+  let baseTree: UnitTestTree;
   let appTree: UnitTestTree;
 
-  beforeEach(async () => {
-    appTree = await createWorkspace(schematicRunner, appTree);
+  beforeAll(async () => {
+    baseTree = await createWorkspace(schematicRunner, appTree);
+  });
+
+  beforeEach(() => {
+    appTree = new UnitTestTree(baseTree.branch());
   });
 
   it('should update package.json', async () => {

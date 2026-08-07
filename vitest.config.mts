@@ -16,6 +16,12 @@ export const baseConfig = {
     passWithNoTests: true,
     setupFiles: ['test-setup.ts'],
     testTimeout: 30000,
+    // Default (300ms) flags nearly every compile-time type-assertion test
+    // (spec/types/**, invokes tsc/vue-tsc) and every schematics/migrations
+    // test (SchematicTestRunner does real Tree/filesystem I/O) as "slow" -
+    // that's inherent to how those tests work, not a regression. 2000ms
+    // keeps the signal meaningful for genuine runtime perf issues instead.
+    slowTestThreshold: 2000,
     typecheck: {
       enabled: true,
       ignoreSourceErrors: true,
@@ -32,5 +38,14 @@ export const baseConfig = {
 export default defineConfig({
   test: {
     projects: ['modules/*/vitest.config.mts', 'projects/*/vitest.config.mts'],
+    reporters: [
+      'default',
+      ['html', { outputFile: './test-results/index.html' }],
+    ],
+    // The html reporter's dashboard "Slow" stat is computed client-side
+    // against this single root-level value, not each project's own
+    // (merged-from-baseConfig) threshold - see the comment above baseConfig.
+    // Setting it only in baseConfig has no effect on the aggregated report.
+    slowTestThreshold: 2000,
   },
 });

@@ -4,5 +4,14 @@
     "angular.ng-template",
     "dbaeumer.vscode-eslint",
     "esbenp.prettier-vscode"
+  ],
+  "unwantedRecommendations": [
+    "cyrilletuzi.angular-schematics",
+    "kingwl.vscode-vitest-runner",
+    "orta.vscode-jest",
+    "firsttris.vscode-jest-runner",
+    "hbenl.vscode-test-explorer",
+    "ms-vscode.test-adapter-converter",
+    "simontest.simontest"
   ]
 }

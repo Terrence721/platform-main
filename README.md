@@ -47,9 +47,12 @@ modules/
   store-devtools/       ← added (real source); 1 legitimate DI-token extends
                            reviewed clean, same composition ripple adapted,
                            plus a StateObservable-specific fix
+  data/                 ← added (real source); largest module yet, audited
+                           clean, found and fixed 2 real upstream bugs plus
+                           the composition ripple in a third shape
 ```
 
-6 more modules (`data`, `component-store`, `signals`, `component`, `eslint-plugin`, `schematics`) come next — see `todo.md`'s "Still to do" table for sequencing and why.
+5 more modules (`component-store`, `signals`, `component`, `eslint-plugin`, `schematics`) come next — see `todo.md`'s "Still to do" table for sequencing and why.
 
 ## 🖥 Getting Started
 

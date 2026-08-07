@@ -6,7 +6,7 @@ This document records the architectural decisions made in this repo that deviate
 
 ## Composition over inheritance: `Store`, `ActionsSubject`, `ReducerManager`, `State`, `ScannedActionsSubject`
 
-**Status:** Done — [`3228385`](https://github.com/Terrence721/platform-main/commit/3228385) (`ActionsSubject`), [`060ea01`](https://github.com/Terrence721/platform-main/commit/060ea01) (`ReducerManager`), [`0a92ba9`](https://github.com/Terrence721/platform-main/commit/0a92ba9) (`Store`), [`2a47a33`](https://github.com/Terrence721/platform-main/commit/2a47a33) (`State`/`StateObservable`, `MockState`, `MockReducerManager`), [`a6cb76a`](https://github.com/Terrence721/platform-main/commit/a6cb76a) (`ScannedActionsSubject`). Confirmed via a full-module audit — every `extends` in every `.ts` file under `modules/store`, not a spot-check — that no other production class in the module extends an RxJS type.
+**Status:** Done — [`7ae7781`](https://github.com/Terrence721/platform-main/commit/7ae7781) (`ActionsSubject`), [`7ae7781`](https://github.com/Terrence721/platform-main/commit/7ae7781) (`ReducerManager`), [`7ae7781`](https://github.com/Terrence721/platform-main/commit/7ae7781) (`Store`), [`bb005ff`](https://github.com/Terrence721/platform-main/commit/bb005ff) (`State`/`StateObservable`, `MockState`, `MockReducerManager`), [`0998b87`](https://github.com/Terrence721/platform-main/commit/0998b87) (`ScannedActionsSubject`). Confirmed via a full-module audit — every `extends` in every `.ts` file under `modules/store`, not a spot-check — that no other production class in the module extends an RxJS type.
 
 ### Context
 
@@ -63,7 +63,7 @@ A third pass — this time a deliberate full-module audit (`grep extends` across
 
 ## Composition over inheritance, continued: `EffectSources` (`@ngrx/effects`)
 
-**Status:** Done — [`ab855b7`](https://github.com/Terrence721/platform-main/commit/ab855b7).
+**Status:** Done — [`cd346bd`](https://github.com/Terrence721/platform-main/commit/cd346bd).
 
 Porting `effects` against this repo's already-composed `Store` surfaced real build/test failures immediately, exactly as predicted above:
 

@@ -44,9 +44,12 @@ modules/
   router-store/         ← added (real source); audited clean, adapted 3 call
                            sites in production code + specs to the composed
                            Store/ActionsSubject surface (state$/asObservable())
+  store-devtools/       ← added (real source); 1 legitimate DI-token extends
+                           reviewed clean, same composition ripple adapted,
+                           plus a StateObservable-specific fix
 ```
 
-7 more modules (`store-devtools`, `data`, `component-store`, `signals`, `component`, `eslint-plugin`, `schematics`) come next — see `todo.md`'s "Still to do" table for sequencing and why.
+6 more modules (`data`, `component-store`, `signals`, `component`, `eslint-plugin`, `schematics`) come next — see `todo.md`'s "Still to do" table for sequencing and why.
 
 ## 🖥 Getting Started
 

@@ -1,0 +1,394 @@
+import { Inject, Injectable, InjectionToken } from '@angular/core';
+import { Action, ActionCreator, UPDATE } from '@ngrx/store';
+import { EMPTY, Observable, of } from 'rxjs';
+import {
+  catchError,
+  concatMap,
+  debounceTime,
+  filter,
+  map,
+  share,
+  switchMap,
+  take,
+  takeUntil,
+  timeout,
+} from 'rxjs/operators';
+
+import { IMPORT_STATE, PERFORM_ACTION } from './actions';
+import {
+  SerializationOptions,
+  STORE_DEVTOOLS_CONFIG,
+  StoreDevtoolsConfig,
+} from './config';
+import { DevtoolsDispatcher } from './devtools-dispatcher';
+import { LiftedAction, LiftedState } from './reducer';
+import {
+  isActionFiltered,
+  sanitizeAction,
+  sanitizeActions,
+  sanitizeState,
+  sanitizeStates,
+  shouldFilterActions,
+  unliftState,
+} from './utils';
+import { injectZoneConfig } from './zone-config';
+
+export const ExtensionActionTypes = {
+  START: 'START',
+  DISPATCH: 'DISPATCH',
+  STOP: 'STOP',
+  ACTION: 'ACTION',
+};
+
+export const REDUX_DEVTOOLS_EXTENSION =
+  new InjectionToken<ReduxDevtoolsExtension>(
+    '@ngrx/store-devtools Redux Devtools Extension'
+  );
+
+export interface ReduxDevtoolsExtensionConnection {
+  subscribe(listener: (change: any) => void): void;
+  unsubscribe(): void;
+  send(action: any, state: any): void;
+  init(state?: any): void;
+  error(anyErr: any): void;
+}
+export interface ReduxDevtoolsExtensionConfig {
+  features?: object | boolean;
+  name: string | undefined;
+  maxAge?: number;
+  autoPause?: boolean;
+  serialize?: boolean | SerializationOptions;
+  trace?: boolean | (() => string);
+  traceLimit?: number;
+  actionCreators?: ActionCreatorDescriptor[];
+}
+
+/**
+ * The shape the Redux DevTools extension expects action creators to be in.
+ * The extension serializes the entries with `JSON.stringify` (keeping `name`
+ * and `args` to render its dispatcher) and refers back to an entry by its
+ * index (`selected`) when an action is dispatched from the extension.
+ */
+export interface ActionCreatorDescriptor {
+  name: string;
+  func: ActionCreator;
+  args: string[];
+}
+
+/**
+ * The payload the extension sends when an action is dispatched from its
+ * dispatcher using one of the configured action creators. `selected` is the
+ * index of the action creator and `args` contains the entered arguments as
+ * strings of JavaScript.
+ */
+interface ActionCreatorPayload {
+  name: string;
+  selected: number;
+  args: string[];
+  rest: string;
+}
+
+function isActionCreatorPayload(
+  action: unknown
+): action is ActionCreatorPayload {
+  return (
+    typeof action === 'object' &&
+    action !== null &&
+    !('type' in action) &&
+    typeof (action as ActionCreatorPayload).selected === 'number' &&
+    Array.isArray((action as ActionCreatorPayload).args)
+  );
+}
+
+/**
+ * Parse the parameter names out of an action creator so the extension can
+ * render input fields for them in its dispatcher.
+ */
+function getActionCreatorArgs(actionCreator: ActionCreator): string[] {
+  const source = String(actionCreator);
+  const parenthesizedArgs = source.match(/^[^(]*\(([^)]*)\)/);
+  if (!parenthesizedArgs) {
+    // arrow function with a single parameter without parentheses
+    const singleArg = source.match(/^\s*([^=\s(]+)\s*=>/);
+    return singleArg ? [singleArg[1]] : [];
+  }
+  return parenthesizedArgs[1]
+    .split(',')
+    .map((arg) =>
+      arg
+        .replace(/^\s*\.{3}/, '')
+        .split('=')[0]
+        .trim()
+    )
+    .filter((arg) => arg !== '');
+}
+
+function getActionCreatorDescriptors(
+  actionCreators: ActionCreator[] | Record<string, ActionCreator>
+): ActionCreatorDescriptor[] {
+  if (Array.isArray(actionCreators)) {
+    return actionCreators.map((actionCreator) => ({
+      name: actionCreator.type || actionCreator.name || 'anonymous',
+      func: actionCreator,
+      args: getActionCreatorArgs(actionCreator),
+    }));
+  }
+  return Object.keys(actionCreators).map((name) => ({
+    name,
+    func: actionCreators[name],
+    args: getActionCreatorArgs(actionCreators[name]),
+  }));
+}
+
+// indirect eval according to https://esbuild.github.io/content-types/#direct-eval
+const evalArg = (arg: string): unknown =>
+  arg === '' ? undefined : (0, eval)(`(${arg})`);
+
+export interface ReduxDevtoolsExtension {
+  connect(
+    options: ReduxDevtoolsExtensionConfig
+  ): ReduxDevtoolsExtensionConnection;
+  send(action: any, state: any, options: ReduxDevtoolsExtensionConfig): void;
+}
+
+@Injectable()
+export class DevtoolsExtension {
+  private devtoolsExtension: ReduxDevtoolsExtension;
+  private extensionConnection!: ReduxDevtoolsExtensionConnection;
+  private readonly actionCreatorDescriptors?: ActionCreatorDescriptor[];
+
+  liftedActions$!: Observable<any>;
+  actions$!: Observable<any>;
+  start$!: Observable<any>;
+
+  private zoneConfig = injectZoneConfig(this.config.connectInZone!);
+
+  constructor(
+    @Inject(REDUX_DEVTOOLS_EXTENSION) devtoolsExtension: ReduxDevtoolsExtension,
+    @Inject(STORE_DEVTOOLS_CONFIG) private config: StoreDevtoolsConfig,
+    private dispatcher: DevtoolsDispatcher
+  ) {
+    this.devtoolsExtension = devtoolsExtension;
+    this.actionCreatorDescriptors = config.actionCreators
+      ? getActionCreatorDescriptors(config.actionCreators)
+      : undefined;
+    this.createActionStreams();
+  }
+
+  notify(action: LiftedAction, state: LiftedState) {
+    if (!this.devtoolsExtension) {
+      return;
+    }
+    // Check to see if the action requires a full update of the liftedState.
+    // If it is a simple action generated by the user's app and the recording
+    // is not locked/paused, only send the action and the current state (fast).
+    //
+    // A full liftedState update (slow: serializes the entire liftedState) is
+    // only required when:
+    //   a) redux-devtools-extension fires the @@Init action (ignored by
+    //      @ngrx/store-devtools)
+    //   b) an action is generated by an @ngrx module (e.g. @ngrx/effects/init
+    //      or @ngrx/store/update-reducers)
+    //   c) the state has been recomputed due to time-traveling
+    //   d) any action that is not a PerformAction to err on the side of
+    //      caution.
+    if (action.type === PERFORM_ACTION) {
+      if (state.isLocked || state.isPaused) {
+        return;
+      }
+
+      const currentState = unliftState(state);
+      if (
+        shouldFilterActions(this.config) &&
+        isActionFiltered(
+          currentState,
+          action,
+          this.config.predicate,
+          this.config.actionsSafelist,
+          this.config.actionsBlocklist
+        )
+      ) {
+        return;
+      }
+      const sanitizedState = this.config.stateSanitizer
+        ? sanitizeState(
+            this.config.stateSanitizer,
+            currentState,
+            state.currentStateIndex
+          )
+        : currentState;
+      const sanitizedAction = this.config.actionSanitizer
+        ? sanitizeAction(
+            this.config.actionSanitizer,
+            action,
+            state.nextActionId
+          )
+        : action;
+
+      this.sendToReduxDevtools(() =>
+        this.extensionConnection.send(sanitizedAction, sanitizedState)
+      );
+    } else {
+      // Requires full state update
+      const sanitizedLiftedState = {
+        ...state,
+        stagedActionIds: state.stagedActionIds,
+        actionsById: this.config.actionSanitizer
+          ? sanitizeActions(this.config.actionSanitizer, state.actionsById)
+          : state.actionsById,
+        computedStates: this.config.stateSanitizer
+          ? sanitizeStates(this.config.stateSanitizer, state.computedStates)
+          : state.computedStates,
+      };
+
+      this.sendToReduxDevtools(() =>
+        this.devtoolsExtension.send(
+          null,
+          sanitizedLiftedState,
+          this.getExtensionConfig(this.config)
+        )
+      );
+    }
+  }
+
+  private createChangesObservable(): Observable<any> {
+    if (!this.devtoolsExtension) {
+      return EMPTY;
+    }
+
+    return new Observable((subscriber) => {
+      const connection = this.zoneConfig.connectInZone
+        ? // To reduce change detection cycles, we need to run the `connect` method
+          // outside of the Angular zone. The `connect` method adds a `message`
+          // event listener to communicate with an extension using `window.postMessage`
+          // and handle message events.
+          this.zoneConfig.ngZone.runOutsideAngular(() =>
+            this.devtoolsExtension.connect(this.getExtensionConfig(this.config))
+          )
+        : this.devtoolsExtension.connect(this.getExtensionConfig(this.config));
+
+      this.extensionConnection = connection;
+      connection.init();
+
+      connection.subscribe((change: any) => subscriber.next(change));
+      return connection.unsubscribe;
+    });
+  }
+
+  private createActionStreams() {
+    // Listens to all changes
+    const changes$ = this.createChangesObservable().pipe(share());
+
+    // Listen for the start action
+    const start$ = changes$.pipe(
+      filter((change: any) => change.type === ExtensionActionTypes.START)
+    );
+
+    // Listen for the stop action
+    const stop$ = changes$.pipe(
+      filter((change: any) => change.type === ExtensionActionTypes.STOP)
+    );
+
+    // Listen for lifted actions
+    const liftedActions$ = changes$.pipe(
+      filter((change) => change.type === ExtensionActionTypes.DISPATCH),
+      map((change) => this.unwrapAction(change.payload)),
+      concatMap((action: any) => {
+        if (action.type === IMPORT_STATE) {
+          // State imports may happen in two situations:
+          // 1. Explicitly by user
+          // 2. User activated the "persist state accross reloads" option
+          //    and now the state is imported during reload.
+          // Because of option 2, we need to give possible
+          // lazy loaded reducers time to instantiate.
+          // As soon as there is no UPDATE action within 1 second,
+          // it is assumed that all reducers are loaded.
+          return this.dispatcher.asObservable().pipe(
+            filter((action) => action.type === UPDATE),
+            timeout(1000),
+            debounceTime(1000),
+            map(() => action),
+            catchError(() => of(action)),
+            take(1)
+          );
+        } else {
+          return of(action);
+        }
+      })
+    );
+
+    // Listen for unlifted actions
+    const actions$ = changes$.pipe(
+      filter((change) => change.type === ExtensionActionTypes.ACTION),
+      map((change) => this.unwrapAction(change.payload))
+    );
+
+    const actionsUntilStop$ = actions$.pipe(takeUntil(stop$));
+    const liftedUntilStop$ = liftedActions$.pipe(takeUntil(stop$));
+    this.start$ = start$.pipe(takeUntil(stop$));
+
+    // Only take the action sources between the start/stop events
+    this.actions$ = this.start$.pipe(switchMap(() => actionsUntilStop$));
+    this.liftedActions$ = this.start$.pipe(switchMap(() => liftedUntilStop$));
+  }
+
+  private unwrapAction(action: Action) {
+    if (typeof action === 'string') {
+      // indirect eval according to https://esbuild.github.io/content-types/#direct-eval
+      return (0, eval)(`(${action})`);
+    }
+    // When action creators are configured, the extension dispatches them as a
+    // `{ selected, args }` payload that refers back to the configured action
+    // creators instead of a ready-made action.
+    if (this.actionCreatorDescriptors && isActionCreatorPayload(action)) {
+      const descriptor = this.actionCreatorDescriptors[action.selected];
+      if (descriptor) {
+        const args = action.args.map(evalArg);
+        if (action.rest) {
+          const rest = evalArg(action.rest);
+          if (Array.isArray(rest)) {
+            args.push(...rest);
+          }
+        }
+        return descriptor.func(...args);
+      }
+    }
+    return action;
+  }
+
+  private getExtensionConfig(config: StoreDevtoolsConfig) {
+    const extensionOptions: ReduxDevtoolsExtensionConfig = {
+      name: config.name,
+      features: config.features,
+      serialize: config.serialize,
+      autoPause: config.autoPause ?? false,
+      trace: config.trace ?? false,
+      traceLimit: config.traceLimit ?? 75,
+      // The action/state sanitizers are not added to the config
+      // because sanitation is done in this class already.
+      // It is done before sending it to the devtools extension for consistency:
+      // - If we call extensionConnection.send(...),
+      //   the extension would call the sanitizers.
+      // - If we call devtoolsExtension.send(...) (aka full state update),
+      //   the extension would NOT call the sanitizers, so we have to do it ourselves.
+    };
+    if (config.maxAge !== false /* support === 0 */) {
+      extensionOptions.maxAge = config.maxAge;
+    }
+    if (this.actionCreatorDescriptors) {
+      extensionOptions.actionCreators = this.actionCreatorDescriptors;
+    }
+    return extensionOptions;
+  }
+
+  private sendToReduxDevtools(send: Function) {
+    try {
+      send();
+    } catch (err: any) {
+      console.warn(
+        '@ngrx/store-devtools: something went wrong inside the redux devtools',
+        err
+      );
+    }
+  }
+}

@@ -9,6 +9,7 @@
   "targets": {
     "build-package": {
       "executor": "@angular/build:ng-packagr",
+      "dependsOn": ["^build"],
       "options": {
         "tsConfig": "modules/entity/tsconfig.build.json",
         "project": "modules/entity/ng-package.json"
@@ -16,12 +17,10 @@
     },
     "build": {
       "executor": "nx:run-commands",
+      "dependsOn": ["build-package"],
       "options": {
         "parallel": false,
         "commands": [
-          {
-            "command": "nx build-package entity"
-          },
           {
             "command": "tsc -p modules/entity/tsconfig.schematics.json"
           },
@@ -41,6 +40,7 @@
       },
       "outputs": [
         "{workspaceRoot}/dist/modules/entity",
+        "{workspaceRoot}/dist/modules/schematics-core",
         "{workspaceRoot}/node_modules/@ngrx/entity"
       ]
     },

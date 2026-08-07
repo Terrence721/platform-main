@@ -4,7 +4,7 @@ import {
   visitTSSourceFiles,
   RemoveChange,
   commitChanges,
-} from '../../schematics-core';
+} from '../../../schematics-core';
 
 function updateCreateFeatureSelectorGenerics(): Rule {
   return (tree: Tree) => {

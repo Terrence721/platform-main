@@ -10,7 +10,7 @@ import {
   visitTSSourceFiles,
   createReplaceChange,
   ReplaceChange,
-} from '../../schematics-core';
+} from '../../../schematics-core';
 
 function renameErrorHandlerConfig(): Rule {
   return (tree: Tree, ctx: SchematicContext) => {

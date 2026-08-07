@@ -5,7 +5,7 @@ import {
   RemoveChange,
   InsertChange,
   commitChanges,
-} from '../../schematics-core';
+} from '../../../schematics-core';
 
 function updateGetMockStore(): Rule {
   return (tree: Tree) => {

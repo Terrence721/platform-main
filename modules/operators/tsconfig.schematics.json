@@ -1,16 +1,15 @@
 {
   "compilerOptions": {
     "baseUrl": ".",
-    "rootDir": ".",
+    "rootDir": "..",
     "stripInternal": true,
     "experimentalDecorators": true,
     "module": "nodenext",
     "target": "es2022",
     "moduleResolution": "nodenext",
     "ignoreDeprecations": "6.0",
-    "outDir": "../../dist/modules/operators",
+    "outDir": "../../dist/modules",
     "paths": {
-      "@ngrx/operators/schematics-core": ["./schematics-core"],
       "@ngrx/operators": ["./src"]
     },
     "sourceMap": true,

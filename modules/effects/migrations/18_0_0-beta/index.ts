@@ -12,8 +12,8 @@ import {
   createReplaceChange,
   InsertChange,
   visitTSSourceFiles,
-} from '../../schematics-core';
-import { createRemoveChange } from '../../schematics-core/utility/change';
+} from '../../../schematics-core';
+import { createRemoveChange } from '../../../schematics-core/utility/change';
 
 export function migrateConcatLatestFromImport(): Rule {
   return (tree: Tree, ctx: SchematicContext) => {

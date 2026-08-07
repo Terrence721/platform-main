@@ -1,17 +1,14 @@
 {
   "compilerOptions": {
     "baseUrl": ".",
-    "rootDir": ".",
+    "rootDir": "..",
     "stripInternal": true,
     "experimentalDecorators": true,
     "module": "nodenext",
     "target": "es2022",
     "moduleResolution": "nodenext",
     "ignoreDeprecations": "6.0",
-    "outDir": "../../dist/modules/effects",
-    "paths": {
-      "@ngrx/effects/schematics-core": ["./schematics-core"]
-    },
+    "outDir": "../../dist/modules",
     "sourceMap": true,
     "inlineSources": true,
     "lib": ["ES2022", "dom"],

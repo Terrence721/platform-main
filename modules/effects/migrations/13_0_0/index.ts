@@ -7,7 +7,7 @@ import {
   replaceImport,
   commitChanges,
   visitTSSourceFiles,
-} from '../../schematics-core';
+} from '../../../schematics-core';
 
 export function migrateToCreators(): Rule {
   return (tree: Tree) => {

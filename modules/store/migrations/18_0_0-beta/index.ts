@@ -11,8 +11,8 @@ import {
   createReplaceChange,
   InsertChange,
   visitTSSourceFiles,
-} from '../../schematics-core';
-import { createRemoveChange } from '../../schematics-core/utility/change';
+} from '../../../schematics-core';
+import { createRemoveChange } from '../../../schematics-core/utility/change';
 
 const storeModelsPath = '@ngrx/store/src/models';
 const filesWithChanges: string[] = [];

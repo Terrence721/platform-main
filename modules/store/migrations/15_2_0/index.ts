@@ -5,7 +5,7 @@ import {
   RemoveChange,
   commitChanges,
   InsertChange,
-} from '../../schematics-core';
+} from '../../../schematics-core';
 
 function updatecreateFeature(): Rule {
   return (tree: Tree) => {

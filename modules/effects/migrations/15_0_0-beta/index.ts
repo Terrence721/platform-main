@@ -10,7 +10,7 @@ import {
   createReplaceChange,
   ReplaceChange,
   visitTSSourceFiles,
-} from '../../schematics-core';
+} from '../../../schematics-core';
 
 export function migrateProvideEffects(): Rule {
   return (tree: Tree, ctx: SchematicContext) => {

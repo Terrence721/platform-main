@@ -4,8 +4,8 @@ import {
   createReplaceChange,
   commitChanges,
   Change,
-} from '../../schematics-core/index';
-import { visitCallExpression } from '../../schematics-core/utility/visitors';
+} from '../../../schematics-core';
+import { visitCallExpression } from '../../../schematics-core/utility/visitors';
 import * as ts from 'typescript';
 
 export default function migrateTapResponse(): Rule {

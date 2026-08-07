@@ -6,7 +6,7 @@ import baseConfig, {
 
 export default tseslint.config(
   {
-    ignores: ['**/dist', '**/schematics-core/**/*.ts'],
+    ignores: ['**/dist'],
   },
   baseConfig,
   {
@@ -17,6 +17,11 @@ export default tseslint.config(
       '@angular-eslint/component-selector': 'off',
       '@angular-eslint/prefer-standalone': 'off',
       '@angular-eslint/prefer-inject': 'off',
+      // migrations/schematics import the shared modules/schematics-core
+      // (a separate Nx project) via a relative path, not an npm-scoped
+      // alias - required so the compiled require() bypasses the published
+      // package.json's "exports" restriction, see docs/architecture.md.
+      '@nx/enforce-module-boundaries': 'off',
     },
     languageOptions: {
       parserOptions: {

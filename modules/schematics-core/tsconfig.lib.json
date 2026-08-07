@@ -1,20 +1,24 @@
 {
   "compilerOptions": {
     "baseUrl": ".",
+    "rootDir": ".",
+    "ignoreDeprecations": "6.0",
     "stripInternal": true,
     "experimentalDecorators": true,
-    "module": "preserve",
-    "moduleResolution": "bundler",
-    "outDir": "../../dist/modules/schematics-score",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "outDir": "../../dist/modules/schematics-core",
+    "declaration": true,
     "sourceMap": true,
     "inlineSources": true,
     "lib": ["es2022", "dom"],
     "skipLibCheck": true,
     "strict": true,
-    "target": "es2022"
+    "target": "es2022",
+    "types": ["node"]
   },
   "include": ["**/*.ts"],
-  "exclude": ["**/*.spec.ts", "test-setup.ts"],
+  "exclude": ["**/*.spec.ts", "testing/**/*.ts", "test-setup.ts"],
   "angularCompilerOptions": {
     "skipMetadataEmit": true,
     "enableSummariesForJit": false,

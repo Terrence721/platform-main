@@ -27,7 +27,6 @@
     "@ngrx/entity": "0.0.0",
     "rxjs": "^6.5.3 || ^7.5.0"
   },
-  "schematics": "./schematics/collection.json",
   "ng-update": {
     "packageGroupName": "@ngrx/store",
     "packageGroup": [

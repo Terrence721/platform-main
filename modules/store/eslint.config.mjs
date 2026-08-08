@@ -16,12 +16,12 @@ export default tseslint.config(
       '@angular-eslint/directive-selector': 'off',
       '@angular-eslint/component-selector': 'off',
       '@angular-eslint/prefer-standalone': 'off',
-      // migrations/schematics import the shared modules/schematics-core
-      // (a separate Nx project) via a relative path, not an npm-scoped
-      // alias - required so the compiled require() bypasses the published
+      '@angular-eslint/prefer-inject': 'off',
+      // migrations import the shared modules/schematics-core (a separate
+      // Nx project) via a relative path, not an npm-scoped alias -
+      // required so the compiled require() bypasses the published
       // package.json's "exports" restriction, see docs/architecture.md.
       '@nx/enforce-module-boundaries': 'off',
-      '@angular-eslint/prefer-inject': 'off',
     },
     languageOptions: {
       parserOptions: {

@@ -22,9 +22,6 @@
         "parallel": false,
         "commands": [
           {
-            "command": "tsc -p modules/data/tsconfig.schematics.json"
-          },
-          {
             "command": "rimraf node_modules/@ngrx/data"
           },
           {
@@ -40,7 +37,6 @@
       },
       "outputs": [
         "{workspaceRoot}/dist/modules/data",
-        "{workspaceRoot}/dist/modules/schematics-core",
         "{workspaceRoot}/node_modules/@ngrx/data"
       ]
     },

@@ -16,11 +16,6 @@
     "types": ["node"],
     "target": "es2022"
   },
-  "include": ["migrations/**/*.ts", "schematics/**/*.ts"],
-  "exclude": ["**/*.spec.ts"],
-  "angularCompilerOptions": {
-    "skipMetadataEmit": true,
-    "enableSummariesForJit": false,
-    "enableIvy": false
-  }
+  "include": ["migrations/**/*.ts"],
+  "exclude": ["**/*.spec.ts"]
 }

@@ -29,6 +29,7 @@
     "annotateForClosureCompiler": true,
     "compilationMode": "partial",
     "flatModuleOutFile": "index.js",
-    "flatModuleId": "@ngrx/signals"
+    "flatModuleId": "@ngrx/signals",
+    "strictTemplates": true
   }
 }

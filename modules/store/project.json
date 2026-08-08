@@ -39,7 +39,6 @@
       },
       "outputs": [
         "{workspaceRoot}/dist/modules/store",
-        "{workspaceRoot}/dist/modules/schematics-core",
         "{workspaceRoot}/node_modules/@ngrx/store"
       ]
     },

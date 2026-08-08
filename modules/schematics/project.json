@@ -18,6 +18,7 @@
     },
     "build-package": {
       "executor": "@nx/js:tsc",
+      "dependsOn": ["^build"],
       "options": {
         "outputPath": "dist/modules/schematics",
         "tsConfig": "modules/schematics/tsconfig.build.json",
@@ -82,10 +83,7 @@
           }
         ]
       },
-      "outputs": [
-        "{workspaceRoot}/dist/modules/schematics",
-        "{workspaceRoot}/dist/modules/schematics-core"
-      ]
+      "outputs": ["{workspaceRoot}/dist/modules/schematics"]
     },
     "test": {
       "executor": "@analogjs/vitest-angular:test",

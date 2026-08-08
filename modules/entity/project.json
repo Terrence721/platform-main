@@ -40,7 +40,6 @@
       },
       "outputs": [
         "{workspaceRoot}/dist/modules/entity",
-        "{workspaceRoot}/dist/modules/schematics-core",
         "{workspaceRoot}/node_modules/@ngrx/entity"
       ]
     },

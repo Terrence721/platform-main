@@ -129,6 +129,12 @@
       "factory": "./ng-add/component-store",
       "schema": "./ng-add/component-store/schema.json",
       "description": "Add @ngrx/component-store to your application (formerly @ngrx/component-store's own ng-add)"
+    },
+
+    "signals-ng-add": {
+      "factory": "./ng-add/signals",
+      "schema": "./ng-add/signals/schema.json",
+      "description": "Add @ngrx/signals to your application (formerly @ngrx/signals's own ng-add)"
     }
   }
 }

@@ -4,7 +4,6 @@
   "include": [],
   "references": [
     { "path": "./tsconfig.build.json" },
-    { "path": "./tsconfig.schematics.json" },
     { "path": "./tsconfig.spec.json" }
   ]
 }

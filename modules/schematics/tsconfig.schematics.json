@@ -16,6 +16,6 @@
     "strict": true,
     "types": ["node"]
   },
-  "include": ["migrations/**/*.ts"],
+  "include": ["migrations/**/*.ts", "ng-add/**/*.ts"],
   "exclude": ["**/*.spec.ts"]
 }

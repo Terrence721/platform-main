@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "stripInternal": true,
+    "experimentalDecorators": true,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "ignoreDeprecations": "6.0",
+    "outDir": "../../dist/modules/schematics",
+    "sourceMap": true,
+    "inlineSources": true,
+    "lib": ["es2022", "dom"],
+    "skipLibCheck": true,
+    "strict": true,
+    "types": ["node"],
+    "target": "es2022"
+  },
+  "include": ["**/*.ts"],
+  "exclude": ["**/*.spec.ts", "test-setup.ts"]
+}

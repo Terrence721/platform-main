@@ -1,0 +1,134 @@
+{
+  "extends": ["@schematics/angular"],
+  "schematics": {
+    "action": {
+      "aliases": ["a"],
+      "factory": "./src/action",
+      "schema": "./src/action/schema.json",
+      "description": "Add store actions"
+    },
+
+    "container": {
+      "aliases": ["co"],
+      "factory": "./src/container",
+      "schema": "./src/container/schema.json",
+      "description": "Add store container component"
+    },
+
+    "effect": {
+      "aliases": ["ef"],
+      "factory": "./src/effect",
+      "schema": "./src/effect/schema.json",
+      "description": "Add side effect class"
+    },
+
+    "entity": {
+      "aliases": ["en"],
+      "factory": "./src/entity",
+      "schema": "./src/entity/schema.json",
+      "description": "Add entity state"
+    },
+
+    "feature": {
+      "aliases": ["f"],
+      "factory": "./src/feature",
+      "schema": "./src/feature/schema.json",
+      "description": "Add feature state"
+    },
+
+    "ngrx-push-migration": {
+      "aliases": ["ngrxpush"],
+      "factory": "./src/ngrx-push-migration",
+      "schema": "./src/ngrx-push-migration/schema.json",
+      "description": "Migration to replace the `async` pipe with `ngrxPush`"
+    },
+
+    "reducer": {
+      "aliases": ["r"],
+      "factory": "./src/reducer",
+      "schema": "./src/reducer/schema.json",
+      "description": "Add state reducer"
+    },
+
+    "store": {
+      "aliases": ["st"],
+      "factory": "./src/store",
+      "schema": "./src/store/schema.json",
+      "description": "Adds initial setup for state management"
+    },
+    "selector": {
+      "aliases": ["se"],
+      "factory": "./src/selector",
+      "schema": "./src/selector/schema.json",
+      "description": "Add selectors"
+    },
+
+    "data": {
+      "aliases": ["dt"],
+      "factory": "./src/data",
+      "schema": "./src/data/schema.json",
+      "description": "Adds a data entity service"
+    },
+
+    "ng-add": {
+      "aliases": ["init"],
+      "factory": "./src/ng-add",
+      "schema": "./src/ng-add/schema.json",
+      "description": "Installs the NgRx schematics package"
+    },
+    "component-store": {
+      "aliases": ["cs"],
+      "factory": "./src/component-store",
+      "schema": "./src/component-store/schema.json",
+      "description": "Add component store."
+    },
+
+    "store-ng-add": {
+      "factory": "./ng-add/store",
+      "schema": "./ng-add/store/schema.json",
+      "description": "Adds initial setup for state management (formerly @ngrx/store's own ng-add)"
+    },
+
+    "entity-ng-add": {
+      "factory": "./ng-add/entity",
+      "schema": "./ng-add/entity/schema.json",
+      "description": "Add @ngrx/entity to your application (formerly @ngrx/entity's own ng-add)"
+    },
+
+    "effects-ng-add": {
+      "factory": "./ng-add/effects",
+      "schema": "./ng-add/effects/schema.json",
+      "description": "Add root side effect class (formerly @ngrx/effects's own ng-add)"
+    },
+
+    "operators-ng-add": {
+      "factory": "./ng-add/operators",
+      "schema": "./ng-add/operators/schema.json",
+      "description": "Add @ngrx/operators to your application (formerly @ngrx/operators's own ng-add)"
+    },
+
+    "router-store-ng-add": {
+      "factory": "./ng-add/router-store",
+      "schema": "./ng-add/router-store/schema.json",
+      "description": "Register @ngrx/router-store within your application (formerly @ngrx/router-store's own ng-add)"
+    },
+
+    "store-devtools-ng-add": {
+      "factory": "./ng-add/store-devtools",
+      "schema": "./ng-add/store-devtools/schema.json",
+      "description": "Adds initial setup for store-devtools (formerly @ngrx/store-devtools's own ng-add)"
+    },
+
+    "data-ng-add": {
+      "factory": "./ng-add/data",
+      "schema": "./ng-add/data/schema.json",
+      "description": "Add @ngrx/data to your application (formerly @ngrx/data's own ng-add)"
+    },
+
+    "component-store-ng-add": {
+      "factory": "./ng-add/component-store",
+      "schema": "./ng-add/component-store/schema.json",
+      "description": "Add @ngrx/component-store to your application (formerly @ngrx/component-store's own ng-add)"
+    }
+  }
+}

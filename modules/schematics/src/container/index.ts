@@ -94,10 +94,19 @@ function addStateToComponent(options: Partial<ContainerOptions>) {
     const componentClass = source.statements.find(
       (stm) => stm.kind === ts.SyntaxKind.ClassDeclaration
     ) as ts.ClassDeclaration;
+    const membersPos = componentClass.members.pos;
+    // The empty class body's line terminator can be `\r\n` or `\n` depending
+    // on how the underlying @schematics/angular template got materialized -
+    // removing a hardcoded 1-character '\n' would only strip the `\r` half
+    // of a `\r\n` pair, leaving a stray `\n` that shows up as an extra blank
+    // line in the generated class body.
+    const lineEnding = source.getFullText().startsWith('\r\n', membersPos)
+      ? '\r\n'
+      : '\n';
     const constructorUpdate = new ReplaceChange(
       componentPath,
-      componentClass.members.pos,
-      '\n',
+      membersPos,
+      lineEnding,
       `\n  constructor(private store: Store) {}`
     );
 

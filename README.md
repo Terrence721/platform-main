@@ -52,9 +52,14 @@ modules/
                            the composition ripple in a third shape
   component-store/      ← added (real source); no @ngrx/store dependency,
                            audited clean, fixed a real TS strictness gap
+  schematics/            ← added (real source); also consolidates all 8
+                           other modules' ng-add schematic into one shared
+                           package (module-qualified keys) instead of 8
+                           duplicated copies — a deliberate DRY-over-fidelity
+                           tradeoff, see docs/architecture.md
 ```
 
-4 more modules (`signals`, `component`, `eslint-plugin`, `schematics`) come next — see `todo.md`'s "Still to do" table for sequencing and why.
+3 more modules (`signals`, `component`, `eslint-plugin`) come next — see `todo.md`'s "Still to do" table for sequencing and why.
 
 ## 🖥 Getting Started
 

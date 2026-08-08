@@ -18,10 +18,5 @@
     "types": ["node"]
   },
   "include": ["**/*.ts"],
-  "exclude": ["**/*.spec.ts", "testing/**/*.ts", "test-setup.ts"],
-  "angularCompilerOptions": {
-    "skipMetadataEmit": true,
-    "enableSummariesForJit": false,
-    "enableIvy": false
-  }
+  "exclude": ["**/*.spec.ts", "testing/**/*.ts", "test-setup.ts"]
 }

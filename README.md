@@ -57,9 +57,13 @@ modules/
                            package (module-qualified keys) instead of 8
                            duplicated copies — a deliberate DRY-over-fidelity
                            tradeoff, see docs/architecture.md
+  signals/               ← added (real source); no @ngrx/store dependency,
+                           audited clean; first module added the corrected
+                           way from the start, ng-add went straight into the
+                           shared schematics package
 ```
 
-3 more modules (`signals`, `component`, `eslint-plugin`) come next — see `todo.md`'s "Still to do" table for sequencing and why.
+2 more modules (`component`, `eslint-plugin`) come next — see `todo.md`'s "Still to do" table for sequencing and why.
 
 ## 🖥 Getting Started
 

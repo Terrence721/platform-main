@@ -5,7 +5,7 @@
 [![Quality](https://github.com/Terrence721/platform-main/actions/workflows/quality.yml/badge.svg)](https://github.com/Terrence721/platform-main/actions/workflows/quality.yml)
 [![CodeQL](https://github.com/Terrence721/platform-main/actions/workflows/codeql.yml/badge.svg)](https://github.com/Terrence721/platform-main/actions/workflows/codeql.yml)
 
-Last updated: August 7, 2026
+Last updated: August 10, 2026
 
 This repository is a personal demonstration workspace: real, MIT-licensed NgRx source added module by module, with specific pieces **redesigned by choice** — not copied verbatim — where the goal is to show a defensible, different architectural call instead of reproducing an existing one.
 
@@ -61,9 +61,14 @@ modules/
                            audited clean; first module added the corrected
                            way from the start, ng-add went straight into the
                            shared schematics package
+  component/              ← added (real source); LetDirective/PushPipe, no
+                           @ngrx/store dependency, audited clean
+  eslint-plugin/           ← added (real source); 27 lint rules + configs,
+                           13th and last module — all module additions
+                           complete
 ```
 
-2 more modules (`component`, `eslint-plugin`) come next — see `todo.md`'s "Still to do" table for sequencing and why.
+All 13 modules are added. See `todo.md`'s "Still to do" table for what's left (tooling migration, containerization).
 
 ## 🖥 Getting Started
 

@@ -1,12 +1,12 @@
 # Case Study: Rebuilding NgRx's Core Libraries
 
-Last updated: August 7, 2026
+Last updated: August 10, 2026
 
 ## Problem
 
 Most portfolio repos are toy CRUD apps — easy to build, hard to use as evidence of senior or principal-level judgment, because there's no existing architecture to evaluate, push back on, or extend. There's nothing to _decide_.
 
-The exercise here was different: take a real, widely-used, battle-tested open-source library — [NgRx](https://github.com/ngrx/platform), Angular's dominant state-management ecosystem — and rebuild its core packages (`store`, `entity`, `effects`, `operators`, and their shared `schematics-core` utilities) module by module, from the real source. The goal wasn't to reproduce NgRx; it was to demonstrate the harder skill: knowing which parts of a mature codebase to carry over faithfully because they're already right, and which parts to challenge because they aren't — and being able to defend that call, in writing, the way it would need to be defended in a real architecture review.
+The exercise here was different: take a real, widely-used, battle-tested open-source library — [NgRx](https://github.com/ngrx/platform), Angular's dominant state-management ecosystem — and rebuild all 13 of its packages (`store`, `schematics-core`, `entity`, `effects`, `operators`, `router-store`, `store-devtools`, `data`, `component-store`, `schematics`, `signals`, `component`, `eslint-plugin`) module by module, from the real source. The goal wasn't to reproduce NgRx; it was to demonstrate the harder skill: knowing which parts of a mature codebase to carry over faithfully because they're already right, and which parts to challenge because they aren't — and being able to defend that call, in writing, the way it would need to be defended in a real architecture review.
 
 This repo is explicitly **not** a fork or continuation of the real `@ngrx/platform` project, and says so in its own README — it's a from-scratch personal workspace that started as a copy of that project's root-level config and got built out from there.
 
@@ -35,7 +35,8 @@ The other architectural strand is Nx workspace and CI engineering: real task-dep
 
 ## Results / Impact
 
-- **1,411 tests passing, 159 files, 0 lint errors**, across the 4 modules added so far (`store`, `entity`, `effects`, `operators`) — real `ng-packagr` builds, not "it compiles."
+- **5,375 tests passing, 517 files, 0 lint errors**, across all 13 modules — real `ng-packagr` builds, not "it compiles."
+- **11 real Dependabot security vulnerabilities resolved** (5 high, 4 moderate, 2 low) via 7 PRs grouped by package, using scoped `yarn` `resolutions` overrides so a fix to one transitive dependency's vulnerable copy never force-crossed an unrelated consumer to a major version it wasn't designed against; the 2 alerts with no upstream fix yet were dismissed with a documented reason rather than silently ignored.
 - **18x / 4.5x reduction** in genuinely slow test suites (schematics: 52.8s → 2.9s; migrations: 51.5s → 11.4s) from one root-cause fix, found by refusing to accept a reporting-config change that didn't actually move the number.
 - **12,453 lines removed** consolidating four duplicated `schematics-core` copies into one, with zero loss of the runtime behavior the duplication was originally protecting.
 - **6 real CodeQL security findings fixed** (5x ReDoS via unanchored regex, 1x prototype pollution) in carried-over, pre-existing Angular CLI source — found by CodeQL, not introduced by this repo, but fixed here regardless, landed through a real branch + PR rather than a direct-to-`main` shortcut.

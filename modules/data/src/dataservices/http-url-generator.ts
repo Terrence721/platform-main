@@ -139,7 +139,21 @@ export class DefaultHttpUrlGenerator implements HttpUrlGenerator {
   }
 }
 
+function isSlashOrWhitespace(char: string): boolean {
+  return char === '/' || /\s/.test(char);
+}
+
 /** Remove leading & trailing spaces or slashes */
 export function normalizeRoot(root: string) {
-  return root.replace(/^[/\s]+|[/\s]+$/g, '');
+  let start = 0;
+  let end = root.length;
+
+  while (start < end && isSlashOrWhitespace(root[start])) {
+    start++;
+  }
+  while (end > start && isSlashOrWhitespace(root[end - 1])) {
+    end--;
+  }
+
+  return root.slice(start, end);
 }

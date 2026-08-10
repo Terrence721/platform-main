@@ -36,7 +36,8 @@
   },
   "packageManager": "yarn@1.22.22",
   "resolutions": {
-    "qs": "^6.15.3"
+    "qs": "^6.15.3",
+    "braces": "^3.0.3"
   },
   "lint-staged": {
     "*.{ts,json,md}": "prettier --write"

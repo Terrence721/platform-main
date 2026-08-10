@@ -1,0 +1,62 @@
+{
+  "name": "component",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "modules/component/src",
+  "prefix": "ngrx",
+  "tags": [],
+  "generators": {},
+  "targets": {
+    "build-package": {
+      "executor": "@angular/build:ng-packagr",
+      "dependsOn": ["^build"],
+      "options": {
+        "tsConfig": "modules/component/tsconfig.build.json",
+        "project": "modules/component/ng-package.json"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build-package"],
+      "options": {
+        "parallel": false,
+        "commands": [
+          {
+            "command": "tsc -p modules/component/tsconfig.schematics.json"
+          },
+          {
+            "command": "rimraf node_modules/@ngrx/component"
+          },
+          {
+            "command": "mkdirp node_modules/@ngrx/component"
+          },
+          {
+            "command": "ncp dist/modules/component node_modules/@ngrx/component"
+          },
+          {
+            "command": "cpy LICENSE dist/modules/component"
+          }
+        ]
+      },
+      "outputs": [
+        "{workspaceRoot}/dist/modules/component",
+        "{workspaceRoot}/node_modules/@ngrx/component"
+      ]
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": [
+          "modules/component/*/**/*.ts",
+          "modules/component/*/**/*.html"
+        ]
+      },
+      "outputs": ["{options.outputFile}"]
+    },
+    "test": {
+      "executor": "@analogjs/vitest-angular:test",
+      "dependsOn": ["build"],
+      "outputs": ["{workspaceRoot}/coverage/modules/component"]
+    }
+  }
+}

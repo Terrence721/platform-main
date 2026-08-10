@@ -1,0 +1,49 @@
+{
+  "name": "@ngrx/component",
+  "version": "0.0.0",
+  "description": "Reactive Extensions for Angular Components",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Terrence721/platform-main.git"
+  },
+  "keywords": [
+    "Angular",
+    "RxJS",
+    "NgRx",
+    "Components",
+    "Angular CLI"
+  ],
+  "author": "Terrence Daniels",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Terrence721/platform-main/issues"
+  },
+  "homepage": "https://github.com/Terrence721/platform-main#readme",
+  "peerDependencies": {
+    "@angular/common": "^22.0.0",
+    "@angular/core": "^22.0.0",
+    "rxjs": "^6.5.3 || ^7.5.0"
+  },
+  "sideEffects": false,
+  "ng-update": {
+    "packageGroupName": "@ngrx/store",
+    "packageGroup": [
+      "@ngrx/store",
+      "@ngrx/effects",
+      "@ngrx/entity",
+      "@ngrx/router-store",
+      "@ngrx/data",
+      "@ngrx/schematics",
+      "@ngrx/store-devtools",
+      "@ngrx/component-store",
+      "@ngrx/component",
+      "@ngrx/eslint-plugin",
+      "@ngrx/operators",
+      "@ngrx/signals"
+    ],
+    "migrations": "./migrations/migration.json"
+  },
+  "dependencies": {
+    "tslib": "^2.0.0"
+  }
+}

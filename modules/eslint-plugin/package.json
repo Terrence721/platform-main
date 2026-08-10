@@ -1,0 +1,46 @@
+{
+  "name": "@ngrx/eslint-plugin",
+  "version": "0.0.0",
+  "description": "NgRx ESLint Plugin",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Terrence721/platform-main.git"
+  },
+  "keywords": [
+    "RxJS",
+    "Angular",
+    "Redux",
+    "NgRx"
+  ],
+  "author": "Terrence Daniels",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Terrence721/platform-main/issues"
+  },
+  "homepage": "https://github.com/Terrence721/platform-main#readme",
+  "ng-update": {
+    "packageGroupName": "@ngrx/store",
+    "packageGroup": [
+      "@ngrx/store",
+      "@ngrx/effects",
+      "@ngrx/entity",
+      "@ngrx/router-store",
+      "@ngrx/data",
+      "@ngrx/schematics",
+      "@ngrx/store-devtools",
+      "@ngrx/component-store",
+      "@ngrx/component",
+      "@ngrx/eslint-plugin",
+      "@ngrx/operators",
+      "@ngrx/signals"
+    ],
+    "migrations": "./migrations/migration.json"
+  },
+  "sideEffects": false,
+  "peerDependencies": {
+    "eslint": "^9.0.0 || ^10.0.0",
+    "typescript": "*",
+    "typescript-eslint": "^8.0.0",
+    "@typescript-eslint/utils": "^8.0.0"
+  }
+}

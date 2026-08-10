@@ -141,6 +141,12 @@
       "factory": "./ng-add/component",
       "schema": "./ng-add/component/schema.json",
       "description": "Add @ngrx/component to your application (formerly @ngrx/component's own ng-add)"
+    },
+
+    "eslint-plugin-ng-add": {
+      "factory": "./ng-add/eslint-plugin",
+      "schema": "./ng-add/eslint-plugin/schema.json",
+      "description": "Add @ngrx/eslint-plugin to your application (formerly @ngrx/eslint-plugin's own ng-add)"
     }
   }
 }

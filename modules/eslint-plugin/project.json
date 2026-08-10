@@ -1,0 +1,63 @@
+{
+  "name": "eslint-plugin",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "modules/eslint-plugin/src",
+  "tags": [],
+  "targets": {
+    "build-package": {
+      "executor": "@nx/js:tsc",
+      "options": {
+        "outputPath": "dist/modules/eslint-plugin",
+        "tsConfig": "modules/eslint-plugin/tsconfig.build.json",
+        "packageJson": "modules/eslint-plugin/package.json",
+        "main": "modules/eslint-plugin/src/index.ts",
+        "generateExportsField": true,
+        "updateBuildableProjectDepsInPackageJson": false,
+        "sourceMap": false,
+        "assets": [
+          {
+            "input": "./modules/eslint-plugin/src",
+            "glob": "**/*.!(ts)",
+            "output": "./src"
+          }
+        ],
+        "srcRootForCompilationRoot": "modules/eslint-plugin"
+      },
+      "outputs": ["{options.outputPath}"]
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "parallel": false,
+        "commands": [
+          {
+            "command": "nx build-package eslint-plugin"
+          },
+          {
+            "command": "cpy modules/eslint-plugin/migrations/migration.json dist"
+          },
+          {
+            "command": "cpy LICENSE dist/modules/eslint-plugin"
+          }
+        ]
+      },
+      "outputs": ["{workspaceRoot}/dist/modules/eslint-plugin"]
+    },
+    "test": {
+      "executor": "@analogjs/vitest-angular:test",
+      "dependsOn": ["build"],
+      "outputs": ["{workspaceRoot}/coverage/modules/eslint-plugin"]
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": [
+          "modules/eslint-plugin/*/**/*.ts",
+          "modules/eslint-plugin/*/**/*.html"
+        ]
+      },
+      "outputs": ["{options.outputFile}"]
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "rootDir": ".",
+    "stripInternal": true,
+    "experimentalDecorators": true,
+    "moduleResolution": "node",
+    "ignoreDeprecations": "6.0",
+    "esModuleInterop": true,
+    "outDir": "../../dist/modules/eslint-plugin",
+    "sourceMap": true,
+    "inlineSources": true,
+    "lib": ["ES2022", "dom"],
+    "skipLibCheck": true,
+    "strict": true,
+    "types": ["node"],
+    "target": "es2022"
+  },
+  "include": ["migrations/**/*.ts"],
+  "exclude": ["**/*.spec.ts"]
+}

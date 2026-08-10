@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "$id": "SchematicsEslintPluginNgRx",
+  "title": "eslint-plugin-ngrx schema",
+  "type": "object",
+  "properties": {
+    "config": {
+      "description": "The config to be used.",
+      "type": "string",
+      "default": "all",
+      "enum": [
+        "all",
+        "allTypeChecked",
+        "componentStore",
+        "effects",
+        "effectsTypeChecked",
+        "operators",
+        "signals",
+        "signalsTypeChecked",
+        "store"
+      ],
+      "x-prompt": {
+        "message": "Which ESLint configuration would you like to use?",
+        "type": "list",
+        "items": [
+          {
+            "value": "all",
+            "label": "all"
+          },
+          {
+            "value": "allTypeChecked",
+            "label": "allTypeChecked"
+          },
+          {
+            "value": "componentStore",
+            "label": "componentStore"
+          },
+          {
+            "value": "effects",
+            "label": "effects"
+          },
+          {
+            "value": "effectsTypeChecked",
+            "label": "effectsTypeChecked"
+          },
+          {
+            "value": "operators",
+            "label": "operators"
+          },
+          {
+            "value": "signals",
+            "label": "signals"
+          },
+          {
+            "value": "signalsTypeChecked",
+            "label": "signalsTypeChecked"
+          },
+          {
+            "value": "store",
+            "label": "store"
+          }
+        ]
+      }
+    }
+  },
+  "required": []
+}

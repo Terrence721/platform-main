@@ -37,7 +37,8 @@
   "packageManager": "yarn@1.22.22",
   "resolutions": {
     "qs": "^6.15.3",
-    "braces": "^3.0.3"
+    "braces": "^3.0.3",
+    "**/nx/brace-expansion": "^5.0.9"
   },
   "lint-staged": {
     "*.{ts,json,md}": "prettier --write"

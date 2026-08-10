@@ -40,7 +40,8 @@
     "braces": "^3.0.3",
     "**/nx/brace-expansion": "^5.0.9",
     "@hono/node-server": "^2.0.5",
-    "esbuild": "^0.28.1"
+    "esbuild": "^0.28.1",
+    "uuid": "^11.1.1"
   },
   "lint-staged": {
     "*.{ts,json,md}": "prettier --write"

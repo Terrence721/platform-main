@@ -131,4 +131,12 @@ Real, unmodified upstream `@ngrx/store` source — pure type definitions plus a 
 
 ---
 
+### [`private_export.ts`](https://github.com/Terrence721/platform-main/blob/7e7a67addd5ece8030d0f74463f302bc69a5efb7/modules/store/src/private_export.ts)
+
+**n/a · Maintainability** — Reviewed, no findings, structural note recorded ([issue #74](https://github.com/Terrence721/platform-main/issues/74))
+
+Mirrors real upstream ngrx's monorepo-internal sharing mechanism — a second "private" entry point sibling packages import instead of the public one, for symbols deliberately excluded from `index.ts`. Every symbol it re-exports here is _also_ already public via `index.ts`, and nothing outside `store`'s own two integration specs imports from it, so its original gating purpose doesn't currently apply in this repo's per-package build. Not a defect — recorded as an observation, consistent with fidelity-to-upstream being a deliberate choice elsewhere in this repo.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `store` module is in progress — see [todo.md](../todo.md) for the full per-file table._

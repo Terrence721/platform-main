@@ -49,4 +49,12 @@ Real, unmodified upstream `@ngrx/store` source — `createFeature()`'s selector-
 
 ---
 
+### [`flags.ts`](https://github.com/Terrence721/platform-main/blob/7e7a67addd5ece8030d0f74463f302bc69a5efb7/modules/store/src/flags.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #54](https://github.com/Terrence721/platform-main/issues/54))
+
+Real, unmodified upstream `@ngrx/store` source — a trivial module-level mutable boolean (`_ngrxMockEnvironment`) with a getter/setter pair, used to flag a mock testing environment. 8 lines, no branching, nothing to get wrong.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `store` module is in progress — see [todo.md](../todo.md) for the full per-file table._

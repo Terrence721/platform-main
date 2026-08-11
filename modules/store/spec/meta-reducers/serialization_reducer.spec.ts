@@ -96,6 +96,14 @@ describe('serializationCheckMetaReducer:', () => {
         /Detected unserializable state at "root"/
       );
     });
+
+    Object.keys(unSerializables).forEach((key) => {
+      it(`should throw if state is itself an unserializable ${key} (not nested)`, () => {
+        expect(() =>
+          invokeStateReducer(unSerializables[key].value)
+        ).toThrowError(/Detected unserializable state at "root"/);
+      });
+    });
   });
 
   function invokeActionReducer(action: any, checkIsOn = true) {

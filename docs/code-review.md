@@ -107,4 +107,12 @@ Real, unmodified upstream `@ngrx/store` source — a 3-line barrel re-exporting 
 
 ---
 
+### [`meta-reducers/serialization_reducer.ts`](https://github.com/Terrence721/platform-main/blob/7e7a67addd5ece8030d0f74463f302bc69a5efb7/modules/store/src/meta-reducers/serialization_reducer.ts)
+
+**low · Reliability** — Fixed via [PR #69](https://github.com/Terrence721/platform-main/pull/69) ([issue #68](https://github.com/Terrence721/platform-main/issues/68))
+
+`getUnserializable()`'s root-level classification was weaker than what nested values get, inherited from the original upstream import — a variation on the same entry-point-vs-recursive-call asymmetry class as `immutability_reducer.ts`'s `freeze()` above, but a silent false-negative here rather than a crash. Nested values are classified via an explicit check set (component/number/boolean/string/array → serializable, plain object → recurse, else → flagged); the root only got a null/undefined guard before going straight to `Object.keys(target)`. A root state that's itself a `Map`/`Set`/class instance/function has no own enumerable keys, so nothing gets flagged even though `JSON.stringify` on it silently loses data — exactly what this check exists to catch. The existing test suite's `unSerializables` fixture was always exercised nested, never as the bare root, so the gap was untested. Added 5 regression tests (one per fixture entry, as root state); confirmed all 5 fail against the unfixed source and pass after the fix. Suggested fix: apply the same classification to the root that nested values already get.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `store` module is in progress — see [todo.md](../todo.md) for the full per-file table._

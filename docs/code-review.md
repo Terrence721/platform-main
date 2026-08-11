@@ -163,4 +163,12 @@ This repo's own composition-over-inheritance redesign — most consumer/DI-wirin
 
 ---
 
+### [`runtime_checks.ts`](https://github.com/Terrence721/platform-main/blob/7e7a67addd5ece8030d0f74463f302bc69a5efb7/modules/store/src/runtime_checks.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #82](https://github.com/Terrence721/platform-main/issues/82))
+
+Already read and traced extensively while investigating the three real meta-reducer findings in this module. This pass checked one thing that looked suspicious on first read: `createActiveRuntimeChecks()`'s production branch never spreads `...runtimeChecks`, so user-configured overrides are silently ignored in production. Confirmed deliberate, not an oversight — a test is literally titled `'should disable runtime checks in production even if opted in to enable'`.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `store` module is in progress — see [todo.md](../todo.md) for the full per-file table._

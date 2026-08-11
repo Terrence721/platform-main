@@ -5,7 +5,7 @@
 [![Quality](https://github.com/Terrence721/platform-main/actions/workflows/quality.yml/badge.svg)](https://github.com/Terrence721/platform-main/actions/workflows/quality.yml)
 [![CodeQL](https://github.com/Terrence721/platform-main/actions/workflows/codeql.yml/badge.svg)](https://github.com/Terrence721/platform-main/actions/workflows/codeql.yml)
 
-Last updated: August 10, 2026
+Last updated: August 11, 2026
 
 This repository is a personal demonstration workspace: real, MIT-licensed NgRx source added module by module, with specific pieces **redesigned by choice** — not copied verbatim — where the goal is to show a defensible, different architectural call instead of reproducing an existing one.
 
@@ -68,7 +68,7 @@ modules/
                            complete
 ```
 
-All 13 modules are added. See `todo.md`'s "Still to do" table for what's left (tooling migration, containerization).
+All 13 modules are added. A per-module code review audit is now in progress (`store` complete — 3 real bugs found and fixed, see [`docs/code-review.md`](docs/code-review.md)). See `todo.md`'s "Still to do" table for what's left (the remaining 12 modules' review, tooling migration, containerization).
 
 ## 🖥 Getting Started
 

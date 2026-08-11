@@ -1,6 +1,6 @@
 # Case Study: Rebuilding NgRx's Core Libraries
 
-Last updated: August 10, 2026
+Last updated: August 11, 2026
 
 ## Problem
 
@@ -40,6 +40,7 @@ The other architectural strand is Nx workspace and CI engineering: real task-dep
 - **18x / 4.5x reduction** in genuinely slow test suites (schematics: 52.8s → 2.9s; migrations: 51.5s → 11.4s) from one root-cause fix, found by refusing to accept a reporting-config change that didn't actually move the number.
 - **12,453 lines removed** consolidating four duplicated `schematics-core` copies into one, with zero loss of the runtime behavior the duplication was originally protecting.
 - **6 real CodeQL security findings fixed** (5x ReDoS via unanchored regex, 1x prototype pollution) in carried-over, pre-existing Angular CLI source — found by CodeQL, not introduced by this repo, but fixed here regardless, landed through a real branch + PR rather than a direct-to-`main` shortcut.
+- **3 real bugs found and fixed in a new per-module code-review audit** (`store`, the first of 13 modules, complete): all three the same underlying pattern — a function's top-level entry point missing a `null`-state guard its own recursive/nested-value logic already had — inherited from the original upstream import, not introduced by this repo, each reproduced with a failing regression test before being fixed and landed through its own dedicated GitHub issue + PR, reviewed and merged by hand rather than self-approved.
 - **2 intermittent CI race conditions eliminated** by declaring real Nx task dependencies instead of shelling out — verified by deliberately stress-testing with a fully clean cache and `--parallel=4`, not just "it passed once."
 - **A live, self-updating test-observability dashboard** ([deployed to GitHub Pages](https://terrence721.github.io/platform-main/) on every push to `main`) — a per-module test-composition chart built from first principles against the project's own validated color/accessibility system, not a third-party widget.
 

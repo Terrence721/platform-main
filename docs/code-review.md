@@ -203,4 +203,12 @@ This repo's own composition-over-inheritance redesign. `select()`/DI-wiring alre
 
 ---
 
+### [`store_config.ts`](https://github.com/Terrence721/platform-main/blob/7e7a67addd5ece8030d0f74463f302bc69a5efb7/modules/store/src/store_config.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #92](https://github.com/Terrence721/platform-main/issues/92))
+
+Real, unmodified upstream `@ngrx/store` source. The core feature-reducer distribution logic (`_createFeatureStore()`, `_createFeatureReducers()`) was already extensively traced and regression-tested while reviewing `provide_store.ts`. This pass covers `_initialStateFactory()` (lazy initial-state factory support), `_concatMetaReducers()` (order-preserving concat), and `_provideForRootGuard()` (`inject(Store, { skipSelf: true })` correctly detects an ancestor injector already providing `Store`, preventing double root-provisioning).
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `store` module is in progress — see [todo.md](../todo.md) for the full per-file table._

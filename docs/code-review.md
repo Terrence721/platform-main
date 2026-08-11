@@ -179,4 +179,12 @@ This repo's own composition-over-inheritance redesign, part of the same family a
 
 ---
 
+### [`selector.ts`](https://github.com/Terrence721/platform-main/blob/7e7a67addd5ece8030d0f74463f302bc69a5efb7/modules/store/src/selector.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #86](https://github.com/Terrence721/platform-main/issues/86))
+
+Real, unmodified upstream `@ngrx/store` source — `createSelector()`/`createSelectorFactory()`/`defaultMemoize()`, the largest and most heavily-used file reviewed in this module so far. Traced the reselect-style reference-preservation semantics in `defaultMemoize()` (returns the _old_ cached result when a newly-computed one is considered equal, not a bug), the three calling-convention dispatch paths in `createSelectorFactory()`, and the `.release()` cascade to parent memoized selectors. The empty-selectors-dictionary edge case (`createSelector({})`) has direct test coverage.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `store` module is in progress — see [todo.md](../todo.md) for the full per-file table._

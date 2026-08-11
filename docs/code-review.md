@@ -219,4 +219,12 @@ Real, unmodified upstream `@ngrx/store` source — the legacy `NgModule`-based (
 
 ---
 
+### [`tokens.ts`](https://github.com/Terrence721/platform-main/blob/7e7a67addd5ece8030d0f74463f302bc69a5efb7/modules/store/src/tokens.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #96](https://github.com/Terrence721/platform-main/issues/96))
+
+Real, unmodified upstream `@ngrx/store` source — pure `InjectionToken` constant declarations, no runtime logic. Every token here was already cross-referenced against its real DI usage while reviewing `provide_store.ts`, `store_module.ts`, `runtime_checks.ts`, `reducer_manager.ts`, and `store_config.ts`. `InjectionToken` identity is reference-based, not string-based, so no "duplicate token" bug class is even possible here.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `store` module is in progress — see [todo.md](../todo.md) for the full per-file table._

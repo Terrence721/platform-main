@@ -35,7 +35,7 @@ function freeze(target: any) {
         ? prop !== 'caller' && prop !== 'callee' && prop !== 'arguments'
         : true)
     ) {
-      const propValue = target[prop];
+      const propValue = (target as any)[prop];
 
       if (
         (isObjectLike(propValue) || isFunction(propValue)) &&

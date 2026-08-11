@@ -171,4 +171,12 @@ Already read and traced extensively while investigating the three real meta-redu
 
 ---
 
+### [`scanned_actions_subject.ts`](https://github.com/Terrence721/platform-main/blob/cd346bdb20794b8ba04cc885edd0c98a1aefccd8/modules/store/src/scanned_actions_subject.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #84](https://github.com/Terrence721/platform-main/issues/84))
+
+This repo's own composition-over-inheritance redesign, part of the same family as `ActionsSubject`/`ReducerManager`. Consumer check: `state.ts` calls `.next()` correctly; grepped `store` for the ripple-bug class (`.pipe`/`.lift`/`.toPromise`/`.forEach`) — no matches. `complete()` being a genuine terminator (not a no-op like `ActionsSubject`'s) is intentional and matches real upstream's design.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `store` module is in progress — see [todo.md](../todo.md) for the full per-file table._

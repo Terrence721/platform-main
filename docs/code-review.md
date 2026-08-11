@@ -155,4 +155,12 @@ Real, unmodified upstream `@ngrx/store` source — `on()`/`createReducer()`'s re
 
 ---
 
+### [`reducer_manager.ts`](https://github.com/Terrence721/platform-main/blob/ef21a62af044fd81efe94b31f75ee40e59c63ecb/modules/store/src/reducer_manager.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #80](https://github.com/Terrence721/platform-main/issues/80))
+
+This repo's own composition-over-inheritance redesign — most consumer/DI-wiring consistency already verified while reviewing `actions_subject.ts`. This pass checked `addFeatures()`'s duplicate-key handling (ordinary last-wins object semantics), `removeReducers()`'s `omit()` helper (correctly builds a new object, no mutation), and confirmed the `TODO(#823)` marker here is the same upstream typing-debt annotation already investigated while reviewing `provide_store.ts`.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `store` module is in progress — see [todo.md](../todo.md) for the full per-file table._

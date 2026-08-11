@@ -44,6 +44,26 @@ function getUnserializable(
     };
   }
 
+  // The root itself needs the same classification nested values get below
+  // (isComponent/isNumber/.../isArray -> fine, isPlainObject -> descend),
+  // otherwise a root that's e.g. a bare Map slips through undetected: it has
+  // no own enumerable keys, so the Object.keys walk below would find nothing
+  // to flag, even though it isn't serializable.
+  if (
+    path.length === 0 &&
+    !isComponent(target) &&
+    !isNumber(target) &&
+    !isBoolean(target) &&
+    !isString(target) &&
+    !isArray(target) &&
+    !isPlainObject(target)
+  ) {
+    return {
+      path: ['root'],
+      value: target,
+    };
+  }
+
   const keys = Object.keys(target);
   return keys.reduce<false | { path: string[]; value: any }>((result, key) => {
     if (result) {

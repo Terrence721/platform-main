@@ -65,4 +65,12 @@ Real, unmodified upstream `@ngrx/store` source — `REGISTERED_ACTION_TYPES` (wr
 
 ---
 
+### [`helpers.ts`](https://github.com/Terrence721/platform-main/blob/7e7a67addd5ece8030d0f74463f302bc69a5efb7/modules/store/src/helpers.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #58](https://github.com/Terrence721/platform-main/issues/58))
+
+Real, unmodified upstream `@ngrx/store` source — `capitalize()`/`uncapitalize()` and `assertDefined()`. Checked the empty-string edge case on the capitalize helpers: degrades to `''` unchanged, matching `Capitalize<''>`/`Uncapitalize<''>` at the type level.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `store` module is in progress — see [todo.md](../todo.md) for the full per-file table._

@@ -147,4 +147,12 @@ No correctness bug — the code is right — but this repo had zero test coverag
 
 ---
 
+### [`reducer_creator.ts`](https://github.com/Terrence721/platform-main/blob/7e7a67addd5ece8030d0f74463f302bc69a5efb7/modules/store/src/reducer_creator.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #78](https://github.com/Terrence721/platform-main/issues/78))
+
+Real, unmodified upstream `@ngrx/store` source — `on()`/`createReducer()`'s reducer-composition logic. Traced how multiple `on()` calls targeting the same action type chain (`const` inside the `for...of` loop gives each iteration its own binding, no closure-over-loop-variable bug); this exact scenario has direct test coverage, verified 5→6→7 across two chained `on()` calls.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `store` module is in progress — see [todo.md](../todo.md) for the full per-file table._

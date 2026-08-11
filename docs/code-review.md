@@ -187,4 +187,12 @@ Real, unmodified upstream `@ngrx/store` source — `createSelector()`/`createSel
 
 ---
 
+### [`state.ts`](https://github.com/Terrence721/platform-main/blob/ef21a62af044fd81efe94b31f75ee40e59c63ecb/modules/store/src/state.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #88](https://github.com/Terrence721/platform-main/issues/88))
+
+This repo's own composition-over-inheritance redesign — per `todo.md` phase 24, this class already went through a second dedicated audit round before this review started. Traced the full RxJS orchestration in the constructor and the `toSignal({ manualCleanup: true })` + `ngOnDestroy()` cleanup interaction: `stateSubject.complete()` propagates completion to `toSignal`'s internal subscription, a deliberate substitute for Angular's DestroyRef-based auto-cleanup. No ripple-bug-class usage found.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `store` module is in progress — see [todo.md](../todo.md) for the full per-file table._

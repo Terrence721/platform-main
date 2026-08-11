@@ -123,4 +123,12 @@ Real, unmodified upstream `@ngrx/store` source — the type-predicate helpers al
 
 ---
 
+### [`models.ts`](https://github.com/Terrence721/platform-main/blob/7e7a67addd5ece8030d0f74463f302bc69a5efb7/modules/store/src/models.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #72](https://github.com/Terrence721/platform-main/issues/72))
+
+Real, unmodified upstream `@ngrx/store` source — pure type definitions plus a handful of literal error-message string constants. No runtime code paths beyond those literals. Cross-checked the key types against consumers already reviewed (`RuntimeChecks` vs. `runtime_checks.ts`, `ActionReducer`/`ActionReducerFactory` vs. `reducer_manager.ts`, `Prettify` vs. `feature_creator.ts`) — all consistent.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `store` module is in progress — see [todo.md](../todo.md) for the full per-file table._

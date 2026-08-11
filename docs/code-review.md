@@ -46,7 +46,6 @@ This repo's own composition-over-inheritance redesign (`ActionsSubject` composes
 **n/a · Maintainability** — Reviewed, no findings ([issue #52](https://github.com/Terrence721/platform-main/issues/52))
 
 Real, unmodified upstream `@ngrx/store` source — `createFeature()`'s selector-generation logic. Traced the runtime path: `featureSelector` via `createFeatureSelector(name)`, per-property `nestedSelectors` derived from `getInitialState(reducer)` (guarded by `isPlainObject()`), merged into `{ name, reducer, ...baseSelectors, ...extraSelectors }` — matches the compile-time `Feature`/`FeatureWithExtraSelectors` types. `NotAllowedFeatureStateCheck` is a compile-time-only guard, same pattern as `action_group_creator.ts`'s `UniqueEventNameCheck`.
->>>>>>> 36bbbf6 (docs: code review — modules/store/src/feature_creator.ts (no findings))
 
 ---
 

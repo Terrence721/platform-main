@@ -33,4 +33,12 @@ Real, unmodified upstream `@ngrx/store` source — the `createActionGroup` type-
 
 ---
 
+### [`actions_subject.ts`](https://github.com/Terrence721/platform-main/blob/7ae77817174db2fed53f150ee47240d0e4180b6b/modules/store/src/actions_subject.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #50](https://github.com/Terrence721/platform-main/issues/50))
+
+This repo's own composition-over-inheritance redesign (`ActionsSubject` composes a `BehaviorSubject` instead of extending it) — traced every in-repo consumer (`Store.dispatch()`, `ReducerManagerDispatcher`, `state.ts`, `store_module.ts`) for the "ripple" bug class already found and fixed in `router-store`/`store-devtools`/`data` (a consumer relying on inherited `BehaviorSubject` surface that composition dropped). Grepped the whole `store` tree for `.pipe(`/`.lift(`/`.toPromise(`/`.forEach(`/`.value` on an actions-subject-typed variable — no matches. `complete()`'s intentional no-op matches the documented contract and `ScannedActionsSubject`'s sibling design.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `store` module is in progress — see [todo.md](../todo.md) for the full per-file table._

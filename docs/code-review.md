@@ -195,4 +195,12 @@ This repo's own composition-over-inheritance redesign — per `todo.md` phase 24
 
 ---
 
+### [`store.ts`](https://github.com/Terrence721/platform-main/blob/bb005ff51335f277079aceb67a177338a12c7948/modules/store/src/store.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #90](https://github.com/Terrence721/platform-main/issues/90))
+
+This repo's own composition-over-inheritance redesign. `select()`/DI-wiring already checked while reviewing `index.ts`. This pass focused on `processDispatchFn()`/`getCallerInjector()` — the reactive `dispatch(() => action)` API. `assertDefined()` runs before the `?? this.injector` fallback chain, guaranteeing it's non-undefined by the time it's reached; `getCallerInjector()`'s try/catch around `inject(Injector)` is the standard Angular pattern for injection-context detection; the `effect()`/`untracked()` structure correctly scopes signal tracking. Has dedicated test coverage including the explicit `{ injector }` config override.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `store` module is in progress — see [todo.md](../todo.md) for the full per-file table._

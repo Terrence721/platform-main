@@ -139,4 +139,12 @@ Mirrors real upstream ngrx's monorepo-internal sharing mechanism — a second "p
 
 ---
 
+### [`provide_store.ts`](https://github.com/Terrence721/platform-main/blob/7e7a67addd5ece8030d0f74463f302bc69a5efb7/modules/store/src/provide_store.ts)
+
+**n/a · Maintainability (test coverage)** — Fixed via [PR #77](https://github.com/Terrence721/platform-main/pull/77) ([issue #76](https://github.com/Terrence721/platform-main/issues/76))
+
+No correctness bug — the code is right — but this repo had zero test coverage for `provideState()`, the primary modern API for registering feature state. `featureStateProviderFactory()`'s `featureReducers.shift()![index]` line looked like a real bug on first read (indexing what appeared to be a single per-feature `ActionReducerMap` with a numeric index). Wrote a throwaway reproduction before concluding anything: it passed. Traced why — `FEATURE_REDUCERS` is itself a `multi: true` token whose factory re-injects the _entire_ accumulated `_FEATURE_REDUCERS` array on every registration, so `featureReducers` is N duplicate full-length copies; `.shift()` pops one copy, `[index]` picks this feature's reducer out of it (_verified_, not just theorized). Convoluted (matches the upstream `TODO(#823)` marker on that line) but correct. Given the mechanism's subtlety and complete lack of coverage, added a permanent regression test exercising 2 simultaneously-registered features, asserting default state and that dispatching to each only changes its own slice.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `store` module is in progress — see [todo.md](../todo.md) for the full per-file table._

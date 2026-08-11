@@ -99,4 +99,12 @@ Real, unmodified upstream `@ngrx/store` source — throws if `checks.action(acti
 
 ---
 
+### [`meta-reducers/index.ts`](https://github.com/Terrence721/platform-main/blob/7e7a67addd5ece8030d0f74463f302bc69a5efb7/modules/store/src/meta-reducers/index.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #66](https://github.com/Terrence721/platform-main/issues/66))
+
+Real, unmodified upstream `@ngrx/store` source — a 3-line barrel re-exporting the three meta-reducers. Matches exactly what `runtime_checks.ts` imports from it.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `store` module is in progress — see [todo.md](../todo.md) for the full per-file table._

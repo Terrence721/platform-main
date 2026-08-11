@@ -25,4 +25,12 @@ Real, unmodified upstream `@ngrx/store` source (adapted from the `ts-action` lib
 
 ---
 
+### [`action_group_creator.ts`](https://github.com/Terrence721/platform-main/blob/7e7a67addd5ece8030d0f74463f302bc69a5efb7/modules/store/src/action_group_creator.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #48](https://github.com/Terrence721/platform-main/issues/48))
+
+Real, unmodified upstream `@ngrx/store` source — the `createActionGroup` type-level machinery plus its runtime counterparts `toActionName()`/`toActionType()`. Traced the runtime path end to end and verified `toActionName`'s camelCase logic matches the compile-time `ActionName<EventName>` type computation, and that `emptyProps()` correctly resolves through `createAction`'s `'props'` case (not `'empty'`) since spreading `undefined` is a documented-safe no-op.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `store` module is in progress — see [todo.md](../todo.md) for the full per-file table._

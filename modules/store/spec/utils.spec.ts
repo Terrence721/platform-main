@@ -37,6 +37,18 @@ describe(`Store utils`, () => {
     it(`should return original state if nothing changed`, () => {
       expect(combination(initialState, { type: '' })).toBe(initialState);
     });
+
+    it(`should not throw when called with null state (e.g. from an outer reducer factory substituting a null initialState config)`, () => {
+      // No initialState arg here on purpose: this mirrors createReducerFactory(),
+      // which calls combineReducers(reducers) with no initialState of its own,
+      // then substitutes its *own* (possibly null) initialState before calling
+      // the returned combination(state, action) directly -- bypassing
+      // combination's internal `state === undefined` default entirely.
+      const nullableCombination = combineReducers(reducers as any);
+      expect(() =>
+        nullableCombination(null as any, { type: '' })
+      ).not.toThrow();
+    });
   });
 
   describe(`omit()`, () => {

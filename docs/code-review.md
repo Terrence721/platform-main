@@ -227,4 +227,12 @@ Real, unmodified upstream `@ngrx/store` source — pure `InjectionToken` constan
 
 ---
 
-_More findings are appended here as each file's PR merges. Review of the `store` module is in progress — see [todo.md](../todo.md) for the full per-file table._
+### [`utils.ts`](https://github.com/Terrence721/platform-main/blob/7e7a67addd5ece8030d0f74463f302bc69a5efb7/modules/store/src/utils.ts)
+
+**medium · Reliability** — Fixed via [issue #98](https://github.com/Terrence721/platform-main/issues/98) — **last file in the `store` module**
+
+`combineReducers()`'s returned `combination()` function crashed with an uncaught `TypeError` when called with a `null` state — the third instance of the same "guards `undefined` but not `null`" bug class already found twice in this module (`immutability_reducer.ts`, `serialization_reducer.ts` above), but in a different function this time. `createReducerFactory()`'s wrapper only guards `undefined` too, so a root/feature explicitly configured with a map-shaped reducer and `initialState: null` (via either `provideStore()`/`provideState()` or the legacy `StoreModule.forRoot()`/`forFeature()` — both go through the same code path) crashes on the very first dispatch: the wrapper substitutes `null` for `undefined` state, then calls `combination(null, action)` directly, bypassing its own `undefined` check, and `state[key]` throws. Reproduced empirically, added a regression test mirroring the exact real-world call path (not just `combineReducers`'s own default), ran the full consumer-spec suite (93 tests, both registration APIs) — no regressions. Fix: widened the guard from `state === undefined` to `state == null`, matching `combineReducers`'s inherent contract as a dictionary-shaped state combiner (unlike a single-function reducer, where `null` state is legitimate and untouched by this fix).
+
+---
+
+**`store` module review complete — 27/27 files reviewed, 3 real bugs found and fixed, 1 test-coverage gap closed.** See [todo.md](../todo.md) for the full per-file table and the next module in the audit.

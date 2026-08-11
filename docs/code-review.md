@@ -73,4 +73,12 @@ Real, unmodified upstream `@ngrx/store` source — `capitalize()`/`uncapitalize(
 
 ---
 
+### [`index.ts`](https://github.com/Terrence721/platform-main/blob/7e7a67addd5ece8030d0f74463f302bc69a5efb7/modules/store/src/index.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #60](https://github.com/Terrence721/platform-main/issues/60))
+
+The package's public API barrel. Cross-checked against `private_export.ts` (internal cross-module surface) and `meta-reducers/index.ts`: the three runtime-check meta-reducers are deliberately not re-exported here, since `runtime_checks.ts` wires them in internally via `provideRuntimeChecks()`'s `META_REDUCERS` multi-provider — matches real `@ngrx/store`'s public API, where runtime checks are configured declaratively through `provideStore()` rather than importing meta-reducers directly.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `store` module is in progress — see [todo.md](../todo.md) for the full per-file table._

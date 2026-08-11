@@ -57,4 +57,12 @@ Real, unmodified upstream `@ngrx/store` source — a trivial module-level mutabl
 
 ---
 
+### [`globals.ts`](https://github.com/Terrence721/platform-main/blob/7e7a67addd5ece8030d0f74463f302bc69a5efb7/modules/store/src/globals.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #56](https://github.com/Terrence721/platform-main/issues/56))
+
+Real, unmodified upstream `@ngrx/store` source — `REGISTERED_ACTION_TYPES` (written by `action_creator.ts`, read by `runtime_checks.ts` for duplicate-action-type detection) plus `resetRegisteredActionTypes()`. The reset loop snapshots `Object.keys()` before `delete`-ing each key, so mutating mid-loop is safe.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `store` module is in progress — see [todo.md](../todo.md) for the full per-file table._

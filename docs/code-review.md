@@ -115,4 +115,12 @@ Real, unmodified upstream `@ngrx/store` source — a 3-line barrel re-exporting 
 
 ---
 
+### [`meta-reducers/utils.ts`](https://github.com/Terrence721/platform-main/blob/7e7a67addd5ece8030d0f74463f302bc69a5efb7/modules/store/src/meta-reducers/utils.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #70](https://github.com/Terrence721/platform-main/issues/70))
+
+Real, unmodified upstream `@ngrx/store` source — the type-predicate helpers already exercised heavily while investigating the two real bugs above. Every predicate matches its name exactly; `hasOwnProperty` safely goes through `Object.prototype.hasOwnProperty.call()`.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `store` module is in progress — see [todo.md](../todo.md) for the full per-file table._

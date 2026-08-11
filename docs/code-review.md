@@ -211,4 +211,12 @@ Real, unmodified upstream `@ngrx/store` source. The core feature-reducer distrib
 
 ---
 
+### [`store_module.ts`](https://github.com/Terrence721/platform-main/blob/7e7a67addd5ece8030d0f74463f302bc69a5efb7/modules/store/src/store_module.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #94](https://github.com/Terrence721/platform-main/issues/94))
+
+Real, unmodified upstream `@ngrx/store` source — the legacy `NgModule`-based (`StoreModule.forRoot`/`forFeature`) registration API. Uses the same `featureReducers.shift()![index]` mechanism already traced and confirmed correct while reviewing `provide_store.ts`. Unlike that file, this exact mechanism already has direct, pre-existing test coverage here — `modules.spec.ts`'s `'Nested'` suite registers 3 simultaneous features together under one root module.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `store` module is in progress — see [todo.md](../todo.md) for the full per-file table._

@@ -15,6 +15,10 @@ export function immutabilityCheckMetaReducer(
 }
 
 function freeze(target: any) {
+  if (!isObjectLike(target) && !isFunction(target)) {
+    return target;
+  }
+
   Object.freeze(target);
 
   const targetIsFunction = isFunction(target);

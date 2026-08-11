@@ -110,6 +110,14 @@ describe('immutabilityCheckMetaReducer:', () => {
       ).not.toThrow();
     });
 
+    it('should not throw when the reducer returns null state', () => {
+      expect(() => invokeStateReducer(() => null)).not.toThrow();
+    });
+
+    it('should not throw when the reducer returns undefined state', () => {
+      expect(() => invokeStateReducer(() => undefined)).not.toThrow();
+    });
+
     function invokeStateReducer(reduce: Function, checkIsOn = true) {
       const reducer = immutabilityCheckMetaReducer(
         (state, action) => {

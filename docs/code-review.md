@@ -81,4 +81,14 @@ The package's public API barrel. Cross-checked against `private_export.ts` (inte
 
 ---
 
+### [`meta-reducers/immutability_reducer.ts`](https://github.com/Terrence721/platform-main/blob/7e7a67addd5ece8030d0f74463f302bc69a5efb7/modules/store/src/meta-reducers/immutability_reducer.ts)
+
+**medium · Reliability** — Fixed via [issue #62](https://github.com/Terrence721/platform-main/issues/62)
+
+`freeze()`'s top-level entry point crashed on `null`/`undefined` — inherited from the original upstream import. `Object.freeze` is a safe no-op on non-objects, but the following `Object.getOwnPropertyNames(target)` call throws `TypeError: Cannot convert undefined or null to object` for `null`/`undefined`. The function's own _recursive_ calls already guarded against this (`isObjectLike(propValue) || isFunction(propValue)` before recursing) — only the top-level entry point was missing the same guard.
+
+Reachable whenever `strictStateImmutability` is on (the dev-mode default): any reducer with legitimately nullable state — a common, valid pattern (`createReducer(null, ...)` for "not yet loaded" state) — throws an uncaught `TypeError` on every dispatch. Reproduced empirically: added 2 regression tests, confirmed they fail against the unfixed source with exactly this error, confirmed they pass after the fix. Suggested fix: apply the same `isObjectLike(target) || isFunction(target)` guard the recursive call already uses, at the top of `freeze()`.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `store` module is in progress — see [todo.md](../todo.md) for the full per-file table._

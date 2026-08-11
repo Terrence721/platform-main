@@ -15,6 +15,10 @@ export function immutabilityCheckMetaReducer(
 }
 
 function freeze(target: any) {
+  if (!isObjectLike(target) && !isFunction(target)) {
+    return target;
+  }
+
   Object.freeze(target);
 
   const targetIsFunction = isFunction(target);
@@ -31,7 +35,7 @@ function freeze(target: any) {
         ? prop !== 'caller' && prop !== 'callee' && prop !== 'arguments'
         : true)
     ) {
-      const propValue = target[prop];
+      const propValue = (target as any)[prop];
 
       if (
         (isObjectLike(propValue) || isFunction(propValue)) &&

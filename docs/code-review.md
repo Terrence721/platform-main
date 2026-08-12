@@ -255,4 +255,12 @@ Two exports: `getInitialEntityState()` (returns a fresh `{ ids: [], entities: {}
 
 ---
 
+### [`index.ts`](https://github.com/Terrence721/platform-main/blob/2208e987dda2f47373af3770d1ed6e790c34cd72/modules/entity/src/index.ts)
+
+**n/a · Maintainability** — Reviewed, no findings, structural note recorded ([issue #104](https://github.com/Terrence721/platform-main/issues/104))
+
+The package's public API barrel — re-exports `createEntityAdapter` plus 12 types from `models.ts`. Cross-checked against `models.ts`'s full export list: 8 types are deliberately not re-exported (`IdSelectorStr`/`IdSelectorNum`/`UpdateStr`/`UpdateNum` overload-resolution helpers behind their public union types, `EntityDefinition`/`EntityStateAdapter` internal composition types, `EntityMapOneNum`/`EntityMapOneStr` behind `EntityMapOne`) — matches real upstream `@ngrx/entity`'s public surface exactly, same pattern already noted for `store`'s `private_export.ts`/`index.ts` pairing.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `entity` module is in progress — see [todo.md](../todo.md) for the full per-file table._

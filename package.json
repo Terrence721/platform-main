@@ -45,7 +45,7 @@
     "**/compare-func/dot-prop": "^4.2.1"
   },
   "lint-staged": {
-    "*.{ts,json,md}": "prettier --write"
+    "*.{ts,json,md,html}": "prettier --write"
   },
   "keywords": [
     "ngrx",

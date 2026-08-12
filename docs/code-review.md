@@ -247,4 +247,12 @@ Real, unmodified upstream `@ngrx/store` source — pure `InjectionToken` constan
 
 ---
 
+### [`entity_state.ts`](https://github.com/Terrence721/platform-main/blob/2208e987dda2f47373af3770d1ed6e790c34cd72/modules/entity/src/entity_state.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #102](https://github.com/Terrence721/platform-main/issues/102))
+
+Two exports: `getInitialEntityState()` (returns a fresh `{ ids: [], entities: {} }` object literal on every call, no shared mutable reference between calls) and `createInitialStateFactory()`, whose returned `getInitialState()` is `Object.assign(getInitialEntityState(), additionalState)` — merges caller-supplied additional feature-state fields onto a fresh base object per call. Cross-checked against `create_adapter.ts`'s usage — consistent. Real, unmodified upstream `@ngrx/entity` source.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `entity` module is in progress — see [todo.md](../todo.md) for the full per-file table._

@@ -303,4 +303,12 @@ The CRUD operator set used whenever `createEntityAdapter()` has no `sortComparer
 
 ---
 
-_More findings are appended here as each file's PR merges. Review of the `entity` module is in progress — see [todo.md](../todo.md) for the full per-file table._
+### [`utils.ts`](https://github.com/Terrence721/platform-main/blob/2208e987dda2f47373af3770d1ed6e790c34cd72/modules/entity/src/utils.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #117](https://github.com/Terrence721/platform-main/issues/117)) — **last file in the `entity` module**
+
+`selectIdValue(entity, selectId)` — the single most-called helper in the module, already exercised extensively while reviewing `unsorted_state_adapter.ts`/`sorted_state_adapter.ts`. Calls the caller-supplied `selectId(entity)` and dev-mode-warns (never throws) if the key is `undefined`, still returning the key regardless — confirmed this matches real upstream `@ngrx/entity` behavior exactly, a diagnostic aid rather than a guard. Real, unmodified upstream source.
+
+---
+
+**`entity` module review complete — 9/9 files reviewed, 0 real bugs found, 2 structural observations recorded** (`index.ts`'s narrower public API matching upstream, `state_adapter.ts`'s not-reachable null-state guard gap). Unlike `store`, this module's CRUD surface didn't exhibit the entry-point-vs-recursive-call guard asymmetry that produced 3 real bugs there. See [todo.md](../todo.md) for the full per-file table and the next module in the audit.

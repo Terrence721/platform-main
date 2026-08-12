@@ -379,4 +379,12 @@ The legacy `NgModule`-based `EffectsModule.forFeature()` registration target. Co
 
 ---
 
+### [`effects_module.ts`](https://github.com/Terrence721/platform-main/blob/cd346bdb20794b8ba04cc885edd0c98a1aefccd8/modules/effects/src/effects_module.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #135](https://github.com/Terrence721/platform-main/issues/135))
+
+`EffectsModule.forFeature()`/`forRoot()` traced: `forFeature()`'s tokens are `multi: true` (correctly allows multiple calls to contribute independently), `forRoot()`'s are deliberately not, with double-registration instead caught by `_provideForRootGuard()` — structurally the same pattern as `store`'s own `_provideForRootGuard()` in `store_config.ts` (issue #92), including the same constructor-parameter-ordering trick. `createEffectsInstances()`'s `isToken()`-gated `inject()` correctly leaves functional-effect records unresolved (already-instantiated values, not injectable references), and `getClasses()` correctly filters the `providers` array to only class-based effects. Real, unmodified upstream `@ngrx/effects` source.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `effects` module is in progress — see [todo.md](../todo.md) for the full per-file table._

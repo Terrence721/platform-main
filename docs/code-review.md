@@ -271,4 +271,12 @@ Pure type definitions plus one runtime construct: `Dictionary<T>` is declared as
 
 ---
 
+### [`sorted_state_adapter.ts`](https://github.com/Terrence721/platform-main/blob/2208e987dda2f47373af3770d1ed6e790c34cd72/modules/entity/src/sorted_state_adapter.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #109](https://github.com/Terrence721/platform-main/issues/109))
+
+The CRUD operator set used whenever `createEntityAdapter()` is given a `sortComparer`. Delegates `removeOne`/`removeMany`/`removeAll` to `createUnsortedStateAdapter()` and implements the rest around a shared `merge()` helper (a standard two-pointer merge-sort merge step against the user's comparer). Traced `setOneMutably`'s re-sort-on-update path, `updateManyMutably`'s index-position heuristic for `DidMutate.EntitiesOnly` vs. `DidMutate.Both` (confirmed intentional, not a defect), and `upsertManyMutably`'s added/updated split. Checked for the "entry point vs. recursive/nested guard" bug class found in `store` — no recursion and no null/undefined state entry point here, all operations assume a valid pre-initialized `EntityState`; the asymmetry doesn't apply. Real, unmodified upstream `@ngrx/entity` source.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `entity` module is in progress — see [todo.md](../todo.md) for the full per-file table._

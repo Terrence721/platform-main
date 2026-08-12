@@ -323,4 +323,12 @@ The CRUD operator set used whenever `createEntityAdapter()` has no `sortComparer
 
 ---
 
+### [`effect_creator.ts`](https://github.com/Terrence721/platform-main/blob/cd346bdb20794b8ba04cc885edd0c98a1aefccd8/modules/effects/src/effect_creator.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #121](https://github.com/Terrence721/platform-main/issues/121))
+
+`createEffect(source, config?)` traced end to end: `effect = config.functional ? source : source()` (functional effects keep the re-invokable source function; class-property effects invoke immediately), metadata attached via `Object.defineProperty` deliberately non-enumerable so it doesn't leak into `for...in`/`Object.keys()`/`JSON.stringify()` while staying discoverable via `hasOwnProperty()`. `getCreateEffectMetadata()`'s second defensive check against [ngrx/platform#2975](https://github.com/ngrx/platform/issues/2975) (observable-like objects with an overridden `hasOwnProperty` producing false positives) confirmed present and correct — a legitimate targeted upstream fix, not something broken here. Real, unmodified upstream `@ngrx/effects` source.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `effects` module is in progress — see [todo.md](../todo.md) for the full per-file table._

@@ -355,4 +355,12 @@ The core async orchestration — composes a private `Subject` (documented as the
 
 ---
 
+### [`effects_error_handler.ts`](https://github.com/Terrence721/platform-main/blob/cd346bdb20794b8ba04cc885edd0c98a1aefccd8/modules/effects/src/effects_error_handler.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #129](https://github.com/Terrence721/platform-main/issues/129))
+
+`defaultEffectsErrorHandler()`'s recursive retry (report via `errorHandler.handleError()`, then either terminate on the last of 10 attempts or resubscribe with a fresh `catchError` wrapper) traced end to end and cross-checked against `spec/effect_sources.spec.ts`'s dedicated resubscribe-on-error/`dispatch: false`/`useEffectsErrorHandler: false` opt-out tests — all three directly confirm this file's behavior. Real, unmodified upstream `@ngrx/effects` source.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `effects` module is in progress — see [todo.md](../todo.md) for the full per-file table._

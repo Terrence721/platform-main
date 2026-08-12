@@ -287,4 +287,12 @@ The immutability wrapper every `*Mutably`-suffixed operation goes through: `crea
 
 ---
 
+### [`state_selectors.ts`](https://github.com/Terrence721/platform-main/blob/2208e987dda2f47373af3770d1ed6e790c34cd72/modules/entity/src/state_selectors.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #113](https://github.com/Terrence721/platform-main/issues/113))
+
+`createSelectorsFactory().getSelectors(selectState?)` returns `selectIds`/`selectEntities`/`selectAll`/`selectTotal` either as plain functions operating directly on `EntityState<T>` (no `selectState` given) or wrapped in `@ngrx/store`'s `createSelector(selectState, ...)` for full memoization (when given). `selectAll`'s `ids.map((id) => entities[id])` denormalization assumes `ids`/`entities` stay in lockstep — cross-checked against every state-adapter operation already reviewed in `unsorted_state_adapter.ts`/`sorted_state_adapter.ts`, which always mutate both together. `createSelector` itself was already traced and confirmed correct during the `store` review (`selector.ts`, issue #86); this file is a straightforward consumer. Real, unmodified upstream `@ngrx/entity` source.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `entity` module is in progress — see [todo.md](../todo.md) for the full per-file table._

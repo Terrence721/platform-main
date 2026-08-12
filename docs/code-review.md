@@ -371,4 +371,12 @@ The legacy `NgModule`-based `EffectsModule.forFeature()` registration target. Co
 
 ---
 
+### [`effects_metadata.ts`](https://github.com/Terrence721/platform-main/blob/cd346bdb20794b8ba04cc885edd0c98a1aefccd8/modules/effects/src/effects_metadata.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #133](https://github.com/Terrence721/platform-main/issues/133))
+
+`getSourceMetadata()` thinly re-exports `effect_creator.ts`'s `getCreateEffectMetadata()` (issue #121). `getEffectsMetadata()`, the public introspection API, reduces the metadata array into a per-property-name dictionary but drops `functional` from each entry — checked whether this is a real gap: still type-valid since `functional` is optional on `EffectConfig`, and the omission fits the function's actual purpose (introspecting registered class-instance effects, where functional-vs-not isn't a meaningful per-property distinction). Not a defect. Real, unmodified upstream `@ngrx/effects` source.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `effects` module is in progress — see [todo.md](../todo.md) for the full per-file table._

@@ -331,4 +331,12 @@ The CRUD operator set used whenever `createEntityAdapter()` has no `sortComparer
 
 ---
 
+### [`effect_notification.ts`](https://github.com/Terrence721/platform-main/blob/cd346bdb20794b8ba04cc885edd0c98a1aefccd8/modules/effects/src/effect_notification.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #123](https://github.com/Terrence721/platform-main/issues/123))
+
+`reportInvalidActions()` only inspects `'N'` notifications (a correct no-op for error/complete), and `isAction()` rejects bare functions — the runtime counterpart to the compile-time "forgot to call the action creator" check elsewhere in the module. `getEffectName()` correctly distinguishes method-style vs. property-style class-effect naming via `typeof sourceInstance[propertyName] === 'function'`, and always appends `()` for functional effects (`sourceName` null). `stringify()`'s try/catch gracefully falls back on circular-reference `JSON.stringify` failures. Real, unmodified upstream `@ngrx/effects` source.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `effects` module is in progress — see [todo.md](../todo.md) for the full per-file table._

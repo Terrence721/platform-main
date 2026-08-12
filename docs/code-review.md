@@ -339,4 +339,12 @@ The CRUD operator set used whenever `createEntityAdapter()` has no `sortComparer
 
 ---
 
+### [`effect_sources.ts`](https://github.com/Terrence721/platform-main/blob/ef21a62af044fd81efe94b31f75ee40e59c63ecb/modules/effects/src/effect_sources.ts)
+
+**n/a · Maintainability** — Reviewed, no findings — highest-risk file in the module, given the deepest scrutiny ([issue #125](https://github.com/Terrence721/platform-main/issues/125))
+
+The core async orchestration — composes a private `Subject` (documented as the same `ActionsSubject`/`ReducerManager`-style design as its store-side counterparts). `toActions()`'s nested `groupBy` (by class prototype, then by `ngrxOnIdentifyEffects()` key) → `exhaustMap` (ignoring re-additions of an already-running instance) → per-group `init$` (`take(1)` scoped per class+identifier pair, not globally) pipeline traced end to end and cross-referenced against `spec/effect_sources.spec.ts`'s 30 test cases — every behavior traced independently (grouping, dedup, init-action timing, invalid-action reporting, error resubscription) has a directly corresponding passing test. `error()`'s genuine-terminator (not no-op) behavior confirmed via its own dedicated test. Real, unmodified upstream `@ngrx/effects` source.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `effects` module is in progress — see [todo.md](../todo.md) for the full per-file table._

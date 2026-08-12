@@ -312,3 +312,15 @@ The CRUD operator set used whenever `createEntityAdapter()` has no `sortComparer
 ---
 
 **`entity` module review complete — 9/9 files reviewed, 0 real bugs found, 2 structural observations recorded** (`index.ts`'s narrower public API matching upstream, `state_adapter.ts`'s not-reachable null-state guard gap). Unlike `store`, this module's CRUD surface didn't exhibit the entry-point-vs-recursive-call guard asymmetry that produced 3 real bugs there. See [todo.md](../todo.md) for the full per-file table and the next module in the audit.
+
+### `effects` module
+
+### [`actions.ts`](https://github.com/Terrence721/platform-main/blob/cd346bdb20794b8ba04cc885edd0c98a1aefccd8/modules/effects/src/actions.ts)
+
+**n/a · Maintainability** — Reviewed, no findings, structural note recorded ([issue #119](https://github.com/Terrence721/platform-main/issues/119))
+
+`Actions<V>` genuinely extends `Observable<V>` (unlike `store`'s `ActionsSubject`/`ScannedActionsSubject`, which compose a `BehaviorSubject` instead) — checked why this is correct rather than a composition-over-inheritance gap: `Actions` is meant to be consumed directly as an RxJS source, and its `lift<R>()` override correctly ensures every operator applied via `.pipe()` produces a new `Actions<R>` (not a plain `Observable`), the standard pattern for subclassing `Observable`. `ofType()`'s 6 overloads narrow to one runtime `filter()` matching a literal action-type string or an `ActionCreator`'s `.type`. Real, unmodified upstream `@ngrx/effects` source.
+
+---
+
+_More findings are appended here as each file's PR merges. Review of the `effects` module is in progress — see [todo.md](../todo.md) for the full per-file table._

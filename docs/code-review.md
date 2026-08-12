@@ -347,4 +347,12 @@ The core async orchestration — composes a private `Subject` (documented as the
 
 ---
 
+### [`effects_actions.ts`](https://github.com/Terrence721/platform-main/blob/cd346bdb20794b8ba04cc885edd0c98a1aefccd8/modules/effects/src/effects_actions.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #127](https://github.com/Terrence721/platform-main/issues/127))
+
+`ROOT_EFFECTS_INIT`/`rootEffectsInit` — 4 lines, a single `createAction()` call. Dispatched once by `effects_root_module.ts`/`provide_effects.ts` after root effects registration, distinct from the per-effects-class `OnInitEffects` mechanism elsewhere in the module. `createAction` itself was already traced and confirmed correct during the `store` review (issue #46); this file is a trivial consumer. Real, unmodified upstream `@ngrx/effects` source.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `effects` module is in progress — see [todo.md](../todo.md) for the full per-file table._

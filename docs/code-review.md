@@ -363,4 +363,12 @@ The core async orchestration — composes a private `Subject` (documented as the
 
 ---
 
+### [`effects_feature_module.ts`](https://github.com/Terrence721/platform-main/blob/cd346bdb20794b8ba04cc885edd0c98a1aefccd8/modules/effects/src/effects_feature_module.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #131](https://github.com/Terrence721/platform-main/issues/131))
+
+The legacy `NgModule`-based `EffectsModule.forFeature()` registration target. Constructor injects `EffectsRootModule` non-optionally (DI construction order enforces `forRoot()` ran first) plus the accumulated `_FEATURE_EFFECTS_INSTANCE_GROUPS` multi-provider array; `@Optional() storeRootModule`/`storeFeatureModule` are unused beyond forcing `@ngrx/store`'s own setup to construct first, the standard Angular DI ordering trick. Body flattens the nested instance groups and delegates to the same `addEffects()` already traced in `effects_root_module.ts`. Real, unmodified upstream `@ngrx/effects` source.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `effects` module is in progress — see [todo.md](../todo.md) for the full per-file table._

@@ -236,3 +236,15 @@ Real, unmodified upstream `@ngrx/store` source — pure `InjectionToken` constan
 ---
 
 **`store` module review complete — 27/27 files reviewed, 3 real bugs found and fixed, 1 test-coverage gap closed.** See [todo.md](../todo.md) for the full per-file table and the next module in the audit.
+
+### `entity` module
+
+### [`create_adapter.ts`](https://github.com/Terrence721/platform-main/blob/2208e987dda2f47373af3770d1ed6e790c34cd72/modules/entity/src/create_adapter.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #100](https://github.com/Terrence721/platform-main/issues/100))
+
+`createEntityAdapter()` — the module's single public factory function. Five overload signatures handle the type-inference cases (default `{ id }` shape, explicit `string`/`number` `selectId`, generic `IdSelector`, no-args), all narrowing to one runtime implementation. Traced the runtime body: `selectId` defaults to `(entity: any) => entity.id` via `??`, `sortComparer` defaults to `false`, and the returned adapter is `createInitialStateFactory()` + `createSelectorsFactory()` + (`createSortedStateAdapter()`/`createUnsortedStateAdapter()` depending on `sortComparer`) object-spread together with no key collisions between the three factories. Real, effectively-unmodified upstream `@ngrx/entity` source — JSDoc has been expanded, runtime logic is untouched.
+
+---
+
+_More findings are appended here as each file's PR merges. Review of the `entity` module is in progress — see [todo.md](../todo.md) for the full per-file table._

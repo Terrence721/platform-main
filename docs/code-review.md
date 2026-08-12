@@ -263,4 +263,12 @@ The package's public API barrel — re-exports `createEntityAdapter` plus 12 typ
 
 ---
 
+### [`models.ts`](https://github.com/Terrence721/platform-main/blob/2208e987dda2f47373af3770d1ed6e790c34cd72/modules/entity/src/models.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #107](https://github.com/Terrence721/platform-main/issues/107))
+
+Pure type definitions plus one runtime construct: `Dictionary<T>` is declared as an `abstract class` implementing `DictionaryNum<T>` with a `[id: string]: T | undefined` index signature — a real TypeScript trick to get both a string and number index signature satisfied simultaneously, used purely for typing, never instantiated at runtime. Cross-checked the type surface against every already-reviewed consumer (`EntityStateAdapter` vs. `unsorted_state_adapter.ts`/`sorted_state_adapter.ts`, `EntitySelectors`/`MemoizedEntitySelectors` vs. `state_selectors.ts`, `EntityAdapter`'s conditional `selectId` type vs. `create_adapter.ts`'s 5 overloads) — all consistent. Real, unmodified upstream `@ngrx/entity` source.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `entity` module is in progress — see [todo.md](../todo.md) for the full per-file table._

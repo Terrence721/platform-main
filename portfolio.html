@@ -466,19 +466,19 @@
   <div class="wrap">
     <div class="manifest-row">
       <div class="manifest-cell">
-        <span class="v">72</span><span class="k">commits</span>
+        <span class="v">250</span><span class="k">commits</span>
       </div>
       <div class="manifest-cell">
-        <span class="v">1,411</span><span class="k">Vitest tests</span>
+        <span class="v">5,380</span><span class="k">Vitest tests</span>
       </div>
       <div class="manifest-cell">
-        <span class="v">4/12</span><span class="k">modules ported</span>
+        <span class="v">12/12</span><span class="k">modules ported</span>
       </div>
       <div class="manifest-cell">
         <span class="v">0</span><span class="k">lint errors</span>
       </div>
       <div class="manifest-cell">
-        <span class="v">6</span><span class="k">CodeQL findings fixed</span>
+        <span class="v">10</span><span class="k">CodeQL findings fixed</span>
       </div>
       <div class="manifest-cell">
         <span class="v">18×</span><span class="k">real perf fix</span>
@@ -567,12 +567,15 @@
       CodeQL findings, fixed on a branch, landed through an actual Pull Request
     </p>
     <p class="lede">
-      Both findings below are real, pre-existing vulnerabilities in ported
-      Angular CLI source (<code>Copyright Google Inc.</code> still in the file
-      header) — found by CodeQL, not introduced by this repo, fixed here
-      regardless, and landed through
+      10 CodeQL findings fixed in total across this repo's life — the two below
+      are the original pair, real pre-existing vulnerabilities in ported Angular
+      CLI source (<code>Copyright Google Inc.</code> still in the file header),
+      found by CodeQL and not introduced by this repo, fixed here regardless and
+      landed through
       <a href="https://github.com/Terrence721/platform-main/pull/21">PR #21</a>
-      rather than a direct-to-<code>main</code> shortcut.
+      rather than a direct-to-<code>main</code> shortcut. The other 8 are the
+      same two finding classes recurring as more modules were added — documented
+      below rather than folded silently into the headline count.
     </p>
     <div class="ledger">
       <div class="item">
@@ -613,6 +616,49 @@
           </div>
         </div>
       </div>
+      <div class="item">
+        <div class="no">03</div>
+        <div>
+          <div class="file">effects, entity, operators — 3× package.ts</div>
+          <div class="desc">
+            The same prototype-pollution pattern above, recurring: each of these
+            3 modules carried its own copy of
+            <code>schematics-core/utility/package.ts</code> at the time it was
+            added, inheriting the still-vulnerable code. Closed alongside the
+            rewrite that finally satisfied CodeQL's own sanitizer recognition
+            (see the note below) — all 4 duplicate copies fixed in the same
+            commit, plus a real, separately-caught CI reliability bug
+            (undeclared Nx task dependencies letting a build step race ahead of
+            its own output).
+          </div>
+          <div class="meta">
+            <span class="tag">high · security</span>
+            <a
+              href="https://github.com/Terrence721/platform-main/commit/623ed2e"
+              >commit 623ed2e</a
+            >
+          </div>
+        </div>
+      </div>
+      <div class="item">
+        <div class="no">04</div>
+        <div>
+          <div class="file">data — http-url-generator.ts</div>
+          <div class="desc">
+            A separate, later polynomial ReDoS — an alternation regex trimming
+            leading/trailing slashes and whitespace in
+            <code>normalizeRoot</code>, found once the <code>data</code> module
+            was added. Replaced with an index-based manual scan, the same
+            "immune by construction" approach as finding 01.
+          </div>
+          <div class="meta">
+            <span class="tag">high · security</span>
+            <a href="https://github.com/Terrence721/platform-main/pull/24"
+              >PR #24</a
+            >
+          </div>
+        </div>
+      </div>
     </div>
     <p class="note">
       <strong>Disclosed, not hidden:</strong> the first prototype-pollution fix
@@ -641,9 +687,9 @@
     </p>
     <div class="twocol">
       <div class="card">
-        <h3>1,411 tests, 0 lint errors</h3>
+        <h3>5,380 tests, 0 lint errors</h3>
         <p>
-          Across all 4 ported modules, real assertions against real behavior —
+          Across all 12 ported modules, real assertions against real behavior —
           not snapshot tests, not compilation-only checks passing for the wrong
           reason.
         </p>

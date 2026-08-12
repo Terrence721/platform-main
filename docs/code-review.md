@@ -279,4 +279,12 @@ The CRUD operator set used whenever `createEntityAdapter()` is given a `sortComp
 
 ---
 
+### [`state_adapter.ts`](https://github.com/Terrence721/platform-main/blob/2208e987dda2f47373af3770d1ed6e790c34cd72/modules/entity/src/state_adapter.ts)
+
+**n/a · Maintainability** — Reviewed, no findings, structural note recorded ([issue #111](https://github.com/Terrence721/platform-main/issues/111))
+
+The immutability wrapper every `*Mutably`-suffixed operation goes through: `createStateOperator(mutator)` clones `ids`/`entities`, runs the mutator against the clone, then branches on the returned `DidMutate` (`Both` merges both clone fields in, `EntitiesOnly` keeps the original `ids` reference, `None` returns the original `state` unchanged — preserving referential equality for downstream memoized selectors). Checked the store-style entry-point-guard bug class: `[...state.ids]` would throw on `null`/`undefined` state, but unlike `store`'s reducers, `entity`'s `EntityState` has no supported nullable-initial-state path — every adapter is only seeded via `getInitialState()`, which never returns `null`. Not a reachable defect, recorded as a structural observation. Real, unmodified upstream `@ngrx/entity` source.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `entity` module is in progress — see [todo.md](../todo.md) for the full per-file table._

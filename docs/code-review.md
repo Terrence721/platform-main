@@ -295,4 +295,12 @@ The immutability wrapper every `*Mutably`-suffixed operation goes through: `crea
 
 ---
 
+### [`unsorted_state_adapter.ts`](https://github.com/Terrence721/platform-main/blob/2208e987dda2f47373af3770d1ed6e790c34cd72/modules/entity/src/unsorted_state_adapter.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #115](https://github.com/Terrence721/platform-main/issues/115))
+
+The CRUD operator set used whenever `createEntityAdapter()` has no `sortComparer` (insertion-order state) — also the base `sorted_state_adapter.ts` delegates `removeOne`/`removeMany`/`removeAll` to. Traced every operation: `addOneMutably`'s no-op-on-existing-key guard, `setAllMutably`'s always-`Both` reset, `removeManyMutably`'s unify-then-filter-to-present-keys pattern, `takeNewKey`/`updateManyMutably`'s id-change detection (checked the simultaneous-updates-racing-to-the-same-key edge case — last-write-wins, matches ordinary object-assignment semantics, not a data-loss bug), and `upsertManyMutably`'s added/updated split with its 3-way `DidMutate` combination. Checked for the store-style entry-point-guard bug class (same reasoning as `state_adapter.ts`, #111) — doesn't apply. Real, unmodified upstream `@ngrx/entity` source.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `entity` module is in progress — see [todo.md](../todo.md) for the full per-file table._

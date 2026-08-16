@@ -112,6 +112,9 @@
     "rctay.karma-problem-matcher",
     "zuoez02.tslint-snippets",
     "necinc.elmmet",
-    "drblury.protobuf-vsc"
+    "drblury.protobuf-vsc",
+
+    "ms-edgedevtools.vscode-edge-devtools",
+    "webhint.vscode-webhint"
   ]
 }

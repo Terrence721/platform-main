@@ -387,4 +387,12 @@ The legacy `NgModule`-based `EffectsModule.forFeature()` registration target. Co
 
 ---
 
+### [`effects_resolver.ts`](https://github.com/Terrence721/platform-main/blob/cd346bdb20794b8ba04cc885edd0c98a1aefccd8/modules/effects/src/effects_resolver.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #137](https://github.com/Terrence721/platform-main/issues/137))
+
+`mergeEffects()` turns one registered effects source into a single merged `Observable<EffectNotification>`. Checked specifically for the entry-point null-guard gap that's been the recurring bug class in this codebase's `store` review: `isClassBasedEffect`'s `!!source &&` short-circuit correctly handles a `null` prototype (an `Object.create(null)` source) before touching `.constructor` — no crash. Traced the `dispatch === false` branch: `ignoreElements()` runs before `materialize()`, so a non-dispatching effect's own errors still propagate normally rather than being silently absorbed by the opt-out. This file's own `spec/effects_resolver.spec.ts` is a placeholder with no real assertions, but every branch traced above (class vs. functional sources, `dispatch: false`, `useEffectsErrorHandler` on/off) is exercised by `effect_sources.spec.ts`'s 30 test cases (issue #125) — organized under a different file's spec, not a real coverage gap.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `effects` module is in progress — see [todo.md](../todo.md) for the full per-file table._

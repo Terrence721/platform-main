@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: August 12, 2026**
+**Last Updated: August 19, 2026**
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -459,4 +459,4 @@ Five small helpers plus a hand-rolled `ObservableNotification<T>` union. Traced 
 
 ---
 
-_More findings are appended here as each file's PR merges. Review of the `effects` module is in progress — see [todo.md](../todo.md) for the full per-file table._
+_More findings are appended here as each file's PR merges. `store`, `entity`, and `effects` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none. No module is currently in progress — 10 remain under [issue #32](https://github.com/Terrence721/platform-main/issues/32). See [todo.md](../todo.md) for the live per-module status._

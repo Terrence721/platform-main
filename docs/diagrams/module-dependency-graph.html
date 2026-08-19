@@ -1,0 +1,420 @@
+<title>Module Dependency Graph — platform-main</title>
+<style>
+  :root {
+    --paper: #ede9df;
+    --paper-2: #e2ddd0;
+    --ink: #1c2333;
+    --ink-soft: #4b5567;
+    --rule: #c7c0ac;
+    --accent: #a13d2b;
+    --accent-ink: #fff7ef;
+    --accent-2: #2e5266;
+    --tier0: #2e5266;
+    --tier0-bg: #dfe6ea;
+    --tier1: #a13d2b;
+    --tier1-bg: #f1e2dd;
+    --tier2: #6b4a8a;
+    --tier2-bg: #e9e0f0;
+    --font-display:
+      Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', serif;
+    --font-body:
+      -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial,
+      sans-serif;
+    --font-mono:
+      ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono',
+      monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --paper: #14181f;
+      --paper-2: #1b212b;
+      --ink: #e8e4d9;
+      --ink-soft: #a3aabb;
+      --rule: #303748;
+      --accent: #dd7a4a;
+      --accent-ink: #1c1006;
+      --accent-2: #7fb2cc;
+      --tier0: #7fb2cc;
+      --tier0-bg: #1b2731;
+      --tier1: #dd7a4a;
+      --tier1-bg: #2c2019;
+      --tier2: #b79bd6;
+      --tier2-bg: #26212f;
+    }
+  }
+  :root[data-theme='dark'] {
+    --paper: #14181f;
+    --paper-2: #1b212b;
+    --ink: #e8e4d9;
+    --ink-soft: #a3aabb;
+    --rule: #303748;
+    --accent: #dd7a4a;
+    --accent-ink: #1c1006;
+    --accent-2: #7fb2cc;
+    --tier0: #7fb2cc;
+    --tier0-bg: #1b2731;
+    --tier1: #dd7a4a;
+    --tier1-bg: #2c2019;
+    --tier2: #b79bd6;
+    --tier2-bg: #26212f;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+  html {
+    color-scheme: light dark;
+  }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    padding: 2.75rem 1.5rem 4rem;
+  }
+  a {
+    color: var(--accent-2);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+  }
+  a:hover {
+    color: var(--accent);
+  }
+
+  .page {
+    max-width: 940px;
+    margin: 0 auto;
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 0.9rem;
+  }
+  .eyebrow::before {
+    content: '◆ ';
+    color: var(--accent);
+  }
+
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: clamp(1.7rem, 3.4vw, 2.5rem);
+    line-height: 1.15;
+    margin: 0 0 0.7rem;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+
+  .dek {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    max-width: 68ch;
+    margin: 0 0 2.4rem;
+  }
+  .dek code {
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+    color: var(--ink);
+  }
+
+  h2 {
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 1rem;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 0.6rem;
+  }
+
+  /* ---- tier diagram ---- */
+  .diagram {
+    border: 1px solid var(--rule);
+    background: var(--paper-2);
+    padding: 1.8rem;
+    margin-bottom: 2.4rem;
+  }
+  .tier-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.9rem 0;
+  }
+  .tier-row + .tier-row {
+    border-top: 1px dashed var(--rule);
+  }
+  .tier-label {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    width: 100%;
+    margin-bottom: 0.2rem;
+  }
+  .mod {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 0.5rem 0.85rem;
+    border: 1px solid var(--rule);
+  }
+  .mod--tier0 {
+    color: var(--tier0);
+    background: var(--tier0-bg);
+    border-color: var(--tier0);
+  }
+  .mod--tier1 {
+    color: var(--tier1);
+    background: var(--tier1-bg);
+    border-color: var(--tier1);
+  }
+  .mod--tier2 {
+    color: var(--tier2);
+    background: var(--tier2-bg);
+    border-color: var(--tier2);
+  }
+  .mod--infra {
+    color: var(--ink-soft);
+    border-style: dashed;
+  }
+
+  .arrow-up {
+    font-family: var(--font-mono);
+    color: var(--ink-soft);
+    font-size: 0.78rem;
+    text-align: center;
+    width: 100%;
+    padding: 0.1rem 0 0.3rem;
+  }
+
+  /* ---- cards ---- */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2.4rem;
+  }
+  .card {
+    border: 1px solid var(--rule);
+    padding: 1.1rem 1.25rem 1.3rem;
+  }
+  .card-tag {
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.55rem;
+    display: inline-block;
+    margin-bottom: 0.6rem;
+  }
+  .card--tier0 .card-tag {
+    color: var(--tier0);
+    background: var(--tier0-bg);
+  }
+  .card--tier1 .card-tag {
+    color: var(--tier1);
+    background: var(--tier1-bg);
+  }
+  .card--tier2 .card-tag {
+    color: var(--tier2);
+    background: var(--tier2-bg);
+  }
+  .card h3 {
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem;
+  }
+  .card ul {
+    margin: 0;
+    padding-left: 1.1rem;
+    font-size: 0.85rem;
+    line-height: 1.65;
+    color: var(--ink-soft);
+  }
+  .card ul li::marker {
+    color: var(--rule);
+  }
+  .card code {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+  }
+
+  .note {
+    border-left: 2px solid var(--accent-2);
+    padding: 0.3rem 0 0.3rem 1rem;
+    color: var(--ink-soft);
+    font-size: 0.92rem;
+    margin: 0 0 2.4rem;
+    max-width: 66ch;
+  }
+  .note strong {
+    color: var(--ink);
+  }
+  .note code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+  }
+
+  footer {
+    margin-top: 2.6rem;
+    padding-top: 1.2rem;
+    border-top: 1px solid var(--rule);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--ink-soft);
+  }
+  footer a {
+    margin-right: 1.2rem;
+  }
+</style>
+
+<div class="page">
+  <p class="eyebrow">platform-main — module dependency graph</p>
+  <h1>
+    13 modules, 3 real dependency tiers — read from every
+    <code style="font-family: var(--font-mono)">peerDependencies</code> field,
+    not guessed.
+  </h1>
+  <p class="dek">
+    Every module was ported in dependency order, tier by tier, because getting
+    the order wrong breaks the build: a module can't compile against an
+    <code>@ngrx/*</code> peer dependency that hasn't been added to the workspace
+    yet. The tiers below are exactly what <code>yarn nx graph</code> and each
+    module's own <code>package.json</code> say — verified again while building
+    this diagram, not carried over from an old note.
+  </p>
+
+  <h2>Dependency Diagram</h2>
+  <div class="diagram">
+    <div class="tier-row">
+      <span class="tier-label"
+        >Tier 0 — no internal @ngrx/* peer dependency</span
+      >
+      <span class="mod mod--tier0">store</span>
+      <span class="mod mod--tier0">operators</span>
+      <span class="mod mod--tier0">component-store</span>
+      <span class="mod mod--tier0">signals</span>
+      <span class="mod mod--tier0">component</span>
+      <span class="mod mod--tier0">eslint-plugin</span>
+    </div>
+    <span class="arrow-up">↑ peer-depends on @ngrx/store</span>
+    <div class="tier-row">
+      <span class="tier-label">Tier 1 — depends on store</span>
+      <span class="mod mod--tier1">entity</span>
+      <span class="mod mod--tier1">effects</span>
+      <span class="mod mod--tier1">router-store</span>
+      <span class="mod mod--tier1">store-devtools</span>
+    </div>
+    <span class="arrow-up">↑ peer-depends on store + effects + entity</span>
+    <div class="tier-row">
+      <span class="tier-label"
+        >Tier 2 — depends on store, effects, and entity together</span
+      >
+      <span class="mod mod--tier2">data</span>
+    </div>
+    <div class="tier-row">
+      <span class="tier-label"
+        >Cross-cutting infra — no peer-dependency edge, consumed via relative
+        import instead</span
+      >
+      <span class="mod mod--infra">schematics-core</span>
+      <span class="mod mod--infra">schematics</span>
+    </div>
+  </div>
+
+  <h2>What Each Tier Actually Is</h2>
+  <div class="grid">
+    <div class="card card--tier0">
+      <span class="card-tag">6 modules</span>
+      <h3>Tier 0 — standalone</h3>
+      <ul>
+        <li>
+          Only peer-depend on <code>@angular/core</code>/<code>rxjs</code>
+        </li>
+        <li>Ported first — nothing else in the workspace has to exist yet</li>
+        <li>
+          <code>component-store</code>/<code>signals</code>/<code
+            >component</code
+          >
+          were the first modules built "the corrected way" —
+          <code>ng-add</code> went straight into the shared
+          <code>schematics</code> package, no per-module copy to migrate later
+        </li>
+      </ul>
+    </div>
+    <div class="card card--tier1">
+      <span class="card-tag">4 modules</span>
+      <h3>Tier 1 — single dependency on store</h3>
+      <ul>
+        <li>Each declares <code>@ngrx/store</code> as a peer dependency</li>
+        <li>
+          Every one of these surfaced the same "composition-redesign ripple" — a
+          consumer relying on <code>Store</code>/<code>ActionsSubject</code>'s
+          old inherited RxJS surface, caught by the build, not by inspection
+        </li>
+        <li>
+          Reviewed in the code-review audit right after <code>store</code>,
+          while the bug pattern was still fresh context
+        </li>
+      </ul>
+    </div>
+    <div class="card card--tier2">
+      <span class="card-tag">1 module</span>
+      <h3>Tier 2 — the only 3-way dependency</h3>
+      <ul>
+        <li>
+          <code>data</code> is the single module needing <code>store</code> +
+          <code>effects</code> + <code>entity</code> at once
+        </li>
+        <li>
+          Added last among the functional modules, once all three of its
+          dependencies existed and were stable
+        </li>
+        <li>
+          Surfaced the same ripple bug a third time, in a third shape —
+          <code>ScannedActionsSubject</code> mistyped as a plain
+          <code>Observable</code>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong
+      >Why <code>schematics-core</code>/<code>schematics</code> aren't in the
+      tier graph:</strong
+    >
+    neither declares an <code>@ngrx/*</code> peer dependency —
+    <code>schematics-core</code> is pulled in via a relative import every
+    module's <code>ng-add</code> schematic needs (consolidated from 4 duplicated
+    copies into one, −12,453 lines), and <code>schematics</code> is the single
+    package every module's own <code>ng-add</code> now registers into. Both
+    still get their own full code-review pass under the same 13-module audit
+    (<code>schematics-core</code> is issue #34) — they're infrastructure, not
+    exceptions to the review scope.
+  </div>
+
+  <footer>
+    <a href="https://github.com/Terrence721/platform-main">Repository</a>
+    <a
+      href="https://github.com/Terrence721/platform-main/blob/main/docs/architecture.md"
+      >Architecture decisions</a
+    >
+    <a href="https://terrence721.github.io/platform-main/portfolio.html"
+      >Portfolio page</a
+    >
+    platform-main · 13 modules · 3 dependency tiers · verified against real
+    peerDependencies
+  </footer>
+</div>

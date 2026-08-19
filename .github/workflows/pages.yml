@@ -43,6 +43,11 @@ jobs:
       - name: Copy static portfolio page
         run: cp portfolio.html test-results/portfolio.html
 
+      - name: Copy diagram pages
+        run: |
+          mkdir -p test-results/diagrams
+          cp docs/diagrams/*.html test-results/diagrams/
+
       - name: Upload report artifact
         uses: actions/upload-pages-artifact@v3
         with:

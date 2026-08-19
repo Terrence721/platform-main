@@ -1,0 +1,433 @@
+<title>Composition Over Inheritance — platform-main</title>
+<style>
+  :root {
+    --paper: #ede9df;
+    --paper-2: #e2ddd0;
+    --ink: #1c2333;
+    --ink-soft: #4b5567;
+    --rule: #c7c0ac;
+    --accent: #a13d2b;
+    --accent-ink: #fff7ef;
+    --accent-2: #2e5266;
+    --before: #a13d2b;
+    --before-bg: #f1e2dd;
+    --after: #2e5266;
+    --after-bg: #dfe6ea;
+    --font-display:
+      Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', serif;
+    --font-body:
+      -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial,
+      sans-serif;
+    --font-mono:
+      ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono',
+      monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --paper: #14181f;
+      --paper-2: #1b212b;
+      --ink: #e8e4d9;
+      --ink-soft: #a3aabb;
+      --rule: #303748;
+      --accent: #dd7a4a;
+      --accent-ink: #1c1006;
+      --accent-2: #7fb2cc;
+      --before: #dd7a4a;
+      --before-bg: #2c2019;
+      --after: #7fb2cc;
+      --after-bg: #1b2731;
+    }
+  }
+  :root[data-theme='dark'] {
+    --paper: #14181f;
+    --paper-2: #1b212b;
+    --ink: #e8e4d9;
+    --ink-soft: #a3aabb;
+    --rule: #303748;
+    --accent: #dd7a4a;
+    --accent-ink: #1c1006;
+    --accent-2: #7fb2cc;
+    --before: #dd7a4a;
+    --before-bg: #2c2019;
+    --after: #7fb2cc;
+    --after-bg: #1b2731;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+  html {
+    color-scheme: light dark;
+  }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    padding: 2.75rem 1.5rem 4rem;
+  }
+  a {
+    color: var(--accent-2);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+  }
+  a:hover {
+    color: var(--accent);
+  }
+
+  .page {
+    max-width: 940px;
+    margin: 0 auto;
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 0.9rem;
+  }
+  .eyebrow::before {
+    content: '◆ ';
+    color: var(--accent);
+  }
+
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: clamp(1.7rem, 3.4vw, 2.5rem);
+    line-height: 1.15;
+    margin: 0 0 0.7rem;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+
+  .dek {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    max-width: 68ch;
+    margin: 0 0 2.4rem;
+  }
+  .dek code {
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+    color: var(--ink);
+  }
+
+  h2 {
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 1rem;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 0.6rem;
+  }
+
+  /* ---- before/after table ---- */
+  .redesign-table {
+    border: 1px solid var(--rule);
+    background: var(--paper-2);
+    margin-bottom: 1.4rem;
+  }
+  .redesign-row {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr 1fr;
+    gap: 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .redesign-row:last-child {
+    border-bottom: none;
+  }
+  .redesign-row.head {
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    background: var(--paper);
+  }
+  .redesign-cell {
+    padding: 0.85rem 1rem;
+    border-right: 1px solid var(--rule);
+  }
+  .redesign-cell:last-child {
+    border-right: none;
+  }
+  .redesign-cell.cls {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+  }
+  .redesign-cell.before code {
+    color: var(--before);
+  }
+  .redesign-cell.after code {
+    color: var(--after);
+  }
+  .redesign-cell code {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+  }
+  .redesign-cell p {
+    margin: 0;
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+    line-height: 1.5;
+  }
+
+  @media (max-width: 700px) {
+    .redesign-row {
+      grid-template-columns: 1fr;
+    }
+    .redesign-cell {
+      border-right: none;
+      border-bottom: 1px dashed var(--rule);
+    }
+  }
+
+  .module-tag {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    display: block;
+    margin-top: 0.15rem;
+  }
+
+  /* ---- cards ---- */
+  .twocol {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin: 2rem 0 2.4rem;
+  }
+  @media (max-width: 640px) {
+    .twocol {
+      grid-template-columns: 1fr;
+    }
+  }
+  .card {
+    border: 1px solid var(--rule);
+    padding: 1.1rem 1.25rem 1.3rem;
+  }
+  .card h3 {
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem;
+  }
+  .card p,
+  .card li {
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    line-height: 1.6;
+  }
+  .card ul {
+    margin: 0;
+    padding-left: 1.1rem;
+  }
+  .card code {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+  }
+
+  .note {
+    border-left: 2px solid var(--accent-2);
+    padding: 0.3rem 0 0.3rem 1rem;
+    color: var(--ink-soft);
+    font-size: 0.92rem;
+    margin: 0 0 2.4rem;
+    max-width: 66ch;
+  }
+  .note strong {
+    color: var(--ink);
+  }
+  .note code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+  }
+
+  footer {
+    margin-top: 2.6rem;
+    padding-top: 1.2rem;
+    border-top: 1px solid var(--rule);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--ink-soft);
+  }
+  footer a {
+    margin-right: 1.2rem;
+  }
+</style>
+
+<div class="page">
+  <p class="eyebrow">platform-main — composition-over-inheritance redesign</p>
+  <h1>
+    Six classes stopped extending RxJS types. Here's exactly what each one
+    gained and lost.
+  </h1>
+  <p class="dek">
+    The real <code>@ngrx/store</code>/<code>@ngrx/effects</code> extend RxJS's
+    <code>Observable</code>/ <code>Subject</code>/<code>BehaviorSubject</code>
+    directly on six classes across two modules — a genuine Interface Segregation
+    violation, not a style nitpick. Every consumer inherits the entire RxJS
+    operator surface (<code>pipe</code>, <code>lift</code>,
+    <code>toPromise</code>, <code>forEach</code>…) when each class's actual
+    contract is far narrower. Fixed one class at a time, in dependency order,
+    fully verified before moving to the next.
+  </p>
+
+  <h2>Before → After, All Six Classes</h2>
+  <div class="redesign-table">
+    <div class="redesign-row head">
+      <div class="redesign-cell">Class</div>
+      <div class="redesign-cell">Before</div>
+      <div class="redesign-cell">After</div>
+    </div>
+    <div class="redesign-row">
+      <div class="redesign-cell cls">
+        ActionsSubject<span class="module-tag">store</span>
+      </div>
+      <div class="redesign-cell before">
+        <code>extends BehaviorSubject&lt;Action&gt;</code>
+      </div>
+      <div class="redesign-cell after">
+        <code>next</code
+        >/<code>subscribe</code>/<code>error</code>/<code>complete</code>/<code
+          >asObservable</code
+        >
+        only — no <code>pipe</code>, not <code>instanceof Observable</code>
+      </div>
+    </div>
+    <div class="redesign-row">
+      <div class="redesign-cell cls">
+        ReducerManager<span class="module-tag">store</span>
+      </div>
+      <div class="redesign-cell before">
+        <code>extends BehaviorSubject&lt;ActionReducer&gt;</code>
+      </div>
+      <div class="redesign-cell after">
+        Composes it privately; <code>ReducerObservable</code> DI token still
+        exposes the Observable view for consumers that need one
+      </div>
+    </div>
+    <div class="redesign-row">
+      <div class="redesign-cell cls">
+        Store<span class="module-tag">store</span>
+      </div>
+      <div class="redesign-cell before">
+        <code
+          >extends Observable&lt;T&gt; implements Observer&lt;Action&gt;</code
+        >, overrides <code>lift()</code> to stop RxJS silently downgrading it
+      </div>
+      <div class="redesign-cell after">
+        <code>select()</code> keeps its full overload set, returns a plain
+        <code>Observable</code> off a new <code>state$</code> field —
+        <code>next</code
+        >/<code>error</code>/<code>complete</code>/<code>subscribe</code>/<code
+          >pipe</code
+        >
+        all removed, a real capability cut
+      </div>
+    </div>
+    <div class="redesign-row">
+      <div class="redesign-cell cls">
+        State<span class="module-tag">store</span>
+      </div>
+      <div class="redesign-cell before">
+        <code>extends BehaviorSubject&lt;any&gt;</code>
+      </div>
+      <div class="redesign-cell after">
+        Composes a private <code>BehaviorSubject</code>, exposes
+        <code>state$</code>/<code>state</code>/a <code>value</code> getter
+      </div>
+    </div>
+    <div class="redesign-row">
+      <div class="redesign-cell cls">
+        ScannedActionsSubject<span class="module-tag">store</span>
+      </div>
+      <div class="redesign-cell before">
+        <code>extends Subject&lt;Action&gt; implements OnDestroy</code>
+      </div>
+      <div class="redesign-cell after">
+        Composes a private <code>Subject</code>; found in round 3 of the audit —
+        a multi-line class declaration the first two grep passes missed
+      </div>
+    </div>
+    <div class="redesign-row">
+      <div class="redesign-cell cls">
+        EffectSources<span class="module-tag">effects</span>
+      </div>
+      <div class="redesign-cell before">
+        <code>extends Subject&lt;any&gt;</code>
+      </div>
+      <div class="redesign-cell after">
+        Composes a private <code>Subject</code>; contract narrowed to
+        <code>addEffects()</code> in, <code>toActions()</code> out
+      </div>
+    </div>
+  </div>
+
+  <div class="twocol">
+    <div class="card">
+      <h3>Why composition, not a workaround</h3>
+      <p>
+        Each class now holds its RxJS subject privately instead of extending it,
+        exposing only the surface its actual contract needs. No
+        override-the-base-class special case left behind —
+        <code>Store</code>'s old <code>lift()</code> override, the symptom that
+        flagged the problem in the first place, is gone because the cause is
+        gone, not patched around.
+      </p>
+    </div>
+    <div class="card">
+      <h3>What it actually cost</h3>
+      <p>
+        <code>Store</code> losing the <code>Observer</code> interface is a real
+        behavior change: ~40 call sites across 6 spec files rewritten, 2 tests
+        deleted outright because the capability they tested no longer exists to
+        test. Every module added afterward that depends on <code>store</code> —
+        <code>entity</code>, <code>effects</code>, <code>router-store</code>,
+        <code>store-devtools</code>, <code>data</code> — hit the same ripple at
+        least once, caught by the build, not by inspection.
+      </p>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>Deliberately left alone:</strong> <code>ReducerObservable</code> and
+    <code>Actions</code> (effects) both still <code>extend Observable</code> —
+    their entire contract <em>is</em> being pipeable, with no unrelated method
+    bolted on, so there's no interface to segregate. Composition was applied to
+    six classes because six classes had the actual violation, not as a blanket
+    "never extend RxJS" rule — the two exceptions are the evidence the decision
+    was reasoned, not reflexive. See
+    <a
+      href="https://github.com/Terrence721/platform-main/blob/main/docs/architecture.md"
+      >docs/architecture.md</a
+    >
+    for the full ADR write-up.
+  </div>
+
+  <footer>
+    <a href="https://github.com/Terrence721/platform-main">Repository</a>
+    <a
+      href="https://github.com/Terrence721/platform-main/blob/main/docs/architecture.md"
+      >Architecture decisions</a
+    >
+    <a href="https://terrence721.github.io/platform-main/portfolio.html"
+      >Portfolio page</a
+    >
+    platform-main · 6 classes redesigned · 2 modules · 3 audit rounds to find
+    them all
+  </footer>
+</div>

@@ -1,0 +1,343 @@
+<title>Effects Runtime Data Flow — platform-main</title>
+<style>
+  :root {
+    --paper: #ede9df;
+    --paper-2: #e2ddd0;
+    --ink: #1c2333;
+    --ink-soft: #4b5567;
+    --rule: #c7c0ac;
+    --accent: #a13d2b;
+    --accent-ink: #fff7ef;
+    --accent-2: #2e5266;
+    --step: #2e5266;
+    --step-bg: #dfe6ea;
+    --warn: #a13d2b;
+    --warn-bg: #f1e2dd;
+    --font-display:
+      Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', serif;
+    --font-body:
+      -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial,
+      sans-serif;
+    --font-mono:
+      ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono',
+      monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --paper: #14181f;
+      --paper-2: #1b212b;
+      --ink: #e8e4d9;
+      --ink-soft: #a3aabb;
+      --rule: #303748;
+      --accent: #dd7a4a;
+      --accent-ink: #1c1006;
+      --accent-2: #7fb2cc;
+      --step: #7fb2cc;
+      --step-bg: #1b2731;
+      --warn: #dd7a4a;
+      --warn-bg: #2c2019;
+    }
+  }
+  :root[data-theme='dark'] {
+    --paper: #14181f;
+    --paper-2: #1b212b;
+    --ink: #e8e4d9;
+    --ink-soft: #a3aabb;
+    --rule: #303748;
+    --accent: #dd7a4a;
+    --accent-ink: #1c1006;
+    --accent-2: #7fb2cc;
+    --step: #7fb2cc;
+    --step-bg: #1b2731;
+    --warn: #dd7a4a;
+    --warn-bg: #2c2019;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+  html {
+    color-scheme: light dark;
+  }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    padding: 2.75rem 1.5rem 4rem;
+  }
+  a {
+    color: var(--accent-2);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+  }
+  a:hover {
+    color: var(--accent);
+  }
+
+  .page {
+    max-width: 940px;
+    margin: 0 auto;
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 0.9rem;
+  }
+  .eyebrow::before {
+    content: '◆ ';
+    color: var(--accent);
+  }
+
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: clamp(1.7rem, 3.4vw, 2.5rem);
+    line-height: 1.15;
+    margin: 0 0 0.7rem;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+
+  .dek {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    max-width: 68ch;
+    margin: 0 0 2.4rem;
+  }
+  .dek code {
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+    color: var(--ink);
+  }
+
+  h2 {
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 1rem;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 0.6rem;
+  }
+
+  /* ---- sequence diagram ---- */
+  .sequence {
+    border: 1px solid var(--rule);
+    background: var(--paper-2);
+    padding: 1.6rem 1.8rem;
+    margin-bottom: 1.4rem;
+  }
+  .seq-step {
+    display: flex;
+    gap: 1rem;
+    padding: 0.7rem 0;
+    align-items: flex-start;
+  }
+  .seq-step + .seq-step {
+    border-top: 1px dashed var(--rule);
+  }
+  .seq-no {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--step);
+    background: var(--step-bg);
+    width: 1.8rem;
+    height: 1.8rem;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .seq-body .code {
+    font-family: var(--font-mono);
+    font-size: 0.86rem;
+    font-weight: 600;
+  }
+  .seq-body .desc {
+    font-size: 0.84rem;
+    color: var(--ink-soft);
+    margin-top: 0.25rem;
+    line-height: 1.55;
+  }
+  .seq-body .desc code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+  }
+
+  .arrow-down {
+    text-align: center;
+    font-family: var(--font-mono);
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+    margin: 0.4rem 0;
+  }
+
+  /* ---- pipeline row for toActions() ---- */
+  .stream {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid var(--rule);
+    background: var(--paper-2);
+    padding: 1.3rem;
+    margin-bottom: 2.4rem;
+  }
+  .stream-node {
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+    padding: 0.45rem 0.7rem;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+  }
+  .stream-arrow {
+    font-family: var(--font-mono);
+    color: var(--ink-soft);
+    font-size: 0.8rem;
+  }
+
+  .warn {
+    border-left: 2px solid var(--warn);
+    background: var(--warn-bg);
+    padding: 1rem 1.2rem;
+    margin: 0 0 2.4rem;
+    max-width: 70ch;
+  }
+  .warn p {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--ink);
+  }
+  .warn code {
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+  }
+  .warn strong {
+    color: var(--warn);
+  }
+
+  footer {
+    margin-top: 2.6rem;
+    padding-top: 1.2rem;
+    border-top: 1px solid var(--rule);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--ink-soft);
+  }
+  footer a {
+    margin-right: 1.2rem;
+  }
+</style>
+
+<div class="page">
+  <p class="eyebrow">platform-main — effects runtime data flow</p>
+  <h1>
+    One subscribe-before-push ordering the whole effects system quietly depends
+    on.
+  </h1>
+  <p class="dek">
+    <code>EffectsRootModule</code>'s constructor runs exactly once, and the
+    order of its three statements isn't incidental — get it wrong and every
+    root-registered effect would silently never fire, with no error anywhere to
+    point at why. Traced end to end during the
+    <a href="https://github.com/Terrence721/platform-main/issues/140"
+      >code review of <code>effects_root_module.ts</code></a
+    >.
+  </p>
+
+  <h2>EffectsRootModule Constructor, In Order</h2>
+  <div class="sequence">
+    <div class="seq-step">
+      <span class="seq-no">1</span>
+      <div class="seq-body">
+        <span class="code">runner.start()</span>
+        <div class="desc">
+          <code>EffectsRunner</code> subscribes to
+          <code>effectSources.toActions()</code> and dispatches every emitted
+          action to the <code>Store</code>. Guarded by a stored
+          <code>Subscription</code> so a second <code>start()</code> is a no-op.
+        </div>
+      </div>
+    </div>
+    <div class="seq-step">
+      <span class="seq-no">2</span>
+      <div class="seq-body">
+        <span class="code"
+          >for (effect of rootEffectsInstances) sources.addEffects(effect)</span
+        >
+        <div class="desc">
+          Pushes every root-registered effects instance into
+          <code>EffectSources</code>' internal stream.
+        </div>
+      </div>
+    </div>
+    <div class="seq-step">
+      <span class="seq-no">3</span>
+      <div class="seq-body">
+        <span class="code">store.dispatch({ type: ROOT_EFFECTS_INIT })</span>
+        <div class="desc">
+          Fires once, after registration — the signal effects can key off "root
+          effects are ready."
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="warn">
+    <p>
+      <strong>Why step 1 has to come before step 2:</strong>
+      <code>EffectSources</code> composes a plain RxJS <code>Subject</code> for
+      its internal <code>sources$</code> — not a <code>ReplaySubject</code>. A
+      plain <code>Subject</code> drops any <code>next()</code> call made before
+      a subscriber exists. If the loop in step 2 ran first, every
+      <code>addEffects()</code> call would push into <code>sources$</code> with
+      nobody listening yet, and <code>toActions()</code>
+      would never see any of it. Starting the runner first guarantees the
+      subscription exists before anything is pushed in.
+    </p>
+  </div>
+
+  <h2>EffectSources.toActions() Pipeline</h2>
+  <div class="stream">
+    <span class="stream-node">sources$ (Subject)</span>
+    <span class="stream-arrow">→ groupBy(class prototype)</span>
+    <span class="stream-node">per-class group</span>
+    <span class="stream-arrow">→ groupBy(ngrxOnIdentifyEffects key)</span>
+    <span class="stream-node">per-identifier group</span>
+    <span class="stream-arrow">→ exhaustMap(mergeEffects)</span>
+    <span class="stream-node">EffectNotification</span>
+    <span class="stream-arrow">→ dematerialize + filter</span>
+    <span class="stream-node">Action</span>
+    <span class="stream-arrow">→</span>
+    <span
+      class="stream-node"
+      style="border-color: var(--accent-2); color: var(--accent-2)"
+      >store.dispatch()</span
+    >
+  </div>
+
+  <footer>
+    <a href="https://github.com/Terrence721/platform-main">Repository</a>
+    <a href="https://github.com/Terrence721/platform-main/issues/125"
+      >EffectSources review</a
+    >
+    <a href="https://github.com/Terrence721/platform-main/issues/140"
+      >EffectsRootModule review</a
+    >
+    <a href="https://terrence721.github.io/platform-main/portfolio.html"
+      >Portfolio page</a
+    >
+    platform-main · effects module · traced from real source, not a spec summary
+  </footer>
+</div>

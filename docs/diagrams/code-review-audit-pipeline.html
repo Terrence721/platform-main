@@ -1,0 +1,414 @@
+<title>Code Review Audit Pipeline — platform-main</title>
+<style>
+  :root {
+    --paper: #ede9df;
+    --paper-2: #e2ddd0;
+    --ink: #1c2333;
+    --ink-soft: #4b5567;
+    --rule: #c7c0ac;
+    --accent: #a13d2b;
+    --accent-ink: #fff7ef;
+    --accent-2: #2e5266;
+    --done: #2e6650;
+    --done-bg: #dfe9e2;
+    --active: #a13d2b;
+    --active-bg: #f1e2dd;
+    --pending: #6b6355;
+    --pending-bg: #e7e2d5;
+    --font-display:
+      Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', serif;
+    --font-body:
+      -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial,
+      sans-serif;
+    --font-mono:
+      ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono',
+      monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --paper: #14181f;
+      --paper-2: #1b212b;
+      --ink: #e8e4d9;
+      --ink-soft: #a3aabb;
+      --rule: #303748;
+      --accent: #dd7a4a;
+      --accent-ink: #1c1006;
+      --accent-2: #7fb2cc;
+      --done: #6bbf9a;
+      --done-bg: #182620;
+      --active: #dd7a4a;
+      --active-bg: #2c2019;
+      --pending: #9a9484;
+      --pending-bg: #211f1a;
+    }
+  }
+  :root[data-theme='dark'] {
+    --paper: #14181f;
+    --paper-2: #1b212b;
+    --ink: #e8e4d9;
+    --ink-soft: #a3aabb;
+    --rule: #303748;
+    --accent: #dd7a4a;
+    --accent-ink: #1c1006;
+    --accent-2: #7fb2cc;
+    --done: #6bbf9a;
+    --done-bg: #182620;
+    --active: #dd7a4a;
+    --active-bg: #2c2019;
+    --pending: #9a9484;
+    --pending-bg: #211f1a;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+  html {
+    color-scheme: light dark;
+  }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    padding: 2.75rem 1.5rem 4rem;
+  }
+  a {
+    color: var(--accent-2);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+  }
+  a:hover {
+    color: var(--accent);
+  }
+
+  .page {
+    max-width: 940px;
+    margin: 0 auto;
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 0.9rem;
+  }
+  .eyebrow::before {
+    content: '◆ ';
+    color: var(--accent);
+  }
+
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: clamp(1.7rem, 3.4vw, 2.5rem);
+    line-height: 1.15;
+    margin: 0 0 0.7rem;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+
+  .dek {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    max-width: 68ch;
+    margin: 0 0 2.4rem;
+  }
+  .dek code {
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+    color: var(--ink);
+  }
+
+  h2 {
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 1rem;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 0.6rem;
+  }
+
+  /* ---- pipeline diagram ---- */
+  .pipeline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 0;
+    border: 1px solid var(--rule);
+    background: var(--paper-2);
+    margin-bottom: 1.4rem;
+  }
+  .stage {
+    flex: 1 1 160px;
+    padding: 1.1rem 1rem;
+    border-right: 1px solid var(--rule);
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  .stage:last-child {
+    border-right: none;
+  }
+  .stage .no {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--ink-soft);
+  }
+  .stage .name {
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 0.88rem;
+  }
+  .stage .desc {
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+    line-height: 1.5;
+  }
+  .stage .who {
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--accent-2);
+    margin-top: auto;
+  }
+  @media (max-width: 760px) {
+    .stage {
+      border-right: none;
+      border-bottom: 1px dashed var(--rule);
+    }
+  }
+
+  .note {
+    border-left: 2px solid var(--accent-2);
+    padding: 0.3rem 0 0.3rem 1rem;
+    color: var(--ink-soft);
+    font-size: 0.92rem;
+    margin: 0 0 2.4rem;
+    max-width: 66ch;
+  }
+  .note strong {
+    color: var(--ink);
+  }
+  .note code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+  }
+
+  /* ---- module status table ---- */
+  .status-table {
+    border: 1px solid var(--rule);
+    margin-bottom: 1.4rem;
+  }
+  .status-row {
+    display: grid;
+    grid-template-columns: 1.4fr 0.8fr 2fr;
+    border-bottom: 1px solid var(--rule);
+  }
+  .status-row:last-child {
+    border-bottom: none;
+  }
+  .status-row.head {
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    background: var(--paper);
+  }
+  .status-cell {
+    padding: 0.7rem 0.9rem;
+    border-right: 1px solid var(--rule);
+    font-size: 0.84rem;
+  }
+  .status-cell:last-child {
+    border-right: none;
+    color: var(--ink-soft);
+  }
+  .status-row.head .status-cell {
+    padding: 0.55rem 0.9rem;
+  }
+  .status-cell code {
+    font-family: var(--font-mono);
+  }
+  .pill {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    padding: 0.15rem 0.5rem;
+    display: inline-block;
+  }
+  .pill--done {
+    color: var(--done);
+    background: var(--done-bg);
+  }
+  .pill--active {
+    color: var(--active);
+    background: var(--active-bg);
+  }
+  .pill--pending {
+    color: var(--pending);
+    background: var(--pending-bg);
+  }
+  @media (max-width: 700px) {
+    .status-row {
+      grid-template-columns: 1fr;
+    }
+    .status-cell {
+      border-right: none;
+      border-bottom: 1px dashed var(--rule);
+    }
+  }
+
+  footer {
+    margin-top: 2.6rem;
+    padding-top: 1.2rem;
+    border-top: 1px solid var(--rule);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--ink-soft);
+  }
+  footer a {
+    margin-right: 1.2rem;
+  }
+</style>
+
+<div class="page">
+  <p class="eyebrow">platform-main — code-review audit pipeline</p>
+  <h1>
+    254 source files, reviewed one at a time, each with its own paper trail.
+  </h1>
+  <p class="dek">
+    Every module gets a full pass — one file reviewed, one GitHub sub-issue
+    documenting the finding (even when the finding is "none"), one PR, one merge
+    by the repo owner, before the next file starts. Tried opening several PRs in
+    parallel once; every PR after the first needed a rebase because they all
+    touched the same tracking table, so the process stayed sequential on
+    purpose.
+  </p>
+
+  <h2>Per-File Pipeline</h2>
+  <div class="pipeline">
+    <div class="stage">
+      <span class="no">01</span>
+      <span class="name">todo.md row</span>
+      <span class="desc"
+        >File path + the exact commit SHA that last touched it, added once
+        review starts</span
+      >
+      <span class="who">Claude</span>
+    </div>
+    <div class="stage">
+      <span class="no">02</span>
+      <span class="name">Sub-issue</span>
+      <span class="desc"
+        >Findings written up after the file is actually read, never an empty
+        placeholder created upfront</span
+      >
+      <span class="who">Claude</span>
+    </div>
+    <div class="stage">
+      <span class="no">03</span>
+      <span class="name">Pull Request</span>
+      <span class="desc"
+        >One PR per file — a real fix, or a docs-only "reviewed, no findings"
+        record</span
+      >
+      <span class="who">Claude</span>
+    </div>
+    <div class="stage">
+      <span class="no">04</span>
+      <span class="name">Review &amp; merge</span>
+      <span class="desc"
+        >Every PR read and merged by hand — nothing self-merges</span
+      >
+      <span class="who">Repo owner</span>
+    </div>
+    <div class="stage">
+      <span class="no">05</span>
+      <span class="name">Board sync</span>
+      <span class="desc"
+        >Project-board status flipped to Done as the closing step, not a
+        separate cleanup pass later</span
+      >
+      <span class="who">Claude</span>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>The recurring bug pattern this process actually found:</strong> in
+    <code>store</code>, all 3 real bugs shared one shape — a function's
+    top-level entry point was missing a <code>null</code>/<code>undefined</code>
+    guard that its own recursive or nested-value handling already had
+    (<code>freeze()</code>, <code>getUnserializable()</code>,
+    <code>combineReducers()</code>). Once that pattern was named, every later
+    module got checked specifically for the same asymmetry — not found again
+    yet, but worth checking every time rather than assuming it was a one-off.
+  </div>
+
+  <h2>Module Status</h2>
+  <div class="status-table">
+    <div class="status-row head">
+      <div class="status-cell">Module</div>
+      <div class="status-cell">Files</div>
+      <div class="status-cell">Result</div>
+    </div>
+    <div class="status-row">
+      <div class="status-cell">
+        <span class="pill pill--done">done</span> store
+      </div>
+      <div class="status-cell"><code>27/27</code></div>
+      <div class="status-cell">
+        3 real bugs found and fixed, 1 test-coverage gap closed, 23 files clean
+      </div>
+    </div>
+    <div class="status-row">
+      <div class="status-cell">
+        <span class="pill pill--done">done</span> entity
+      </div>
+      <div class="status-cell"><code>9/9</code></div>
+      <div class="status-cell">
+        0 real bugs — 2 structural observations recorded, not defects
+      </div>
+    </div>
+    <div class="status-row">
+      <div class="status-cell">
+        <span class="pill pill--active">in progress</span> effects
+      </div>
+      <div class="status-cell"><code>11/18</code></div>
+      <div class="status-cell">
+        0 real bugs so far — one file's constructor ordering turned out to be
+        correctness-critical, confirmed correct as written
+      </div>
+    </div>
+    <div class="status-row">
+      <div class="status-cell">
+        <span class="pill pill--pending">not started</span> 10 modules
+      </div>
+      <div class="status-cell">—</div>
+      <div class="status-cell">
+        component, component-store, data, eslint-plugin, operators,
+        router-store, schematics, schematics-core, signals, store-devtools
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <a href="https://github.com/Terrence721/platform-main">Repository</a>
+    <a
+      href="https://github.com/Terrence721/platform-main/blob/main/docs/code-review.md"
+      >Findings index</a
+    >
+    <a href="https://github.com/users/Terrence721/projects/2">Project board</a>
+    <a href="https://terrence721.github.io/platform-main/portfolio.html"
+      >Portfolio page</a
+    >
+    platform-main · issue #32 · 47/254 files reviewed so far
+  </footer>
+</div>

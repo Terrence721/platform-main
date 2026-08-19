@@ -451,4 +451,12 @@ The standalone-API equivalent of `effects_root_module.ts`/`effects_feature_modul
 
 ---
 
+### [`utils.ts`](https://github.com/Terrence721/platform-main/blob/cd346bdb20794b8ba04cc885edd0c98a1aefccd8/modules/effects/src/utils.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #154](https://github.com/Terrence721/platform-main/issues/154)) — **last file in `effects`, 18/18**
+
+Five small helpers plus a hand-rolled `ObservableNotification<T>` union. Traced `isClassInstance()`'s entry-point guard (`!!obj.constructor && ...`) - correctly short-circuits before `.name` is accessed, which matters for a prototype-less object where `.constructor` is `undefined`. The most thoroughly tested file in the module: `utils.spec.ts` directly exercises every function, including the exact prototype-less-object edge case (`{ __proto__: null }`) traced above - not just reasoned about, actually tested. The `ObservableNotification` TODO comment checked against the module's real `peerDependencies` (`rxjs ^6.5.3 || ^7.5.0`) - legitimate, documented technical debt tied to a real cross-version constraint, same category as `store`'s already-traced `TODO(#823)` marker.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `effects` module is in progress — see [todo.md](../todo.md) for the full per-file table._

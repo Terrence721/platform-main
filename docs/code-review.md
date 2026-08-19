@@ -443,4 +443,12 @@ The standalone-API equivalent of `effects_root_module.ts`/`effects_feature_modul
 
 ---
 
+### [`tokens.ts`](https://github.com/Terrence721/platform-main/blob/cd346bdb20794b8ba04cc885edd0c98a1aefccd8/modules/effects/src/tokens.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #152](https://github.com/Terrence721/platform-main/issues/152))
+
+7 `InjectionToken` declarations, each checked against its real registration (`effects_module.ts`) and injection sites, not read in isolation. A deliberate, well-reasoned asymmetry worth naming: `_ROOT_EFFECTS`'s strict 1-tuple type matches its **non-multi** provider (`forRoot()` is meant to be called exactly once - the guard exists specifically to reject a second call), while `_FEATURE_EFFECTS`'s plain array-of-arrays type matches its **multi** provider (`forFeature()` is legitimately called many times, once per feature module) - both type shapes are exactly right for their own cardinality, not copy-pasted from each other. `USER_PROVIDED_EFFECTS` is a real, tested extension point, not dead code - `integration.spec.ts`'s "runs user provided effects defined as injection token" test confirms a custom `InjectionToken`-backed effects source actually runs through it. One soft, non-defect note: `_ROOT_EFFECTS_GUARD: InjectionToken<void>`'s generic is effectively decorative (the factory returns `unknown`, the injection site declares `unknown`, neither relies on `void`) - a legitimate pattern for a presence-only guard token whose value is never read.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `effects` module is in progress — see [todo.md](../todo.md) for the full per-file table._

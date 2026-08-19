@@ -395,4 +395,12 @@ The legacy `NgModule`-based `EffectsModule.forFeature()` registration target. Co
 
 ---
 
+### [`effects_root_module.ts`](https://github.com/Terrence721/platform-main/blob/cd346bdb20794b8ba04cc885edd0c98a1aefccd8/modules/effects/src/effects_root_module.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #140](https://github.com/Terrence721/platform-main/issues/140))
+
+`EffectsRootModule`'s constructor runs once, in order: `runner.start()`, then a loop registering every root effect via `sources.addEffects()`, then a single `ROOT_EFFECTS_INIT` dispatch. That order is correctness-critical, not incidental: `EffectSources` composes a plain `Subject` (issue #125), which drops any `next()` call made before a subscriber exists, so `runner.start()` has to subscribe before the loop pushes effects in, or every root effect would silently never fire. The public `addEffects()` method — the one `effects_feature_module.ts` (issue #131) calls for feature-level registration — just forwards to the same `EffectSources` call. The `@Optional()` DI-ordering params and the `_ROOT_EFFECTS_GUARD` injection are the same forced-construction-order and double-`forRoot()`-guard tricks already seen in `effects_module.ts` (issue #135) and `store`'s `store_config.ts` (issue #92).
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `effects` module is in progress — see [todo.md](../todo.md) for the full per-file table._

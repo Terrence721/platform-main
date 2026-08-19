@@ -411,4 +411,12 @@ The legacy `NgModule`-based `EffectsModule.forFeature()` registration target. Co
 
 ---
 
+### [`index.ts`](https://github.com/Terrence721/platform-main/blob/cd346bdb20794b8ba04cc885edd0c98a1aefccd8/modules/effects/src/index.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #144](https://github.com/Terrence721/platform-main/issues/144))
+
+The module's public API barrel - 27 re-exports across 12 files, checked both directions against each source file's own export list, not just skimmed. Every excluded symbol traces to a real internal consumer: `models.ts`'s 5 unexported symbols are metadata-attachment plumbing for `createEffect()`, `tokens.ts`'s 5 underscore-prefixed tokens wire `effects_module.ts`/`provide_effects.ts` to `effects_root_module.ts`/`effects_feature_module.ts`, `lifecycle_hooks.ts`'s 3 type-guard functions are used only inside `effect_sources.ts`, and `effect_creator.ts`'s `getCreateEffectMetadata()`/`effect_notification.ts`'s `reportInvalidActions()` are both internal engines behind already-reviewed public wrappers. Same privacy-boundary-by-naming-convention pattern already confirmed clean in `store`'s and `entity`'s own `index.ts` reviews.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `effects` module is in progress — see [todo.md](../todo.md) for the full per-file table._

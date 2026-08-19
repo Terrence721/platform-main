@@ -99,7 +99,9 @@ export type RouterCancelAction<
 
 export const routerCancelAction = createAction(
   ROUTER_CANCEL,
-  props<{ payload: RouterCancelPayload<SerializedRouterStateSnapshot> }>()
+  props<{
+    payload: RouterCancelPayload<unknown, SerializedRouterStateSnapshot>;
+  }>()
 );
 
 /**
@@ -132,7 +134,9 @@ export type RouterErrorAction<
 
 export const routerErrorAction = createAction(
   ROUTER_ERROR,
-  props<{ payload: RouterErrorPayload<SerializedRouterStateSnapshot> }>()
+  props<{
+    payload: RouterErrorPayload<unknown, SerializedRouterStateSnapshot>;
+  }>()
 );
 
 /**

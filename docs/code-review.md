@@ -403,4 +403,12 @@ The legacy `NgModule`-based `EffectsModule.forFeature()` registration target. Co
 
 ---
 
+### [`effects_runner.ts`](https://github.com/Terrence721/platform-main/blob/cd346bdb20794b8ba04cc885edd0c98a1aefccd8/modules/effects/src/effects_runner.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #142](https://github.com/Terrence721/platform-main/issues/142))
+
+`EffectsRunner.start()` subscribes to `EffectSources.toActions()` with no explicit `error` callback on the subscribe call - flagged a real hypothesis worth testing: could a thrown error inside `store.dispatch()` (a buggy reducer, a runtime-check violation) silently tear down the subscription forever, with `isStarted` continuing to falsely report `true`? Wrote a throwaway repro against this repo's real installed `rxjs` (7.8.2) instead of trusting the reasoning - a `Subject` whose subscriber throws on a sentinel value stays open (`closed: false`) and keeps delivering later emissions; the thrown error routes through RxJS's own `reportUnhandledError` path instead of tearing down the subscriber chain. The hypothesis was wrong, disproven by testing rather than by static reading alone.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `effects` module is in progress — see [todo.md](../todo.md) for the full per-file table._

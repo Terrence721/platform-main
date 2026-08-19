@@ -467,4 +467,12 @@ Five small helpers plus a hand-rolled `ObservableNotification<T>` union. Traced 
 
 ---
 
-_More findings are appended here as each file's PR merges. `store`, `entity`, and `effects` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none. `router-store` is in progress — see [todo.md](../todo.md) for the live per-module status._
+### [`index.ts`](https://github.com/Terrence721/platform-main/blob/5a04de59b298f57f50a3900ac161199513148af5/modules/router-store/src/index.ts)
+
+**low · Maintainability** — Fixed via [PR #159](https://github.com/Terrence721/platform-main/pull/159) ([issue #158](https://github.com/Terrence721/platform-main/issues/158))
+
+The public API barrel was missing a real re-export: `models.ts`'s `RouterStateSelectors<V>` - the direct return-type of the already-public `getRouterSelectors<V>()` - had no way to reach a consumer through the package's normal entry point. Cross-checked every other file in the module against what's re-exported, not just this one gap: everything else matched exactly, including a correct exclusion (`store_router_connecting.service.ts`'s `StoreRouterConnectingService` class is genuinely internal wiring, confirmed by the module's own `router_store_module.spec.ts` importing it from the concrete path rather than the barrel). Fixed with one added line; verified clean build/test/lint.
+
+---
+
+_More findings are appended here as each file's PR merges. `store`, `entity`, and `effects` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none. `router-store` is in progress (2 real findings so far, both fixed) — see [todo.md](../todo.md) for the live per-module status._

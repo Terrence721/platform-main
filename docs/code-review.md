@@ -459,4 +459,12 @@ Five small helpers plus a hand-rolled `ObservableNotification<T>` union. Traced 
 
 ---
 
-_More findings are appended here as each file's PR merges. `store`, `entity`, and `effects` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none. No module is currently in progress — 10 remain under [issue #32](https://github.com/Terrence721/platform-main/issues/32). See [todo.md](../todo.md) for the live per-module status._
+### [`actions.ts`](https://github.com/Terrence721/platform-main/blob/5a04de59b298f57f50a3900ac161199513148af5/modules/router-store/src/actions.ts)
+
+**low · Correctness** — Fixed via [PR #157](https://github.com/Terrence721/platform-main/pull/157) ([issue #156](https://github.com/Terrence721/platform-main/issues/156)) — first file in `router-store`
+
+`routerCancelAction`/`routerErrorAction`'s exported `payload.storeState` was typed as `SerializedRouterStateSnapshot` (router-state shape, `.url`/`.root`) when it actually holds the application's own arbitrary store state - confirmed via `store_router_connecting.service.ts`'s own `private storeState: any` field, the real source of that value. Root cause: `RouterCancelPayload<T, V = SerializedRouterStateSnapshot>` takes two type parameters, but the action creators supplied only one (`RouterCancelPayload<SerializedRouterStateSnapshot>`), which binds positionally to `T` (storeState) instead of the intended `V` (routerState). Confirmed empirically with a throwaway type-check probe against the real action creators (not just read and reasoned about): before the fix, `.url`/`.root` access on `storeState` type-checked cleanly and a deliberately-nonexistent property correctly errored, proving it was locked to the wrong concrete type rather than loosely `any`; after the fix, `.url` access correctly errors, confirming `storeState` is now honestly `unknown`. Fixed by passing both type arguments explicitly and in the right order at both call sites - doesn't touch the type parameter declarations, so the public generic types and any code already parametrizing them explicitly (e.g. `integration.spec.ts`'s `RouterAction<any>`) are unaffected. Type-only, no runtime crash. Verified: `yarn nx build-package router-store` (clean), `yarn nx test router-store` (156/156, 1 pre-existing skip, 0 type errors), `yarn nx lint router-store` (0 errors, 1 pre-existing unrelated warning).
+
+---
+
+_More findings are appended here as each file's PR merges. `store`, `entity`, and `effects` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none. `router-store` is in progress — see [todo.md](../todo.md) for the live per-module status._

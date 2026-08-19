@@ -1,6 +1,6 @@
-# ⚙️ Principal Frontend Engineering Demonstration
+**[→ Read the one-page portfolio](https://terrence721.github.io/platform-main/portfolio.html)** — the 60-second version, with links back into this repo for anyone who wants to go deeper.
 
-**[📜 View the portfolio page →](https://terrence721.github.io/platform-main/portfolio.html)** · [More of my work ↗](https://terrence721.github.io/)
+# ⚙️ Principal Frontend Engineering Demonstration
 
 [![Quality](https://github.com/Terrence721/platform-main/actions/workflows/quality.yml/badge.svg)](https://github.com/Terrence721/platform-main/actions/workflows/quality.yml)
 [![CodeQL](https://github.com/Terrence721/platform-main/actions/workflows/codeql.yml/badge.svg)](https://github.com/Terrence721/platform-main/actions/workflows/codeql.yml)

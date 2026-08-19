@@ -419,4 +419,12 @@ The module's public API barrel - 27 re-exports across 12 files, checked both dir
 
 ---
 
+### [`lifecycle_hooks.ts`](https://github.com/Terrence721/platform-main/blob/cd346bdb20794b8ba04cc885edd0c98a1aefccd8/modules/effects/src/lifecycle_hooks.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #146](https://github.com/Terrence721/platform-main/issues/146))
+
+The 3 optional lifecycle-hook interfaces (`OnIdentifyEffects`/`OnRunEffects`/`OnInitEffects`) all delegate to one shared `isFunction()` guard. Its `instance &&` check is load-bearing (the `in` operator throws on `null`/`undefined`) and correctly ordered first. Checked one step further: `in` also throws on any non-object primitive, not just nullish values - traced every call path back to `EffectSources.addEffects()`, which only ever receives DI-resolved class instances or functional-effect records at every typed public entry point (`forRoot()`/`forFeature()`/`provideEffects()`). A primitive can't reach this function without forcing it with `as any`, so not a defect reachable under normal usage. One cosmetic naming inconsistency noted (the third key constant is `onInitEffects`, not `onInitEffectsKey` like its two siblings) - harmless, not a finding.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `effects` module is in progress — see [todo.md](../todo.md) for the full per-file table._

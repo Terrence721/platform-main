@@ -435,4 +435,12 @@ Pure types/interfaces/constants - `EffectConfig`, `DEFAULT_EFFECT_CONFIG`, `CREA
 
 ---
 
+### [`provide_effects.ts`](https://github.com/Terrence721/platform-main/blob/cd346bdb20794b8ba04cc885edd0c98a1aefccd8/modules/effects/src/provide_effects.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #150](https://github.com/Terrence721/platform-main/issues/150))
+
+The standalone-API equivalent of `effects_root_module.ts`/`effects_feature_module.ts` (issues #140/#131), via `provideEnvironmentInitializer()` instead of an NgModule constructor. Confirmed the same correctness-critical ordering from issue #140 is preserved in this style too: `effectsRunner.start()` runs before the `addEffects()` loop, gated on `shouldInitEffects = !effectsRunner.isStarted`. Worth naming as a real, deliberate design difference from the NgModule path, not a bug: `effects_module.ts`'s `_ROOT_EFFECTS_GUARD` (issue #135) _throws_ on a second `forRoot()` call, while `provideEffects()` uses `isStarted` to make repeat calls idempotent-safe instead - every call's effects still register, only the runner-start/init-dispatch is deduplicated. Confirmed intentional via `provide_effects.spec.ts`'s own test (`provideEffects()` called twice, `start()` fires exactly once, no thrown error). 7 test cases cover idempotency, a real thrown error when store isn't provided, class/functional/mixed effects running end-to-end, and effects registered _before_ `provideStore()`/`provideState()` in the providers array still resolving correctly - confirming the DI-ordering tricks aren't array-position-dependent.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `effects` module is in progress — see [todo.md](../todo.md) for the full per-file table._

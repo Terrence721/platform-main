@@ -427,4 +427,12 @@ The 3 optional lifecycle-hook interfaces (`OnIdentifyEffects`/`OnRunEffects`/`On
 
 ---
 
+### [`models.ts`](https://github.com/Terrence721/platform-main/blob/cd346bdb20794b8ba04cc885edd0c98a1aefccd8/modules/effects/src/models.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #148](https://github.com/Terrence721/platform-main/issues/148))
+
+Pure types/interfaces/constants - `EffectConfig`, `DEFAULT_EFFECT_CONFIG`, `CREATE_EFFECT_METADATA_KEY`, `CreateEffectMetadata`/`FunctionalCreateEffectMetadata`, `FunctionalEffect`, `EffectPropertyKey`, `EffectMetadata`, `EffectsMetadata`. Checked for consistency against every already-reviewed consumer rather than in isolation: `DEFAULT_EFFECT_CONFIG` matches `effect_creator.ts`'s documented defaults and `effects_resolver.ts`'s actual branching (issue #137); `EffectMetadata<T> extends Required<EffectConfig>` matches what `getCreateEffectMetadata()` actually constructs at runtime (every field always filled via spread-over-defaults); `EffectsMetadata<T>`'s optional-field shape matches `getEffectsMetadata()`'s 2-of-3-field population, already confirmed not a defect (issue #133); `EffectPropertyKey<T>`'s `Object.prototype`-member exclusion aligns the compile-time type with `getCreateEffectMetadata()`'s runtime use of `Object.getOwnPropertyNames()`. No runtime logic beyond a plain object literal and a string constant, so a types-only file's correctness is enforced by the compiler at every consuming call site rather than by a dedicated spec.
+
+---
+
 _More findings are appended here as each file's PR merges. Review of the `effects` module is in progress — see [todo.md](../todo.md) for the full per-file table._

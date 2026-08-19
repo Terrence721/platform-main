@@ -88,10 +88,10 @@ The package affected, matching the `modules/` layout as it gets built out:
 - **effects**
 - **entity**
 - **eslint-plugin**
-- **example**
 - **operators**
 - **router-store**
 - **schematics**
+- **schematics-core**
 - **signals**
 - **store**
 - **store-devtools**

@@ -3,7 +3,7 @@ import { MemoizedSelector } from '@ngrx/store';
 
 export type RouterStateSelectors<V> = {
   selectCurrentRoute: MemoizedSelector<V, any>;
-  selectFragment: MemoizedSelector<V, string | undefined>;
+  selectFragment: MemoizedSelector<V, string | null | undefined>;
   selectQueryParams: MemoizedSelector<V, Params>;
   selectQueryParam: (
     param: string

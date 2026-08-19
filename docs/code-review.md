@@ -475,4 +475,12 @@ The public API barrel was missing a real re-export: `models.ts`'s `RouterStateSe
 
 ---
 
-_More findings are appended here as each file's PR merges. `store`, `entity`, and `effects` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none. `router-store` is in progress (2 real findings so far, both fixed) — see [todo.md](../todo.md) for the live per-module status._
+### [`models.ts`](https://github.com/Terrence721/platform-main/blob/5a04de59b298f57f50a3900ac161199513148af5/modules/router-store/src/models.ts)
+
+**low · Correctness** — Fixed via [PR #161](https://github.com/Terrence721/platform-main/pull/161) ([issue #160](https://github.com/Terrence721/platform-main/issues/160))
+
+`RouterStateSelectors<V>`'s `selectFragment` field was typed `MemoizedSelector<V, string | undefined>`, missing `null` from the union - Angular's real `ActivatedRouteSnapshot.fragment` is `string | null`, confirmed directly against `@angular/router`'s `.d.ts`. Silently unenforced because the selector chain is `any`-typed by design (the router state's true shape depends on which serializer a consumer picks), so TypeScript never actually compared the real field type against the declared one. Checked `selectTitle` for the same class of gap - it's correct as-is, since `.title` is a getter Angular itself normalizes to `string | undefined`. The other selectors' shared `any`-typed intermediate chain is a deliberate architectural characteristic of the whole file, not a bug, so left alone - fix scoped to the one concretely-verified mismatch.
+
+---
+
+_More findings are appended here as each file's PR merges. `store`, `entity`, and `effects` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none. `router-store` is in progress (3 real findings so far, all fixed) — see [todo.md](../todo.md) for the live per-module status._

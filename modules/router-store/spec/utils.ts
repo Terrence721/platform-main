@@ -3,17 +3,24 @@ import { TestBed } from '@angular/core/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 import { StoreModule } from '@ngrx/store';
 
-import { StoreRouterConfig, StoreRouterConnectingModule } from '../src';
+import {
+  BaseRouterStoreState,
+  SerializedRouterStateSnapshot,
+  StoreRouterConfig,
+  StoreRouterConnectingModule,
+} from '../src';
 import { RouterOutlet } from '@angular/router';
 import { vi } from 'vitest';
 
-export function createTestModule(
+export function createTestModule<
+  T extends BaseRouterStoreState = SerializedRouterStateSnapshot,
+>(
   opts: {
     reducers?: any;
     canActivate?: Function;
     canLoad?: Function;
     providers?: Provider[];
-    config?: StoreRouterConfig;
+    config?: StoreRouterConfig<T>;
   } = {}
 ) {
   @Component({

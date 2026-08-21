@@ -493,4 +493,12 @@ No bug in this file - but tracing `config.serializer`'s type to understand the g
 
 ---
 
-_More findings are appended here as each file's PR merges. `store`, `entity`, and `effects` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none. `router-store` is in progress (3 real findings so far, all fixed) — see [todo.md](../todo.md) for the live per-module status._
+### [`router_store_config.ts`](https://github.com/Terrence721/platform-main/blob/5a04de59b298f57f50a3900ac161199513148af5/modules/router-store/src/router_store_config.ts)
+
+**low · Correctness** — Fixed via [issue #178](https://github.com/Terrence721/platform-main/issues/178) — reviewed out of file order, surfaced during `provide_router_store.ts`'s review
+
+`StoreRouterConfig<T>.serializer` was typed `new (...args: any[]) => RouterStateSerializer` - not parameterized by `T` - even though `RouterStateSerializer<T>` is itself generic, so `provideRouterStore<T>({ serializer: SomeSerializer })` accepted any serializer regardless of whether it actually produced `T`, with no compile error. Confirmed empirically with a throwaway type probe (a serializer producing a weaker shape than a custom `T` compiled cleanly before the fix, correctly errored after). Parameterizing the field alone broke `_createRouterConfig`'s own default-fill object literal (`MinimalRouterStateSerializer` doesn't satisfy the interface's default `T = SerializedRouterStateSnapshot`) - rather than widen that public default (a much larger change rippling through `provideRouterStore()`, `StoreRouterConnectingModule.forRoot()`, and `StateKeyOrSelector<T>`), scoped `_createRouterConfig`'s own parameter/return type to `StoreRouterConfig<BaseRouterStoreState>` instead, since it's only ever called as a bare DI factory reference with no generic argument supplied anywhere. Running the real suite with the fix applied surfaced a second live instance of the same gap in `spec/integration.spec.ts`'s custom-serializer test, silently relying on the same unparameterized hole - fixed by making the shared `createTestModule()` test helper generic to match.
+
+---
+
+_More findings are appended here as each file's PR merges. `store`, `entity`, and `effects` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none. `router-store` is in progress (4 real findings so far, all fixed) — see [todo.md](../todo.md) for the live per-module status._

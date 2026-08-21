@@ -700,7 +700,7 @@ describe('integration spec', () => {
     }
 
     if (serializerThroughConfig) {
-      createTestModule({
+      createTestModule<SerializedState>({
         reducers: { routerReducer, reducer },
         config: { serializer: CustomSerializer },
       });

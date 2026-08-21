@@ -483,4 +483,14 @@ The public API barrel was missing a real re-export: `models.ts`'s `RouterStateSe
 
 ---
 
+### [`provide_router_store.ts`](https://github.com/Terrence721/platform-main/blob/5a04de59b298f57f50a3900ac161199513148af5/modules/router-store/src/provide_router_store.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #176](https://github.com/Terrence721/platform-main/issues/176))
+
+Builds the four `provideRouterStore<T>()` providers: `_ROUTER_CONFIG` (raw value), `ROUTER_CONFIG` (defaults filled via `_createRouterConfig`), `RouterStateSerializer` (`useClass` picked from `config.serializer`/`config.routerState`), and an eager `provideEnvironmentInitializer(() => inject(StoreRouterConnectingService))` alongside the service class. Checked for this audit's recurring guard-asymmetry class - no recursion here, doesn't apply. Checked provider-order sensitivity (the `EffectSources`/`ROOT_EFFECTS_INIT` ordering class from `effects`) - doesn't apply either, since `provideEnvironmentInitializer(...)` and `StoreRouterConnectingService` are independent non-multi provider entries and Angular collects the full provider list before running any `ENVIRONMENT_INITIALIZER`. `router_store_module.ts`'s `StoreRouterConnectingModule.forRoot()` is a thin passthrough with no drift. `RouterState.Full` is enum value `0`, so the `===` check against it correctly handles the falsy-zero case. No dedicated spec file, but exercised thoroughly through `spec/utils.ts`'s `createTestModule()` across `router_store_module.spec.ts` and `integration.spec.ts`.
+
+No bug in this file - but tracing `config.serializer`'s type to understand the generic flow surfaced a real bug one file over in `router_store_config.ts` (`StoreRouterConfig<T>.serializer` isn't parameterized by `T`, so a mismatched serializer compiles with no error). That fix is tracked as this module's next sub-issue, reviewed out of file order since the context was already loaded.
+
+---
+
 _More findings are appended here as each file's PR merges. `store`, `entity`, and `effects` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none. `router-store` is in progress (3 real findings so far, all fixed) — see [todo.md](../todo.md) for the live per-module status._

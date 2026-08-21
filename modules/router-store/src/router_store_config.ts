@@ -35,8 +35,8 @@ export enum RouterState {
 }
 
 export function _createRouterConfig(
-  config: StoreRouterConfig
-): StoreRouterConfig {
+  config: StoreRouterConfig<BaseRouterStoreState>
+): StoreRouterConfig<BaseRouterStoreState> {
   return {
     stateKey: DEFAULT_ROUTER_FEATURENAME,
     serializer: MinimalRouterStateSerializer,
@@ -49,7 +49,7 @@ export interface StoreRouterConfig<
   T extends BaseRouterStoreState = SerializedRouterStateSnapshot,
 > {
   stateKey?: StateKeyOrSelector<T>;
-  serializer?: new (...args: any[]) => RouterStateSerializer;
+  serializer?: new (...args: any[]) => RouterStateSerializer<T>;
   /**
    * By default, ROUTER_NAVIGATION is dispatched before guards and resolvers run.
    * Therefore, the action could run too soon, for example

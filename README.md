@@ -23,6 +23,8 @@ This repo is **not affiliated with, and not published by, the upstream [@ngrx/pl
 - **[Effects Runtime Data Flow](https://terrence721.github.io/platform-main/diagrams/effects-runtime-data-flow.html)** — the startup ordering `EffectsRootModule` depends on, and why getting it wrong would fail silently
 - **[CONTRIBUTING.md](./CONTRIBUTING.md)** — development setup, testing commands, commit conventions.
 
+On AI-assisted development: Commits co-authored as Claude are AI-assisted implementations directed, reviewed, and merged by Terrence Daniels — same process as every other change, documented in docs/code-review.md.
+
 ## 🧭 Why This Matters
 
 Anyone can `cp -r` a well-known open-source library. The more useful exercise — and the point of this repo — is knowing _which_ parts of a mature codebase to leave alone and _which_ to challenge.

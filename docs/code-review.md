@@ -509,4 +509,12 @@ No bug in this file - but tracing `config.serializer`'s type to understand the g
 
 ---
 
-_More findings are appended here as each file's PR merges. `store`, `entity`, and `effects` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none. `router-store` is in progress (4 real findings so far, all fixed) — see [todo.md](../todo.md) for the live per-module status._
+### [`router_selectors.ts`](https://github.com/Terrence721/platform-main/blob/5a04de59b298f57f50a3900ac161199513148af5/modules/router-store/src/router_selectors.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #182](https://github.com/Terrence721/platform-main/issues/182)) — real bug surfaced in the already-closed `models.ts`, filed separately
+
+`createRouterSelector()`/`getRouterSelectors()`'s own logic is correct - every derived selector short-circuits to `undefined` when its upstream value is missing, matching `store_router_connecting.service.ts`'s established defensive pattern. But tracing that chain surfaced that `models.ts`'s `RouterStateSelectors<V>` (already reviewed and closed via #160/PR #161) is honestly wrong for 4 fields - `selectQueryParams`, `selectRouteParams`, `selectRouteData`, `selectUrl` are all declared without `| undefined`, the same bug class #160 caught for `selectFragment`, just missed then. Confirmed empirically (a throwaway runtime probe against `{ router: undefined }` returns `undefined` for all four) and against the type system (the existing, passing `spec/types/router_selectors.types.spec.ts` literally asserts the wrong type). Deliberately not touching `createRouterSelector()`'s own return type or the broader `RouterReducerState<any>`-without-undefined convention this module's public API uses throughout - same "concretely-verified mismatch only" scoping as `router_store_config.ts` (#178). Fix tracked as a new sub-issue against `models.ts` + its type-spec.
+
+---
+
+_More findings are appended here as each file's PR merges. `store`, `entity`, and `effects` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none. `router-store` is in progress (4 real findings so far, all fixed, plus a 5th just surfaced and in flight) — see [todo.md](../todo.md) for the live per-module status._

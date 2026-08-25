@@ -74,7 +74,7 @@ modules/
                            complete
 ```
 
-All 13 modules are added. A per-module code review audit is now in progress (`store` complete — 3 real bugs found and fixed; `entity` complete — 0 real bugs found; `effects` complete — 0 real bugs found; `router-store` in progress — 9/12 files reviewed, 7 real bugs found and fixed, see [`docs/code-review.md`](docs/code-review.md)). See `todo.md`'s "Still to do" table for what's left (9 modules' review remaining after `router-store`, plus the deferred `migrations/`-folder pass, tooling migration, containerization).
+All 13 modules are added. A per-module code review audit is now in progress (`store` complete — 3 real bugs found and fixed; `entity` complete — 0 real bugs found; `effects` complete — 0 real bugs found; `router-store` in progress — 10/12 files reviewed, 7 real bugs found and fixed, see [`docs/code-review.md`](docs/code-review.md)). See `todo.md`'s "Still to do" table for what's left (9 modules' review remaining after `router-store`, plus the deferred `migrations/`-folder pass, tooling migration, containerization).
 
 ## 🖥 Getting Started
 

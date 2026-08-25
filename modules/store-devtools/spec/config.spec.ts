@@ -143,4 +143,10 @@ describe('StoreDevtoolsOptions', () => {
       connectInZone: false,
     });
   });
+
+  it('does not mutate the caller-supplied features object when normalizing "import"', () => {
+    const callerFeatures: { import: true } = { import: true };
+    createConfig({ features: callerFeatures });
+    expect(callerFeatures.import).toBe(true);
+  });
 });

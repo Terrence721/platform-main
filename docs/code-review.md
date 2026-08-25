@@ -571,4 +571,12 @@ Declarative action-class file (13 action classes, no generics) - a different sha
 
 ---
 
+### [`config.ts`](https://github.com/Terrence721/platform-main/blob/d94a77a519e8b44ce76d47f0bba9704c0b081229/modules/store-devtools/src/config.ts)
+
+**low · Correctness** — Fixed via [issue #198](https://github.com/Terrence721/platform-main/issues/198)
+
+`createConfig()`'s `features` computation had two bugs that canceled each other out in the one place they were both reachable, which is why neither was previously observable: (1) when the caller supplied their own `features` object, `features` aliased that same reference rather than copying it, so the `import: true -> 'custom'` normalization a few lines later mutated the caller's own config object; (2) the final `Object.assign({}, DEFAULT_OPTIONS, { features }, options)` put the normalized `{ features }` _before_ `options` in the source list, so `options.features` would clobber it - except it never visibly did, because `features` and `options.features` were the same mutated object, so the "clobber" was a no-op. Confirmed by fixing only the mutation first: it broke the existing `'import "true" is updated to "custom"'` test, since the now-_different_, unmutated `options.features` legitimately won the assign - proving both fixes were required together, not independently optional. Fix: `features` is now always a fresh copy, and the assign order is swapped (`options` before `{ features }`) so the normalized value survives. Deliberately left the `features` fallback chain's wholesale-replace-not-merge behavior alone (a partial caller override still drops the other 9 default flags) - two existing tests explicitly assert that as the expected result, not just fail to catch it; recorded as a structural observation, not a defect.
+
+---
+
 _More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, and `router-store` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files. `store-devtools` is in progress — see [todo.md](../todo.md) for the live per-module status._

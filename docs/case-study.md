@@ -1,6 +1,6 @@
 # Case Study: Rebuilding NgRx's Core Libraries
 
-Last updated: August 19, 2026
+Last updated: August 25, 2026
 
 ## Problem
 
@@ -35,7 +35,7 @@ The other architectural strand is Nx workspace and CI engineering: real task-dep
 
 ## Results / Impact
 
-- **5,389 tests passing, 519 files, 0 lint errors**, across all 13 modules — real `ng-packagr` builds, not "it compiles."
+- **5,391 tests passing, 519 files, 0 lint errors**, across all 13 modules — real `ng-packagr` builds, not "it compiles."
 - **12 real Dependabot security vulnerabilities resolved** (6 high, 4 moderate, 2 low) via 8 PRs grouped by package, using scoped `yarn` `resolutions` overrides so a fix to one transitive dependency's vulnerable copy never force-crossed an unrelated consumer to a major version it wasn't designed against; the 2 alerts with no upstream fix yet were dismissed with a documented reason rather than silently ignored.
 - **18x / 4.5x reduction** in genuinely slow test suites (schematics: 52.8s → 2.9s; migrations: 51.5s → 11.4s) from one root-cause fix, found by refusing to accept a reporting-config change that didn't actually move the number.
 - **12,453 lines removed** consolidating four duplicated `schematics-core` copies into one, with zero loss of the runtime behavior the duplication was originally protecting.

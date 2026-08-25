@@ -1,6 +1,6 @@
 ﻿# 📝 TODO
 
-**Last Updated:** August 25, 2026 (`router-store` module code review complete — 12/12 files, 7 real bugs found and fixed, the highest hit rate of any module so far; no module currently in progress; 9 modules left under issue #32)
+**Last Updated:** August 25, 2026 (`router-store` module code review complete — 12/12 files, 7 real bugs found and fixed, the highest hit rate of any module so far; `store-devtools` in progress — 3/11 files, 1 real bug found and fixed; 8 modules left under issue #32)
 
 A phase-by-phase log of what's been done on this repo and what's still open. This is the source of truth for progress — the [GitHub Project board](https://github.com/users/Terrence721/projects/2) is a lighter-weight view of the same work, kept in sync with this file, not a separate source of truth.
 

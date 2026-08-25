@@ -5,7 +5,7 @@
 [![Quality](https://github.com/Terrence721/platform-main/actions/workflows/quality.yml/badge.svg)](https://github.com/Terrence721/platform-main/actions/workflows/quality.yml)
 [![CodeQL](https://github.com/Terrence721/platform-main/actions/workflows/codeql.yml/badge.svg)](https://github.com/Terrence721/platform-main/actions/workflows/codeql.yml)
 
-Last updated: August 12, 2026
+Last updated: August 25, 2026
 
 This repository is a personal demonstration workspace: real, MIT-licensed NgRx source added module by module, with specific pieces **redesigned by choice** — not copied verbatim — where the goal is to show a defensible, different architectural call instead of reproducing an existing one.
 
@@ -74,7 +74,7 @@ modules/
                            complete
 ```
 
-All 13 modules are added. A per-module code review audit is now in progress (`store` complete — 3 real bugs found and fixed; `entity` complete — 0 real bugs found; `effects` complete — 0 real bugs found; `router-store` complete — 7 real bugs found and fixed across 12/12 files, the highest hit rate of any module so far, see [`docs/code-review.md`](docs/code-review.md)). See `todo.md`'s "Still to do" table for what's left (9 modules' review remaining, none started, plus the deferred `migrations/`-folder pass, tooling migration, containerization).
+All 13 modules are added. A per-module code review audit is now in progress (`store` complete — 3 real bugs found and fixed; `entity` complete — 0 real bugs found; `effects` complete — 0 real bugs found; `router-store` complete — 7 real bugs found and fixed across 12/12 files, the highest hit rate of any module so far; `store-devtools` in progress — 3/11 files reviewed, 1 real bug found and fixed, see [`docs/code-review.md`](docs/code-review.md)). See `todo.md`'s "Still to do" table for what's left (8 modules' review not yet started, plus the deferred `migrations/`-folder pass, tooling migration, containerization).
 
 ## 🖥 Getting Started
 

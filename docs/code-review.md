@@ -553,4 +553,14 @@ Given the sibling file's real bug (`full_serializer.ts`'s `component` re-derived
 
 ---
 
-_More findings are appended here as each file's PR merges. `store`, `entity`, and `effects` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none. `router-store` is in progress (7 real findings so far, all fixed) — see [todo.md](../todo.md) for the live per-module status._
+### [`store_router_connecting.service.ts`](https://github.com/Terrence721/platform-main/blob/5a04de59b298f57f50a3900ac161199513148af5/modules/router-store/src/store_router_connecting.service.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #194](https://github.com/Terrence721/platform-main/issues/194)) — **last file in `router-store`, 12/12**
+
+The largest, most central file in the module - everything else this audit found traces back to how it actually behaves. Traced the full `RouterTrigger` state machine (`NONE`/`ROUTER`/`STORE`) synchronously through `dispatchRouterAction()`/`navigateIfNeeded()` and confirmed the guards correctly prevent circular re-dispatch in both directions. Checked why `NavigationCancel`/`NavigationError` dispatch unconditionally (unlike the other three event branches, which are gated on `trigger !== STORE`) - confirmed intentional: a store-triggered navigation that fails still needs to notify the store so `reducer.ts`'s cancel/error state-revert (#180) can correct it back to reality. Manually verified all 5 dispatched action payloads against `actions.ts`'s declared types field-by-field, since this file builds `{ type, payload }` literals directly rather than through the typed action creators. Investigated a real-looking `config.routerState` vs `config.serializer` decoupling (a caller can set `serializer: FullRouterStateSerializer` without `routerState: RouterState.Full`, and the event-trimming check only looks at the latter) - concluded intentional per `StoreRouterConfig.routerState`'s own doc comment, which explicitly describes it as independently controlling the dispatched payload's event metadata. Checked the theoretical `this.routerState | null` vs. the non-nullable action payload types - not reachable, since Angular Router guarantees `NavigationStart` (which sets it) always fires before any event that would read it.
+
+No dedicated spec file, but exercised extensively through `integration.spec.ts` (store-triggered vs. router-triggered navigation, guard cancellation/error, `PostActivation` timing, currently-open-URL trailing-slash handling) and `router_store_module.spec.ts`.
+
+---
+
+_More findings are appended here as each file's PR merges. `store`, `entity`, and `effects` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none. `router-store` is complete — 7 real bugs found and fixed across 12/12 files — see [todo.md](../todo.md) for the live per-module status._

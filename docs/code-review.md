@@ -537,4 +537,12 @@ Smallest file in the module: one interface, one abstract class, no runtime logic
 
 ---
 
-_More findings are appended here as each file's PR merges. `store`, `entity`, and `effects` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none. `router-store` is in progress (6 real findings so far, all fixed) — see [todo.md](../todo.md) for the live per-module status._
+### [`serializers/full_serializer.ts`](https://github.com/Terrence721/platform-main/blob/5a04de59b298f57f50a3900ac161199513148af5/modules/router-store/src/serializers/full_serializer.ts)
+
+**medium · Correctness** — Fixed via [issue #190](https://github.com/Terrence721/platform-main/issues/190)
+
+`serializeRoute()`'s `component` field was re-derived from `route.routeConfig.component` instead of copying `route.component` directly, unlike every other field in the function. Confirmed against the real installed `@angular/router` source that the Router sets `route.component` directly on the snapshot for `loadComponent`-based lazy routes and never touches `routeConfig.component` for that shape - so the serialized state's `component` was always `undefined` for any lazy-loaded standalone route, a common and increasingly default pattern. Confirmed empirically with a throwaway probe simulating a real `loadComponent` resolution before writing the fix, not just reasoned about. Matters more for `FullRouterStateSerializer` specifically than `MinimalRouterStateSerializer`, which deliberately excludes `component` entirely - Full getting it wrong defeats the entire reason to pick Full over Minimal. Root cause the existing tests missed it: `serializers.spec.ts`'s mock never set a top-level `.component` field distinct from `routeConfig.component`, so the suite couldn't distinguish the two read paths. Fix: `component: route.component`, plus updated the mock and expectations (including removing a now-incorrect `component: undefined` override on the "empty routeConfig" test, since `component` no longer depends on `routeConfig` at all). Checked whether any other file reads a `routeConfig` field this serializer drops - none found.
+
+---
+
+_More findings are appended here as each file's PR merges. `store`, `entity`, and `effects` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none. `router-store` is in progress (7 real findings so far, all fixed) — see [todo.md](../todo.md) for the live per-module status._

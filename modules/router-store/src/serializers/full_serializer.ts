@@ -38,9 +38,7 @@ export class FullRouterStateSerializer implements RouterStateSerializer<Serializ
       queryParams: route.queryParams,
       queryParamMap: route.queryParamMap,
       fragment: route.fragment,
-      component: (route.routeConfig
-        ? route.routeConfig.component
-        : undefined) as any,
+      component: route.component,
       root: undefined as any,
       parent: undefined as any,
       firstChild: children[0],

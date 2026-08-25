@@ -32,7 +32,6 @@ describe('full serializer', () => {
       root: {
         ...createExpectedSnapshot(),
         routeConfig: null,
-        component: undefined,
       },
     };
     expect(actual).toEqual(expected);
@@ -66,7 +65,7 @@ describe('full serializer', () => {
   function createExpectedSnapshot(prefix = 'root') {
     return {
       ...createRouteSnapshot(prefix),
-      component: `${prefix}-route.routeConfig.component`,
+      component: `${prefix}-route.component`,
       root: undefined,
       parent: undefined,
       firstChild: undefined,
@@ -171,6 +170,7 @@ function createRouteSnapshot(prefix = 'root'): any {
     data: `${prefix}-route.data`,
     url: `${prefix}-route.url`,
     outlet: `${prefix}-route.outlet`,
+    component: `${prefix}-route.component`,
     routeConfig: {
       component: `${prefix}-route.routeConfig.component`,
       path: `${prefix}-route.routeConfig.path`,

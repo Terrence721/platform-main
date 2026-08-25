@@ -41,7 +41,7 @@ describe('getRouterSelectors', () => {
     `).toInfer('selector', 'MemoizedSelector<State, any, (s1: any) => any>');
   });
 
-  it('selectQueryParams should return Params', () => {
+  it('selectQueryParams should return Params or undefined', () => {
     expectSnippet(`
       export const selector = createSelector(
         selectQueryParams,
@@ -49,7 +49,7 @@ describe('getRouterSelectors', () => {
       );
     `).toInfer(
       'selector',
-      'MemoizedSelector<State, Params, (s1: Params) => Params>'
+      'MemoizedSelector<State, Params | undefined, (s1: Params | undefined) => Params | undefined>'
     );
   });
 
@@ -66,7 +66,7 @@ describe('getRouterSelectors', () => {
     );
   });
 
-  it('selectRouteParams should return Params', () => {
+  it('selectRouteParams should return Params or undefined', () => {
     expectSnippet(`
       export const selector = createSelector(
         selectRouteParams,
@@ -74,7 +74,7 @@ describe('getRouterSelectors', () => {
       );
     `).toInfer(
       'selector',
-      'MemoizedSelector<State, Params, (s1: Params) => Params>'
+      'MemoizedSelector<State, Params | undefined, (s1: Params | undefined) => Params | undefined>'
     );
   });
 
@@ -91,16 +91,19 @@ describe('getRouterSelectors', () => {
     );
   });
 
-  it('selectRouteData should return Data', () => {
+  it('selectRouteData should return Data or undefined', () => {
     expectSnippet(`
       export const selector = createSelector(
         selectRouteData,
         data => data
       );
-    `).toInfer('selector', 'MemoizedSelector<State, Data, (s1: Data) => Data>');
+    `).toInfer(
+      'selector',
+      'MemoizedSelector<State, Data | undefined, (s1: Data | undefined) => Data | undefined>'
+    );
   });
 
-  it('selectUrl should return string', () => {
+  it('selectUrl should return string or undefined', () => {
     expectSnippet(`
       export const selector = createSelector(
         selectUrl,
@@ -108,7 +111,7 @@ describe('getRouterSelectors', () => {
       );
     `).toInfer(
       'selector',
-      'MemoizedSelector<State, string, (s1: string) => string>'
+      'MemoizedSelector<State, string | undefined, (s1: string | undefined) => string | undefined>'
     );
   });
 

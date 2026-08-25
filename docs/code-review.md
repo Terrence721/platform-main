@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: August 19, 2026**
+**Last Updated: August 25, 2026**
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -563,4 +563,4 @@ No dedicated spec file, but exercised extensively through `integration.spec.ts` 
 
 ---
 
-_More findings are appended here as each file's PR merges. `store`, `entity`, and `effects` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none. `router-store` is complete — 7 real bugs found and fixed across 12/12 files — see [todo.md](../todo.md) for the live per-module status._
+_More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, and `router-store` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files. No module is currently in progress — 9 remain under [issue #32](https://github.com/Terrence721/platform-main/issues/32). See [todo.md](../todo.md) for the live per-module status._

@@ -18,10 +18,15 @@ import { provideRouterStore } from './provide_router_store';
  * ```
  *
  * Either a reducer or an effect can be invoked in response to this action.
- * If the invoked reducer throws, the navigation will be canceled.
+ * A reducer that throws in response to this action does *not* cancel navigation -
+ * the error becomes an uncaught exception rather than a caught navigation failure,
+ * so `router.navigateByUrl(...)`'s returned promise never settles. (Confirmed via
+ * `integration.spec.ts`'s `should support preventing navigation`, which is
+ * `test.skip`'d for exactly this reason - the test times out if un-skipped.)
  *
  * If navigation gets canceled because of a guard, a ROUTER_CANCEL action will be
- * dispatched. If navigation results in an error, a ROUTER_ERROR action will be dispatched.
+ * dispatched. If navigation results in an error (e.g. a guard or resolver throws),
+ * a ROUTER_ERROR action will be dispatched.
  *
  * Both ROUTER_CANCEL and ROUTER_ERROR contain the store state before the navigation
  * which can be used to restore the consistency of the store.

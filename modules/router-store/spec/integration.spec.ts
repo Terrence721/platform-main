@@ -141,6 +141,16 @@ describe('integration spec', () => {
         });
     }));
 
+  // Un-skipping this reliably times out: the reducer's throw becomes an
+  // uncaught exception (visible in the console as "Error: You shall not
+  // pass!"), not a rejection the .catch() below ever sees, so
+  // navigateByUrl()'s promise never settles. Confirmed empirically during
+  // the router_store_module.ts code review (#186) - not fixed here, since
+  // making a reducer throw actually cancel navigation would need Angular
+  // Router visibility into the store dispatch this module's subscriber
+  // makes, which the Router has no hook for. Real, pre-existing gap in the
+  // module's documented behavior, not something this repo's adaptation
+  // introduced - inherited already-skipped from the original upstream import.
   test.skip('should support preventing navigation', () =>
     new Promise<void>((done) => {
       const reducer = (state = '', action: RouterAction<any>) => {

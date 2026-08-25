@@ -521,4 +521,12 @@ No bug in this file - but tracing `config.serializer`'s type to understand the g
 
 ---
 
-_More findings are appended here as each file's PR merges. `store`, `entity`, and `effects` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none. `router-store` is in progress (5 real findings so far, all fixed) — see [todo.md](../todo.md) for the live per-module status._
+### [`router_store_module.ts`](https://github.com/Terrence721/platform-main/blob/5a04de59b298f57f50a3900ac161199513148af5/modules/router-store/src/router_store_module.ts)
+
+**low · Maintainability** — Fixed via [issue #186](https://github.com/Terrence721/platform-main/issues/186)
+
+`StoreRouterConnectingModule.forRoot()` itself is a correct thin passthrough to `provideRouterStore()` - `EnvironmentProviders` inside `ModuleWithProviders.providers` is a supported Angular pattern (confirmed against `@angular/core`'s real `.d.ts`), and the generic `T` flows through by ordinary inference. But the class's JSDoc claimed "if the invoked reducer throws, the navigation will be canceled" - false. The one test that would prove it (`integration.spec.ts`'s `should support preventing navigation`) is `test.skip`'d, inherited already-skipped from the original upstream import. Didn't take the skip at face value: un-skipped it and ran it in isolation - it fails with a 30s timeout, not the assertion it expects. The reducer's throw surfaces as an uncaught exception deep in the store's reduce pipeline, never as a rejection the navigation promise's `.catch()` sees, so the promise never settles. Root cause: Angular Router's guard/error pipeline (which correctly handles guard-based `ROUTER_CANCEL` and guard/resolver-thrown `ROUTER_ERROR` - both separately tested and passing) has no visibility into `store_router_connecting.service.ts`'s independent `router.events` subscription, so a reducer throwing inside that subscriber's `store.dispatch()` call has no path back to the Router. Reverted the un-skip immediately after confirming. Fix: corrected the JSDoc, added an explanatory comment above the skip in `integration.spec.ts` - left the underlying (inherited, pre-existing) behavior and the skip itself unchanged, since actually cancelling navigation on a reducer throw would need Router visibility this architecture doesn't have.
+
+---
+
+_More findings are appended here as each file's PR merges. `store`, `entity`, and `effects` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none. `router-store` is in progress (6 real findings so far, all fixed) — see [todo.md](../todo.md) for the live per-module status._

@@ -529,4 +529,12 @@ No bug in this file - but tracing `config.serializer`'s type to understand the g
 
 ---
 
+### [`serializers/base.ts`](https://github.com/Terrence721/platform-main/blob/5a04de59b298f57f50a3900ac161199513148af5/modules/router-store/src/serializers/base.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #188](https://github.com/Terrence721/platform-main/issues/188))
+
+Smallest file in the module: one interface, one abstract class, no runtime logic. `RouterStateSerializer` is deliberately a class rather than an interface - interfaces erase at compile time and can't serve as `store_router_connecting.service.ts`'s implicit constructor-parameter-type DI token, confirmed load-bearing rather than incidental. Both concrete serializers use `implements` rather than `extends`; checked whether that loses anything - the abstract class has no constructor logic or non-abstract members, so there's nothing to actually inherit, and `instanceof` checks elsewhere work against the concrete classes either way. Confirmed both concrete serializers' state types actually satisfy the `url: string` bound by reading their field declarations directly, not just trusting a clean compile.
+
+---
+
 _More findings are appended here as each file's PR merges. `store`, `entity`, and `effects` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none. `router-store` is in progress (6 real findings so far, all fixed) — see [todo.md](../todo.md) for the live per-module status._

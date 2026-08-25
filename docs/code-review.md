@@ -545,4 +545,12 @@ Smallest file in the module: one interface, one abstract class, no runtime logic
 
 ---
 
+### [`serializers/minimal_serializer.ts`](https://github.com/Terrence721/platform-main/blob/5a04de59b298f57f50a3900ac161199513148af5/modules/router-store/src/serializers/minimal_serializer.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #192](https://github.com/Terrence721/platform-main/issues/192))
+
+Given the sibling file's real bug (`full_serializer.ts`'s `component` re-derived from the wrong object - #190), checked every field here for the same "derived value reads from the wrong source" pattern. Key difference: `MinimalActivatedRouteSnapshot` has no `component` field at all by design - confirmed intentional (matches `store_router_connecting.service.ts`'s own doc comment and the test suite's "not serializable" annotations), so no possible instance of that bug class exists here. Every other field is either a direct `route.X` copy or a narrowing verified against the real `Route.title` type (`string | Type<Resolve<string>> | ResolveFn<string> | undefined`, confirmed against `@angular/router`'s `.d.ts`) - correctly resolves to `undefined`, never `null`, matching `router_selectors.ts`'s identical static-vs-resolved title distinction.
+
+---
+
 _More findings are appended here as each file's PR merges. `store`, `entity`, and `effects` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none. `router-store` is in progress (7 real findings so far, all fixed) — see [todo.md](../todo.md) for the live per-module status._

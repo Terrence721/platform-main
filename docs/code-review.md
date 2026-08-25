@@ -501,4 +501,12 @@ No bug in this file - but tracing `config.serializer`'s type to understand the g
 
 ---
 
+### [`reducer.ts`](https://github.com/Terrence721/platform-main/blob/5a04de59b298f57f50a3900ac161199513148af5/modules/router-store/src/reducer.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #180](https://github.com/Terrence721/platform-main/issues/180))
+
+`routerReducer()` handles `ROUTER_NAVIGATION`/`ROUTER_ERROR`/`ROUTER_CANCEL` identically - all three commit `payload.routerState` and `payload.event.id`. Traced whether that's actually correct for cancel/error rather than assuming it: `store_router_connecting.service.ts`'s `dispatchRouterAction()` only overrides `routerState` in the payloads for navigation, not cancel/error, so `this.routerState` (set once, on `NavigationStart`, before the attempt) is what those two commit - correctly reverting store state to match the router, which never left the old URL, while `navigationId` still advances to the failed event's own `id`. Confirmed against `@angular/router`'s real `.d.ts` that `NavigationCancel`/`NavigationError`/`RoutesRecognized` all extend `RouterEvent`, whose `id: number` is non-optional, so `payload.event.id` can't be `undefined` for any case this switch handles. The `Result` generic's unconstrained default and double-cast through `unknown` is a documented `strictFunctionTypes` escape hatch (`ref: #1344`), not the same class of gap as `router_store_config.ts`'s missing parameterization - no call site in this repo supplies a `Result` inconsistent with `RouterState`. No dedicated spec file, but exercised extensively through `integration.spec.ts` and `router_store_module.spec.ts`.
+
+---
+
 _More findings are appended here as each file's PR merges. `store`, `entity`, and `effects` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none. `router-store` is in progress (4 real findings so far, all fixed) — see [todo.md](../todo.md) for the live per-module status._

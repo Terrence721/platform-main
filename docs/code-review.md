@@ -579,4 +579,12 @@ Declarative action-class file (13 action classes, no generics) - a different sha
 
 ---
 
+### [`devtools-dispatcher.ts`](https://github.com/Terrence721/platform-main/blob/d94a77a519e8b44ce76d47f0bba9704c0b081229/modules/store-devtools/src/devtools-dispatcher.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #200](https://github.com/Terrence721/platform-main/issues/200))
+
+One line: `class DevtoolsDispatcher extends ActionsSubject {}` - an empty DI-token subclass, same shape as `store`'s own `ReducerManagerDispatcher`, already characterized as a legitimate DI-token case (not an ISP violation) during the module's original addition. Didn't stop at "trivial" - traced why it exists: `provide-store-devtools.ts` re-provides `{ provide: ReducerManagerDispatcher, useExisting: DevtoolsDispatcher }`, overriding `store`'s own default (`useExisting: ActionsSubject`), so with `store-devtools` installed, the `ReducerManager` that drives every state update dispatches through `DevtoolsDispatcher` instead of the main action stream. That's what lets `StoreDevtools` sit between the app's real actions and the reducers - intercepting, lifting, and selectively re-dispatching through `DevtoolsDispatcher` for time-travel/rollback, while `ActionsSubject` stays the unmodified record of what the app actually dispatched. Confirmed deliberate, coherent architecture, not two unrelated empty subclasses that happen to share a shape.
+
+---
+
 _More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, and `router-store` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files. `store-devtools` is in progress — see [todo.md](../todo.md) for the live per-module status._

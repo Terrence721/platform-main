@@ -563,4 +563,12 @@ No dedicated spec file, but exercised extensively through `integration.spec.ts` 
 
 ---
 
-_More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, and `router-store` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files. No module is currently in progress — 9 remain under [issue #32](https://github.com/Terrence721/platform-main/issues/32). See [todo.md](../todo.md) for the live per-module status._
+### [`actions.ts`](https://github.com/Terrence721/platform-main/blob/d94a77a519e8b44ce76d47f0bba9704c0b081229/modules/store-devtools/src/actions.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #196](https://github.com/Terrence721/platform-main/issues/196)) — first file in `store-devtools`
+
+Declarative action-class file (13 action classes, no generics) - a different shape than `router-store`'s `createAction()`-based actions. Confirmed the `All` union matches the 13 declared action-type constants 1:1, and cross-checked every `PerformAction(action, timestamp)` constructor call site (`devtools.ts`, `reducer.ts` x2, `utils.ts`) for argument-order consistency - no drift. `SetActionsActive` looked like a possible dead export at first (never `new`'d anywhere in this module's own `devtools.ts` API, unlike its 12 siblings) - traced it further before flagging: it legitimately arrives as a raw dispatched object from the Redux DevTools browser extension's own UI via `extension.ts`'s `unwrapAction()`, not through this repo's action creators. Could not verify the literal action-type strings against the real Redux DevTools extension protocol - no reference package available locally, and this repo's policy is not to diff against a reference implementation from memory; every constant is at least internally self-consistent.
+
+---
+
+_More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, and `router-store` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files. `store-devtools` is in progress — see [todo.md](../todo.md) for the live per-module status._

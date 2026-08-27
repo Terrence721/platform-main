@@ -587,4 +587,16 @@ One line: `class DevtoolsDispatcher extends ActionsSubject {}` - an empty DI-tok
 
 ---
 
+### [`devtools.ts`](https://github.com/Terrence721/platform-main/blob/d94a77a519e8b44ce76d47f0bba9704c0b081229/modules/store-devtools/src/devtools.ts)
+
+**low · Maintainability** — Fixed via [issue #202](https://github.com/Terrence721/platform-main/issues/202)
+
+The largest, most central file in the module - `StoreDevtools` merges the app's real dispatched actions (`actions$: ActionsSubject`) with the devtools-internal stream (`dispatcher: DevtoolsDispatcher`) and the browser extension's streams, runs them through `reducer.ts`'s `liftReducerWith()` to build `LiftedState`, and exposes the unlifted result as the `StateObservable` that `provide-store-devtools.ts` substitutes for the app's normal `State` service - the mechanism that lets time-travel/pause/lock actually affect what components see. Traced why `actions$.asObservable().pipe(skip(1))` skips exactly one emission: `ActionsSubject` seeds its `BehaviorSubject` with `{ type: INIT }` at construction, and `dispatcher: DevtoolsDispatcher` (a separate singleton - confirmed `provide-store-devtools.ts` only re-points `ReducerManagerDispatcher`, never plain `ActionsSubject`) carries its _own_ independently-seeded INIT into `liftedAction$` unwrapped; without the skip, `reducer.ts`'s dedicated (fire-once) `case INIT` would trigger twice. That same dispatcher-sourced INIT is load-bearing for `toSignal(unliftedState$, { requireSync: true })`: unlike `state.ts`'s `State` class (which seeds its `BehaviorSubject` with `initialState` directly), this file's `liftedStateSubject` is an unseeded `ReplaySubject(1)`. Wrote a throwaway repro against this repo's installed `rxjs` to confirm `queueScheduler` delivers a scheduled action synchronously (not deferred) when nothing is already draining the queue - it does, so the dispatcher's synchronous INIT reaches `liftedStateSubject.next(...)` before the constructor's later `toSignal()` call subscribes. Fragile-by-construction, verified correct as written. Also verified `injectZoneConfig(config.connectInZone!)`'s non-null assertion is safe (`config.ts` always defaults `connectInZone` to `false`), and that `this.state`'s object literal matches `StateObservable`'s real shape field-for-field.
+
+**One real (minor) finding, fixed:** `NgZone` and `inject` (top-of-file imports) were dead - lint-confirmed and confirmed by reading, neither is referenced in the file body. Both responsibilities now live in `zone-config.ts`'s `injectZoneConfig()`, factored out after these imports were added. Removed; module lint-warning count dropped from 30 to 28 (0 errors either way).
+
+Exercised via `devtools.spec.ts` plus indirectly through every other spec in the module that dispatches through a real `Store`.
+
+---
+
 _More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, and `router-store` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files. `store-devtools` is in progress — see [todo.md](../todo.md) for the live per-module status._

@@ -14,16 +14,22 @@ import {
   MonoTypeOperatorFunction,
   Observable,
   Observer,
+  of,
   queueScheduler,
   ReplaySubject,
   Subscription,
 } from 'rxjs';
-import { map, observeOn, scan, skip, withLatestFrom } from 'rxjs/operators';
+import { filter, map, observeOn, scan, withLatestFrom } from 'rxjs/operators';
 
 import * as Actions from './actions';
 import { STORE_DEVTOOLS_CONFIG, StoreDevtoolsConfig } from './config';
 import { DevtoolsExtension } from './extension';
-import { LiftedState, liftInitialState, liftReducerWith } from './reducer';
+import {
+  INIT_ACTION,
+  LiftedState,
+  liftInitialState,
+  liftReducerWith,
+} from './reducer';
 import {
   liftAction,
   unliftState,
@@ -61,11 +67,22 @@ export class StoreDevtools implements Observer<any>, OnDestroy {
       config
     );
 
+    // `actions$` (ActionsSubject) and `dispatcher` (DevtoolsDispatcher) are
+    // both BehaviorSubject-backed and each independently seed their own
+    // `{ type: INIT }` action on construction. Both streams are filtered to
+    // exclude INIT explicitly, and a single INIT_ACTION is merged in below
+    // instead - the one deliberate INIT trigger this pipeline has, rather
+    // than one of them incidentally standing in for it.
+    const isNotInitAction = (action: Action) =>
+      action.type !== INIT_ACTION.type;
+
     const liftedAction$ = merge(
-      merge(actions$.asObservable().pipe(skip(1)), extension.actions$).pipe(
-        map(liftAction)
-      ),
-      dispatcher.asObservable(),
+      of(INIT_ACTION),
+      merge(
+        actions$.asObservable().pipe(filter(isNotInitAction)),
+        extension.actions$
+      ).pipe(map(liftAction)),
+      dispatcher.asObservable().pipe(filter(isNotInitAction)),
       extension.liftedActions$
     ).pipe(observeOn(queueScheduler));
 
@@ -73,6 +90,11 @@ export class StoreDevtools implements Observer<any>, OnDestroy {
 
     const zoneConfig = injectZoneConfig(config.connectInZone!);
 
+    // Populated synchronously below by the INIT_ACTION merged into
+    // liftedAction$ above, which is what makes
+    // `toSignal(..., { requireSync: true })` on unliftedState$ further down
+    // safe - it no longer depends on any incidental behavior of
+    // `dispatcher`/`actions$`, just on this file's own explicit INIT source.
     const liftedStateSubject = new ReplaySubject<LiftedState>(1);
 
     this.liftedStateSubscription = liftedAction$

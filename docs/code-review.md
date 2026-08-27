@@ -601,4 +601,16 @@ Exercised via `store.spec.ts` (where `StoreDevtools` is actually instantiated an
 
 ---
 
+### [`extension.ts`](https://github.com/Terrence721/platform-main/blob/d94a77a519e8b44ce76d47f0bba9704c0b081229/modules/store-devtools/src/extension.ts)
+
+**low · Correctness** — Fixed via [issue #205](https://github.com/Terrence721/platform-main/issues/205)
+
+The browser-extension-facing counterpart to `devtools.ts`: `DevtoolsExtension` wraps `window.postMessage`-based `connect()`/`init()`/`subscribe()` behind `actions$`/`liftedActions$`/`start$` observables, and `notify()` is what `devtools.ts`'s `scan` callback calls on every lifted action to push updates back to the extension - either a fast path (just the action + current state, for a plain `PERFORM_ACTION` when not locked/paused/filtered) or a full lifted-state update (everything else). Confirmed the fast path's `isLocked`/`isPaused` early-returns are correct against `reducer.ts`'s own handling of those cases, and that the full-update path deliberately skips that check since non-`PERFORM_ACTION` lifted actions are frequently the devtools UI's own interactions (e.g. `PAUSE_RECORDING` itself) that must be reflected regardless of the state they just caused. Checked the `IMPORT_STATE` handling's `timeout(1000)`/`debounceTime(1000)` race in `createActionStreams()` - both the success and timeout/`catchError` paths resolve to the same value, so the race has no observable effect. Left `unwrapAction()`'s indirect `eval` (for extension-dispatched action strings/args) as-is - by-design for the extension's manual dispatcher, not a vulnerability on an external input surface.
+
+**One real bug, fixed:** the fast path passed `state.nextActionId` as the numeric id argument to a configured `actionSanitizer`. `nextActionId` is the _next_ id to be assigned (`reducer.ts`'s `PERFORM_ACTION` case post-increments it), so it's always one past the id of the action actually being reported - `utils.ts`'s own `unliftAction()` establishes the correct pattern (`nextActionId - 1`) elsewhere in this same file family. The existing test couldn't catch this: `testActionSanitizer(action, id)` in `extension.spec.ts` discards its `id` parameter entirely, so the assertion never actually depended on the value passed - confirmed via a throwaway instrumented build (forced `notify()` to throw with the real value) that the fast path was calling the sanitizer with `id=1` where `0` is correct for the standard test fixture. Notably, the existing test's own expected-value literal already used `testActionSanitizer(createPerformAction().action, 0)` - the original intent was clearly `0`, it just was never enforced. Fixed to `state.nextActionId - 1`, with a new regression test that embeds `id` in the sanitizer's output so the assertion actually discriminates on the value - confirmed it fails against the pre-fix code and passes against the fix.
+
+Exercised via `extension.spec.ts` (the whole file is specifically about this class, 31 tests -> 32) plus `integration.spec.ts`.
+
+---
+
 _More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, and `router-store` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files. `store-devtools` is in progress — see [todo.md](../todo.md) for the live per-module status._

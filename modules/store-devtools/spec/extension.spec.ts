@@ -511,6 +511,32 @@ describe('DevtoolsExtension', () => {
         });
       });
 
+      describe('should pass the just-processed action id to the sanitizer', () => {
+        it('uses nextActionId - 1, not nextActionId', () => {
+          function idCapturingSanitizer(action: Action, id: number) {
+            return { type: SANITIZED_TOKEN, id };
+          }
+          const { devtoolsExtension, extensionConnection } = testSetup({
+            config: createConfig({
+              actionSanitizer: idCapturingSanitizer,
+            }),
+          });
+          devtoolsExtension.actions$.subscribe(() => null);
+
+          const action = createPerformAction();
+          // nextActionId: 1 means action id 0 (the only entry in
+          // actionsById/stagedActionIds) is the one that was just processed.
+          const state = createState();
+
+          devtoolsExtension.notify(action, state);
+
+          expect(extensionConnection.send).toHaveBeenCalledWith(
+            { ...action, action: { type: SANITIZED_TOKEN, id: 0 } },
+            unliftState(state)
+          );
+        });
+      });
+
       describe('should run the state sanitizer on store state', () => {
         let devtoolsExtension: DevtoolsExtension;
         let extensionConnection: ReduxDevtoolsExtensionConnection;

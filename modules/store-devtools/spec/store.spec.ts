@@ -896,5 +896,32 @@ describe('Store Devtools', () => {
       store.dispatch({ type: 'DECREMENT' });
       expect(store.state()).toEqual({ state: 0 });
     });
+
+    it('should not construct StoreDevtools when no extension or monitor is present', () => {
+      TestBed.configureTestingModule({
+        imports: [
+          StoreModule.forRoot({ state: counter }),
+          StoreDevtoolsModule.instrument(),
+        ],
+        providers: [
+          { provide: IS_EXTENSION_OR_MONITOR_PRESENT, useValue: false },
+        ],
+      });
+      TestBed.overrideProvider(StoreDevtools, {
+        useFactory: () => {
+          throw new Error(
+            'StoreDevtools should not be constructed when no extension or monitor is present'
+          );
+        },
+      });
+
+      const testbed: TestBed = getTestBed();
+      const store = testbed.inject(Store);
+      const state = testbed.inject(StateObservable);
+
+      expect(state.state()).toEqual({ state: 0 });
+      store.dispatch({ type: 'INCREMENT' });
+      expect(state.state()).toEqual({ state: 1 });
+    });
   });
 });

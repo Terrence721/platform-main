@@ -637,4 +637,16 @@ No dedicated spec file, but this is the single most-exercised line in the module
 
 ---
 
+### [`provide-store-devtools.ts`](https://github.com/Terrence721/platform-main/blob/d94a77a519e8b44ce76d47f0bba9704c0b081229/modules/store-devtools/src/provide-store-devtools.ts)
+
+**medium · Correctness** — Fixed via [issue #211](https://github.com/Terrence721/platform-main/issues/211)
+
+The module's real entry point: the `EnvironmentProviders` array everything else in this module (`DevtoolsExtension`, `DevtoolsDispatcher`, `StoreDevtools`, and the token overrides that make devtools actually intercept the app's real state/reducer pipeline) gets wired through.
+
+**Real gap, fixed:** `IS_EXTENSION_OR_MONITOR_PRESENT` was provided with a real factory but never injected or read anywhere in this module's source - a full-module grep confirmed it, and `store.spec.ts`'s test-setup helper deliberately overriding it to `true` in every test was the tell that this wasn't intentional dead code. The name says the intent: skip `StoreDevtools`'s lifted-reducer machinery entirely when neither an extension nor a monitor is present, for near-zero overhead in production - exactly what `config.ts`'s own `autoPause` doc comment already promises elsewhere in this module. Wired it up: `createStateObservable()` now branches on the flag, resolving either `StoreDevtools.state` or `@ngrx/store`'s own default `State`, both via lazy `Injector.get()` inside the factory body rather than static `deps` - listing `State` as a static dep in the first pass constructed it unconditionally regardless of branch taken, which silently ran `State`'s own independent, non-error-catching reducer subscription in parallel with devtools' lifted one and broke a real test (an uncaught `ReferenceError` where the error should have been caught and recorded). Added a regression test using `TestBed.overrideProvider(StoreDevtools, { useFactory: () => { throw ... } })` to prove the laziness itself, not just the branching logic.
+
+**Cross-file finding, not fixed here:** `createIsExtensionOrMonitorPresent`'s own parameter (`extension: ReduxDevtoolsExtension | null`) already correctly allows `null`, matching what this file's `createReduxDevtoolsExtension()` actually returns - but `REDUX_DEVTOOLS_EXTENSION`'s `InjectionToken<ReduxDevtoolsExtension>` declaration in the already-closed `extension.ts` (#205) claims otherwise. Filed as a new sub-issue against that file rather than fixed inline.
+
+---
+
 _More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, and `router-store` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files. `store-devtools` is in progress — see [todo.md](../todo.md) for the live per-module status._

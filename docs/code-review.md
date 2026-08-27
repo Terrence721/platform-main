@@ -673,4 +673,16 @@ The shared helpers used by `devtools.ts`/`extension.ts`/`reducer.ts` - most alre
 
 ---
 
-_More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, and `router-store` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files. `store-devtools` is in progress — see [todo.md](../todo.md) for the live per-module status._
+### [`zone-config.ts`](https://github.com/Terrence721/platform-main/blob/d94a77a519e8b44ce76d47f0bba9704c0b081229/modules/store-devtools/src/zone-config.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #223](https://github.com/Terrence721/platform-main/issues/223))
+
+Smallest file in the module: a discriminated union (`ZoneConfig`) plus `injectZoneConfig()`, which conditionally calls `inject(NgZone)` and returns the matching variant. Verified the `as ZoneConfig` cast is a legitimate, narrow assertion (TypeScript can't statically narrow a plain runtime `boolean` to the union on its own, even though the function's logic genuinely guarantees the invariant). Re-checked `devtools.ts`'s `emitInZone()` (this type's only real consumer) for a subscription leak - `new Observable<T>((subscriber) => source.subscribe({...}))` looked at first glance like it might drop the inner subscription on unsubscribe, since the callback body has no explicit `return`; it doesn't leak, since the concise-body arrow function implicitly returns `source.subscribe({...})`'s own `Subscription` as valid teardown logic. Worth double-checking rather than assuming, but confirmed correct.
+
+**One coverage gap noted, not fixed:** every test fixture across the module sets `connectInZone: false`, so `injectZoneConfig`'s `connectInZone: true` branch (the one that actually calls `inject(NgZone)`) has no direct test coverage anywhere. Low risk (`NgZone` is a core, always-available Angular service, and `emitInZone`'s zone-wrapping logic was independently re-verified above), so left as an observation.
+
+This completes the `store-devtools` module: **11/11 files reviewed, 6 real bugs found and fixed** (`config.ts`'s mutation bug, `extension.ts`'s sanitizer-id off-by-one, `index.ts`'s missing barrel exports, `provide-store-devtools.ts`'s unwired `IS_EXTENSION_OR_MONITOR_PRESENT`, `extension.ts`'s follow-up nullable-token fix, `reducer.ts`'s `TOGGLE_ACTION`/`SET_ACTIONS_ACTIVE` crash), plus 1 minor cleanup (`devtools.ts`'s dead imports).
+
+---
+
+_More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, and `store-devtools` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files. See [todo.md](../todo.md) for the live per-module status of the remaining 8 modules._

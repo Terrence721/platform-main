@@ -102,9 +102,9 @@
     "rxjs": "7.8.2",
     "semver": "^7.7.2",
     "shiki": "^1.29.2",
-    "tslib": "^2.7.0",
+    "tslib": "^2.8.1",
     "tsx": "^4.11.2",
-    "zone.js": "0.15.0"
+    "zone.js": "0.16.2"
   },
   "devDependencies": {
     "@analogjs/platform": "2.6.4",

@@ -627,4 +627,14 @@ Verified at the type level, not just by reading: confirmed all four newly-export
 
 ---
 
+### [`instrument.ts`](https://github.com/Terrence721/platform-main/blob/d94a77a519e8b44ce76d47f0bba9704c0b081229/modules/store-devtools/src/instrument.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #209](https://github.com/Terrence721/platform-main/issues/209))
+
+The legacy NgModule entry point: `StoreDevtoolsModule.instrument(options)` returns a `ModuleWithProviders<StoreDevtoolsModule>` wrapping the standalone `provideStoreDevtools()` (already reviewed, no bug). One real line of logic. Didn't stop at "trivial" - verified `provideStoreDevtools()`'s `EnvironmentProviders` return type is actually valid inside `ModuleWithProviders.providers` (not just something that happens to compile), that the default `options: StoreDevtoolsOptions = {}` matches `provideStoreDevtools()`'s own default exactly, and that `@NgModule({})` with no `declarations`/`imports`/`exports` is the correct shape for a providers-only module.
+
+No dedicated spec file, but this is the single most-exercised line in the module: `store.spec.ts`'s shared test-setup helper and `integration.spec.ts` both route every test through `StoreDevtoolsModule.instrument()` rather than `provideStoreDevtools()` directly.
+
+---
+
 _More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, and `router-store` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files. `store-devtools` is in progress — see [todo.md](../todo.md) for the live per-module status._

@@ -663,4 +663,14 @@ Everything else traced without further findings: `commitExcessActions`'s error-s
 
 ---
 
+### [`utils.ts`](https://github.com/Terrence721/platform-main/blob/d94a77a519e8b44ce76d47f0bba9704c0b081229/modules/store-devtools/src/utils.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #217](https://github.com/Terrence721/platform-main/issues/217))
+
+The shared helpers used by `devtools.ts`/`extension.ts`/`reducer.ts` - most already cross-checked as supporting context in those files' own reviews, but given a dedicated pass here. Confirmed `sanitizeStates()` correctly uses the plain array index (not an action id) for a `StateSanitizer` - unlike `extension.ts`'s `actionSanitizer` bug, this is actually correct since `computedStates` is a dense positional array with no independent id concept. Confirmed `isActionFiltered()`'s safelist/blocklist substring matching (unanchored `.match()`) is deliberate devtools-filter UX, not a bug.
+
+**Two structural observations, not fixed - couldn't confirm either as concretely reachable:** `unliftAction()` is dead code (zero callers anywhere in the module, not in the barrel either) - unlike `IS_EXTENSION_OR_MONITOR_PRESENT`'s strong tell (a test deliberately overriding a token nothing read), nothing here signals an intended-but-missing consumer, so left alone rather than inventing a use case. `filterLiftedState()`'s caller forwards `currentStateIndex` unchanged even though the filtered arrays it returns are shorter - traced whether this is reachable and found `reducer.ts`'s own `PERFORM_ACTION` case already excludes filtered actions from `stagedActionIds` at dispatch time (confirmed via the existing "Filtered actions" tests), so the re-filtering pass has nothing left to remove in the dominant path; couldn't construct a concrete broken scenario without unverifiable assumptions about the real extension's own index handling.
+
+---
+
 _More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, and `router-store` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files. `store-devtools` is in progress — see [todo.md](../todo.md) for the live per-module status._

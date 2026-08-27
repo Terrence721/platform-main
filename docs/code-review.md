@@ -611,6 +611,8 @@ The browser-extension-facing counterpart to `devtools.ts`: `DevtoolsExtension` w
 
 Exercised via `extension.spec.ts` (the whole file is specifically about this class, 31 tests -> 32) plus `integration.spec.ts`.
 
+**Follow-up, surfaced while reviewing `provide-store-devtools.ts` ([#211](https://github.com/Terrence721/platform-main/issues/211)), fixed via [issue #213](https://github.com/Terrence721/platform-main/issues/213):** `REDUX_DEVTOOLS_EXTENSION`'s `InjectionToken<ReduxDevtoolsExtension>` claimed the resolved value is never `null`, but its own factory (`createReduxDevtoolsExtension()` in `provide-store-devtools.ts`) returns `null` whenever the browser extension isn't installed - the common case. `createIsExtensionOrMonitorPresent`'s own parameter in that same file already typed this correctly as `ReduxDevtoolsExtension | null`, and `DevtoolsExtension`'s own runtime checks (`if (!this.devtoolsExtension)`) were already null-safe - only the declared type lied. Fixed to `InjectionToken<ReduxDevtoolsExtension | null>` plus the matching field/constructor-parameter types. Making the type accurate surfaced three real `TS2531` errors `strict` mode couldn't see before: `this.devtoolsExtension` was referenced inside closures (`sendToReduxDevtools(() => ...)`, `new Observable((subscriber) => ...)`) where a method-level `if (!this.devtoolsExtension) return;` guard's narrowing doesn't cross the function boundary for a mutable class field. Fixed by capturing a locally-narrowed `const devtoolsExtension` after each guard rather than reaching for a non-null assertion.
+
 ---
 
 ### [`index.ts`](https://github.com/Terrence721/platform-main/blob/d94a77a519e8b44ce76d47f0bba9704c0b081229/modules/store-devtools/src/index.ts)

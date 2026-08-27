@@ -41,7 +41,7 @@ export const ExtensionActionTypes = {
 };
 
 export const REDUX_DEVTOOLS_EXTENSION =
-  new InjectionToken<ReduxDevtoolsExtension>(
+  new InjectionToken<ReduxDevtoolsExtension | null>(
     '@ngrx/store-devtools Redux Devtools Extension'
   );
 
@@ -153,7 +153,7 @@ export interface ReduxDevtoolsExtension {
 
 @Injectable()
 export class DevtoolsExtension {
-  private devtoolsExtension: ReduxDevtoolsExtension;
+  private devtoolsExtension: ReduxDevtoolsExtension | null;
   private extensionConnection!: ReduxDevtoolsExtensionConnection;
   private readonly actionCreatorDescriptors?: ActionCreatorDescriptor[];
 
@@ -164,7 +164,8 @@ export class DevtoolsExtension {
   private zoneConfig = injectZoneConfig(this.config.connectInZone!);
 
   constructor(
-    @Inject(REDUX_DEVTOOLS_EXTENSION) devtoolsExtension: ReduxDevtoolsExtension,
+    @Inject(REDUX_DEVTOOLS_EXTENSION)
+    devtoolsExtension: ReduxDevtoolsExtension | null,
     @Inject(STORE_DEVTOOLS_CONFIG) private config: StoreDevtoolsConfig,
     private dispatcher: DevtoolsDispatcher
   ) {
@@ -176,7 +177,8 @@ export class DevtoolsExtension {
   }
 
   notify(action: LiftedAction, state: LiftedState) {
-    if (!this.devtoolsExtension) {
+    const devtoolsExtension = this.devtoolsExtension;
+    if (!devtoolsExtension) {
       return;
     }
     // Check to see if the action requires a full update of the liftedState.
@@ -242,7 +244,7 @@ export class DevtoolsExtension {
       };
 
       this.sendToReduxDevtools(() =>
-        this.devtoolsExtension.send(
+        devtoolsExtension.send(
           null,
           sanitizedLiftedState,
           this.getExtensionConfig(this.config)
@@ -252,7 +254,8 @@ export class DevtoolsExtension {
   }
 
   private createChangesObservable(): Observable<any> {
-    if (!this.devtoolsExtension) {
+    const devtoolsExtension = this.devtoolsExtension;
+    if (!devtoolsExtension) {
       return EMPTY;
     }
 
@@ -263,9 +266,9 @@ export class DevtoolsExtension {
           // event listener to communicate with an extension using `window.postMessage`
           // and handle message events.
           this.zoneConfig.ngZone.runOutsideAngular(() =>
-            this.devtoolsExtension.connect(this.getExtensionConfig(this.config))
+            devtoolsExtension.connect(this.getExtensionConfig(this.config))
           )
-        : this.devtoolsExtension.connect(this.getExtensionConfig(this.config));
+        : devtoolsExtension.connect(this.getExtensionConfig(this.config));
 
       this.extensionConnection = connection;
       connection.init();

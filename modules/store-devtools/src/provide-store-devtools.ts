@@ -1,6 +1,7 @@
 import {
   EnvironmentProviders,
   InjectionToken,
+  Injector,
   makeEnvironmentProviders,
 } from '@angular/core';
 import {
@@ -17,7 +18,7 @@ import {
   StoreDevtoolsConfig,
   StoreDevtoolsOptions,
 } from './config';
-import { ReducerManagerDispatcher, StateObservable } from '@ngrx/store';
+import { ReducerManagerDispatcher, State, StateObservable } from '@ngrx/store';
 import { StoreDevtools } from './devtools';
 
 export const IS_EXTENSION_OR_MONITOR_PRESENT = new InjectionToken<boolean>(
@@ -44,10 +45,23 @@ export function createReduxDevtoolsExtension() {
   }
 }
 
+/**
+ * Only routes the app's state through `StoreDevtools`'s lifted-reducer
+ * pipeline when an extension or monitor is actually present to observe it.
+ * Both `StoreDevtools` and the default `State` are resolved lazily via
+ * `injector.get` - listing either as a static factory dep would construct
+ * it unconditionally (running its independent reducer-subscription
+ * pipeline) regardless of which branch is actually taken, defeating the
+ * point: whichever one isn't needed is never constructed at all, so
+ * devtools genuinely has no runtime cost when nothing is watching it.
+ */
 export function createStateObservable(
-  devtools: StoreDevtools
+  isExtensionOrMonitorPresent: boolean,
+  injector: Injector
 ): StateObservable {
-  return devtools.state;
+  return isExtensionOrMonitorPresent
+    ? injector.get(StoreDevtools).state
+    : injector.get(State);
 }
 
 /**
@@ -93,7 +107,7 @@ export function provideStoreDevtools(
     },
     {
       provide: StateObservable,
-      deps: [StoreDevtools],
+      deps: [IS_EXTENSION_OR_MONITOR_PRESENT, Injector],
       useFactory: createStateObservable,
     },
     {

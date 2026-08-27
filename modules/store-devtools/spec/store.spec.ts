@@ -18,6 +18,7 @@ import {
 } from '../';
 import { RECOMPUTE } from '../src/reducer';
 import { IS_EXTENSION_OR_MONITOR_PRESENT } from '../src/provide-store-devtools';
+import { SetActionsActive } from '../src/actions';
 
 const counter = vi.fn(function (state = 0, action: Action) {
   switch (action.type) {
@@ -245,6 +246,24 @@ describe('Store Devtools', () => {
 
       devtools.toggleAction(2);
       expect(getState()).toBe(1);
+    });
+
+    it('should not throw when toggling an action id that is no longer staged', () => {
+      store.dispatch({ type: 'INCREMENT' });
+
+      expect(() => devtools.toggleAction(999)).not.toThrow();
+      expect(getLiftedState().skippedActionIds).toContain(999);
+    });
+
+    it('should not throw when setting a range of action ids that are no longer staged active', () => {
+      store.dispatch({ type: 'INCREMENT' });
+
+      expect(() =>
+        devtools.dispatch(new SetActionsActive(999, 1001, false))
+      ).not.toThrow();
+      expect(getLiftedState().skippedActionIds).toEqual(
+        expect.arrayContaining([999, 1000])
+      );
     });
 
     it('should sweep disabled actions', () => {

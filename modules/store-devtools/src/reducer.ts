@@ -303,8 +303,14 @@ export function liftReducerWith(
           } else {
             skippedActionIds = skippedActionIds.filter((id) => id !== actionId);
           }
-          // Optimization: we know history before this action hasn't changed
-          minInvalidatedStateIndex = stagedActionIds.indexOf(actionId);
+          // Optimization: we know history before this action hasn't changed.
+          // indexOf can be -1 if actionId is no longer staged (e.g. already
+          // auto-committed away by maxAge) - fall back to recomputing
+          // everything rather than starting the recompute loop at -1.
+          minInvalidatedStateIndex = Math.max(
+            0,
+            stagedActionIds.indexOf(actionId)
+          );
           break;
         }
         case DevtoolsActions.SET_ACTIONS_ACTIVE: {
@@ -319,8 +325,13 @@ export function liftReducerWith(
             skippedActionIds = [...skippedActionIds, ...actionIds];
           }
 
-          // Optimization: we know history before this action hasn't changed
-          minInvalidatedStateIndex = stagedActionIds.indexOf(start);
+          // Optimization: we know history before this action hasn't changed.
+          // Same -1 fallback as TOGGLE_ACTION above - start may no longer be
+          // staged.
+          minInvalidatedStateIndex = Math.max(
+            0,
+            stagedActionIds.indexOf(start)
+          );
           break;
         }
         case DevtoolsActions.JUMP_TO_STATE: {

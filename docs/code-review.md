@@ -651,4 +651,16 @@ The module's real entry point: the `EnvironmentProviders` array everything else 
 
 ---
 
+### [`reducer.ts`](https://github.com/Terrence721/platform-main/blob/d94a77a519e8b44ce76d47f0bba9704c0b081229/modules/store-devtools/src/reducer.ts)
+
+**high · Correctness** — Fixed via [issue #215](https://github.com/Terrence721/platform-main/issues/215)
+
+The most complex file in the module - `liftReducerWith()`'s returned reducer is what `devtools.ts` actually runs on every lifted action. Traced every case's history-tracking invariants (`nextActionId`/`stagedActionIds`/`actionsById`/`computedStates` staying mutually consistent) against `store.spec.ts`'s extensive indirect coverage (8 `maxAge option` tests, 6 `pause recording` tests, 2 `Import State` tests) - this file has no dedicated spec of its own.
+
+**One real bug, fixed - and a serious one:** `TOGGLE_ACTION` and `SET_ACTIONS_ACTIVE` both computed `minInvalidatedStateIndex = stagedActionIds.indexOf(actionId)` with no guard for `-1` (reachable whenever the target id is no longer staged, e.g. after `maxAge` auto-commits it away). `-1` flows into `recomputeStates()`'s `for` loop, starting it at `i = -1`, so `stagedActionIds[-1]`/`actionsById[undefined]` are both `undefined` and `.action` on that throws. Not just a devtools-panel bug: `provide-store-devtools.ts` (#211) routes the app's _entire_ live state through this reducer whenever an extension or monitor is present, so this exception can take down the app's whole reactive state stream, not just the history view - and `TOGGLE_ACTION` is reachable from `StoreDevtools.toggleAction(id)`, a public method callable with any id. Found via a guard-asymmetry check: `JUMP_TO_ACTION`'s equivalent `indexOf` call, a few cases later in the same switch, is already correctly guarded (`if (index !== -1) ...`) - the same risk, already handled right next to two siblings that weren't. Confirmed with a standalone repro (`tsx` against the real `liftInitialState`/`liftReducerWith`, bypassing Angular entirely) before touching any code, and again after the fix. Fixed to `Math.max(0, stagedActionIds.indexOf(actionId))`, matching the file's own existing clamping idiom elsewhere (`SWEEP`'s `Math.min(currentStateIndex, stagedActionIds.length - 1)`). Added 2 regression tests to `store.spec.ts` - `SET_ACTIONS_ACTIVE` had zero prior coverage anywhere in the module - confirmed both fail with the exact repro error pre-fix and pass post-fix.
+
+Everything else traced without further findings: `commitExcessActions`'s error-stopping loop (well covered by the `maxAge` suite's clamping/multi-commit tests), `PAUSE_RECORDING`'s placeholder-overwrite mechanics (directly tested), `UPDATE`'s reducer-change signaling and independent per-entry `RECOMPUTE_ACTION` re-derivation, `ROLLBACK` correctly leaving `committedState` untouched (unlike `RESET`) per its own comment, `IMPORT_STATE`'s wholesale replace.
+
+---
+
 _More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, and `router-store` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files. `store-devtools` is in progress — see [todo.md](../todo.md) for the live per-module status._

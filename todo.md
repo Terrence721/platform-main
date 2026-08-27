@@ -1,6 +1,6 @@
 ﻿# 📝 TODO
 
-**Last Updated:** August 27, 2026 (`router-store` module code review complete — 12/12 files, 7 real bugs found and fixed, the highest hit rate of any module so far; `store-devtools` in progress — 9/11 files, 6 real bugs + 1 minor cleanup found and fixed; 8 modules left under issue #32)
+**Last Updated:** August 27, 2026 (`router-store` module code review complete — 12/12 files, 7 real bugs found and fixed, the highest hit rate of any module so far; `store-devtools` in progress — 10/11 files, 6 real bugs + 1 minor cleanup found and fixed; 8 modules left under issue #32)
 
 A phase-by-phase log of what's been done on this repo and what's still open. This is the source of truth for progress — the [GitHub Project board](https://github.com/users/Terrence721/projects/2) is a lighter-weight view of the same work, kept in sync with this file, not a separate source of truth.
 
@@ -289,5 +289,5 @@ Chosen next: small (11 files, right-sized like `router-store`'s 12) and the only
 | `src/instrument.ts`             | [`d94a77a`](https://github.com/Terrence721/platform-main/commit/d94a77a519e8b44ce76d47f0bba9704c0b081229) | [#209](https://github.com/Terrence721/platform-main/issues/209) | [#210](https://github.com/Terrence721/platform-main/pull/210) | Done — no findings      |
 | `src/provide-store-devtools.ts` | [`d94a77a`](https://github.com/Terrence721/platform-main/commit/d94a77a519e8b44ce76d47f0bba9704c0b081229) | [#211](https://github.com/Terrence721/platform-main/issues/211) | [#212](https://github.com/Terrence721/platform-main/pull/212) | Done — real fix         |
 | `src/reducer.ts`                | [`d94a77a`](https://github.com/Terrence721/platform-main/commit/d94a77a519e8b44ce76d47f0bba9704c0b081229) | [#215](https://github.com/Terrence721/platform-main/issues/215) | [#216](https://github.com/Terrence721/platform-main/pull/216) | Done — real fix         |
-| `src/utils.ts`                  | [`d94a77a`](https://github.com/Terrence721/platform-main/commit/d94a77a519e8b44ce76d47f0bba9704c0b081229) | —                                                               | —                                                             | Pending                 |
+| `src/utils.ts`                  | [`d94a77a`](https://github.com/Terrence721/platform-main/commit/d94a77a519e8b44ce76d47f0bba9704c0b081229) | [#217](https://github.com/Terrence721/platform-main/issues/217) | —                                                             | Done — no findings      |
 | `src/zone-config.ts`            | [`d94a77a`](https://github.com/Terrence721/platform-main/commit/d94a77a519e8b44ce76d47f0bba9704c0b081229) | —                                                               | —                                                             | Pending                 |

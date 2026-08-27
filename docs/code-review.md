@@ -613,4 +613,18 @@ Exercised via `extension.spec.ts` (the whole file is specifically about this cla
 
 ---
 
+### [`index.ts`](https://github.com/Terrence721/platform-main/blob/d94a77a519e8b44ce76d47f0bba9704c0b081229/modules/store-devtools/src/index.ts)
+
+**low · Correctness** — Fixed via [issue #207](https://github.com/Terrence721/platform-main/issues/207)
+
+The public barrel. Same review method as `router-store`'s own `index.ts` (#158/#159, the first barrel-completeness bug this audit found): cross-checked every `export` across all 12 source files against what this file re-exports, looking for a type needed to _use_ an already-exported member that isn't itself exported.
+
+**Two real gaps, both fixed:** `LiftedAction`/`LiftedActions`/`ComputedState` (from `reducer.ts`) are fields of the already-exported `LiftedState` (`StoreDevtools.liftedState: Observable<LiftedState>`, meant for building a custom time-travel UI), so a consumer had no way to name the type of an individual staged action or computed-state entry without a deep import. `ReduxDevtoolsExtension` (from `extension.ts`) is the type parameter of the already-exported `REDUX_DEVTOOLS_EXTENSION` injection token, so a consumer providing or typing a value for that token had the same problem. Scoped the second fix to just the outer interface, not its nested `ReduxDevtoolsExtensionConnection`/`ReduxDevtoolsExtensionConfig` - implementing `connect()`/`send()` inline gets those checked via normal contextual typing without naming them separately.
+
+Deliberately left everything else internal-only: `actions.ts`'s 13 action classes/constants are consumed entirely through `StoreDevtools`'s own public methods (`.reset()`, `.rollback()`, ...), so an app never constructs them directly - cross-checks cleanly against `actions.ts`'s own review (#196). Config-side types (`ActionSanitizer`, `StateSanitizer`, `Predicate`, `SerializationOptions`) and the resolved-config token `STORE_DEVTOOLS_CONFIG` (only the raw `INITIAL_OPTIONS` is public) are only ever consumed as inline properties on the already-exported `StoreDevtoolsConfig`, getting contextual typing without a separate export.
+
+Verified at the type level, not just by reading: confirmed all four newly-exported types actually appear in the built package's rolled-up public `.d.ts` (`dist/modules/store-devtools/types/ngrx-store-devtools.d.ts`), not just in the barrel's own source.
+
+---
+
 _More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, and `router-store` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files. `store-devtools` is in progress — see [todo.md](../todo.md) for the live per-module status._

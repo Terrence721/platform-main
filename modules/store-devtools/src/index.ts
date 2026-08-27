@@ -1,7 +1,13 @@
 export { StoreDevtoolsModule } from './instrument';
-export { LiftedState, RECOMPUTE } from './reducer';
+export {
+  ComputedState,
+  LiftedAction,
+  LiftedActions,
+  LiftedState,
+  RECOMPUTE,
+} from './reducer';
 export { StoreDevtools } from './devtools';
-export { REDUX_DEVTOOLS_EXTENSION } from './extension';
+export { REDUX_DEVTOOLS_EXTENSION, ReduxDevtoolsExtension } from './extension';
 export {
   StoreDevtoolsConfig,
   StoreDevtoolsOptions,

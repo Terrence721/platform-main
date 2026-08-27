@@ -1,11 +1,4 @@
-import {
-  Injectable,
-  Inject,
-  ErrorHandler,
-  OnDestroy,
-  NgZone,
-  inject,
-} from '@angular/core';
+import { Injectable, Inject, ErrorHandler, OnDestroy } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import {
   Action,

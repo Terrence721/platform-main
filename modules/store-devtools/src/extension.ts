@@ -221,7 +221,7 @@ export class DevtoolsExtension {
         ? sanitizeAction(
             this.config.actionSanitizer,
             action,
-            state.nextActionId
+            state.nextActionId - 1
           )
         : action;
 

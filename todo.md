@@ -1,6 +1,6 @@
 ﻿# 📝 TODO
 
-**Last Updated:** August 29, 2026 (`component` module code review in progress — 4/10 files done, no findings; `component-store` complete (4/4 files, 1 real gap found and fixed); 6 modules left under issue #32)
+**Last Updated:** August 29, 2026 (`component` module code review in progress — 5/10 files done, no findings; `component-store` complete (4/4 files, 1 real gap found and fixed); 6 modules left under issue #32)
 
 A phase-by-phase log of what's been done on this repo and what's still open. This is the source of truth for progress — the [GitHub Project board](https://github.com/users/Terrence721/projects/2) is a lighter-weight view of the same work, kept in sync with this file, not a separate source of truth.
 
@@ -284,7 +284,7 @@ Chosen next after `component-store` closed: small (10 files) and directly depend
 | `src/core/render-event/models.ts`   | [`f97d612`](https://github.com/Terrence721/platform-main/commit/f97d612ce90734c230722cac21adc4a1841e3399) | [#236](https://github.com/Terrence721/platform-main/issues/236) | —   | Done — no findings |
 | `src/core/render-event/handlers.ts` | [`f97d612`](https://github.com/Terrence721/platform-main/commit/f97d612ce90734c230722cac21adc4a1841e3399) | [#238](https://github.com/Terrence721/platform-main/issues/238) | —   | Done — no findings |
 | `src/core/render-event/manager.ts`  | [`f97d612`](https://github.com/Terrence721/platform-main/commit/f97d612ce90734c230722cac21adc4a1841e3399) | [#240](https://github.com/Terrence721/platform-main/issues/240) | —   | Done — no findings |
-| `src/core/tick-scheduler.ts`        | [`f97d612`](https://github.com/Terrence721/platform-main/commit/f97d612ce90734c230722cac21adc4a1841e3399) | —                                                               | —   | Not started        |
+| `src/core/tick-scheduler.ts`        | [`f97d612`](https://github.com/Terrence721/platform-main/commit/f97d612ce90734c230722cac21adc4a1841e3399) | [#242](https://github.com/Terrence721/platform-main/issues/242) | —   | Done — no findings |
 | `src/core/render-scheduler.ts`      | [`f97d612`](https://github.com/Terrence721/platform-main/commit/f97d612ce90734c230722cac21adc4a1841e3399) | —                                                               | —   | Not started        |
 | `src/core/zone-helpers.ts`          | [`f97d612`](https://github.com/Terrence721/platform-main/commit/f97d612ce90734c230722cac21adc4a1841e3399) | —                                                               | —   | Not started        |
 | `src/let/let.directive.ts`          | [`f97d612`](https://github.com/Terrence721/platform-main/commit/f97d612ce90734c230722cac21adc4a1841e3399) | —                                                               | —   | Not started        |

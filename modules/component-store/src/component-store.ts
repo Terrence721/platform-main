@@ -59,7 +59,7 @@ export type Projector<Selectors extends Observable<unknown>[], Result> = (
   ...args: SelectorResults<Selectors>
 ) => Result;
 
-type SignalsProjector<Signals extends Signal<unknown>[], Result> = (
+export type SignalsProjector<Signals extends Signal<unknown>[], Result> = (
   ...values: {
     [Key in keyof Signals]: Signals[Key] extends Signal<infer Value>
       ? Value
@@ -67,7 +67,7 @@ type SignalsProjector<Signals extends Signal<unknown>[], Result> = (
   }
 ) => Result;
 
-interface SelectSignalOptions<T> {
+export interface SelectSignalOptions<T> {
   /**
    * A comparison function which defines equality for select results.
    */

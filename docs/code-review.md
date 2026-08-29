@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: August 29, 2026**
+**Last Updated: August 29, 2026** (`component-store` module complete)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -715,4 +715,16 @@ The largest, most central file in the module — the `ComponentStore<T>` class i
 
 ---
 
-_More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, and `store-devtools` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files. `component-store` is in progress. See [todo.md](../todo.md) for the live per-module status of the remaining modules._
+### [`index.ts`](https://github.com/Terrence721/platform-main/blob/e48eb7a523d7dbd1218959190a836b86906096da/modules/component-store/src/index.ts)
+
+**low · Maintainability** — Fixed via [issue #232](https://github.com/Terrence721/platform-main/issues/232)
+
+The public barrel, reviewed last per this audit's established pattern. Applied the same method used for `router-store`'s and `store-devtools`'s own `index.ts` reviews: cross-check every source file's exports against the barrel for a type needed to _use_ an already-exported member but not itself reachable.
+
+**Real gap, fixed:** `component-store.ts`'s `selectSignal()` (a public method on the exported `ComponentStore` class) takes `SelectSignalOptions<Result>` and `SignalsProjector<Signals, Result>` directly in its public overload signatures, but neither type had an `export` keyword at all - so they never flowed through the barrel's `export *`. Confirmed real and reachable with a throwaway repro: importing either type from the module's public entry point failed with `TS2305: has no exported member` before the fix, compiled clean after adding `export` to both declarations. Verified at the type level, not just by reading - confirmed both now appear in the built package's rolled-up public `.d.ts`. Deliberately left unexported: `debounceSync` (never appears in a public signature, only used internally via `select()`'s boolean `debounce` flag) and `isOnStoreInitDefined`/`isOnStateInitDefined` (internal predicates used only by `provideComponentStore()`/`checkProviderForHooks()`, never part of any exported member's public signature) - neither matches the "needed to use an already-exported member" pattern the way `SelectSignalOptions`/`SignalsProjector` do.
+
+This completes the `component-store` module: **4/4 files reviewed, 1 real gap found and fixed** (the `selectSignal()` barrel-export gap), no other bugs.
+
+---
+
+_More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, and `component-store` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files. See [todo.md](../todo.md) for the live per-module status of the remaining modules._

@@ -81,6 +81,12 @@ example-dist/
 modules/*/schematics-core/testing
 !modules/schematics-core/testing
 
+# @angular-devkit/schematics/tools compiles schematics-core's .ts factories
+# on the fly (in place) for SchematicTestRunner's require() calls when
+# running the migrations/ng-add test suites — not a real source change
+modules/schematics-core/**/*.js
+modules/schematics-core/**/*.js.map
+
 .angular
 migrations.json
 .env

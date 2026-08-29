@@ -737,4 +737,14 @@ First file in the `component` module — picked next after `component-store` clo
 
 ---
 
+### [`models.ts`](https://github.com/Terrence721/platform-main/blob/f97d612ce90734c230722cac21adc4a1841e3399/modules/component/src/core/render-event/models.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #236](https://github.com/Terrence721/platform-main/issues/236))
+
+A discriminated union (`RenderEvent<T>`) of four render-lifecycle events, each extending a base `reset`/`synchronous` boolean pair. `SuspenseRenderEvent` narrows both to literal `true` — a real contract, not just documentation. Pure type declarations with zero runtime code, so traced forward to the one place it's actually constructed (`manager.ts`'s `switchMapToRenderEvent()`, not yet reviewed on its own) to check for the declared-narrower-type-vs-actual-construction divergence that recurred across `router-store`'s findings. None found — the construction site is gated exactly by the condition (`if (reset)`) that proves `reset` is `true` there, and `synchronous: true` is written as a literal rather than the variable, consistent with the declared type rather than accidental.
+
+**No bug found. No coverage gap** — no dedicated spec needed for a pure-type file; correctness validated through the construction-site trace plus existing indirect coverage.
+
+---
+
 _More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, and `component-store` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files. `component` is in progress. See [todo.md](../todo.md) for the live per-module status of the remaining modules._

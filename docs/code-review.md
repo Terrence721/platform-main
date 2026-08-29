@@ -727,4 +727,14 @@ This completes the `component-store` module: **4/4 files reviewed, 1 real gap fo
 
 ---
 
-_More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, and `component-store` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files. See [todo.md](../todo.md) for the live per-module status of the remaining modules._
+### [`potential-observable.ts`](https://github.com/Terrence721/platform-main/blob/f97d612ce90734c230722cac21adc4a1841e3399/modules/component/src/core/potential-observable.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #234](https://github.com/Terrence721/platform-main/issues/234))
+
+First file in the `component` module — picked next after `component-store` closed since it directly depends on it. `fromPotentialObservable<PO>()` normalizes four input shapes (an Observable, a dictionary of named Observables, a Promise-like, or any other plain value) into a real `Observable`. Checked the type-level `PotentialObservableResult<PO, ExtendedResult>` conditional type against the runtime branches for the declared-vs-actual-behavior divergence that recurred across `router-store`'s findings - none found; the runtime has no explicit "is Primitive" check, but primitives simply fall through to the same shared plain-value-wrap branch the type's separate `Primitive` case also resolves to. The plain-value branch's `new Observable(...)` never calling `.complete()` looked like a possible bug at first glance - confirmed deliberate instead: the existing marble tests explicitly assert no completion marker for every non-observable input, consistent with how the other three branches also never force premature completion. Hand-traced `toDistinctObsDictionary()`'s `distinctUntilChanged()`-before-`combineLatest` interaction frame-by-frame against the existing dictionary-combination marble test and confirmed a source's duplicate emission is genuinely suppressed before reaching `combineLatest`, not just assumed from reading the code.
+
+**No bug found. No coverage gap** — existing marble-test coverage already exercises every branch and the subtler distinct-filtering/non-completion behaviors.
+
+---
+
+_More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, and `component-store` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files. `component` is in progress. See [todo.md](../todo.md) for the live per-module status of the remaining modules._

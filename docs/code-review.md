@@ -777,4 +777,14 @@ A DI-factory-selected abstraction (`NoopTickScheduler` for real Zone.js apps, `Z
 
 ---
 
+### [`zone-helpers.ts`](https://github.com/Terrence721/platform-main/blob/f97d612ce90734c230722cac21adc4a1841e3399/modules/component/src/core/zone-helpers.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #244](https://github.com/Terrence721/platform-main/issues/244))
+
+A single type guard: `isNgZone(zone): zone is NgZone { return zone instanceof NgZone; }` — the exact check already fully verified against the real installed `@angular/core` source during `tick-scheduler.ts`'s review (#242), this file's own primary caller.
+
+**No bug found. No coverage gap** — `zone-helpers.spec.ts` directly tests both branches with the same faithful fixtures.
+
+---
+
 _More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, and `component-store` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files. `component` is in progress. See [todo.md](../todo.md) for the live per-module status of the remaining modules._

@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: August 27, 2026**
+**Last Updated: August 29, 2026**
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -685,4 +685,24 @@ This completes the `store-devtools` module: **11/11 files reviewed, 6 real bugs 
 
 ---
 
-_More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, and `store-devtools` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files. See [todo.md](../todo.md) for the live per-module status of the remaining 8 modules._
+### [`debounce-sync.ts`](https://github.com/Terrence721/platform-main/blob/122f86a561d860f697cfe5b0f52c7f546e3e6a15/modules/component-store/src/debounce-sync.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #226](https://github.com/Terrence721/platform-main/issues/226))
+
+First file in the `component-store` module. `debounceSync<T>()` is a custom RxJS operator that collapses any number of synchronous `next()` calls into a single emission of the latest value via `asapScheduler` — a microtask-boundary debounce, not time-based; used internally by `ComponentStore.select(..., { debounce: true })`. The non-obvious piece: if the source completes while an `asapScheduler` job is still pending, the `complete` handler emits the pending value synchronously and calls `observer.complete()`, relying on RxJS's `Subscriber` automatically tearing down the returned `rootSubscription` (and thus cancelling the still-pending job) immediately afterward, so it never double-emits. Didn't just reason through this — wrote a throwaway repro against the real installed `rxjs` (a `Subject` and real microtask timing, not virtual/marble time) covering three cases: multiple synchronous `next()` calls collapsing to the latest value, completion-while-pending emitting exactly once, and completion-with-nothing-pending emitting nothing extra. All three matched.
+
+**One real gap, fixed:** zero dedicated test coverage existed for this operator — only indirect exercise through `ComponentStore`'s own `select(..., { debounce: true })` tests, which never isolate the completion-cancellation edge case. Added `modules/component-store/spec/debounce-sync.spec.ts` encoding the same three scenarios (plus error propagation) as real regression tests against the operator directly.
+
+---
+
+### [`lifecycle_hooks.ts`](https://github.com/Terrence721/platform-main/blob/122f86a561d860f697cfe5b0f52c7f546e3e6a15/modules/component-store/src/lifecycle_hooks.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #228](https://github.com/Terrence721/platform-main/issues/228))
+
+`provideComponentStore()` — the `OnStoreInit`/`OnStateInit` lifecycle-hook wiring. Registers the store class under a fresh, locally-scoped `InjectionToken`, then re-provides the class itself via a factory that resolves that token, marks the instance's private `ɵhasProvider` flag, and runs the hooks (`ngrxOnStoreInit()` synchronously, `ngrxOnStateInit()` once `state$` first emits). Traced the cross-file interaction with `component-store.ts`'s `checkProviderForHooks()` (an `asapScheduler`-deferred dev-mode warning for hooks defined without this provider) and confirmed the ordering is correct by construction, not luck: the factory's synchronous `ɵhasProvider = true` assignment always completes before the scheduled microtask check can run. Also confirmed `CS_WITH_HOOKS` being declared _inside_ the function (not module-level) is what lets two separate `provideComponentStore()` calls in the same injector coexist without colliding — not an accident of the existing multi-store test happening to pass.
+
+**No bug found. No coverage gap** — `component-store.spec.ts`'s `LifecycleStore` block already covers eager/lazy state init, hook-called-once, multi-store composition, and both the warning and no-warning `ɵhasProvider` paths.
+
+---
+
+_More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, and `store-devtools` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files. `component-store` is in progress. See [todo.md](../todo.md) for the live per-module status of the remaining modules._

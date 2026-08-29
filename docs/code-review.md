@@ -767,4 +767,14 @@ The largest, most central file so far in this module — orchestrates `potential
 
 ---
 
+### [`tick-scheduler.ts`](https://github.com/Terrence721/platform-main/blob/f97d612ce90734c230722cac21adc4a1841e3399/modules/component/src/core/tick-scheduler.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #242](https://github.com/Terrence721/platform-main/issues/242))
+
+A DI-factory-selected abstraction (`NoopTickScheduler` for real Zone.js apps, `ZonelessTickScheduler` for zoneless ones), branching on `isNgZone(zone)` (`zone instanceof NgZone`, from `zone-helpers.ts`, not yet reviewed on its own). Verified this `instanceof` check against the actual installed `@angular/core` source rather than assuming: `NoopNgZone` (what real zoneless mode provides for the `NgZone` token, confirmed via `provideZonelessChangeDetectionInternal()`'s `{ provide: NgZone, useClass: NoopNgZone }`) is a plain class with no `extends NgZone` — so the check is correct by construction for both real and zoneless apps, not by luck. The test fixture (`MockNoopNgZone`) faithfully mirrors this same plain-class shape.
+
+**No bug found. No coverage gap** — 11 existing tests cover the DI-factory branching, coalescing (sync, microtask-queued, and multi-async calls), the browser-vs-SSR scheduling choice, and a `this`-binding safety check.
+
+---
+
 _More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, and `component-store` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files. `component` is in progress. See [todo.md](../todo.md) for the live per-module status of the remaining modules._

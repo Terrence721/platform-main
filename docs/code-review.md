@@ -787,4 +787,14 @@ A single type guard: `isNgZone(zone): zone is NgZone { return zone instanceof Ng
 
 ---
 
+### [`render-scheduler.ts`](https://github.com/Terrence721/platform-main/blob/f97d612ce90734c230722cac21adc4a1841e3399/modules/component/src/core/render-scheduler.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #246](https://github.com/Terrence721/platform-main/issues/246))
+
+`RenderScheduler.schedule()` delegates to `cdRef.markForCheck()` and the already-reviewed `tickScheduler.schedule()`; call order between the two doesn't matter since the tick's real effect is always deferred. `createRenderScheduler()` (a standalone `inject()`-based factory, separate from the class's own constructor shape) looked like it might be dead/unwired code at first — traced it and confirmed `push/push.pipe.ts` (not yet reviewed) genuinely needs it as a field-initializer factory, a different construction shape than `let.directive.ts`'s plain constructor injection.
+
+**No bug found. No coverage gap** — existing tests cover both injection-context cases for `createRenderScheduler()` (including the expected throw outside one) plus `schedule()`'s delegation.
+
+---
+
 _More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, and `component-store` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files. `component` is in progress. See [todo.md](../todo.md) for the live per-module status of the remaining modules._

@@ -705,4 +705,14 @@ First file in the `component-store` module. `debounceSync<T>()` is a custom RxJS
 
 ---
 
+### [`component-store.ts`](https://github.com/Terrence721/platform-main/blob/b9ffef9bae6312ccd352fb63bfcdce97db0562ce/modules/component-store/src/component-store.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #230](https://github.com/Terrence721/platform-main/issues/230))
+
+The largest, most central file in the module — the `ComponentStore<T>` class itself. `updater()`'s sync-error-capture pattern (an `isSyncUpdate` flag flipped only after `.subscribe()` returns) relies on `observeOn(queueScheduler)` delivering synchronously for a synchronous source, the same mechanism already confirmed real via a throwaway repro during `store-devtools`'s `devtools.ts` review - held up again here. `select()`'s multi-overload dispatch (`processSelectorArgs()`/`hasProjectFnOnly()`/`combineLatest()`) is the file's most complex logic; worked through all four call shapes by hand and specifically verified the "entire state is itself an array" edge case the file's own comment calls out - the `.length > 0` guard is checked on the _selectors array_, not the emitted value, which is exactly what prevents a `ComponentStore<string[]>`'s raw state from being misinterpreted as multiple projector arguments. `get()`'s reliance on `ReplaySubject`'s synchronous replay-to-new-subscriber behavior (no scheduler passed to its constructor) confirmed safe. `effect()` subscribing its generator with no error handler (an unhandled error permanently stops that effect responding to further dispatches) is documented upstream behavior, not a defect - same category as `effects`' own audited "correctness-critical by design" findings. Also confirmed `throwError(error)`'s raw-value form (deprecated but not removed in RxJS 7) still delivers correctly at runtime with the installed `rxjs@7.8.2`, via a real throwaway repro forcing an error through it - not a bug, and this repo's lint config doesn't flag the deprecation either. Checked every state-reading/writing path for the "guard asymmetry" bug pattern that recurred across `store`'s and `store-devtools`'s findings; all consistently gated by `assertStateIsInitialized()`, no gap found.
+
+**No bug found. No coverage gap** — `component-store.spec.ts` (~2000 lines) already has dedicated coverage for essentially every method reviewed here.
+
+---
+
 _More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, and `store-devtools` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files. `component-store` is in progress. See [todo.md](../todo.md) for the live per-module status of the remaining modules._

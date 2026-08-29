@@ -1,6 +1,6 @@
 ﻿# 📝 TODO
 
-**Last Updated:** August 29, 2026 (`component-store` module code review in progress — 2/4 files done, no findings; `store-devtools` complete (11/11 files, 6 real bugs + 1 minor cleanup); 7 modules left under issue #32)
+**Last Updated:** August 29, 2026 (`component-store` module code review in progress — 3/4 files done, no findings; `store-devtools` complete (11/11 files, 6 real bugs + 1 minor cleanup); 7 modules left under issue #32)
 
 A phase-by-phase log of what's been done on this repo and what's still open. This is the source of truth for progress — the [GitHub Project board](https://github.com/users/Terrence721/projects/2) is a lighter-weight view of the same work, kept in sync with this file, not a separate source of truth.
 
@@ -282,5 +282,5 @@ Chosen next after `store-devtools` closed: small (4 files) and directly unlocks 
 | ------------------------ | --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------- | --------------------------------------- |
 | `src/debounce-sync.ts`   | [`122f86a`](https://github.com/Terrence721/platform-main/commit/122f86a561d860f697cfe5b0f52c7f546e3e6a15) | [#226](https://github.com/Terrence721/platform-main/issues/226) | [#227](https://github.com/Terrence721/platform-main/pull/227) | Done — no findings, test coverage added |
 | `src/lifecycle_hooks.ts` | [`122f86a`](https://github.com/Terrence721/platform-main/commit/122f86a561d860f697cfe5b0f52c7f546e3e6a15) | [#228](https://github.com/Terrence721/platform-main/issues/228) | —                                                             | Done — no findings                      |
-| `src/component-store.ts` | [`122f86a`](https://github.com/Terrence721/platform-main/commit/122f86a561d860f697cfe5b0f52c7f546e3e6a15) | —                                                               | —                                                             | Not started                             |
+| `src/component-store.ts` | [`b9ffef9`](https://github.com/Terrence721/platform-main/commit/b9ffef9bae6312ccd352fb63bfcdce97db0562ce) | [#230](https://github.com/Terrence721/platform-main/issues/230) | —                                                             | Done — no findings                      |
 | `src/index.ts`           | [`122f86a`](https://github.com/Terrence721/platform-main/commit/122f86a561d860f697cfe5b0f52c7f546e3e6a15) | —                                                               | —                                                             | Not started                             |

@@ -757,4 +757,14 @@ A discriminated union (`RenderEvent<T>`) of four render-lifecycle events, each e
 
 ---
 
+### [`manager.ts`](https://github.com/Terrence721/platform-main/blob/f97d612ce90734c230722cac21adc4a1841e3399/modules/component/src/core/render-event/manager.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #240](https://github.com/Terrence721/platform-main/issues/240))
+
+The largest, most central file so far in this module — orchestrates `potential-observable.ts` and `render-event/{models,handlers}.ts` together via `createRenderEventManager<PO>()`. `renderEventComparator()`'s `distinctUntilChanged` deliberately excludes `synchronous` from its equality check — confirmed correct, not an oversight: if `type`/`reset`/`value` (or `error`) are unchanged there's nothing new to render, so whether a filtered-out duplicate would have carried `synchronous: true` or `false` doesn't matter. The `untracked(() => observable$.subscribe(...))` wrapper has no dedicated test for its actual Angular-signal-interaction purpose — checked its only current caller (`let.directive.ts`'s `ngOnInit()`, a plain lifecycle hook, not itself a reactive scope) and read this as defensive design for a shared utility that doesn't control its caller's context, not a bug or an actionable gap absent concrete evidence it's needed or missing (same bar `component-store`'s `utils.ts` review used for a similarly-plausible-but-unconfirmed wiring question).
+
+**No bug found. No coverage gap** — the existing `manager.spec.ts` (30 tests) is unusually thorough, covering every combination of sync/async timing, next/error/complete, and both dedup layers.
+
+---
+
 _More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, and `component-store` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files. `component` is in progress. See [todo.md](../todo.md) for the live per-module status of the remaining modules._

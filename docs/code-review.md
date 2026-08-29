@@ -747,4 +747,14 @@ A discriminated union (`RenderEvent<T>`) of four render-lifecycle events, each e
 
 ---
 
+### [`handlers.ts`](https://github.com/Terrence721/platform-main/blob/f97d612ce90734c230722cac21adc4a1841e3399/modules/component/src/core/render-event/handlers.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #238](https://github.com/Terrence721/platform-main/issues/238))
+
+`combineRenderEventHandlers<T>()` dispatches a `RenderEvent<T>` to the matching optional handler by property name (`handlers[event.type]?.(event as any)`). The `as any` cast is necessary and legitimate, not a shortcut around a real bug — TypeScript can't statically correlate a dynamically-indexed lookup's function type with `event`'s actual narrowed type at that call site, even though the runtime correspondence (each handler's property name matches its event's `type` discriminant exactly) is genuinely sound. Already traced this once during `models.ts`'s review when checking `SuspenseRenderEvent`'s construction path; re-verified here as this file's own primary subject.
+
+**No bug found. No coverage gap** — `handlers.spec.ts` already tests all 4 event types × 2 cases each (correct handler called with the correct event; no throw when undefined), 8 tests total.
+
+---
+
 _More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, and `component-store` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files. `component` is in progress. See [todo.md](../todo.md) for the live per-module status of the remaining modules._

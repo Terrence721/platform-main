@@ -13,9 +13,9 @@
     { "name": "schematics-core", "path": "modules/schematics-core" },
     { "name": "signals", "path": "modules/signals" },
     { "name": "store", "path": "modules/store" },
-    { "name": "store-devtools", "path": "modules/store-devtools" }
+    { "name": "store-devtools", "path": "modules/store-devtools" },
   ],
   "settings": {
-    "vitest.enable": true
-  }
+    "vitest.enable": true,
+  },
 }

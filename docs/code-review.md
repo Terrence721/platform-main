@@ -853,4 +853,14 @@ Investigated one thing hard enough to write throwaway type probes for: the file'
 
 ---
 
+### [`tap-response.ts`](https://github.com/Terrence721/platform-main/blob/fad941cb2e2cc6aee14f97bd7d40329284c86385/modules/operators/src/tap-response.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #260](https://github.com/Terrence721/platform-main/issues/260))
+
+`tapResponse` — `mapResponse`'s sibling for side effects instead of value mapping, primarily documented for `@ngrx/component-store` effects. Same `catchError`-also-catches-a-throwing-`next`-callback design, confirmed deliberate via existing tests the same way. Noticed a minor internal-consistency wrinkle, not a bug: `tap({ next: observer.next, complete: observer.complete })` passes bare function references (detached from `observer` as `this`), unlike the file's own `catchError` handler and `mapResponse`'s handlers, which all use method-call syntax. Only matters for a caller's real `this`-dependent method rather than the documented arrow-function pattern — no concrete reachable bug, left alone.
+
+**No bug found. No coverage gap** — `tap-response.spec.ts` (7 tests) covers next/error/complete/finalize in every combination; `tap-response.types.spec.ts` (3 tests) covers required handlers and `E`'s `unknown` default.
+
+---
+
 _More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, `component-store`, and `component` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files, `component` found 1 real bug plus 2 barrel-export gaps (all fixed) across 10/10 files. `operators` is in progress. See [todo.md](../todo.md) for the live per-module status of the remaining modules._

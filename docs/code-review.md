@@ -843,4 +843,14 @@ Investigated one thing hard enough to write throwaway type probes for: the file'
 
 ---
 
+### [`map-response.ts`](https://github.com/Terrence721/platform-main/blob/fad941cb2e2cc6aee14f97bd7d40329284c86385/modules/operators/src/map-response.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #258](https://github.com/Terrence721/platform-main/issues/258))
+
+`mapResponse` — maps a source observable's `next`/error notifications into `R1`/`R2` values, the standard NgRx Effects "turn an HTTP call into a success or failure action" pattern. Checked something that looked like a real bug before trusting the existing tests: `catchError` sits after `map`, so it catches not only errors from the source but also a synchronous throw from the caller's own `next` mapper — before flagging it, checked the spec and found `'should map the error thrown in next callback using error callback'` proving this is deliberate, tested behavior (same "check for an existing test before treating a repro as a bug" discipline from `push.pipe.ts`'s review, #250). Traced the operator's real purpose too: `'should not unsubscribe from outer observable on inner observable error'` confirms wrapping the error path in `of(...)` keeps an outer Effects-composition observable alive when this operator's own source errors.
+
+**No bug found. No coverage gap** — `map-response.spec.ts` (4 tests) covers next-mapping, error-mapping from the source, error-mapping from a throwing next-callback, and outer-stream survival.
+
+---
+
 _More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, `component-store`, and `component` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files, `component` found 1 real bug plus 2 barrel-export gaps (all fixed) across 10/10 files. `operators` is in progress. See [todo.md](../todo.md) for the live per-module status of the remaining modules._

@@ -422,18 +422,33 @@
     </div>
     <div class="status-row">
       <div class="status-cell">
-        <span class="pill pill--active">in progress</span> component
+        <span class="pill pill--done">done</span> component
       </div>
-      <div class="status-cell"><code>7/10</code></div>
-      <div class="status-cell">0 real bugs found so far</div>
+      <div class="status-cell"><code>10/10</code></div>
+      <div class="status-cell">
+        1 real bug found and fixed (a shared render-event dedup layer silently
+        swallowing a second, genuinely new <code>error</code>
+        notification) plus 2 barrel-export gaps fixed — 7 files clean
+      </div>
     </div>
     <div class="status-row">
       <div class="status-cell">
-        <span class="pill pill--pending">not started</span> 6 modules
+        <span class="pill pill--done">done</span> operators
+      </div>
+      <div class="status-cell"><code>4/4</code></div>
+      <div class="status-cell">
+        0 real bugs found, 2 barrel-export gaps fixed —
+        <code>MapResponseObserver</code>/<code>TapResponseObserver</code> were
+        never <code>export</code>ed from their own files
+      </div>
+    </div>
+    <div class="status-row">
+      <div class="status-cell">
+        <span class="pill pill--pending">not started</span> 5 modules
       </div>
       <div class="status-cell">—</div>
       <div class="status-cell">
-        data, eslint-plugin, operators, schematics, schematics-core, signals
+        data, eslint-plugin, schematics, schematics-core, signals
       </div>
     </div>
   </div>
@@ -448,6 +463,6 @@
     <a href="https://terrence721.github.io/platform-main/portfolio.html"
       >Portfolio page</a
     >
-    platform-main · issue #32 · 88/254 files reviewed so far
+    platform-main · issue #32 · 95/254 files reviewed so far
   </footer>
 </div>

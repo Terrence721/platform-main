@@ -9,6 +9,7 @@
   "targets": {
     "build-package": {
       "executor": "@angular/build:ng-packagr",
+      "dependsOn": ["^build"],
       "options": {
         "tsConfig": "modules/operators/tsconfig.build.json",
         "project": "modules/operators/ng-package.json"

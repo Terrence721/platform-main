@@ -831,4 +831,16 @@ This completes the `component` module: **10/10 files reviewed, 1 real bug found 
 
 ---
 
-_More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, `component-store`, and `component` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files, `component` found 1 real bug plus 2 barrel-export gaps (all fixed) across 10/10 files. See [todo.md](../todo.md) for the live per-module status of the remaining modules._
+### [`concat_latest_from.ts`](https://github.com/Terrence721/platform-main/blob/fad941cb2e2cc6aee14f97bd7d40329284c86385/modules/operators/src/concat_latest_from.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #256](https://github.com/Terrence721/platform-main/issues/256))
+
+`concatLatestFrom` — combines each source value with the lazily-evaluated, freshly-subscribed latest value(s) from other observables, the documented alternative to a naive `withLatestFrom(store.select(...))` that subscribes once up front and never re-evaluates. Traced the `concatMap` + `of(value).pipe(withLatestFrom(...))` mechanism end to end: each source emission gets a fresh `observablesFactory(value)` call, fresh subscriptions, and immediate teardown — confirmed by the existing spec's laziness tests. `withLatestFrom`'s "requires every combined source to have emitted before it emits" characteristic matches the documented synchronous-selector use case, not a bug.
+
+Investigated one thing hard enough to write throwaway type probes for: the file's own comment claims the array overload needs to come first "to maintain the proper order in the resulting tuple." Tested single/2-array/1-array factory shapes against both the real overload order and a scratch copy with them swapped — all cases resolved identically either way (array and single-observable types are structurally disjoint, so there's no real ambiguity for TypeScript to resolve). Inconclusive whether the comment is stale or guards an edge case the probes didn't hit, but found no verified mismatch to fix — also the exact question this module's deferred type-level-test-coverage issue (#171, under #162) exists to eventually cover; #162's own scope note keeps that deferred unless a review finds a real declared-vs-actual mismatch, which this wasn't.
+
+**No bug found. No coverage gap** — `concat_latest_from.spec.ts` (8 marble tests) covers laziness, evaluation-on-trigger, and order preservation for both the array and single-observable forms.
+
+---
+
+_More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, `component-store`, and `component` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files, `component` found 1 real bug plus 2 barrel-export gaps (all fixed) across 10/10 files. `operators` is in progress. See [todo.md](../todo.md) for the live per-module status of the remaining modules._

@@ -1,7 +1,7 @@
 import { Observable, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
-type MapResponseObserver<T, E, R1, R2> = {
+export type MapResponseObserver<T, E, R1, R2> = {
   next: (value: T) => R1;
   error: (error: E) => R2;
 };

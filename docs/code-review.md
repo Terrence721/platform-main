@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: August 31, 2026** (`component` module complete)
+**Last Updated: August 31, 2026** (`operators` module complete)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -863,4 +863,14 @@ Investigated one thing hard enough to write throwaway type probes for: the file'
 
 ---
 
-_More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, `component-store`, and `component` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files, `component` found 1 real bug plus 2 barrel-export gaps (all fixed) across 10/10 files. `operators` is in progress. See [todo.md](../todo.md) for the live per-module status of the remaining modules._
+### [`index.ts`](https://github.com/Terrence721/platform-main/blob/fad941cb2e2cc6aee14f97bd7d40329284c86385/modules/operators/src/index.ts)
+
+**low · Maintainability** — Fixed via [issue #262](https://github.com/Terrence721/platform-main/issues/262)
+
+The module's public API barrel, 3 lines. Same cross-check method as every other `index.ts` review in this audit. **Two real gaps, fixed** — the same class of gap as `component`'s `PushPipeResult` (#254): `mapResponse`'s and `tapResponse`'s `observer` parameters are each typed by a local type alias (`MapResponseObserver`, `TapResponseObserver`) that wasn't `export`ed even from its own file. Added `export` to both aliases and re-exported through the barrel. Verified at the type level: rebuilt the package and confirmed both types now appear in a real `export type { MapResponseObserver, TapResponseObserver };` line in the rolled-up `.d.ts`, where neither appeared in any export statement before.
+
+This completes the `operators` module: **4/4 files reviewed, 0 real bugs, 2 barrel-export gaps fixed** (this file). All 3 other files' own logic checked out clean.
+
+---
+
+_More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, `component-store`, `component`, and `operators` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files, `component` found 1 real bug plus 2 barrel-export gaps (all fixed) across 10/10 files, `operators` found 2 barrel-export gaps (fixed) across 4/4 files. See [todo.md](../todo.md) for the live per-module status of the remaining modules._

@@ -1,7 +1,7 @@
 import { EMPTY, Observable } from 'rxjs';
 import { catchError, finalize, tap } from 'rxjs/operators';
 
-type TapResponseObserver<T, E> = {
+export type TapResponseObserver<T, E> = {
   next: (value: T) => void;
   error: (error: E) => void;
   complete?: () => void;

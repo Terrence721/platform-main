@@ -47,7 +47,7 @@
     "nanoid": "^3.3.18"
   },
   "lint-staged": {
-    "*.{ts,json,md,html}": "prettier --write"
+    "*.{ts,json,md,html,code-workspace}": "prettier --write"
   },
   "keywords": [
     "ngrx",

@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: August 29, 2026** (`component-store` module complete)
+**Last Updated: August 31, 2026** (`component` module complete)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -813,12 +813,22 @@ The `*ngrxLet` structural directive, the primary consumer of `createRenderEventM
 
 ### [`push.pipe.ts`](https://github.com/Terrence721/platform-main/blob/f97d612ce90734c230722cac21adc4a1841e3399/modules/component/src/push/push.pipe.ts)
 
-**n/a · Maintainability** — Reviewed, no findings ([issue #250](https://github.com/Terrence721/platform-main/issues/250))
+**n/a · Maintainability** — Reviewed, no findings ([issue #250](https://github.com/Terrence721/platform-main/issues/250)) — real bug surfaced in the already-closed `manager.ts`, filed separately
 
-The `ngrxPush` impure pipe, a `PipeTransform` sibling to `let.directive.ts` (#248) sharing the same render-event machinery (#240) but rendering a single returned value instead of a multi-field view context. Investigated a plausible-looking bug hard enough to write a throwaway repro for: since `error`/`complete` are terminal RxJS notifications, two consecutive same-type render events can only come from two _different_ switched-to sources, so `manager.ts`'s `distinctUntilChanged(renderEventComparator)` deduping them by value looked like it could swallow a genuinely new error's `errorHandler.handleError()` call. Reproduced it — it does suppress the second call — but `manager.spec.ts` already has three explicit tests asserting exactly this as intended, symmetrically for error/complete/suspense (anti-duplicate-report behavior, not an oversight). Confirmed via the existing suite rather than "fixing" documented, deliberate behavior.
+The `ngrxPush` impure pipe, a `PipeTransform` sibling to `let.directive.ts` (#248) sharing the same render-event machinery (#240) but rendering a single returned value instead of a multi-field view context. Investigated a plausible-looking bug hard enough to write a throwaway repro for: since `error`/`complete` are terminal RxJS notifications, two consecutive same-type render events can only come from two _different_ switched-to sources, so `manager.ts`'s `distinctUntilChanged(renderEventComparator)` deduping them by value looked like it could swallow a genuinely new error's `errorHandler.handleError()` call. Reproduced it — it does suppress the second call. `manager.spec.ts` already had three explicit tests asserting exactly this as intended, symmetrically for error/complete/suspense — initially read as deliberate anti-duplicate-report design and left alone. On revisiting, that read was wrong: `error`'s unconditional handler call is exactly the kind of per-occurrence signal that must never be silently dropped, unlike `complete`/`suspense` which carry no such side effect. Fix tracked as a new sub-issue against `manager.ts` (see its own entry, #252).
 
-**No bug found. No coverage gap** — `push.pipe.spec.ts` (50 tests) and `push.pipe.types.spec.ts` (17 tests) cover next/error/complete/suspense/the signal-untracked-subscription case/observable-dictionary inputs.
+**No bug found in this file. No coverage gap** — `push.pipe.spec.ts` (50 tests) and `push.pipe.types.spec.ts` (17 tests) cover next/error/complete/suspense/the signal-untracked-subscription case/observable-dictionary inputs.
 
 ---
 
-_More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, and `component-store` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files. `component` is in progress. See [todo.md](../todo.md) for the live per-module status of the remaining modules._
+### [`index.ts`](https://github.com/Terrence721/platform-main/blob/f97d612ce90734c230722cac21adc4a1841e3399/modules/component/src/index.ts)
+
+**low · Maintainability** — Fixed via [issue #254](https://github.com/Terrence721/platform-main/issues/254)
+
+The module's public API barrel, 3 lines. Same cross-check method as this audit's other `index.ts` reviews (`router-store`'s #158/#159, `store-devtools`'s #207/#208, `component-store`'s #232/#233): check every already-exported member's own public signature for a type it names but the barrel doesn't re-export. **Two real gaps, fixed:** `LetDirective.ngTemplateContextGuard()`'s public return type names `LetViewContext<PO>` directly — already `export`ed from `let.directive.ts` itself, just never reached the barrel; and `PushPipe.transform()`'s return type names `PushPipeResult<PO>`, which wasn't even `export`ed from `push.pipe.ts` — a deeper gap, since `PushPipe` is documented and spec-tested as usable directly as an injectable service (not just via the template pipe), so a consumer calling `.transform()` in application code had no way to name their own variable's type. Verified at the type level: rebuilt the package and confirmed both types now appear in a real `export type { LetViewContext, PushPipeResult };` line in the rolled-up `dist/modules/component/types/ngrx-component.d.ts`, where neither appeared in any export statement before. Deliberately left `PotentialObservableResult`, `LetViewContextValue`, `TickScheduler`, and every `render-event/*` type unexported — none is the literal type name in an already-exported member's own signature, just resolved structurally one or more levels deeper, the same "contextual typing doesn't need a name" scoping already used for `store-devtools`'s `ReduxDevtoolsExtensionConnection`/`ReduxDevtoolsExtensionConfig`.
+
+This completes the `component` module: **10/10 files reviewed, 1 real bug found and fixed** (the cross-file `manager.ts` error-dedup fix, #252 — discovered during `push.pipe.ts`'s review, also silently fixed the identical bug in `let.directive.ts`) **plus 2 barrel-export gaps fixed** (this file). 7 files confirmed clean with no findings at all.
+
+---
+
+_More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, `component-store`, and `component` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files, `component` found 1 real bug plus 2 barrel-export gaps (all fixed) across 10/10 files. See [todo.md](../todo.md) for the live per-module status of the remaining modules._

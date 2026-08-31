@@ -1,3 +1,3 @@
 export { RenderScheduler } from './core/render-scheduler';
-export { LetDirective } from './let/let.directive';
-export { PushPipe } from './push/push.pipe';
+export { LetDirective, LetViewContext } from './let/let.directive';
+export { PushPipe, PushPipeResult } from './push/push.pipe';

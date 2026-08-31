@@ -4,7 +4,7 @@ import { PotentialObservableResult } from '../core/potential-observable';
 import { createRenderScheduler } from '../core/render-scheduler';
 import { createRenderEventManager } from '../core/render-event/manager';
 
-type PushPipeResult<PO> = PotentialObservableResult<PO, undefined>;
+export type PushPipeResult<PO> = PotentialObservableResult<PO, undefined>;
 
 /**
  * @description

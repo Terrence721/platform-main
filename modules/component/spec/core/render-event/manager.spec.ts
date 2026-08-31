@@ -543,7 +543,7 @@ describe('createRenderEventManager', () => {
         expect(completeHandler).toHaveBeenCalledTimes(1);
       });
 
-      it('should not call error handler second time when same error is emitted twice', () => {
+      it('should call error handler again when a different source errors with the same value', () => {
         const { renderEventManager, errorHandler } = withNextObservableSetup(
           throwError(() => 'SAME_ERROR!')
         );
@@ -551,13 +551,25 @@ describe('createRenderEventManager', () => {
         renderEventManager.nextPotentialObservable(
           throwError(() => 'SAME_ERROR!')
         );
-        expect(errorHandler).toHaveBeenCalledWith({
+
+        // first observable
+        expect(errorHandler.mock.calls[0][0]).toEqual({
           type: 'error',
           error: 'SAME_ERROR!',
           reset: true,
           synchronous: true,
         });
-        expect(errorHandler).toHaveBeenCalledTimes(1);
+
+        // second, distinct observable - a coincidentally equal error value
+        // must not suppress its own, separate error report
+        expect(errorHandler.mock.calls[1][0]).toEqual({
+          type: 'error',
+          error: 'SAME_ERROR!',
+          reset: true,
+          synchronous: true,
+        });
+
+        expect(errorHandler).toHaveBeenCalledTimes(2);
       });
 
       it('should call complete handler with reset flag when complete is emitted', () => {

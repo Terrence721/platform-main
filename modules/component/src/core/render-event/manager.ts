@@ -1,6 +1,6 @@
 import { Observable, pipe, ReplaySubject } from 'rxjs';
 import { distinctUntilChanged, switchMap, tap } from 'rxjs/operators';
-import { ErrorRenderEvent, NextRenderEvent, RenderEvent } from './models';
+import { NextRenderEvent, RenderEvent } from './models';
 import { combineRenderEventHandlers, RenderEventHandlers } from './handlers';
 import {
   fromPotentialObservable,
@@ -89,8 +89,13 @@ function renderEventComparator<T>(
     return (previous as NextRenderEvent<T>).value === current.value;
   }
 
+  // `error` is a terminal RxJS notification - a single subscription can
+  // never emit it twice, so two consecutive 'error' render events always
+  // come from two different switched-to sources. Treating them as equal
+  // just because their error values coincidentally match would silently
+  // drop the second source's error report.
   if (current.type === 'error') {
-    return (previous as ErrorRenderEvent).error === current.error;
+    return false;
   }
 
   return true;

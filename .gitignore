@@ -62,6 +62,7 @@ __build__/**
 .vscode/*
 !.vscode/extensions.json
 .vim/
+*.code-workspace
 
 # Build Artifacts #
 release

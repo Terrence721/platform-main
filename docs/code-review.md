@@ -797,4 +797,14 @@ A single type guard: `isNgZone(zone): zone is NgZone { return zone instanceof Ng
 
 ---
 
+### [`let.directive.ts`](https://github.com/Terrence721/platform-main/blob/f97d612ce90734c230722cac21adc4a1841e3399/modules/component/src/let/let.directive.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #248](https://github.com/Terrence721/platform-main/issues/248))
+
+The `*ngrxLet` structural directive, the primary consumer of `createRenderEventManager` (#240) and `RenderScheduler` (#246). Traced three things end-to-end: the `next`/`error`/`complete` handlers' reset/synchronous handling is structurally symmetric (no `store`-style entry-point-guard asymmetry); the reentrancy case exercised by the existing recursive-directive test is correctly guarded because `isMainViewCreated` is set _before_ `createEmbeddedView` runs, so a synchronous re-emission during view creation only mutates `viewContext` in place instead of double-creating a view; and `SuspenseRenderEvent.synchronous` being statically `true` matches the runtime flow, since a suspense event can only be the first event after a `switchMap` resubscribe, which itself happens inside an Angular-initiated change-detection pass — which is why `renderSuspenseView()` never needs a `renderScheduler.schedule()` call, unlike `renderMainView()`. A stray `NG0406` stderr line during this file's spec run turned out to reproduce identically from `tick-scheduler.spec.ts` alone (already closed, #242) — pre-existing harness noise, not caused by this file.
+
+**No bug found. No coverage gap** — `let.directive.spec.ts` (38 tests) covers next/error/complete/suspense/suspense-template/the recursion edge case/observable-dictionary inputs; `let.directive.types.spec.ts` (17 tests) covers `ngTemplateContextGuard`'s type inference.
+
+---
+
 _More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, and `component-store` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files. `component` is in progress. See [todo.md](../todo.md) for the live per-module status of the remaining modules._

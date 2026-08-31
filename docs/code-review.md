@@ -807,4 +807,14 @@ The `*ngrxLet` structural directive, the primary consumer of `createRenderEventM
 
 ---
 
+### [`push.pipe.ts`](https://github.com/Terrence721/platform-main/blob/f97d612ce90734c230722cac21adc4a1841e3399/modules/component/src/push/push.pipe.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #250](https://github.com/Terrence721/platform-main/issues/250))
+
+The `ngrxPush` impure pipe, a `PipeTransform` sibling to `let.directive.ts` (#248) sharing the same render-event machinery (#240) but rendering a single returned value instead of a multi-field view context. Investigated a plausible-looking bug hard enough to write a throwaway repro for: since `error`/`complete` are terminal RxJS notifications, two consecutive same-type render events can only come from two _different_ switched-to sources, so `manager.ts`'s `distinctUntilChanged(renderEventComparator)` deduping them by value looked like it could swallow a genuinely new error's `errorHandler.handleError()` call. Reproduced it — it does suppress the second call — but `manager.spec.ts` already has three explicit tests asserting exactly this as intended, symmetrically for error/complete/suspense (anti-duplicate-report behavior, not an oversight). Confirmed via the existing suite rather than "fixing" documented, deliberate behavior.
+
+**No bug found. No coverage gap** — `push.pipe.spec.ts` (50 tests) and `push.pipe.types.spec.ts` (17 tests) cover next/error/complete/suspense/the signal-untracked-subscription case/observable-dictionary inputs.
+
+---
+
 _More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, and `component-store` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files. `component` is in progress. See [todo.md](../todo.md) for the live per-module status of the remaining modules._

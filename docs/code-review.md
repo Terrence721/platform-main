@@ -917,4 +917,16 @@ Verified: `npx nx run schematics-core:lint` (0 errors), `npx nx run schematics-c
 
 ---
 
+### [`package.ts`](https://github.com/Terrence721/platform-main/blob/7e7a67addd5ece8030d0f74463f302bc69a5efb7/modules/schematics-core/utility/package.ts)
+
+**low · Test Coverage** — Reviewed, no code findings ([issue #279](https://github.com/Terrence721/platform-main/issues/279))
+
+`addPackageToPackageJson(host, type, pkg, version)` writes a dependency entry into a consumer's `package.json`: creates the `dependencies`/`devDependencies` section with `Object.create(null)` if it's missing, and only writes when the package isn't already present (never clobbers an existing pin). It also carries an explicit `isUnsafeObjectKey()` guard — refusing `__proto__`/`constructor`/`prototype` as either the `type` or `pkg` key — added in a dedicated prior commit (`b77bcc6`) specifically to satisfy a CodeQL prototype-pollution finding. Traced all 13 real call sites (10 `ng-add` schematics, `store`'s second call for `@ngrx/eslint-plugin`, and 2 `18_0_0-beta` migrations) before assuming the guard was actually reachable: every one passes a hardcoded string literal for both `type` and `pkg` — none is schema-driven or otherwise attacker-influenced today — so the guard is defense-in-depth, not a live path that needs it.
+
+**No bug found. Real coverage gap, not fixed here** — same "zero test infrastructure of its own" characteristic as every other file in this module (see `libs-version.ts`, #269): the normal write path is transitively covered (`modules/schematics/ng-add/store/index.spec.ts`'s "should update package.json" / "should skip package.json update" tests), but the `isUnsafeObjectKey` throw branch is exercised by nothing in the suite — no caller anywhere ever passes an unsafe key, so nothing would catch a future refactor accidentally weakening or removing this guard until CodeQL re-scans `main` after the fact. Consistent with the module-wide precedent set at `libs-version.ts`: noted, not fixed here, since closing it needs `schematics-core`'s own `vitest.config.mts` + `test` target (neither exists for this module today) — out of scope for a single utility file's review.
+
+Verified: `npx nx run schematics-core:lint` (0 errors), `npx nx run schematics-core:build` (clean), `npx vitest run modules/schematics/ng-add modules/effects/migrations/18_0_0-beta modules/component-store/migrations/18_0_0-beta` (28 files / 194 tests, all passing — one prior run flagged 5 failures across 7 files, but a clean re-run with an unchanged working tree confirmed that was transient flakiness, not a regression).
+
+---
+
 _More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, `component-store`, `component`, and `operators` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files, `component` found 1 real bug plus 2 barrel-export gaps (all fixed) across 10/10 files, `operators` found 2 barrel-export gaps (fixed) across 4/4 files. `schematics-core` is in progress. See [todo.md](../todo.md) for the live per-module status of the remaining modules._

@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: August 31, 2026** (`operators` module complete)
+**Last Updated: September 2, 2026** (`schematics-core` module in progress)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -873,4 +873,16 @@ This completes the `operators` module: **4/4 files reviewed, 0 real bugs, 2 barr
 
 ---
 
-_More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, `component-store`, `component`, and `operators` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files, `component` found 1 real bug plus 2 barrel-export gaps (all fixed) across 10/10 files, `operators` found 2 barrel-export gaps (fixed) across 4/4 files. See [todo.md](../todo.md) for the live per-module status of the remaining modules._
+### [`libs-version.ts`](https://github.com/Terrence721/platform-main/blob/7e7a67addd5ece8030d0f74463f302bc69a5efb7/modules/schematics-core/utility/libs-version.ts)
+
+**low · Maintainability** — Fixed via [issue #269](https://github.com/Terrence721/platform-main/issues/269)
+
+First file in `schematics-core`, which has zero test infrastructure of its own — every file here is exercised only indirectly through the 10 `ng-add` schematics in `modules/schematics` that import from it. This file is one exported constant, `platformVersion` — traced its usage before assuming a one-liner couldn't hide a real bug: it's the exact version string every one of those 10 `ng-add` schematics writes into a real consumer's `package.json` for the `@ngrx/*` package being added. **Real bug, fixed**: the value was `'^22.0.0-rc.0'`, a stale prerelease-tagged floor never updated when this repo's own `@angular/core` moved from the Angular 22 RC period to stable (`22.1.4` now, several patch bumps ago). Confirmed empirically via `node-semver` this never broke dependency resolution (`22.1.4` and `semver.maxSatisfying` both correctly resolve through a prerelease-tagged floor to the latest stable version — prerelease tags only restrict _other prereleases_ from matching), so it's a genuine "forgot to update" gap rather than a functional break. Noted, not fixed here: none of the 10 `ng-add` spec files assert on the actual version value written (only `toBeDefined()`) — that coverage gap lives in the `schematics` module, left for its own future review.
+
+**Fix**: `'^22.0.0-rc.0'` → `'^22.0.0'`.
+
+Verified: `npx nx run schematics:lint` (0 errors), `npx vitest run modules/schematics/ng-add` (all 10 `ng-add` consumers plus `src/ng-add`, 24 files / 162 tests, all passing).
+
+---
+
+_More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, `component-store`, `component`, and `operators` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files, `component` found 1 real bug plus 2 barrel-export gaps (all fixed) across 10/10 files, `operators` found 2 barrel-export gaps (fixed) across 4/4 files. `schematics-core` is in progress. See [todo.md](../todo.md) for the live per-module status of the remaining modules._

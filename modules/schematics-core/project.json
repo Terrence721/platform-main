@@ -23,6 +23,11 @@
         ]
       },
       "outputs": ["{options.outputFile}"]
+    },
+    "test": {
+      "executor": "@analogjs/vitest-angular:test",
+      "dependsOn": ["build"],
+      "outputs": ["{workspaceRoot}/coverage/modules/schematics-core"]
     }
   }
 }

@@ -50,7 +50,7 @@ export {
   ModuleOptions,
 } from './utility/find-module';
 
-export { findPropertyInAstObject } from './utility/json-utilts';
+export { findPropertyInAstObject } from './utility/json-utils';
 
 export {
   addReducerToState,

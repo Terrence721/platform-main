@@ -897,4 +897,14 @@ Verified: `npx nx run schematics-core:lint` (0 errors), `npx nx run schematics-c
 
 ---
 
+### [`parse-name.ts`](https://github.com/Terrence721/platform-main/blob/7e7a67addd5ece8030d0f74463f302bc69a5efb7/modules/schematics-core/utility/parse-name.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #275](https://github.com/Terrence721/platform-main/issues/275))
+
+`parseName(path, name)` splits a schematic's `--name` option into `{ name, path }`. Small but high-stakes: used by 13 files across `ng-add` and every code-generator schematic, and its return value feeds directly into `move(parsedPath.path)` — the actual filesystem destination generated files get written to. Verified empirically against the real installed `@angular-devkit/core` rather than just reading it: a throwaway probe covering a plain name, a nested `sub/name`, an empty `path`, a trailing slash on `path`, `./name`, and `../name` all produced correct results, including the double-slash-normalizes-away and parent-directory-traversal cases most likely to hide a subtle bug.
+
+**No bug found. No coverage gap** — `schematics-core` has no test infrastructure of its own, but this function is genuinely, transitively covered: all 13 consumers' own spec files assert on the resulting generated-file paths directly, which would catch a regression here through its real consumer.
+
+---
+
 _More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, `component-store`, `component`, and `operators` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files, `component` found 1 real bug plus 2 barrel-export gaps (all fixed) across 10/10 files, `operators` found 2 barrel-export gaps (fixed) across 4/4 files. `schematics-core` is in progress. See [todo.md](../todo.md) for the live per-module status of the remaining modules._

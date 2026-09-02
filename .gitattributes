@@ -1,0 +1,5 @@
+# Vitest/Jest-style snapshot files are always written with LF by the test
+# runner's serializer, regardless of platform. Without this, core.autocrlf
+# repeatedly flags them as modified on Windows after every local test run,
+# even though the content never actually changes.
+*.snap text eol=lf

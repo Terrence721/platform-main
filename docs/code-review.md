@@ -885,4 +885,16 @@ Verified: `npx nx run schematics:lint` (0 errors), `npx vitest run modules/schem
 
 ---
 
+### [`json-utils.ts`](https://github.com/Terrence721/platform-main/blob/7e7a67addd5ece8030d0f74463f302bc69a5efb7/modules/schematics-core/utility/json-utils.ts)
+
+**low · Maintainability** — Fixed via [issue #272](https://github.com/Terrence721/platform-main/issues/272)
+
+A single small utility, `findPropertyInAstObject`, carried over from Angular CLI's own schematics tooling. Confirmed its "return the last matching property, don't break early" behavior is correct, not a bug — it mirrors real JS object-literal semantics (a later duplicate key wins). **Real issue, fixed**: the file itself was misnamed — `json-utilts.ts` is a typo for `json-utils.ts` (transposed letters). Checked the blast radius before renaming (one reference outside its own file, the barrel export) and updated it. Exported but never called anywhere in this repo, not even indirectly — not flagged as dead code, matching `libs-version.ts`'s (#269) reasoning: a shared AST-utility toolkit legitimately exports more than what this repo's own `ng-add` schematics happen to use.
+
+**Also fixed, repo-wide but discovered here**: `modules/schematics/**/__snapshots__/*.snap` files kept showing as modified after every test run with zero real content difference (confirmed via `git diff`). No `.gitattributes` existed anywhere in the repo, so these LF-written snapshot files were subject to plain `core.autocrlf` round-trip churn on Windows. Added a scoped `*.snap text eol=lf` rule and renormalized — verified clean by re-running the affected specs.
+
+Verified: `npx nx run schematics-core:lint` (0 errors), `npx nx run schematics-core:build` (clean), `npx vitest run modules/schematics` (50 files / 396 tests, all passing).
+
+---
+
 _More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, `component-store`, `component`, and `operators` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files, `component` found 1 real bug plus 2 barrel-export gaps (all fixed) across 10/10 files, `operators` found 2 barrel-export gaps (fixed) across 4/4 files. `schematics-core` is in progress. See [todo.md](../todo.md) for the live per-module status of the remaining modules._

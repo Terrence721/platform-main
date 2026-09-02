@@ -907,4 +907,14 @@ Verified: `npx nx run schematics-core:lint` (0 errors), `npx nx run schematics-c
 
 ---
 
+### [`update.ts`](https://github.com/Terrence721/platform-main/blob/7e7a67addd5ece8030d0f74463f302bc69a5efb7/modules/schematics-core/utility/update.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #277](https://github.com/Terrence721/platform-main/issues/277))
+
+`updatePackage(name)` rewrites `@ngrx/{name}`'s version in a consumer's `package.json` to `6.0.0`, preserving a `^`/`~` prefix if present. The hardcoded `6.0.0` looked suspicious at first — checked every consumer before assuming a bug: it's called exclusively from `migrations/6_0_0/index.ts` across 6 modules, and a version-specific `ng update` migration hardcoding its own target version is correct by design, not stale. (`migrations/` folders themselves are out of scope for this audit per #106, but this file lives in `schematics-core/utility/`, not inside a `migrations/` folder, so it's in scope regardless of what consumes it.)
+
+**No bug found. No coverage gap** — confirmed genuinely thorough transitive coverage: 6 migration specs (one per consumer module) each iterate the shared test helper's `versionPrefixes = ['~', '^', '']` and run the real schematic via `SchematicTestRunner`, asserting the exact resulting version string — covering every branch this file's prefix logic has.
+
+---
+
 _More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, `component-store`, `component`, and `operators` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files, `component` found 1 real bug plus 2 barrel-export gaps (all fixed) across 10/10 files, `operators` found 2 barrel-export gaps (fixed) across 4/4 files. `schematics-core` is in progress. See [todo.md](../todo.md) for the live per-module status of the remaining modules._

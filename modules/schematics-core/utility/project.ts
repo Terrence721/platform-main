@@ -25,7 +25,15 @@ export function getProject(
         : Object.keys(workspace.projects)[0];
   }
 
-  return workspace.projects[options.project];
+  const project = workspace.projects[options.project];
+
+  if (!project) {
+    throw new SchematicsException(
+      `Project '${options.project}' does not exist.`
+    );
+  }
+
+  return project;
 }
 
 export function getProjectPath(

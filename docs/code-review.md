@@ -931,4 +931,20 @@ Verified: `npx nx run schematics-core:lint` (0 errors), `npx nx run schematics-c
 
 ---
 
+### [`project.ts`](https://github.com/Terrence721/platform-main/blob/7e7a67addd5ece8030d0f74463f302bc69a5efb7/modules/schematics-core/utility/project.ts)
+
+**low · Correctness** — Fixed via [issue #281](https://github.com/Terrence721/platform-main/issues/281)
+
+Four small workspace-resolution helpers: `getProject` reads the target project out of `angular.json` (falling back to `defaultProject`, then the first project key, when `--project` isn't given); `getProjectPath` derives a project's default source path; `isLib` and `getProjectMainFile` branch on `projectType` and read the real entry point (`browser` for the modern application builder, `main` for the legacy one).
+
+**Real bug, fixed**: `getProject` looked up `workspace.projects[options.project]` and returned whatever it found — including `undefined` when `--project` names something that isn't in the workspace. Every one of the 10 `ng-add` schematics exposes `project` as a plain, unvalidated `--project`/`-p` string flag (no `$default: {"$source": "projectName"}` in any of their `schema.json`s), so a real user typo reaches this code path with nothing upstream to catch it. The `undefined` then propagated into `getProjectPath`/`isLib`/`getProjectMainFile`, each of which immediately dereferences a property on it (`project.root`, `project.projectType`, `project.architect`) — turning a routine typo into an opaque `TypeError: Cannot read properties of undefined (reading 'root')` instead of a message that says what's actually wrong.
+
+**Fix**: `getProject` now throws a `SchematicsException` — `Project '<name>' does not exist.` — the moment the lookup comes back empty, instead of letting `undefined` leak out to whichever caller happens to dereference it first.
+
+Also gave this file its own direct spec — `modules/schematics-core/utility/project.spec.ts`, 13 tests covering `getProject`'s name/defaultProject/first-project resolution and the new not-found throw, `getProjectPath`'s trailing-slash trim and app/lib path defaulting, `isLib`, and both entry-point branches of `getProjectMainFile` — the first file in this module to get direct coverage now that `schematics-core` has its own test infrastructure (#279). Caught a real, environment-specific trap while writing it: this module's `utility/*.ts` files each have a stale, gitignored `.js`/`.js.map` sibling from an earlier local `tsc` run, and Vite's extensionless-import resolution picked the stale compiled `.js` over the edited `.ts` source — making the new test appear to fail against my own fix. Confirmed with an isolated `tsx` probe that the fix's logic was correct outside Vitest, then deleted the stale local build output (gitignored, never committed, so it can't affect CI or another clone) and reran clean.
+
+Verified: `npx nx run schematics-core:lint` (0 errors), `npx nx run schematics-core:build` (clean), `npx nx run schematics-core:test` (4 files / 42 tests, all passing, 0 type errors), `npx vitest run modules/schematics` (50 files / 396 tests, all passing — the full consumer suite for every caller of these four functions).
+
+---
+
 _More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, `component-store`, `component`, and `operators` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files, `component` found 1 real bug plus 2 barrel-export gaps (all fixed) across 10/10 files, `operators` found 2 barrel-export gaps (fixed) across 4/4 files. `schematics-core` is in progress. See [todo.md](../todo.md) for the live per-module status of the remaining modules._

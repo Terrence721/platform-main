@@ -1,0 +1,9 @@
+{
+  "schematics": {
+    "ng-add": {
+      "factory": "../schematics/ng-add/data",
+      "schema": "../schematics/ng-add/data/schema.json",
+      "description": "Add @ngrx/data to your application (formerly @ngrx/data's own ng-add)"
+    }
+  }
+}

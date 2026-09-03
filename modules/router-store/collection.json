@@ -1,0 +1,9 @@
+{
+  "schematics": {
+    "ng-add": {
+      "factory": "../schematics/ng-add/router-store",
+      "schema": "../schematics/ng-add/router-store/schema.json",
+      "description": "Register @ngrx/router-store within your application (formerly @ngrx/router-store's own ng-add)"
+    }
+  }
+}

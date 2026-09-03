@@ -1,7 +1,7 @@
 {
   "$schema": "../../node_modules/ng-packagr/ng-package.schema.json",
   "dest": "../../dist/modules/component",
-  "assets": ["migrations/**/*.json", "**/files/**/*"],
+  "assets": ["migrations/**/*.json", "**/files/**/*", "collection.json"],
   "lib": {
     "entryFile": "index.ts"
   }

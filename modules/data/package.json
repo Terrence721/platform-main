@@ -25,7 +25,12 @@
     "@ngrx/store": "0.0.0",
     "@ngrx/effects": "0.0.0",
     "@ngrx/entity": "0.0.0",
-    "rxjs": "^6.5.3 || ^7.5.0"
+    "rxjs": "^6.5.3 || ^7.5.0",
+    "@ngrx/schematics": "0.0.0"
+  },
+  "schematics": "./collection.json",
+  "ng-add": {
+    "save": "dependencies"
   },
   "ng-update": {
     "packageGroupName": "@ngrx/store",

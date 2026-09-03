@@ -1,0 +1,9 @@
+{
+  "schematics": {
+    "ng-add": {
+      "factory": "../schematics/ng-add/store-devtools",
+      "schema": "../schematics/ng-add/store-devtools/schema.json",
+      "description": "Adds initial setup for store-devtools (formerly @ngrx/store-devtools's own ng-add)"
+    }
+  }
+}

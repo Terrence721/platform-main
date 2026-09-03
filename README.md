@@ -5,7 +5,7 @@
 [![Quality](https://github.com/Terrence721/platform-main/actions/workflows/quality.yml/badge.svg)](https://github.com/Terrence721/platform-main/actions/workflows/quality.yml)
 [![CodeQL](https://github.com/Terrence721/platform-main/actions/workflows/codeql.yml/badge.svg)](https://github.com/Terrence721/platform-main/actions/workflows/codeql.yml)
 
-Last updated: August 31, 2026
+Last updated: September 2, 2026
 
 This repository is a personal demonstration workspace: real, MIT-licensed NgRx source added module by module, with specific pieces **redesigned by choice** — not copied verbatim — where the goal is to show a defensible, different architectural call instead of reproducing an existing one.
 
@@ -58,11 +58,12 @@ modules/
                            the composition ripple in a third shape
   component-store/      ← added (real source); no @ngrx/store dependency,
                            audited clean, fixed a real TS strictness gap
-  schematics/            ← added (real source); also consolidates all 8
-                           other modules' ng-add schematic into one shared
-                           package (module-qualified keys) instead of 8
-                           duplicated copies — a deliberate DRY-over-fidelity
-                           tradeoff, see docs/architecture.md
+  schematics/            ← added (real source); also holds every other
+                           module's ng-add schematic (module-qualified
+                           keys), one shared implementation instead of 11
+                           duplicated copies — each module still resolves
+                           its own real `ng add @ngrx/X`, see
+                           docs/architecture.md
   signals/               ← added (real source); no @ngrx/store dependency,
                            audited clean; first module added the corrected
                            way from the start, ng-add went straight into the
@@ -74,7 +75,7 @@ modules/
                            complete
 ```
 
-All 13 modules are added. A per-module code review audit is now in progress (`store` complete — 3 real bugs found and fixed; `entity` complete — 0 real bugs found; `effects` complete — 0 real bugs found; `router-store` complete — 7 real bugs found and fixed across 12/12 files, the highest hit rate of any module so far; `store-devtools` complete — 6 real bugs found and fixed plus 1 minor cleanup across 11/11 files; `component-store` complete — 1 real gap found and fixed across 4/4 files; `component` complete — 1 real bug found and fixed plus 2 barrel-export gaps fixed across 10/10 files; `operators` complete — 0 real bugs found, 2 barrel-export gaps fixed across 4/4 files, see [`docs/code-review.md`](docs/code-review.md)). See `todo.md`'s "Still to do" table for what's left (5 modules' review not yet started, plus the deferred `migrations/`-folder pass, tooling migration, containerization).
+All 13 modules are added. A per-module code review audit is now in progress (`store` complete — 3 real bugs found and fixed; `entity` complete — 0 real bugs found; `effects` complete — 0 real bugs found; `router-store` complete — 7 real bugs found and fixed across 12/12 files, the highest hit rate of any module so far; `store-devtools` complete — 6 real bugs found and fixed plus 1 minor cleanup across 11/11 files; `component-store` complete — 1 real gap found and fixed across 4/4 files; `component` complete — 1 real bug found and fixed plus 2 barrel-export gaps fixed across 10/10 files; `operators` complete — 0 real bugs found, 2 barrel-export gaps fixed across 4/4 files; `schematics-core` in progress — 6/16 files, 2 real bugs found and fixed so far, see [`docs/code-review.md`](docs/code-review.md)). See `todo.md`'s "Still to do" table for what's left (4 modules' review not yet started, plus the deferred `migrations/`-folder pass, tooling migration, containerization).
 
 ## 🖥 Getting Started
 

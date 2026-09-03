@@ -399,10 +399,14 @@
     <code>schematics-core</code> is pulled in via a relative import every
     module's <code>ng-add</code> schematic needs (consolidated from 4 duplicated
     copies into one, −12,453 lines), and <code>schematics</code> is the single
-    package every module's own <code>ng-add</code> now registers into. Both
-    still get their own full code-review pass under the same 13-module audit
-    (<code>schematics-core</code> is issue #34) — they're infrastructure, not
-    exceptions to the review scope.
+    package holding every module's actual <code>ng-add</code> implementation —
+    each module's own <code>package.json</code> once again resolves its own real
+    <code>ng add @ngrx/&lt;name&gt;</code> too, via a thin wrapper delegating to
+    that shared implementation rather than a second copy of it. Both still get
+    their own full code-review pass under the same 13-module audit (<code
+      >schematics-core</code
+    >
+    is issue #34) — they're infrastructure, not exceptions to the review scope.
   </div>
 
   <footer>

@@ -5,6 +5,7 @@
   "sourceRoot": "modules/store-devtools/src",
   "prefix": "ngrx",
   "tags": [],
+  "implicitDependencies": ["schematics"],
   "generators": {},
   "targets": {
     "build-package": {

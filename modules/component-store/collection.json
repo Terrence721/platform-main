@@ -1,0 +1,9 @@
+{
+  "schematics": {
+    "ng-add": {
+      "factory": "../schematics/ng-add/component-store",
+      "schema": "../schematics/ng-add/component-store/schema.json",
+      "description": "Add @ngrx/component-store to your application (formerly @ngrx/component-store's own ng-add)"
+    }
+  }
+}

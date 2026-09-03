@@ -1,0 +1,9 @@
+{
+  "schematics": {
+    "ng-add": {
+      "factory": "../schematics/ng-add/eslint-plugin",
+      "schema": "../schematics/ng-add/eslint-plugin/schema.json",
+      "description": "Add @ngrx/eslint-plugin to your application (formerly @ngrx/eslint-plugin's own ng-add)"
+    }
+  }
+}

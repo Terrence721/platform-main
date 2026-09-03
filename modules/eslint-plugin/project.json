@@ -4,6 +4,7 @@
   "projectType": "library",
   "sourceRoot": "modules/eslint-plugin/src",
   "tags": [],
+  "implicitDependencies": ["schematics"],
   "targets": {
     "build-package": {
       "executor": "@nx/js:tsc",
@@ -38,11 +39,26 @@
             "command": "cpy modules/eslint-plugin/migrations/migration.json dist"
           },
           {
+            "command": "cpy modules/eslint-plugin/collection.json dist"
+          },
+          {
             "command": "cpy LICENSE dist/modules/eslint-plugin"
+          },
+          {
+            "command": "rimraf node_modules/@ngrx/eslint-plugin"
+          },
+          {
+            "command": "mkdirp node_modules/@ngrx/eslint-plugin"
+          },
+          {
+            "command": "ncp dist/modules/eslint-plugin node_modules/@ngrx/eslint-plugin"
           }
         ]
       },
-      "outputs": ["{workspaceRoot}/dist/modules/eslint-plugin"]
+      "outputs": [
+        "{workspaceRoot}/dist/modules/eslint-plugin",
+        "{workspaceRoot}/node_modules/@ngrx/eslint-plugin"
+      ]
     },
     "test": {
       "executor": "@analogjs/vitest-angular:test",

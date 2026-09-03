@@ -1,0 +1,9 @@
+{
+  "schematics": {
+    "ng-add": {
+      "factory": "../schematics/ng-add/signals",
+      "schema": "../schematics/ng-add/signals/schema.json",
+      "description": "Add @ngrx/signals to your application (formerly @ngrx/signals's own ng-add)"
+    }
+  }
+}

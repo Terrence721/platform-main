@@ -5,6 +5,7 @@
   "sourceRoot": "modules/signals/src",
   "prefix": "ngrx",
   "tags": [],
+  "implicitDependencies": ["schematics"],
   "generators": {},
   "targets": {
     "build-package": {

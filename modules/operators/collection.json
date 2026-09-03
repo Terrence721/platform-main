@@ -1,0 +1,9 @@
+{
+  "schematics": {
+    "ng-add": {
+      "factory": "../schematics/ng-add/operators",
+      "schema": "../schematics/ng-add/operators/schema.json",
+      "description": "Add @ngrx/operators to your application (formerly @ngrx/operators's own ng-add)"
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "schematics": {
+    "ng-add": {
+      "factory": "../schematics/ng-add/effects",
+      "schema": "../schematics/ng-add/effects/schema.json",
+      "description": "Add root side effect class (formerly @ngrx/effects's own ng-add)"
+    }
+  }
+}

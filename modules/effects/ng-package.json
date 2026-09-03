@@ -1,7 +1,7 @@
 {
   "$schema": "../../node_modules/ng-packagr/ng-package.schema.json",
   "dest": "../../dist/modules/effects",
-  "assets": ["migrations/**/*.json", "**/files/**/*"],
+  "assets": ["migrations/**/*.json", "**/files/**/*", "collection.json"],
   "allowedNonPeerDependencies": ["@ngrx/operators"],
   "lib": {
     "entryFile": "index.ts"

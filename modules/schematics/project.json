@@ -80,10 +80,22 @@
           },
           {
             "command": "cpy LICENSE dist/modules/schematics"
+          },
+          {
+            "command": "rimraf node_modules/@ngrx/schematics"
+          },
+          {
+            "command": "mkdirp node_modules/@ngrx/schematics"
+          },
+          {
+            "command": "ncp dist/modules/schematics node_modules/@ngrx/schematics"
           }
         ]
       },
-      "outputs": ["{workspaceRoot}/dist/modules/schematics"]
+      "outputs": [
+        "{workspaceRoot}/dist/modules/schematics",
+        "{workspaceRoot}/node_modules/@ngrx/schematics"
+      ]
     },
     "test": {
       "executor": "@analogjs/vitest-angular:test",

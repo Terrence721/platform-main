@@ -1,0 +1,9 @@
+{
+  "schematics": {
+    "ng-add": {
+      "factory": "../schematics/ng-add/store",
+      "schema": "../schematics/ng-add/store/schema.json",
+      "description": "Adds initial setup for state management (formerly @ngrx/store's own ng-add)"
+    }
+  }
+}

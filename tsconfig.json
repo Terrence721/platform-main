@@ -18,8 +18,6 @@
     "strict": true,
     "skipLibCheck": true,
     "paths": {
-      "@example-app/*": ["./projects/example-app/src/app/*"],
-      "@ngrx-io/*": ["./projects/www/src/*"],
       "@ngrx/component": ["./modules/component"],
       "@ngrx/component-store": ["./modules/component-store"],
       "@ngrx/component-store/schematics-core": [

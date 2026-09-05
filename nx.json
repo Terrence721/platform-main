@@ -41,7 +41,6 @@
       "style": "css"
     }
   },
-  "defaultProject": "example-app",
   "$schema": "./node_modules/nx/schemas/nx-schema.json",
   "targetDefaults": {
     "build": {
@@ -68,10 +67,8 @@
   "namedInputs": {
     "default": ["{projectRoot}/**/*", "sharedGlobals"],
     "sharedGlobals": [
-      "{workspaceRoot}/angular.json",
       "{workspaceRoot}/nx.json",
-      "{workspaceRoot}/tsconfig.json",
-      "{workspaceRoot}/.circleci/config.yml"
+      "{workspaceRoot}/tsconfig.json"
     ],
     "production": [
       "default",

@@ -130,7 +130,13 @@ export interface AppConfig {
 
 export function getWorkspacePath(host: Tree): string {
   const possibleFiles = ['/angular.json', '/.angular.json', '/workspace.json'];
-  const path = possibleFiles.filter((path) => host.exists(path))[0];
+  const path = possibleFiles.find((path) => host.exists(path));
+
+  if (!path) {
+    throw new SchematicsException(
+      'Could not find a workspace configuration file (checked angular.json, .angular.json, workspace.json).'
+    );
+  }
 
   return path;
 }

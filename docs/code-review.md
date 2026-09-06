@@ -975,4 +975,18 @@ Verified: `npx nx run schematics-core:lint` (0 errors, down from 3 warnings on t
 
 ---
 
+### [`find-component.ts`](https://github.com/Terrence721/platform-main/blob/7e7a67addd5ece8030d0f74463f302bc69a5efb7/modules/schematics-core/utility/find-component.ts)
+
+**low · Maintainability** — Fixed via [issue #310](https://github.com/Terrence721/platform-main/issues/310)
+
+The component-side counterpart to `find-module.ts`: `findComponentFromOptions` (resolve a schematic's target component, either an explicitly-named one with a chain of filename-shape fallbacks, or the nearest ancestor `*.component.ts` when none is given), `findComponent` (the ancestor-walk itself). Only one real caller anywhere in the repo — `modules/schematics/src/component-store/index.ts`, guarded by `if (options.component) { ... }` — so, same shape as `find-module.ts`'s corrected finding (#307), `findComponentFromOptions`'s own auto-detect branch (and `findComponent()` itself) can never run today. **Not a bug here**: this is the exact call site the repo owner explicitly chose to keep guarded when #307/PR #308 landed — `component-store` has `--component` as one of two valid targets (the other being `--module`), and repeated per-feature generation carries real risk of the "nearest ancestor" heuristic guessing wrong in a multi-module app. `findComponentFromOptions`'s explicit-path branch (the only reachable one) is genuinely, transitively covered by `component-store/index.spec.ts` — both the success path (`component: 'app.ts'`) and the "specified component path does not exist" throw.
+
+**Real, minor cleanup, fixed**: this file also carried its own copy of `buildRelativePath`/`parsePath`/`convertToTypeScriptFileName` — byte-for-byte identical to `find-module.ts`'s versions, and entirely dead: the barrel (`modules/schematics-core/index.ts`) re-exports `buildRelativePath` only from `find-module.ts`, and nothing anywhere imported this file's copy directly (confirmed and flagged during `find-module.ts`'s own review, #305/PR #306). Same duplication shape this module's history already had at a larger scale (Phase 30–32 consolidated 4 duplicated `schematics-core` copies into 1). Removed all three functions and the now-unused `relative`/`basename`/`extname`/`dirname` imports that only they used.
+
+**Fix**: deleted `buildRelativePath`/`parsePath`/`convertToTypeScriptFileName` and their now-dead imports.
+
+Verified: `npx nx run schematics-core:lint` (0 errors, down from 3 warnings on this file to 0; 12 warnings remain repo-wide, all pre-existing and unrelated), `npx nx run schematics-core:build` (clean), `npx nx run schematics-core:test` (6 files / 48 tests, all passing, 0 type errors), `npx vitest run modules/schematics` (50 files / 396 tests, all passing — the full consumer suite for the one real caller of `findComponentFromOptions`).
+
+---
+
 _More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, `component-store`, `component`, and `operators` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files, `component` found 1 real bug plus 2 barrel-export gaps (all fixed) across 10/10 files, `operators` found 2 barrel-export gaps (fixed) across 4/4 files. `schematics-core` is in progress. See [todo.md](../todo.md) for the live per-module status of the remaining modules._

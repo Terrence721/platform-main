@@ -160,9 +160,7 @@ export default function (options: StoreOptions): Rule {
     options.name = parsedPath.name;
     options.path = parsedPath.path;
 
-    if (options.module) {
-      options.module = findModuleFromOptions(host, options);
-    }
+    options.module = findModuleFromOptions(host, options);
 
     if (
       options.root &&

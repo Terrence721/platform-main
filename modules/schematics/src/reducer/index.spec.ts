@@ -46,6 +46,10 @@ describe('Reducer Schematic', () => {
     const options = {
       ...defaultOptions,
       project: 'baz',
+      // 'baz' is an Angular library fixture (see createWorkspace()), which
+      // has no root NgModule at all - skipImport makes that explicit rather
+      // than relying on auto-detect failing to find one to wire into.
+      skipImport: true,
     };
 
     const specifiedProjectPath = getTestProjectPath(defaultWorkspaceOptions, {

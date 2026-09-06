@@ -136,7 +136,7 @@ export default function (options: RouterStoreOptions): Rule {
 
     options.path = getProjectPath(host, options);
 
-    if (options.module && !isStandalone) {
+    if (!isStandalone) {
       options.module = findModuleFromOptions(host, {
         name: '',
         module: options.module,

@@ -221,7 +221,7 @@ export default function (options: RootStoreOptions): Rule {
     const parsedPath = parseName(options.path, '');
     options.path = parsedPath.path;
 
-    if (options.module && !isStandalone) {
+    if (!isStandalone) {
       options.module = findModuleFromOptions(host, {
         name: '',
         module: options.module,

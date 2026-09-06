@@ -36,9 +36,7 @@ export default function (options: ReducerOptions): Rule {
     options.name = parsedPath.name;
     options.path = parsedPath.path;
 
-    if (options.module) {
-      options.module = findModuleFromOptions(host, options);
-    }
+    options.module = findModuleFromOptions(host, options);
 
     const templateOptions = {
       ...stringUtils,

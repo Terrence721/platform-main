@@ -205,7 +205,7 @@ export default function (options: EffectOptions): Rule {
 
     options.path = getProjectPath(host, options);
 
-    if (options.module && !isStandalone) {
+    if (!isStandalone) {
       options.module = findModuleFromOptions(host, options);
     }
 

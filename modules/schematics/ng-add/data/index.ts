@@ -372,10 +372,9 @@ export default function (options: EntityDataOptions): Rule {
     const mainFile = getProjectMainFile(host, options);
     const isStandalone = isStandaloneApp(host, mainFile);
     options.effects = options.effects === undefined ? true : options.effects;
-    options.module =
-      options.module && !isStandalone
-        ? findModuleFromOptions(host, options as any)
-        : options.module;
+    options.module = !isStandalone
+      ? findModuleFromOptions(host, options as any)
+      : options.module;
 
     const parsedPath = parseName(options.path, '');
     options.path = parsedPath.path;

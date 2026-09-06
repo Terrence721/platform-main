@@ -30,6 +30,12 @@ export interface Schema {
   module?: string;
 
   /**
+   * When true, does not attempt to insert the generated feature into a
+   * module, and does not throw if no declaring module can be found.
+   */
+  skipImport?: boolean;
+
+  /**
    * Allows specification of the declaring reducers.
    */
   reducers?: string;

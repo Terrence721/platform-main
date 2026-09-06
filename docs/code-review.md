@@ -947,4 +947,22 @@ Verified: `npx nx run schematics-core:lint` (0 errors), `npx nx run schematics-c
 
 ---
 
+### [`find-module.ts`](https://github.com/Terrence721/platform-main/blob/7e7a67addd5ece8030d0f74463f302bc69a5efb7/modules/schematics-core/utility/find-module.ts)
+
+**low · Maintainability** — Fixed via [issue #305](https://github.com/Terrence721/platform-main/issues/305)
+
+Three exported functions: `findModuleFromOptions` (resolve a schematic's target `NgModule`, either an explicitly-named one with a chain of filename-shape fallbacks, or the nearest ancestor module when none is given), `findModule` (the ancestor-walk itself), and `buildRelativePath` (compute the relative import path between two generated files). All three are genuinely, transitively covered — `modules/schematics/src/store/index.spec.ts` alone exercises the explicit-module success path, the "specified module does not exist" throw, and the default ancestor-walk path (most of that file's other tests just omit `module`), with real snapshot assertions on the computed relative-import strings `buildRelativePath` produces; every other `ng-add`/generator schematic that imports a module exercises the same functions again with its own fixtures.
+
+**No bug found.** Traced the one place this looked risky — `findModuleFromOptions`'s no-module branch builds `pathToCheck` from `options.path || ''`, and the explicit-module branch instead concatenates `options.path` directly with no fallback — but every real caller (`modules/schematics/src/*/index.ts`, `modules/schematics/ng-add/*/index.ts`) always sets `options.path` via `getProjectPath()`/`parseName()` before either branch runs, so the unguarded concatenation is never reachable with an actual `undefined`.
+
+**Real, minor cleanup, fixed**: `buildRelativePath` destructured `path`/`filename`/`directory` from both `parsePath(from)` and `parsePath(to)`, but only used `fromDirectory`, `toDirectory`, and `toFileName` — `fromPath`, `fromFileName`, and `toPath` were dead on arrival (lint-confirmed, 3 `@typescript-eslint/no-unused-vars` warnings). Narrowed both destructures to only the fields actually used; zero behavior change, `parsePath` itself untouched.
+
+**Found, not fixed here**: `modules/schematics-core/utility/find-component.ts` (next file in this module's review queue) contains a byte-for-byte duplicate of this file's `buildRelativePath`/`parsePath`/`convertToTypeScriptFileName` — and it's entirely dead: the barrel (`modules/schematics-core/index.ts`) re-exports `buildRelativePath` only from `find-module.ts`, and nothing anywhere imports `find-component.ts`'s copy directly. Same duplication shape this module's own history already had at a larger scale (Phase 30–32 consolidated 4 duplicated `schematics-core` copies into 1). Leaving the actual removal for `find-component.ts`'s own review, since the dead code lives there, not here.
+
+**Fix**: narrowed `buildRelativePath`'s two `parsePath()` destructures to `{ directory: fromDirectory }` and `{ filename: toFileName, directory: toDirectory }`.
+
+Verified: `npx nx run schematics-core:lint` (0 errors, down from 3 warnings on this file; 15 warnings remain repo-wide, all pre-existing and unrelated), `npx nx run schematics-core:build` (clean), `npx nx run schematics-core:test` (6 files / 48 tests, all passing, 0 type errors), `npx vitest run modules/schematics` (50 files / 396 tests, all passing — the full consumer suite for every caller of these three functions).
+
+---
+
 _More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, `component-store`, `component`, and `operators` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files, `component` found 1 real bug plus 2 barrel-export gaps (all fixed) across 10/10 files, `operators` found 2 barrel-export gaps (fixed) across 4/4 files. `schematics-core` is in progress. See [todo.md](../todo.md) for the live per-module status of the remaining modules._

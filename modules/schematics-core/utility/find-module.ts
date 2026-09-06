@@ -100,16 +100,8 @@ export function findModule(host: Tree, generateDir: string): Path {
  * Build a relative path from one file path to another file path.
  */
 export function buildRelativePath(from: string, to: string): string {
-  const {
-    path: fromPath,
-    filename: fromFileName,
-    directory: fromDirectory,
-  } = parsePath(from);
-  const {
-    path: toPath,
-    filename: toFileName,
-    directory: toDirectory,
-  } = parsePath(to);
+  const { directory: fromDirectory } = parsePath(from);
+  const { filename: toFileName, directory: toDirectory } = parsePath(to);
   const relativePath = relative(fromDirectory, toDirectory);
   const fixedRelativePath = relativePath.startsWith('.')
     ? relativePath

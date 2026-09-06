@@ -27,12 +27,14 @@
     "shufo.vscode-blade-formatter",
     "xdebug.php-debug",
     "zobo.php-intellisense",
+    "recca0120.vscode-phpunit",
     "adamwalzer.scss-lint",
     "gencer.html-slim-scss-css-class-completion",
     "zignd.html-css-class-completion",
     "rcore.rcore-unused-css-classes",
     "ecmel.vscode-html-css",
     "damms005.devdb",
+    "bradlc.vscode-tailwindcss",
 
     "adrianwilczynski.add-reference",
     "adrianwilczynski.asp-net-core-switcher",
@@ -63,6 +65,7 @@
     "vscjava.vscode-java-pack",
     "vscjava.vscode-java-test",
     "vscjava.vscode-maven",
+    "shengchen.vscode-checkstyle",
 
     "ms-python.debugpy",
     "ms-python.python",
@@ -78,6 +81,7 @@
     "visioncan.vscode-jss-snippets",
     "mgmcdermott.vscode-language-babel",
     "jeremyrajan.webpack",
+    "vue.volar",
 
     "ms-azuretools.vscode-containers",
     "ms-azuretools.vscode-docker",

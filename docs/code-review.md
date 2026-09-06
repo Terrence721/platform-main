@@ -989,4 +989,20 @@ Verified: `npx nx run schematics-core:lint` (0 errors, down from 3 warnings on t
 
 ---
 
+### [`config.ts`](https://github.com/Terrence721/platform-main/blob/7e7a67addd5ece8030d0f74463f302bc69a5efb7/modules/schematics-core/utility/config.ts)
+
+**low · Correctness** — Fixed via [issue #312](https://github.com/Terrence721/platform-main/issues/312)
+
+`AppConfig` (a pure type, generated from the real Angular CLI config schema — nothing to review) plus two functions: `getWorkspacePath` (find whichever of `angular.json`/`.angular.json`/`workspace.json` actually exists) and `getWorkspace` (read and parse it). Two real callers repo-wide: `project.ts`'s `getProject()` (already reviewed, #281) and `modules/schematics/src/ng-add/index.ts`.
+
+**Real bug, fixed**: `getWorkspacePath` returned `undefined` — typed as `string`, a real lie — when none of the 3 possible filenames exist, via `.filter(...)[0]` on an empty array. Confirmed with a real repro (not just reading the type signature): `host.read(undefined)` doesn't throw, it returns `null`, which `getWorkspace` already correctly detects — so the actual failure mode wasn't a crash, but a confusing `SchematicsException('Could not find (undefined)')` instead of a message that says what's actually missing. Not reachable by any current caller in practice (both real call sites only ever run against an actual Angular workspace, which by definition always has one of these 3 files), but a real user pointing either the `ng-add` flow or a generator at a bare, non-Angular directory would hit it — the same "internal wiring is fine today, but the type is a promise the function doesn't keep" shape as `libs-version.ts`'s stale version string (#269), just for an error path instead of a value.
+
+**Fix**: `getWorkspacePath` now throws a clear `SchematicsException` — `Could not find a workspace configuration file (checked angular.json, .angular.json, workspace.json).` — the moment none of the 3 files are found, instead of returning `undefined` and letting a later, unrelated-looking `host.read()` call produce a confusing secondary error. Switched `.filter(...)[0]` to `.find(...)` while touching this line (same result, no intermediate array).
+
+Added `modules/schematics-core/utility/config.spec.ts` (6 tests) — the third file in this module to get direct coverage now that `schematics-core` has its own test infrastructure (#279): each of the 3 filename fallbacks for `getWorkspacePath`, its new not-found throw, and `getWorkspace`'s parse-and-return happy path plus the same throw propagating through it. Hit this module's now-familiar stale-`.js`-shadows-`.ts` trap again while writing it (see `project.ts`'s entry, #281) — same fix, delete the stale gitignored build output and clear Vite's cache.
+
+Verified: `npx nx run schematics-core:lint` (0 errors, 12 pre-existing warnings, unchanged), `npx nx run schematics-core:build` (clean), `npx nx run schematics-core:test` (8 files / 60 tests, all passing, 0 type errors), `npx vitest run modules/schematics` (50 files / 396 tests, all passing — the full consumer suite for `ng-add/index.ts`'s real usage).
+
+---
+
 _More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, `component-store`, `component`, and `operators` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files, `component` found 1 real bug plus 2 barrel-export gaps (all fixed) across 10/10 files, `operators` found 2 barrel-export gaps (fixed) across 4/4 files. `schematics-core` is in progress. See [todo.md](../todo.md) for the live per-module status of the remaining modules._

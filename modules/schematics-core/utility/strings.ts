@@ -122,11 +122,17 @@ export function capitalize(str: string): string {
  ```
  */
 export function pluralize(str: string): string {
-  return camelize(
-    [/([^aeiou])y$/, /()fe?$/, /([^aeiou]o|[sxz]|[cs]h)$/].map(
-      (c, i) => (str = str.replace(c, `$1${'iv'[i] || ''}e`))
-    ) && str + 's'
-  );
+  const rules: [RegExp, string][] = [
+    [/([^aeiou])y$/, '$1ie'],
+    [/()fe?$/, '$1ve'],
+    [/([^aeiou]o|[sxz]|[cs]h)$/, '$1e'],
+  ];
+
+  for (const [regex, replacement] of rules) {
+    str = str.replace(regex, replacement);
+  }
+
+  return camelize(str + 's');
 }
 
 export function group(name: string, group: string | undefined) {

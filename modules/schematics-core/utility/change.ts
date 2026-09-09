@@ -2,7 +2,6 @@ import * as ts from 'typescript';
 import { Tree, UpdateRecorder } from '@angular-devkit/schematics';
 import { Path } from '@angular-devkit/core';
 
-/* istanbul ignore file */
 /**
  * @license
  * Copyright Google Inc. All Rights Reserved.

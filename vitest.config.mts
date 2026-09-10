@@ -8,6 +8,15 @@ import { defineConfig } from 'vitest/config';
  */
 export const baseConfig = {
   plugins: [angular(), nxViteTsPaths()],
+  resolve: {
+    // Vite's default extension-resolution order checks .js before .ts, so
+    // any stray compiled .js sibling (e.g. a stale local tsc/typecheck
+    // output) silently shadows the real .ts source for an extensionless
+    // import. .ts is the only real source of truth in this repo - always
+    // resolve it first, regardless of what stale build output exists on
+    // disk.
+    extensions: ['.ts', '.mts', '.mjs', '.js', '.jsx', '.tsx', '.json'],
+  },
   test: {
     globals: true,
     environment: 'jsdom',

@@ -1013,6 +1013,8 @@ Nine casing/pluralization helpers (`decamelize`, `dasherize`, `camelize`, `class
 
 **Fix**: rewrote `pluralize`'s internals as an explicit `[RegExp, string][]` rule list applied in a `for` loop; added `strings.spec.ts` (6 tests) covering all 4 branches plus the vowel+y non-match case and the deliberate lowercase-first behavior.
 
+Verified: `npx nx run schematics-core:lint` (0 errors, 12 pre-existing warnings, unchanged), `npx nx run schematics-core:build` (clean), `npx vitest run modules/schematics-core` (10 files / 72 tests, all passing, 0 type errors), `npx vitest run modules/schematics` (50 files / 396 tests, all passing, including the real `entity` "should update the state to plural" snapshot — confirms the rewrite is exactly behavior-preserving, not just "new tests pass").
+
 ---
 
 ### [`change.ts`](https://github.com/Terrence721/platform-main/blob/7e7a67addd5ece8030d0f74463f302bc69a5efb7/modules/schematics-core/utility/change.ts)
@@ -1029,7 +1031,23 @@ Two parallel mechanisms for the same `Change` objects (`NoopChange`/`InsertChang
 
 Verified: `npx nx run schematics-core:lint` (0 errors, 12 pre-existing warnings, unchanged), `npx nx run schematics-core:build` (clean), `npx vitest run modules/schematics-core` (10 files / 72 tests, all passing), full build + migration-spec run across every module that constructs a `Change` directly (`store`/`effects`/`router-store`/`store-devtools`/`component`/`component-store`/`signals`/`operators`/`schematics`) — 60 files / 265 tests, all passing.
 
-Verified: `npx nx run schematics-core:lint` (0 errors, 12 pre-existing warnings, unchanged), `npx nx run schematics-core:build` (clean), `npx vitest run modules/schematics-core` (10 files / 72 tests, all passing, 0 type errors), `npx vitest run modules/schematics` (50 files / 396 tests, all passing, including the real `entity` "should update the state to plural" snapshot — confirms the rewrite is exactly behavior-preserving, not just "new tests pass").
+---
+
+### [`ngrx-utils.ts`](https://github.com/Terrence721/platform-main/blob/7e7a67addd5ece8030d0f74463f302bc69a5efb7/modules/schematics-core/utility/ngrx-utils.ts)
+
+**medium · Correctness** — Fixed via [issue #319](https://github.com/Terrence721/platform-main/issues/319)
+
+Six functions wiring a generated reducer into an app: `addReducerToState`/`addReducerImportToNgModule` (the two `Rule` factories that drive it), `addReducerToStateInterface`/`addReducerToActionReducerMap` (the two AST-editing helpers they call), plus `omit`/`getPrefix`.
+
+**No bug found** in `addReducerToState`/`addReducerImportToNgModule`/`addReducerToStateInterface`/`omit`/`getPrefix` — all exercised transitively via real schematic/migration specs (`entity`'s "should update the state to plural" snapshot alone proves `addReducerToStateInterface`'s real output; `container/index.spec.ts` exercises `omit` on every single test, since the schematic's own entry point calls it unconditionally). Noted, not fixed: both `Rule` factories throw a plain `Error` for a missing file (`!host.exists(...)`) but `SchematicsException` for a null read (`text === null`) — an inconsistent pair of error types for two closely-related failure modes, but harmless (both are still real thrown errors surfaced to the user) and identical in both functions, matching upstream's own style rather than a one-off slip.
+
+**Real bug, fixed**: `addReducerToActionReducerMap` crashes with `TypeError: Cannot read properties of undefined (reading 'text')` if the target `reducers/index.ts` has _any_ top-level typed variable declaration, other than the `ActionReducerMap`-typed one, whose type isn't a simple named type reference (an array type, union type, object-literal type, etc.) — `.find(({ type }) => type.typeName.text === 'ActionReducerMap')` assumes every candidate's `type` node has a `.typeName`, but that's only true for `TypeReferenceNode`; e.g. `ArrayTypeNode` (`MetaReducer<State>[]`) has `.elementType` instead, no `.typeName` at all. Confirmed real and reachable with a repro, not just reasoning: the actual `store` schematic's own `reducers/index.ts.template` declares `reducers: ActionReducerMap<State>` _before_ `metaReducers: MetaReducer<State>[]`, so `.find()`'s left-to-right short-circuit happens to reach the safe entry first in the one file this repo's own tooling ever generates — masking the bug in normal use. Reordering those two declarations (or any hand-edited/differently-shaped `reducers/index.ts`) reaches the crash immediately; verified both directions with a throwaway repro calling the function directly against synthetic sources before touching any code.
+
+**Fix**: narrowed the `.find()` predicate with `ts.isTypeReferenceNode(type) && ts.isIdentifier(type.typeName) && type.typeName.text === 'ActionReducerMap'` — skips any non-matching type shape instead of crashing on it. Also noted, not fixed: a few lines above, `const type = variable ? variable.type : {}` guards against `variable` being falsy, but the very next line (`variable.initializer`) doesn't — technically inconsistent, but confirmed unreachable, since a real `VariableDeclarationList`'s `declarations` array can only ever contain `VariableDeclaration` nodes by TypeScript's own AST invariants, so `.find(decl => decl.kind === ts.SyntaxKind.VariableDeclaration)` can't actually fail for any syntactically valid source.
+
+Added `ngrx-utils.spec.ts` (3 tests) — the file's first direct coverage: the default declaration order (matching the real template, still resolves correctly), the reversed order that used to crash (now returns a normal `InsertChange`), and the already-correct no-match `NoopChange` path.
+
+Verified: `npx nx run schematics-core:lint` (0 errors, 12 pre-existing warnings, unchanged), `npx nx run schematics-core:build` (clean), `npx vitest run modules/schematics-core` (12 files / 78 tests, all passing, 0 type errors), `npx vitest run modules/schematics` (50 files / 396 tests, all passing — the full consumer suite for `entity`/`reducer`/`feature`/`store`, every real caller of these functions).
 
 **Fix**: `getWorkspacePath` now throws a clear `SchematicsException` — `Could not find a workspace configuration file (checked angular.json, .angular.json, workspace.json).` — the moment none of the 3 files are found, instead of returning `undefined` and letting a later, unrelated-looking `host.read()` call produce a confusing secondary error. Switched `.filter(...)[0]` to `.find(...)` while touching this line (same result, no intermediate array).
 

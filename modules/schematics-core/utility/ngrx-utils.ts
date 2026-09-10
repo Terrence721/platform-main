@@ -148,7 +148,12 @@ export function addReducerToActionReducerMap(
       return { initializer: variable.initializer, type };
     })
     .filter((initWithType) => initWithType.type !== undefined)
-    .find(({ type }) => type.typeName.text === 'ActionReducerMap');
+    .find(
+      ({ type }) =>
+        ts.isTypeReferenceNode(type) &&
+        ts.isIdentifier(type.typeName) &&
+        type.typeName.text === 'ActionReducerMap'
+    );
 
   if (!actionReducerMap || !actionReducerMap.initializer) {
     return new NoopChange();

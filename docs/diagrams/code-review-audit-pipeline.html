@@ -446,17 +446,20 @@
       <div class="status-cell">
         <span class="pill pill--active">in progress</span> schematics-core
       </div>
-      <div class="status-cell"><code>9/16</code></div>
+      <div class="status-cell"><code>12/16</code></div>
       <div class="status-cell">
-        4 real bugs found and fixed so far (a stale prerelease version floor; a
+        5 real bugs found and fixed so far (a stale prerelease version floor; a
         missing-project <code>ng add</code> error surfacing a raw
         <code>TypeError</code> instead of a clear message; a
         <code>findModuleFromOptions</code> auto-detect path that could never run
         because every caller guarded the call itself; a missing-workspace-file
         error surfacing a confusing
-        <code>Could not find (undefined)</code> instead of a clear message) plus
-        a genuinely untested prototype-pollution guard given the module's
-        first-ever direct test coverage, and a dead duplicate-code cleanup
+        <code>Could not find (undefined)</code> instead of a clear message; and
+        <code>addReducerToActionReducerMap</code> crashing on a
+        <code>reducers/index.ts</code> with any typed declaration ordered before
+        the <code>ActionReducerMap</code>-typed one) plus a genuinely untested
+        prototype-pollution guard given the module's first-ever direct test
+        coverage, and a dead duplicate-code cleanup
       </div>
     </div>
     <div class="status-row">
@@ -478,6 +481,6 @@
     <a href="https://terrence721.github.io/platform-main/portfolio.html"
       >Portfolio page</a
     >
-    platform-main · issue #32 · 104/254 files reviewed so far
+    platform-main · issue #32 · 107/254 files reviewed so far
   </footer>
 </div>

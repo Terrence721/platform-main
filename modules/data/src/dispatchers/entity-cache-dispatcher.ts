@@ -10,7 +10,7 @@ import { EntityCache } from '../reducers/entity-cache';
 import { EntityDispatcherDefaultOptions } from './entity-dispatcher-default-options';
 
 import { MergeStrategy } from '../actions/merge-strategy';
-import { PersistanceCanceled } from './entity-dispatcher';
+import { PersistenceCanceled } from './entity-dispatcher';
 
 import { ChangeSet, ChangeSetItem } from '../actions/entity-cache-change-set';
 import {
@@ -206,7 +206,7 @@ export class EntityCacheDispatcher {
       mergeMap((act) => {
         return act.type === EntityCacheAction.SAVE_ENTITIES_CANCEL
           ? throwError(
-              new PersistanceCanceled(
+              new PersistenceCanceled(
                 (act as SaveEntitiesCancel).payload.reason
               )
             )

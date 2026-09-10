@@ -10,7 +10,7 @@ import {
   pipeExpression,
 } from '../../utils';
 
-export const messageId = 'avoidMapppingSelectors';
+export const messageId = 'avoidMappingSelectors';
 
 type MessageIds = typeof messageId;
 type Options = readonly [];

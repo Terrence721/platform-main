@@ -80,7 +80,7 @@ export { EntityDispatcherDefaultOptions } from './dispatchers/entity-dispatcher-
 export { EntityDispatcherFactory } from './dispatchers/entity-dispatcher-factory';
 export {
   EntityDispatcher,
-  PersistanceCanceled,
+  PersistenceCanceled,
 } from './dispatchers/entity-dispatcher';
 
 // // effects

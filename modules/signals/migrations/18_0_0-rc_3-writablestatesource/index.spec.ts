@@ -91,7 +91,7 @@ function updateCount(state: StateSignal<{ count: number }>, count: number): void
       level: 'info',
     });
     expect(logEntries[1]).toMatchObject({
-      message: `[@ngrx/signals] No 'StateSignal' refences found to, skipping the migration`,
+      message: `[@ngrx/signals] No 'StateSignal' references found to, skipping the migration`,
       level: 'info',
     });
   });

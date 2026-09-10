@@ -26,7 +26,7 @@ describe('Actions', function () {
   }
 
   const square = createAction('SQUARE');
-  const multiply = createAction('MULTYPLY', props<{ by: number }>());
+  const multiply = createAction('MULTIPLY', props<{ by: number }>());
   const divide = createAction('DIVIDE', props<{ by: number }>());
 
   const actions = [ADD, ADD, SUBTRACT, ADD, SUBTRACT];
@@ -138,7 +138,7 @@ describe('Actions', function () {
   });
 
   it('should infer the type for the action when it is filter by action creator with property', async () => {
-    const MULTYPLY_BY = 5;
+    const MULTIPLY_BY = 5;
 
     const resultPromise = firstValueFrom(
       actions$.pipe(
@@ -149,16 +149,16 @@ describe('Actions', function () {
     );
 
     actions.forEach((action) => dispatcher.next({ type: action }));
-    dispatcher.next(multiply({ by: MULTYPLY_BY }));
+    dispatcher.next(multiply({ by: MULTIPLY_BY }));
     dispatcher.complete();
 
     const actual = await resultPromise;
-    expect(actual).toEqual([MULTYPLY_BY]);
+    expect(actual).toEqual([MULTIPLY_BY]);
   });
 
   it('should infer the type for the action when it is filter by action creator', async () => {
     const untypedActions$: Actions = actions$;
-    const MULTYPLY_BY = 5;
+    const MULTIPLY_BY = 5;
 
     const resultPromise = firstValueFrom(
       untypedActions$.pipe(
@@ -169,17 +169,17 @@ describe('Actions', function () {
     );
 
     actions.forEach((action) => dispatcher.next({ type: action }));
-    dispatcher.next(multiply({ by: MULTYPLY_BY }));
+    dispatcher.next(multiply({ by: MULTIPLY_BY }));
     dispatcher.complete();
 
     const actual = await resultPromise;
-    expect(actual).toEqual([MULTYPLY_BY]);
+    expect(actual).toEqual([MULTIPLY_BY]);
   });
 
   it('should filter out multiple actions by action creator', async () => {
     const DIVIDE_BY = 3;
-    const MULTYPLY_BY = 5;
-    const expected = [DIVIDE_BY, MULTYPLY_BY];
+    const MULTIPLY_BY = 5;
+    const expected = [DIVIDE_BY, MULTIPLY_BY];
 
     const resultPromise = firstValueFrom(
       actions$.pipe(
@@ -191,7 +191,7 @@ describe('Actions', function () {
 
     actions.forEach((action) => dispatcher.next({ type: action }));
     dispatcher.next(divide({ by: DIVIDE_BY }));
-    dispatcher.next(divide({ by: MULTYPLY_BY }));
+    dispatcher.next(divide({ by: MULTIPLY_BY }));
     dispatcher.complete();
 
     const actual = await resultPromise;

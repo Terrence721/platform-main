@@ -18,6 +18,7 @@
     "update": "nx migrate latest",
     "update:check": "ng update",
     "lint": "nx run-many --target=lint --all",
+    "spell": "cspell --no-progress --gitignore \"**/*\"",
     "eslint-plugin:update": "npx tsx modules/eslint-plugin/scripts/generate-config.ts",
     "prepare": "husky"
   },
@@ -128,6 +129,7 @@
     "@vitest/ui": "4.1.11",
     "angular-eslint": "22.1.0",
     "cpy-cli": "^6.0.0",
+    "cspell": "^10.3.0",
     "deep-freeze": "^0.0.1",
     "eslint": "10.8.0",
     "express": "4.21.2",

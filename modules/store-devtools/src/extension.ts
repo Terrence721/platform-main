@@ -300,7 +300,7 @@ export class DevtoolsExtension {
         if (action.type === IMPORT_STATE) {
           // State imports may happen in two situations:
           // 1. Explicitly by user
-          // 2. User activated the "persist state accross reloads" option
+          // 2. User activated the "persist state across reloads" option
           //    and now the state is imported during reload.
           // Because of option 2, we need to give possible
           // lazy loaded reducers time to instantiate.

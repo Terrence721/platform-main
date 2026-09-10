@@ -57,7 +57,7 @@ export function migrateWritableStateSource(): Rule {
       );
     } else {
       ctx.logger.info(
-        `[@ngrx/signals] No 'StateSignal' refences found to, skipping the migration`
+        `[@ngrx/signals] No 'StateSignal' references found to, skipping the migration`
       );
     }
   };

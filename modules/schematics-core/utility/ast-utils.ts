@@ -89,17 +89,17 @@ function nodesByPosition(first: ts.Node, second: ts.Node): number {
 }
 
 /**
- * Insert `toInsert` after the last occurence of `ts.SyntaxKind[nodes[i].kind]`
- * or after the last of occurence of `syntaxKind` if the last occurence is a sub child
+ * Insert `toInsert` after the last occurrence of `ts.SyntaxKind[nodes[i].kind]`
+ * or after the last of occurrence of `syntaxKind` if the last occurrence is a sub child
  * of ts.SyntaxKind[nodes[i].kind] and save the changes in file.
  *
- * @param nodes insert after the last occurence of nodes
+ * @param nodes insert after the last occurrence of nodes
  * @param toInsert string to insert
  * @param file file to insert changes into
- * @param fallbackPos position to insert if toInsert happens to be the first occurence
+ * @param fallbackPos position to insert if toInsert happens to be the first occurrence
  * @param syntaxKind the ts.SyntaxKind of the subchildren to insert after
  * @return Change instance
- * @throw Error if toInsert is first occurence but fall back is not set
+ * @throw Error if toInsert is first occurrence but fall back is not set
  */
 export function insertAfterLastOccurrence(
   nodes: ts.Node[],
@@ -117,7 +117,7 @@ export function insertAfterLastOccurrence(
   }
   if (!lastItem && fallbackPos == undefined) {
     throw new Error(
-      `tried to insert ${toInsert} as first occurence with no fallback position`
+      `tried to insert ${toInsert} as first occurrence with no fallback position`
     );
   }
   const lastItemPosition: number = lastItem ? lastItem.end : fallbackPos;
@@ -885,7 +885,7 @@ export function replaceImport(
       }
 
       const nextIdentifier = importSpecifiers[index + 1];
-      // identifer is not the last, also clean up the comma
+      // identifier is not the last, also clean up the comma
       if (nextIdentifier) {
         return createRemoveChange(
           sourceFile,

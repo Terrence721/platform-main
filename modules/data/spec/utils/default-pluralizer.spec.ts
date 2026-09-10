@@ -31,7 +31,7 @@ describe('DefaultPluralizer', () => {
     });
 
     it('should pluralize "Information" as "Information ', () => {
-      // known "uncoumtables"
+      // known "uncountables"
       expect(pluralizer.pluralize('Information')).toBe('Information');
     });
 

@@ -3,7 +3,7 @@
 
 /** General purpose entity action operations, good for any entity type */
 export enum EntityOp {
-  // Persistance operations
+  // Persistence operations
   CANCEL_PERSIST = '@ngrx/data/cancel-persist',
   CANCELED_PERSIST = '@ngrx/data/canceled-persist',
 

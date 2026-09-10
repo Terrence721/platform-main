@@ -221,12 +221,12 @@ function findAppConfig(
  * Resolves the app config from an identifier referring to it.
  * @param identifier Identifier referring to the app config.
  * @param tree File tree of the project.
- * @param bootstapFilePath Path of the bootstrap call.
+ * @param bootstrapFilePath Path of the bootstrap call.
  */
 function resolveAppConfigFromIdentifier(
   identifier: ts.Identifier,
   tree: Tree,
-  bootstapFilePath: string
+  bootstrapFilePath: string
 ): ResolvedAppConfig | null {
   const sourceFile = identifier.getSourceFile();
 
@@ -253,7 +253,7 @@ function resolveAppConfigFromIdentifier(
       // the type checker to resolve this, but we can't because these utilities are set up to
       // operate on individual files, not the entire program.
       const filePath = join(
-        dirname(bootstapFilePath),
+        dirname(bootstrapFilePath),
         node.moduleSpecifier.text + '.ts'
       );
       const importedSourceFile = createSourceFile(tree, filePath);
@@ -274,7 +274,7 @@ function resolveAppConfigFromIdentifier(
   );
 
   return variableInSameFile
-    ? { filePath: bootstapFilePath, node: variableInSameFile }
+    ? { filePath: bootstrapFilePath, node: variableInSameFile }
     : null;
 }
 

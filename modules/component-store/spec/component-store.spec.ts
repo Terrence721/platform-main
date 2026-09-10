@@ -172,13 +172,13 @@ describe('Component Store', () => {
         ' before initialization',
       () => {
         const componentStore = new ComponentStore();
-        const syncronousObservable$ = of({
+        const synchronousObservable$ = of({
           updater: 'new state',
         });
 
         expect(() => {
           componentStore.updater<object>((state, value) => value)(
-            syncronousObservable$
+            synchronousObservable$
           );
         }).toThrow(
           new Error(
@@ -223,7 +223,7 @@ describe('Component Store', () => {
       marbles((m) => {
         const componentStore = new ComponentStore();
         const INIT_STATE = { initState: 'passed' };
-        const UPDATED_STATE = { updatedState: 'proccessed' };
+        const UPDATED_STATE = { updatedState: 'processed' };
 
         // Record all the values that go through state$.
         const recordedStateValues$ =
@@ -231,14 +231,14 @@ describe('Component Store', () => {
         // Need to "connect" to start getting notifications.
         (recordedStateValues$ as ConnectableObservable<object>).connect();
 
-        const asyncronousObservable$ = of(UPDATED_STATE).pipe(
+        const asynchronousObservable$ = of(UPDATED_STATE).pipe(
           // Delays until the state gets the init value.
           delayWhen(() => componentStore.state$)
         );
 
         expect(() => {
           componentStore.updater<object>((state, value) => value)(
-            asyncronousObservable$
+            asynchronousObservable$
           );
         }).not.toThrow();
 
@@ -341,7 +341,7 @@ describe('Component Store', () => {
           },
         ]);
 
-        // New subsriber gets the latest value only.
+        // New subscriber gets the latest value only.
         m.expect(componentStore.state$).toBeObservable(
           m.hot('s', {
             s: {

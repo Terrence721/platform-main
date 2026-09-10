@@ -11,7 +11,7 @@ import { commandDispatchTest } from '../dispatchers/entity-dispatcher.spec';
 import {
   EntityCollectionService,
   EntityActionOptions,
-  PersistanceCanceled,
+  PersistenceCanceled,
   EntityDispatcherDefaultOptions,
   EntityAction,
   EntityActionFactory,
@@ -222,7 +222,7 @@ describe('EntityCollectionService', () => {
         heroCollectionService.getAll(options).subscribe({
           next: (data) => fail('should not have data but got data'),
           error: (error) => {
-            expect(error instanceof PersistanceCanceled).toBe(true);
+            expect(error instanceof PersistenceCanceled).toBe(true);
             expect(error.message).toBe('Test cancel');
             done();
           },

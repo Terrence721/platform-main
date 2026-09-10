@@ -12,7 +12,7 @@ export default createRule<Options, MessageIds>({
     type: 'problem',
     docs: {
       description:
-        'Overriden ngOnDestroy method in component stores require a call to super.ngOnDestroy().',
+        'Overridden ngOnDestroy method in component stores require a call to super.ngOnDestroy().',
       ngrxModule: 'component-store',
     },
     schema: [],

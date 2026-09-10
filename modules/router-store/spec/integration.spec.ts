@@ -661,7 +661,7 @@ describe('integration spec', () => {
 
           expect(log).toEqual([
             { type: 'store', state: null }, // initial state
-            { type: 'store', state: null }, // ROUTER_REQEST event in the store
+            { type: 'store', state: null }, // ROUTER_REQUEST event in the store
             { type: 'action', action: ROUTER_REQUEST },
             { type: 'router', event: 'NavigationStart', url: '/load' },
             { type: 'store', state: { url: '', navigationId: 1 } },

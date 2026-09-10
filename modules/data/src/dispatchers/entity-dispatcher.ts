@@ -70,7 +70,7 @@ export interface EntityDispatcher<T> extends EntityCommands<T> {
 /**
  * Persistence operation canceled
  */
-export class PersistanceCanceled {
+export class PersistenceCanceled {
   constructor(public readonly message?: string) {
     this.message = message || 'Canceled by user';
   }

@@ -20,7 +20,7 @@ import { EntityCache } from '../reducers/entity-cache';
 import { EntityCacheSelector } from '../selectors/entity-cache-selector';
 import { EntityCollection } from '../reducers/entity-collection';
 import { EntityCommands } from './entity-commands';
-import { EntityDispatcher, PersistanceCanceled } from './entity-dispatcher';
+import { EntityDispatcher, PersistenceCanceled } from './entity-dispatcher';
 import { EntityDispatcherDefaultOptions } from './entity-dispatcher-default-options';
 import { EntityOp, OP_ERROR, OP_SUCCESS } from '../actions/entity-op';
 import { MergeStrategy } from '../actions/merge-strategy';
@@ -615,7 +615,7 @@ export class EntityDispatcherBase<T> implements EntityDispatcher<T> {
       mergeMap((act) => {
         const { entityOp } = act.payload;
         return entityOp === EntityOp.CANCEL_PERSIST
-          ? throwError(new PersistanceCanceled(act.payload.data))
+          ? throwError(new PersistenceCanceled(act.payload.data))
           : entityOp.endsWith(OP_SUCCESS)
             ? of(act.payload.data as D)
             : throwError(act.payload.data.error);

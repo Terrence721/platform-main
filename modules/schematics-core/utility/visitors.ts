@@ -163,9 +163,10 @@ export function visitDecorator(
   ts.forEachChild(sourceFile, function findClassDeclaration(node) {
     if (!ts.isClassDeclaration(node)) {
       ts.forEachChild(node, findClassDeclaration);
+      return;
     }
 
-    const classDeclarationNode = node as ts.ClassDeclaration;
+    const classDeclarationNode = node;
     const decorators = ts.getDecorators(classDeclarationNode);
 
     if (!decorators || !decorators.length) {

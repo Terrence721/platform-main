@@ -1,4 +1,3 @@
-/* istanbul ignore file */
 /**
  * @license
  * Copyright Google Inc. All Rights Reserved.
@@ -372,7 +371,7 @@ function _addSymbolToNgModuleMetadata(
     );
 
     if (effectsModule && symbolName.includes('EffectsModule')) {
-      const effectsArgs = (effectsModule as any).arguments.shift();
+      const effectsArgs = (effectsModule as any).arguments[0];
 
       if (
         effectsArgs &&
@@ -895,7 +894,19 @@ export function replaceImport(
         );
       }
 
-      // there are no imports following, just remove it
+      const previousIdentifier = importSpecifiers[index - 1];
+      // identifier is the last one but not the only one - clean up the
+      // preceding comma instead, so removal doesn't leave a dangling ", "
+      if (previousIdentifier) {
+        return createRemoveChange(
+          sourceFile,
+          specifier,
+          previousIdentifier.getEnd(),
+          specifier.getEnd()
+        );
+      }
+
+      // there are no other imports, just remove it
       return createRemoveChange(
         sourceFile,
         specifier,

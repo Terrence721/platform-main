@@ -1093,4 +1093,26 @@ Verified: `npx nx run schematics-core:lint` (0 errors, 12 pre-existing warnings,
 
 ---
 
+### [`ast-utils.ts`](https://github.com/Terrence721/platform-main/blob/5df179632c6785fc1e6e634a3a8aa5b8fc6628e7/modules/schematics-core/utility/ast-utils.ts)
+
+**medium · Correctness** — Fixed via [issue #332](https://github.com/Terrence721/platform-main/issues/332)
+
+The largest file in the module (926 lines): real, MIT-licensed Angular CLI source (`findNodes`, `getSourceNodes`, `getDecoratorMetadata`, `insertImport`, the `_addSymbolTo*Metadata` family) plus NgRx-specific extensions layered on top — most notably `_addSymbolToNgModuleMetadata`'s `EffectsModule.forRoot`/`forFeature` merge branch, which doesn't exist in the sibling `_addSymbolToComponentMetadata`.
+
+**No bug found** in the core Angular CLI logic — `findNodes`/`getSourceNodes`/`insertAfterLastOccurrence`/`getDecoratorMetadata`/`insertImport`/the `_addSymbolTo*Metadata` family's main insertion paths are all extensively, transitively covered across dozens of real migration and generator specs repo-wide (every `ng-add`/`ng generate` schematic in `modules/schematics` routes through this file).
+
+**Real bug, fixed**: `replaceImport`'s dedup-removal branch (used when renaming an import specifier to a name that's already separately imported in the same statement — e.g. the `effects` module's `13_0_0` migration renaming `Effect` → `createEffect`) correctly cleaned up the trailing comma when removing a specifier that has a _following_ specifier, but left a dangling `", "` behind when the removed specifier was the _last_ one in the list (with an earlier specifier still before it) — `import { Actions, ofType, createEffect, Effect }` became `import { Actions, ofType, createEffect,  }` instead of cleanly closing the brace. Confirmed with a real repro against the actual function (not just reading the branch), and confirmed the existing migration test suite never covered this shape - the only existing "dedup remove" test has the removed specifier in the middle of the list, not last.
+
+**Fix**: added a `previousIdentifier` branch that removes from the end of the preceding specifier through the end of the one being removed (mirroring the existing "next identifier" branch in reverse) when there's no following specifier to anchor on.
+
+**Real, minor cleanup, fixed**: `_addSymbolToNgModuleMetadata`'s `EffectsModule` merge branch extracted the existing call's array argument via `.arguments.shift()` — a mutating read where a plain `.arguments[0]` was clearly intended (nothing downstream re-reads `.arguments` afterward). Traced the actual blast radius: every real caller in this repo (`modules/schematics/src/effect/index.ts`) parses a fresh `ts.SourceFile` for a single `addImportToModule` call per schematic invocation, so the mutation has never been observable — but it's a real footgun for any future caller that reuses the same parsed AST across multiple calls against the same NgModule. Swapped for a non-mutating index read.
+
+**Real, minor cleanup, fixed**: removed the same vestigial `/* istanbul ignore file */` comment class already removed from `change.ts` (#317) - dead since this repo's last Istanbul/nyc references were removed in [PR #300](https://github.com/Terrence721/platform-main/pull/300).
+
+Added `ast-utils.spec.ts` (5 tests) — the file's first direct coverage, focused on the actual finding: `replaceImport`'s plain-rename path, the existing mid-list dedup-remove behavior (regression-proofing what already worked), the previously-broken last-of-list dedup-remove case, a 2-specifier variant, and the no-op case for an unrelated module.
+
+Verified: `npx nx run schematics-core:lint` (0 errors, 12 pre-existing warnings, unchanged), `npx nx run schematics-core:build` (clean), `npx nx run schematics-core:test` (15 files / 109 tests, all passing, 0 type errors), `npx nx run schematics:test` (50 files / 396 tests, all passing), `npx nx run effects:test` (the real `replaceImport` migration caller — the specific 3 tests that intermittently timed out under full-suite worker contention on an unrelated `spec/types/**` compiler-API check all passed cleanly, with real timing margin, when run in isolation — the documented pre-existing flakiness pattern, not a regression).
+
+---
+
 _More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, `component-store`, `component`, and `operators` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files, `component` found 1 real bug plus 2 barrel-export gaps (all fixed) across 10/10 files, `operators` found 2 barrel-export gaps (fixed) across 4/4 files. `schematics-core` is in progress. See [todo.md](../todo.md) for the live per-module status of the remaining modules._

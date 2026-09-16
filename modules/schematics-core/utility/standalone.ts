@@ -4,7 +4,7 @@ import {
   Tree,
   UpdateRecorder,
 } from '@angular-devkit/schematics';
-import { dirname, join } from 'path';
+import { dirname, join, normalize } from '@angular-devkit/core';
 import { insertImport } from './ast-utils';
 import { InsertChange } from './change';
 import * as ts from 'typescript';
@@ -253,7 +253,7 @@ function resolveAppConfigFromIdentifier(
       // the type checker to resolve this, but we can't because these utilities are set up to
       // operate on individual files, not the entire program.
       const filePath = join(
-        dirname(bootstrapFilePath),
+        dirname(normalize(bootstrapFilePath)),
         node.moduleSpecifier.text + '.ts'
       );
       const importedSourceFile = createSourceFile(tree, filePath);

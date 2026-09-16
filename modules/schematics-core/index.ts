@@ -35,13 +35,17 @@ export {
   RemoveChange,
   ReplaceChange,
   createReplaceChange,
+  createRemoveChange,
   createChangeRecorder,
   commitChanges,
 } from './utility/change';
 
 export { AppConfig, getWorkspace, getWorkspacePath } from './utility/config';
 
-export { findComponentFromOptions } from './utility/find-component';
+export {
+  ComponentOptions,
+  findComponentFromOptions,
+} from './utility/find-component';
 
 export {
   findModule,
@@ -61,7 +65,13 @@ export {
   getPrefix,
 } from './utility/ngrx-utils';
 
-export { getProjectPath, getProject, isLib } from './utility/project';
+export {
+  WorkspaceProject,
+  getProjectPath,
+  getProject,
+  isLib,
+  getProjectMainFile,
+} from './utility/project';
 
 export const stringUtils = {
   dasherize,
@@ -77,11 +87,17 @@ export const stringUtils = {
 
 export { updatePackage } from './utility/update';
 
-export { parseName } from './utility/parse-name';
+export { Location, parseName } from './utility/parse-name';
 
 export { addPackageToPackageJson } from './utility/package';
 
 export { platformVersion } from './utility/libs-version';
+
+export {
+  callsProvidersFunction,
+  addFunctionalProvidersToStandaloneBootstrap,
+  findBootstrapApplicationCall,
+} from './utility/standalone';
 
 export {
   visitTSSourceFiles,
@@ -91,4 +107,9 @@ export {
   visitDecorator,
   visitNgModules,
   visitTemplates,
+  visitImportDeclaration,
+  visitImportSpecifier,
+  visitTypeReference,
+  visitTypeLiteral,
+  visitCallExpression,
 } from './utility/visitors';

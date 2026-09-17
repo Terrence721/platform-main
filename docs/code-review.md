@@ -1115,4 +1115,32 @@ Verified: `npx nx run schematics-core:lint` (0 errors, 12 pre-existing warnings,
 
 ---
 
-_More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, `component-store`, `component`, and `operators` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files, `component` found 1 real bug plus 2 barrel-export gaps (all fixed) across 10/10 files, `operators` found 2 barrel-export gaps (fixed) across 4/4 files. `schematics-core` is in progress. See [todo.md](../todo.md) for the live per-module status of the remaining modules._
+### [`index.ts`](https://github.com/Terrence721/platform-main/blob/e35d1e68cebdba45abea67a7156a49562af80466/modules/schematics-core/index.ts)
+
+**medium · Correctness** — Fixed via [issue #334](https://github.com/Terrence721/platform-main/issues/334)
+
+The module's public barrel, and its last file — closes out `schematics-core`.
+
+**Real bug, fixed**: applying this audit's established barrel cross-check method (every already-exported member's own public signature checked for a type/function it needs but the barrel doesn't re-export) turned up an unusually large set of gaps for this module specifically — `schematics-core` is consumed by _other modules in this same repo_, and several real internal callers turned out to reach it via deep imports (`'../../../schematics-core/utility/X'`) rather than the barrel, which let the barrel drift badly out of sync with what the module actually offers:
+
+- `createRemoveChange` (`change.ts`) — the sibling factory to the already-exported `createReplaceChange`, used internally by `ast-utils.ts`'s `replaceImport`.
+- `ComponentOptions` (`find-component.ts`) — the parameter type of the already-exported `findComponentFromOptions`.
+- `Location` (`parse-name.ts`) — the return type of the already-exported `parseName`.
+- `WorkspaceProject` (`project.ts`) — the return type of the already-exported `getProject`.
+- `getProjectMainFile` (`project.ts`) — a whole function, confirmed with 5 real callers (`data`/`effects`/`router-store`/`store`/`store-devtools`'s `ng-add` schematics) that all currently deep-import it.
+- All 3 of `standalone.ts`'s exports (`callsProvidersFunction`, `addFunctionalProvidersToStandaloneBootstrap`, `findBootstrapApplicationCall`) — the entire file was unreachable via the barrel, despite the same 5 real `ng-add` callers above depending on it (this is the file reviewed in #330/PR #331).
+- 5 of `visitors.ts`'s 12 exports (`visitImportDeclaration`, `visitImportSpecifier`, `visitTypeReference`, `visitTypeLiteral`, `visitCallExpression`) — confirmed with 4 real callers across `effects`/`operators`/`signals`' migrations.
+
+**Fix**: added all of the above to the barrel. Deliberately left `strings.ts`'s 9 casing/pluralization functions alone — they're intentionally namespaced under the already-exported `stringUtils` object rather than re-exported individually, a deliberate design choice (the object is explicitly constructed for that purpose), not an oversight.
+
+Verified at the type level, not just by reading the source: confirmed every new export actually appears in the compiled `dist/modules/schematics-core/index.d.ts`. No new test file needed — this is a pure re-export change with no new logic; existing behavior for every already-reachable export is unchanged.
+
+Verified: `npx nx run schematics-core:lint` (0 errors, 12 pre-existing warnings, unchanged), `npx nx run schematics-core:build` (clean), `npx nx run schematics-core:test` (15 files / 109 tests, all passing, 0 type errors), `npx nx run schematics:test` (50 files / 396 tests, all passing), plus the real deep-import consumers confirmed directly: `operators`', `effects`', and `signals`' migration specs that use `visitors.ts`'s newly-barrel-exported functions all pass clean in isolation.
+
+---
+
+**`schematics-core` module COMPLETE as of 2026-09-16: 16/16 files, 9 real bugs found and fixed, 2 test-coverage gaps closed, 13 barrel-export gaps closed (across 6 files, the largest barrel-gap finding of any module in this audit) plus 2 dead-code/vestigial-comment cleanups.** Full real-bug list: `libs-version.ts` (stale version floor), `json-utils.ts` (misnamed file), `project.ts` (missing-project error), `find-module.ts` (`findModuleFromOptions` never actually auto-detected), `config.ts` (`getWorkspacePath` returning `undefined` typed as `string`), `ngrx-utils.ts` (`addReducerToActionReducerMap` crash on non-simple type shapes), `visitors.ts` (`visitDecorator` handing callers a `ClassExpression` typed as `ClassDeclaration`), `standalone.ts` (`resolveAppConfigFromIdentifier` building a backslash-separated path on Windows), `ast-utils.ts` (`replaceImport` leaving a dangling comma). Tracking issue [#34](https://github.com/Terrence721/platform-main/issues/34) to be closed once this PR merges.
+
+---
+
+_More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, `component-store`, `component`, `operators`, and `schematics-core` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files, `component` found 1 real bug plus 2 barrel-export gaps (all fixed) across 10/10 files, `operators` found 2 barrel-export gaps (fixed) across 4/4 files, `schematics-core` found 9 real bugs plus 13 barrel-export gaps (all fixed) across 16/16 files. See [todo.md](../todo.md) for the live per-module status of the remaining modules._

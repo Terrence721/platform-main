@@ -283,4 +283,29 @@ describe('toDeepSignal', () => {
     expect(isSignal(deepArrayBuffer)).toBe(true);
     expect(deepArrayBuffer()).toBe(arrayBuffer());
   });
+
+  it('does not overwrite the underlying writable signal when a state property shares a name with a Signal API method', () => {
+    // Regression: the deep-signal cache used to be written directly onto the
+    // underlying signal via Object.defineProperty(target, prop, ...). If the
+    // state value had a property literally named e.g. "set", accessing it
+    // through the deep signal permanently replaced the writable signal's own
+    // real `.set()` method with a read-only computed signal - silently
+    // breaking any future call to `sig.set(...)` with no error. Confirmed
+    // with a real repro against signalState/patchState before fixing; this
+    // covers the same shape directly against toDeepSignal/the underlying
+    // signal, closer to the root cause.
+    const sig = signal({ set: ['a', 'b'], count: 0 });
+    const deepSig = toDeepSignal(sig);
+
+    // Access the nested "set" property - this used to clobber sig.set.
+    expect(isSignal(deepSig.set)).toBe(true);
+    expect(deepSig.set()).toEqual(['a', 'b']);
+
+    expect(typeof sig.set).toBe('function');
+    sig.set({ set: ['c'], count: 1 });
+
+    expect(sig()).toEqual({ set: ['c'], count: 1 });
+    expect(deepSig()).toEqual({ set: ['c'], count: 1 });
+    expect(deepSig.set()).toEqual(['c']);
+  });
 });

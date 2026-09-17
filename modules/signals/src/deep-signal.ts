@@ -1,17 +1,25 @@
-import { computed, isSignal, Signal, untracked } from '@angular/core';
+import { computed, Signal, untracked } from '@angular/core';
 import {
   HasKnownRecordMember,
   IsKnownRecord,
   NonRecordMembers,
 } from './ts-helpers';
 
-const DEEP_SIGNAL = Symbol(
-  typeof ngDevMode !== 'undefined' && ngDevMode ? 'DEEP_SIGNAL' : ''
-);
+const deepSignalCache = new WeakMap<object, Map<PropertyKey, Signal<any>>>();
+
+function getDeepSignalCache(target: object): Map<PropertyKey, Signal<any>> {
+  let cache = deepSignalCache.get(target);
+  if (!cache) {
+    cache = new Map();
+    deepSignalCache.set(target, cache);
+  }
+
+  return cache;
+}
 
 export type DeepSignal<T> = Signal<T> &
   (IsKnownRecord<T> extends true
-    ? Readonly<{ [K in keyof T]: DeepSignalOf<T[K]> }>
+    ? { readonly [K in keyof T]: DeepSignalOf<T[K]> }
     : unknown);
 
 export type DeepSignalOf<T> =
@@ -32,27 +40,35 @@ type DeepSignalNonRecordMembers<T> = [NonRecordMembers<T>] extends [never]
 export function toDeepSignal<T>(signal: Signal<T>): DeepSignalOf<T> {
   return new Proxy(signal, {
     has(target: any, prop) {
-      return !!this.get!(target, prop, undefined);
+      return !!this.get?.(target, prop, undefined);
     },
     get(target: any, prop) {
       const value = untracked(target);
+      const cache = getDeepSignalCache(target);
+
       if (!isRecord(value) || !(prop in value)) {
-        if (isSignal(target[prop]) && (target[prop] as any)[DEEP_SIGNAL]) {
-          delete target[prop];
-        }
+        // The underlying value no longer has this property (e.g. a
+        // discriminated union that changed shape) - drop any stale cached
+        // computed signal for it and fall through to whatever real property
+        // lives on the signal itself (e.g. `set`/`update`/`asReadonly`).
+        // Deliberately cached in a side WeakMap instead of being written
+        // directly onto `target` (the real, possibly writable, underlying
+        // signal): a state property that happens to be named `set`/`update`/
+        // etc. would otherwise silently overwrite the signal's own mutation
+        // methods, breaking `patchState` with no error - confirmed with a
+        // real repro against signalState/patchState.
+        cache.delete(prop);
 
         return target[prop];
       }
 
-      if (!isSignal(target[prop])) {
-        Object.defineProperty(target, prop, {
-          value: computed(() => target()[prop]),
-          configurable: true,
-        });
-        target[prop][DEEP_SIGNAL] = true;
+      let propSignal = cache.get(prop);
+      if (!propSignal) {
+        propSignal = computed(() => target()[prop]);
+        cache.set(prop, propSignal);
       }
 
-      return toDeepSignal(target[prop]);
+      return toDeepSignal(propSignal);
     },
   });
 }

@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: September 17, 2026** (`schematics-core` module COMPLETE — 16/16 files; `signals` module in progress — 3/18 files)
+**Last Updated: September 17, 2026** (`schematics-core` module COMPLETE — 16/16 files; `signals` module in progress — 4/18 files)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -1187,4 +1187,16 @@ One minor, non-functional observation, not filed as a bug: `.destroy()` calls `.
 
 ---
 
-_More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, `component-store`, `component`, `operators`, and `schematics-core` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files, `component` found 1 real bug plus 2 barrel-export gaps (all fixed) across 10/10 files, `operators` found 2 barrel-export gaps (fixed) across 4/4 files, `schematics-core` found 9 real bugs plus 13 barrel-export gaps (all fixed) across 16/16 files. `signals` is in progress (3/18 files — `deep-computed.ts` and `signal-method.ts` no findings, `deep-signal.ts` 1 severe real bug fixed). See [todo.md](../todo.md) for the live per-module status of the remaining modules._
+### [`signal-state.ts`](https://github.com/Terrence721/platform-main/blob/main/modules/signals/src/signal-state.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #350](https://github.com/Terrence721/platform-main/issues/350))
+
+`signalState`, one of the real callers of `deep-signal.ts`'s `toDeepSignal` engine — given deliberate extra scrutiny rather than a quick pass, per the follow-up note left on that severe finding.
+
+**No bug found, but the same collision class was worth re-checking directly, not assumed safe:** `signalState()` also writes per-key deep-signal accessors straight onto an object via `Object.defineProperty(signalState, key, { value: toDeepSignal(stateSource[key]) })` — the same general shape as `deep-signal.ts`'s pre-fix bug. The difference that makes it safe: the target here (`signalState`, a `computed()` result) is genuinely **read-only** — it never has live `.set`/`.update`/`.asReadonly` methods to begin with, so a state key literally named `set`/`update`/`asReadonly` can't clobber a real mutator the way it did on the writable signal in `deep-signal.ts`. The actual writable signals live in a separate `stateSource` dictionary, attached once via its own `Object.defineProperty(signalState, STATE_SOURCE, ...)` call and never touched by the per-key loop. Confirmed `patchState` (`state-source.ts`) mutates exclusively through `stateSource[STATE_SOURCE][key].set(...)` — the raw dictionary — never through `signalState[key]`, so there's no path from a colliding key name back to a broken `patchState` call. The existing test `'overrides Function properties if state keys have the same name'` already directly exercises the top-level collision case (state keys named `name`/`length`, real `Function.prototype` properties) and confirms it as the library's own deliberate, tested behavior.
+
+Also confirmed: the eager, one-time `Reflect.ownKeys(initialState)` top-level key enumeration (vs. `deepComputed`'s fully lazy Proxy-based approach) matches `WritableStateSource<State>`'s own type contract (a fixed `keyof State`), not a gap — nested levels below the top layer still go through the already-fixed, dynamic `toDeepSignal` engine. Already thoroughly tested: 10 runtime tests (`signal-state.spec.ts`) plus an unusually extensive 15-test type-level spec (`signal-state.types.spec.ts`) covering optional slices, unions, iterables, built-ins, and Function-property-name collisions at the type level.
+
+---
+
+_More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, `component-store`, `component`, `operators`, and `schematics-core` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files, `component` found 1 real bug plus 2 barrel-export gaps (all fixed) across 10/10 files, `operators` found 2 barrel-export gaps (fixed) across 4/4 files, `schematics-core` found 9 real bugs plus 13 barrel-export gaps (all fixed) across 16/16 files. `signals` is in progress (4/18 files — `deep-computed.ts`, `signal-method.ts`, and `signal-state.ts` no findings, `deep-signal.ts` 1 severe real bug fixed). See [todo.md](../todo.md) for the live per-module status of the remaining modules._

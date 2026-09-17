@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: September 10, 2026** (`schematics-core` module in progress — 12/16 files)
+**Last Updated: September 17, 2026** (`schematics-core` module COMPLETE — 16/16 files; `signals` module in progress — 2/18 files)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.

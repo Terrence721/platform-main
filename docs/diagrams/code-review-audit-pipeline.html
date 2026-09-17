@@ -469,10 +469,24 @@
     </div>
     <div class="status-row">
       <div class="status-cell">
-        <span class="pill pill--pending">not started</span> 4 modules
+        <span class="pill pill--active">in progress</span> signals
+      </div>
+      <div class="status-cell"><code>2/18</code></div>
+      <div class="status-cell">
+        <code>deep-computed.ts</code> no findings; <code>deep-signal.ts</code> a
+        severe real bug — a state property named <code>set</code>/
+        <code>update</code>/<code>asReadonly</code> silently and permanently
+        broke <code>patchState</code>, fixed via a side <code>WeakMap</code>
+        cache instead of writing the deep-signal cache directly onto the
+        underlying writable signal
+      </div>
+    </div>
+    <div class="status-row">
+      <div class="status-cell">
+        <span class="pill pill--pending">not started</span> 3 modules
       </div>
       <div class="status-cell">—</div>
-      <div class="status-cell">data, eslint-plugin, schematics, signals</div>
+      <div class="status-cell">data, eslint-plugin, schematics</div>
     </div>
   </div>
 
@@ -486,6 +500,6 @@
     <a href="https://terrence721.github.io/platform-main/portfolio.html"
       >Portfolio page</a
     >
-    platform-main · issue #32 · 111/254 files reviewed so far
+    platform-main · issue #32 · 113/254 files reviewed so far
   </footer>
 </div>

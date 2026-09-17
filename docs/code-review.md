@@ -1143,4 +1143,14 @@ Verified: `npx nx run schematics-core:lint` (0 errors, 12 pre-existing warnings,
 
 ---
 
-_More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, `component-store`, `component`, `operators`, and `schematics-core` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files, `component` found 1 real bug plus 2 barrel-export gaps (all fixed) across 10/10 files, `operators` found 2 barrel-export gaps (fixed) across 4/4 files, `schematics-core` found 9 real bugs plus 13 barrel-export gaps (all fixed) across 16/16 files. See [todo.md](../todo.md) for the live per-module status of the remaining modules._
+### [`deep-computed.ts`](https://github.com/Terrence721/platform-main/blob/61e1fdc8421ded83cba45489338afd2fc4c82530/modules/signals/src/deep-computed.ts)
+
+**low · Correctness** — Reviewed via [issue #336](https://github.com/Terrence721/platform-main/issues/336)
+
+`deepComputed`, the module's first file. A thin wrapper (one line of real logic): `toDeepSignal(computed(computation))`, deferring all the real deep-signal-construction work to `deep-signal.ts` (next file in this module's review).
+
+**No bug found**: confirmed the wrapping is type-sound (`computed()` returns `Signal<T>`, `toDeepSignal<T>(signal: Signal<T>): DeepSignalOf<T>` accepts exactly that, matching `deepComputed`'s own declared `DeepSignalOf<T>` return type). Genuinely, directly well-tested already — not just trivially trusted for its small size — `deep-computed.spec.ts` has 6 tests covering nested object literals, unions of objects (including a live discriminated-union narrowing check via `'m' in result`), unions with primitives/null mixed in, arrays (confirmed deliberately _not_ deep-signaled), and primitives/null/undefined. Also checked the doc comment's own usage example against the real implementation — accurate.
+
+---
+
+_More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, `component-store`, `component`, `operators`, and `schematics-core` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files, `component` found 1 real bug plus 2 barrel-export gaps (all fixed) across 10/10 files, `operators` found 2 barrel-export gaps (fixed) across 4/4 files, `schematics-core` found 9 real bugs plus 13 barrel-export gaps (all fixed) across 16/16 files. `signals` is in progress. See [todo.md](../todo.md) for the live per-module status of the remaining modules._

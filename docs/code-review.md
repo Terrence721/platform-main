@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: September 17, 2026** (`schematics-core` module COMPLETE — 16/16 files; `signals` module in progress — 2/18 files)
+**Last Updated: September 17, 2026** (`schematics-core` module COMPLETE — 16/16 files; `signals` module in progress — 3/18 files)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -1175,4 +1175,16 @@ Verified: `npx nx run signals:lint` (0 errors, 70 warnings, down from 71 — the
 
 ---
 
-_More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, `component-store`, `component`, `operators`, and `schematics-core` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files, `component` found 1 real bug plus 2 barrel-export gaps (all fixed) across 10/10 files, `operators` found 2 barrel-export gaps (fixed) across 4/4 files, `schematics-core` found 9 real bugs plus 13 barrel-export gaps (all fixed) across 16/16 files. `signals` is in progress. See [todo.md](../todo.md) for the live per-module status of the remaining modules._
+### [`signal-method.ts`](https://github.com/Terrence721/platform-main/blob/main/modules/signals/src/signal-method.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #348](https://github.com/Terrence721/platform-main/issues/348))
+
+`signalMethod`, a standalone helper unrelated to the `toDeepSignal` engine the previous two files built — wraps a static value or a signal/computation in an `effect()`-driven call to a processing function, with manual per-instance `.destroy()` plus automatic cleanup on injector teardown.
+
+**No bug found**: traced the reactive-vs-static branch (`isReactiveComputation`), the injector-priority chain (explicit config injector > caller injector > source injector — all three orderings directly tested), the dev-mode deprecation warning gate, and the `watchers` array bookkeeping behind `.destroy()`. Already thoroughly tested directly — 15 tests in `signal-method.spec.ts` covering non-signal/signal/computation inputs, injection-context assertion, 4 distinct destroy scenarios (including a destroyed child injector's effect ref being safely re-destroyed), 3 injector-priority orderings, and the full deprecation-warning matrix.
+
+One minor, non-functional observation, not filed as a bug: `.destroy()` calls `.destroy()` on every entry in the internal `watchers` array but never clears the array itself, and a watcher destroyed individually (via its own returned `EffectRef.destroy()`, not through the owning injector) is never removed from it either — the array only shrinks via `DestroyRef.onDestroy`, which fires on injector teardown, not on a direct `.destroy()` call. Confirmed this doesn't cause a functional defect — Angular's `effect().destroy()` is idempotent, so a stale re-destroy is a harmless no-op — just a bounded memory-retention nuance, not worth a fix on its own.
+
+---
+
+_More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, `component-store`, `component`, `operators`, and `schematics-core` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files, `component` found 1 real bug plus 2 barrel-export gaps (all fixed) across 10/10 files, `operators` found 2 barrel-export gaps (fixed) across 4/4 files, `schematics-core` found 9 real bugs plus 13 barrel-export gaps (all fixed) across 16/16 files. `signals` is in progress (3/18 files — `deep-computed.ts` and `signal-method.ts` no findings, `deep-signal.ts` 1 severe real bug fixed). See [todo.md](../todo.md) for the live per-module status of the remaining modules._

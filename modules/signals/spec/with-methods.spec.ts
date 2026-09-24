@@ -57,4 +57,34 @@ describe('withMethods', () => {
       'p2, s1, m2, Symbol(state_secret), Symbol(computed_secret)'
     );
   });
+
+  it('does not log a warning for a non-enumerable method, since it is never added to the store', () => {
+    const initialStore = [
+      withState({ p1: 10 }),
+      withComputed(() => ({ s1: signal(true).asReadonly() })),
+      withMethods(() => ({ m1: () => 'm1', m2: () => 'm2' })),
+    ].reduce((acc, feature) => feature(acc), getInitialInnerStore());
+    vi.spyOn(console, 'warn')
+      .mockImplementation(() => undefined)
+      .mockClear();
+
+    const methods = { m3: () => 'm3', m1: () => 'enumerable' };
+    Object.defineProperty(methods, 'p1', {
+      value: () => 'hidden',
+      enumerable: false,
+    });
+    Object.defineProperty(methods, 's1', {
+      value: () => 'hidden',
+      enumerable: false,
+    });
+    const store = withMethods(() => methods)(initialStore);
+
+    expect(Object.keys(store.methods)).toEqual(['m1', 'm2', 'm3']);
+    expect(console.warn).toHaveBeenCalledTimes(1);
+    expect(console.warn).toHaveBeenCalledWith(
+      '@ngrx/signals: SignalStore members cannot be overridden.',
+      'Trying to override:',
+      'm1'
+    );
+  });
 });

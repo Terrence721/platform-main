@@ -47,12 +47,16 @@ export function withMethods<
   ) => Methods
 ): SignalStoreFeature<Input, { state: {}; props: {}; methods: Methods }> {
   return (store) => {
-    const methods = methodsFactory({
-      [STATE_SOURCE]: store[STATE_SOURCE],
-      ...store.stateSignals,
-      ...store.props,
-      ...store.methods,
-    });
+    // Spreading drops non-enumerable keys, so the assertion below only sees
+    // the methods that are actually added to the store.
+    const methods = {
+      ...methodsFactory({
+        [STATE_SOURCE]: store[STATE_SOURCE],
+        ...store.stateSignals,
+        ...store.props,
+        ...store.methods,
+      }),
+    };
     if (typeof ngDevMode !== 'undefined' && ngDevMode) {
       assertUniqueStoreMembers(store, Reflect.ownKeys(methods));
     }

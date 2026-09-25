@@ -22,10 +22,13 @@ export function createTestResource<T>(): TestResource<T> {
   const resourceRef = TestBed.runInInjectionContext(() =>
     resource<T, number | undefined>({
       params,
-      loader: () =>
-        new Promise<T>((resolve, reject) => {
+      loader: () => {
+        const promise = new Promise<T>((resolve, reject) => {
           pending = { resolve, reject };
-        }),
+        });
+        promise.catch(() => undefined);
+        return promise;
+      },
     })
   );
   const appRef = TestBed.inject(ApplicationRef);

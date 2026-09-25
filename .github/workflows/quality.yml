@@ -35,6 +35,9 @@ jobs:
       - name: Derive SHAs for nx affected
         uses: nrwl/nx-set-shas@v5
 
+      - name: Check module dependency ranges
+        run: yarn check:versions
+
       - name: Run lint
         run: yarn nx affected -t lint
 
@@ -64,6 +67,9 @@ jobs:
 
       - name: Run test suite
         run: yarn nx affected -t test
+
+      - name: Test repo scripts
+        run: yarn test:scripts
 
   build:
     name: Build packages

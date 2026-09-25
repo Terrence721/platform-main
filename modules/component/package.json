@@ -49,6 +49,6 @@
     "migrations": "./migrations/migration.json"
   },
   "dependencies": {
-    "tslib": "^2.0.0"
+    "tslib": "^2.3.0"
   }
 }

@@ -11,17 +11,12 @@ const repoRoot = join(__dirname, '..');
 const modulesDir = join(repoRoot, 'modules');
 
 /**
- * Ranges that predate this check and differ from the other modules'. Each is
- * pinned to its exact current value, and the check fails when one goes stale,
- * so this list can only shrink. Aligning them changes what consumers may
- * install, so that is a separate, deliberate decision.
+ * Ranges that are allowed to differ from the other modules', each pinned to its
+ * exact current value; the check fails when one goes stale, so the list can
+ * only shrink. None today. Adding one changes what consumers may install, so
+ * it should be a deliberate decision.
  */
-const deviations: Deviation[] = [
-  { module: 'operators', name: 'rxjs', range: '^6.5.3 || ^7.4.0' },
-  { module: 'operators', name: 'tslib', range: '^2.3.0' },
-  { module: 'signals', name: 'rxjs', range: '^6.5.3 || ^7.4.0' },
-  { module: 'signals', name: 'tslib', range: '^2.3.0' },
-];
+const deviations: Deviation[] = [];
 
 function readManifest(path: string): Manifest {
   return JSON.parse(readFileSync(path, 'utf8'));

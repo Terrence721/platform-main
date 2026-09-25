@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: September 25, 2026** (`schematics-core` module COMPLETE — 16/16 files; `signals` module in progress — 6/18 files)
+**Last Updated: September 25, 2026** (`schematics-core` module COMPLETE — 16/16 files; `signals` module in progress — 7/18 files)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -1228,6 +1228,24 @@ Verified: `npx nx run signals:lint` (0 errors, 70 warnings; the four touched fil
 **Two observations, deliberately not changed:** (1) **JSDoc is dropped from the built `.d.ts` for every overloaded function** — module-wide, not specific to this file. The `@description`/`@usageNotes` block sits above the _implementation_ signature, which TypeScript does not emit, so hovering `signalStoreFeature` shows no documentation. Verified by text-matching each function's doc in the built `.d.ts`: `signalStore` (45 signatures), `withState` (2), `signalStoreFeature` (20) and `withHooks` (2) all lose it, while the single-signature features (`withMethods`, `withProps`, `withComputed`, `withLinkedState`) keep theirs. A real fix means deciding where the docs live across all four functions (and whether to repeat them on every overload), so it is left for its own decision rather than changed silently here. (2) `signalStoreFeature` types up to 10 features while `signalStore` types up to 15 — looks intentional, since larger sets compose by nesting, which the existing spec exercises.
 
 Verified: the 5 related spec files (`signal-store-feature`, its type spec, `signal-store`, `with-feature` and its type spec — 110 tests counting both the runtime and type-check passes, 0 type errors) pass, `npx nx run signals:build` is clean, `eslint` and prettier report nothing on the file.
+
+### [`signal-store-models.ts`](https://github.com/Terrence721/platform-main/blob/61e1fdc8421ded83cba45489338afd2fc4c82530/modules/signals/src/signal-store-models.ts)
+
+**low · Correctness** — Fixed via [issue #356](https://github.com/Terrence721/platform-main/issues/356)
+
+82 lines of pure types with no runtime code: `StateSignals`, `SignalsDictionary`, `MethodsDictionary`, `SignalStoreHooks`, `InnerSignalStore`, `SignalStoreFeatureResult`, `EmptyFeatureResult`, `SignalStoreFeature` and `SignalStoreFeatureType`. Each declaration was checked against what the runtime actually does, not just read.
+
+**Sound, verified:** `InnerSignalStore` matches the runtime shape `getInitialInnerStore()` produces. `SignalStoreFeatureType`'s three branches (no required input → `Output`; required input → `Input & Output`; bare factory with unresolved input → `Output`) are all exercised by the existing type spec, and its JSDoc example was compiled **verbatim** in a throwaway probe and yields a correctly typed store, so the documentation is not stale.
+
+**Real gap, fixed:** `SignalsDictionary` is keyed by `string | symbol`, but `MethodsDictionary` was `Record<string, Function>` — string keys only — even though the runtime and existing specs plainly support symbol-keyed methods (`withMethods` iterates `Reflect.ownKeys`; `with-state.spec` and `with-methods.spec` use `[METHOD_SECRET]() {}`). A `Record<string, …>` constraint never sees symbol keys. Confirmed with a type-check probe: `withMethods(() => ({ [SYM]: 42 }))` **compiled with no error**, while the string-keyed equivalent is correctly rejected — a symbol-keyed non-function was silently accepted as a "method". Low impact: the inferred store type still says `number` for that key, so nothing is misrepresented; the methods contract just was not enforced for symbol keys.
+
+**Fix**: `MethodsDictionary = Record<string | symbol, Function>` (one line). Blast radius verified before keeping it: the only other user of the type is `with-methods.ts`'s generic constraint, the **full `spec/` directory (112 files, 876 tests, every existing type spec included) passes with 0 type errors**, the library build is clean across all entry points, and the only new compile error anywhere is the intended one. This is a deliberate tightening of a public constraint — code that misused a symbol-keyed non-function as a method now fails to compile; previously valid code is unaffected.
+
+**Regression test**: new `spec/types/with-methods.types.spec.ts` (plain vitest `expectTypeOf` + `@ts-expect-error`, deliberately not the `ts-snippet` style, to avoid that harness's documented contention flakiness) — symbol-keyed methods are accepted and passed on to later features with the right type; a symbol-keyed and a string-keyed non-function are both rejected. Verified two-sided: **fails without the fix** (`Unused '@ts-expect-error' directive`), passes with it. It is also `signals`' first type-level coverage for `withMethods` (the scope of [#174](https://github.com/Terrence721/platform-main/issues/174)), which this real declared-vs-actual finding justifies.
+
+**Suspicion investigated and disproven:** that symbol-keyed methods might not propagate to later features at the type level — they do, with the correct type, both before and after the change (probed with and without a string key alongside). **Deferred to `index.ts`'s own review:** the barrel exports 5 of this file's 9 types; `SignalsDictionary`, `MethodsDictionary`, `SignalStoreHooks` and `InnerSignalStore` are not exported although `InnerSignalStore` and `MethodsDictionary` appear in the signatures of the exported `SignalStoreFeature`/`SignalStoreFeatureResult` — exactly the barrel cross-check that file's review applies.
+
+Verified: `npx nx run signals:build` (clean), the full `spec/` directory as above, `eslint` (0 errors; the 4 `{}`-type warnings on lines 11 and 39 pre-exist on `main` and are unchanged) and prettier on the changed files.
 
 ---
 

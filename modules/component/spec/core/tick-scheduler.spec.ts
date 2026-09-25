@@ -94,6 +94,17 @@ describe('TickScheduler', () => {
       expect(appRef.tick).toHaveBeenCalledTimes(3);
     }));
 
+    it('should not tick an ApplicationRef that was destroyed before the frame fired', fakeAsync(() => {
+      const { tickScheduler, appRef } = setup(noopNgZoneMock);
+
+      tickScheduler.schedule();
+      // What a test's teardown does, while the frame is still pending.
+      TestBed.resetTestingModule();
+      tick(animationFrameDelay);
+
+      expect(appRef.tick).not.toHaveBeenCalled();
+    }));
+
     it('should ensure requestAnimationFrame is not bound to the tick scheduler', () => {
       const rafSpy = vi.spyOn(window, 'requestAnimationFrame');
       const { tickScheduler } = setup(noopNgZoneMock);

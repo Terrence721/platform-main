@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: September 25, 2026** (`schematics-core` module COMPLETE — 16/16 files; `signals` module in progress — 7/18 files)
+**Last Updated: September 25, 2026** (`schematics-core` module COMPLETE — 16/16 files; `signals` module in progress — 8/18 files)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -1246,6 +1246,29 @@ Verified: the 5 related spec files (`signal-store-feature`, its type spec, `sign
 **Suspicion investigated and disproven:** that symbol-keyed methods might not propagate to later features at the type level — they do, with the correct type, both before and after the change (probed with and without a string key alongside). **Deferred to `index.ts`'s own review:** the barrel exports 5 of this file's 9 types; `SignalsDictionary`, `MethodsDictionary`, `SignalStoreHooks` and `InnerSignalStore` are not exported although `InnerSignalStore` and `MethodsDictionary` appear in the signatures of the exported `SignalStoreFeature`/`SignalStoreFeatureResult` — exactly the barrel cross-check that file's review applies.
 
 Verified: `npx nx run signals:build` (clean), the full `spec/` directory as above, `eslint` (0 errors; the 4 `{}`-type warnings on lines 11 and 39 pre-exist on `main` and are unchanged) and prettier on the changed files.
+
+### [`signal-store.ts`](https://github.com/Terrence721/platform-main/blob/61e1fdc8421ded83cba45489338afd2fc4c82530/modules/signals/src/signal-store.ts)
+
+**low · Test coverage** — Fixed via [issue #396](https://github.com/Terrence721/platform-main/issues/396)
+
+File is 1,432 lines: 45 `signalStore` overload signatures (three families of 15: no config, `{ protectedState?: true }` and `{ protectedState: false }`), a 45-line implementation and the small `getInitialInnerStore()` helper.
+
+**Sound, verified:**
+
+- **All 45 overloads checked mechanically** with the TypeScript compiler API instead of by eye (the method that found the `Input:` typo in `signal-store-feature.ts`): type parameters `F1…Fn` plus `R` from the second overload on, every `Fk` constrained to `SignalStoreFeatureResult`, `R` defaulting to `F1 & … & Fn`, parameters `f1…fn` (after `config` in the two config families), each `fk` taking exactly `F1 & … & F(k-1)` as its input (`EmptyFeatureResult` for `f1`, `{} & F1` for `f2`), and the right return type per family (`StateSource` for the two protected families, `WritableStateSource` for `protectedState: false`). 0 deviations.
+- **Implementation:** the config is told from the features by `typeof args[0] === 'function'`; the arguments are copied before `shift()`, so the caller's array is never mutated; the feature chain re-runs per instance from a fresh `getInitialInnerStore()`, so instances share nothing; every member is assigned before `onInit` runs; `inject(DestroyRef)` is only called when an `onDestroy` exists, so a store without one can still be created with `new` outside an injection context.
+- **`protectedState` is compile-time only.** Nothing at runtime reads it (checked across `src/`); it only selects between the `StateSource` and `WritableStateSource` overload families, which the existing type spec covers for all three shapes.
+
+**Real gap, fixed:** `providedIn: 'platform'`, half of the public `providedIn?: 'root' | 'platform'` option, had no test anywhere (the specs only cover `'root'`). A throwaway probe confirmed it works (created, injected, `onInit` ran), then a new spec asserts that the instance survives `TestBed.resetTestingModule()`, which only a platform-scoped provider does. Verified two-sided: it passes as written and fails (`expected … to be …`) when the same store is declared `providedIn: 'root'`. Also replaced a `store.x!()` non-null assertion in the neighbouring "optional state slices" test with `store.x?.()` (same assertion, clears the spec file's one ESLint warning).
+
+**Observed, not changed (verified, no demonstrable harm):**
+
+- `signalStore()` with no arguments, unreachable through the types (they need at least one feature), throws `TypeError: Cannot read properties of undefined (reading 'providedIn')` because `shift()` hands back `undefined` as the config. Only a plain-JS or `any` caller can hit it.
+- A `signalStore` instance carries `STATE_SOURCE` as an ordinary property (enumerable, writable, configurable), while `signalState` defines it locked (non-enumerable, non-writable, non-configurable), so `{ ...store }` copies it. Nothing in the repo depends on either behaviour.
+
+**Confirmed module-wide, needs a decision:** the JSDoc (description plus usage example) sits on the implementation signature, which TypeScript does not publish. It appears **0 times** in the built `ngrx-signals.d.ts`, while 12 `@description` blocks on single-signature functions survive. Four functions are affected: `signalStore` (45 overloads), `signalStoreFeature` (20), `withHooks` (2) and `withState` (2), so hover/IntelliSense on the library's headline API shows no description. TypeScript shows the JSDoc of the overload a call resolves to, so a real fix means copying the block onto every overload (about 38 lines × 45 in this file). That is a call for the maintainer, not something to fold into a per-file review PR, so nothing was changed.
+
+Verified: `yarn nx test signals` (122 files, 922 tests, 0 type errors), `yarn nx lint signals` (0 errors; the changed spec file now has 0 warnings) and prettier on the changed files.
 
 ---
 

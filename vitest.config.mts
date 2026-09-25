@@ -4,6 +4,36 @@ import tsconfigPaths from 'vite-tsconfig-paths';
 import { defineConfig } from 'vitest/config';
 
 /**
+ * Vitest prints "Testing types with tsc and vue-tsc is an experimental feature"
+ * once per project whenever `typecheck` is enabled, and offers no option to turn
+ * it off. The type tests (`expectTypeOf`, `@ts-expect-error`) need typecheck, so
+ * it stays on; this drops only that advisory - both of its lines, which arrive
+ * in one write - from stderr. Everything else written to stderr passes through
+ * untouched. Remove this if the advisory is ever removed upstream or wanted.
+ */
+const typecheckAdvisory =
+  'Testing types with tsc and vue-tsc is an experimental feature';
+const advisoryFilter = Symbol.for('ngrx.vitest.typecheckAdvisoryFilter');
+const stderr = process.stderr as NodeJS.WriteStream & {
+  [advisoryFilter]?: true;
+};
+if (!stderr[advisoryFilter]) {
+  // A config can be evaluated more than once in one process; wrap only once.
+  stderr[advisoryFilter] = true;
+  const write = stderr.write.bind(stderr) as (...args: unknown[]) => boolean;
+  stderr.write = ((chunk: unknown, ...rest: unknown[]) => {
+    if (String(chunk).includes(typecheckAdvisory)) {
+      // Still honour a write callback, or a caller waiting on it would hang.
+      const callback = rest.find((arg) => typeof arg === 'function') as
+        (() => void) | undefined;
+      callback?.();
+      return true;
+    }
+    return write(chunk, ...rest);
+  }) as typeof stderr.write;
+}
+
+/**
  * Every module is a Vitest project, named after its Nx project. The value
  * holds that module's overrides of the shared settings below; none has any
  * today.

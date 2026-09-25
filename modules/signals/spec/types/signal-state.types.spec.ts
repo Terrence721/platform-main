@@ -435,4 +435,4 @@ describe('signalState', () => {
       patchState(state, (state) => ({ user: { ...state.user, age: '30' } }));
     `).toFail(/Type 'string' is not assignable to type 'number'/);
   });
-}, 8_000);
+});

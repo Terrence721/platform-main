@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: September 24, 2026** (`schematics-core` module COMPLETE — 16/16 files; `signals` module in progress — 5/18 files)
+**Last Updated: September 25, 2026** (`schematics-core` module COMPLETE — 16/16 files; `signals` module in progress — 6/18 files)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -1210,6 +1210,24 @@ Also confirmed: the eager, one-time `Reflect.ownKeys(initialState)` top-level ke
 **Fix**: `withProps`/`withMethods` now spread the factory's result once into a local and derive the guard's keys from that same enumerable-only snapshot that gets merged, so the guard can only report members that are actually being added (same key set, order, values, and single getter evaluation as before). Added one regression test each to `with-props.spec.ts`/`with-methods.spec.ts` — a mixed case (one enumerable colliding key plus non-enumerable keys colliding with existing state/method/computed members) — confirmed to fail against the pre-fix source and pass after. `with-props.ts`/`with-methods.ts` are not yet reviewed under [#43](https://github.com/Terrence721/platform-main/issues/43) and will still get their own full pass; this fix covers only the key-derivation mismatch above.
 
 Verified: `npx nx run signals:lint` (0 errors, 70 warnings; the four touched files are unchanged at 16 warnings vs. `main`), `npx nx run signals:build` (clean), and the 6 related spec files (`with-props`, `with-methods`, `with-computed`, `signal-store`, `with-state`, `with-linked-state`; 127 tests counting both the runtime and type-check passes, 0 type errors) pass. A full local `npx nx test signals` additionally shows `signal-state.spec.ts > caches previously created signals` failing — it fails identically on a clean `main` checkout (confirmed by stashing this change and re-running), as do the documented `spec/types/**` worker-contention errors; neither is touched by this change.
+
+### [`signal-store-feature.ts`](https://github.com/Terrence721/platform-main/blob/61e1fdc8421ded83cba45489338afd2fc4c82530/modules/signals/src/signal-store-feature.ts)
+
+**low · Maintainability** — Fixed via [issue #354](https://github.com/Terrence721/platform-main/issues/354)
+
+`signalStoreFeature`, the function that combines several store features into one: 20 hand-written overloads (10 arities × with/without an `input` argument), a 6-line runtime (`typeof args[0] === 'function' ? args : args.slice(1)`, then a `reduce` over the features), and the `type<T>()` helper.
+
+**Reviewed mechanically, not by eye:** a hand-typed overload set is exactly where a copy-paste slip hides, so every overload was checked by a script against the pattern the first few establish — the type-parameter list, the feature-to-feature input chain (`F1 & … & F(k-1)`), the `NoInfer<Input>` handling, and the return type including `PrettifyFeatureResult`. **19 of 20 match exactly.**
+
+**Real defect, fixed:** the 4-feature-with-`input` overload named its first parameter `Input` (capital I) where the other nine use `input`. Confirmed to reach consumers, not just the source: the built package's public `.d.ts` emitted `(Input: Input, …)` for that one overload only, so editor signature help showed a differently-named parameter for that call shape. No behavioral or type-checking effect (parameter names in overload signatures do not participate in assignability), hence low severity.
+
+**Fix**: renamed the parameter to `input` (one-line diff). After the fix the same mechanical check reports all 20 overloads matching, and a rebuilt `.d.ts` emits `(input: Input` for all ten with-input overloads with zero `Input:` remaining. No regression test was added: a parameter name is erased from assignability, so no meaningful runtime or type-level test can observe it.
+
+**Runtime, verified correct:** the discriminator inspects only `args[0]` — a function means every argument is a feature, anything else is the `input` object and is dropped (its values are `undefined` at runtime anyway, since `type<T>()` returns `undefined`). Zero-feature and input-only calls return an identity feature — unreachable for TypeScript callers (every overload needs at least one feature) but sane regardless. Each feature receives and returns a fresh store object, so the `reduce` threads state correctly.
+
+**Two observations, deliberately not changed:** (1) **JSDoc is dropped from the built `.d.ts` for every overloaded function** — module-wide, not specific to this file. The `@description`/`@usageNotes` block sits above the _implementation_ signature, which TypeScript does not emit, so hovering `signalStoreFeature` shows no documentation. Verified by text-matching each function's doc in the built `.d.ts`: `signalStore` (45 signatures), `withState` (2), `signalStoreFeature` (20) and `withHooks` (2) all lose it, while the single-signature features (`withMethods`, `withProps`, `withComputed`, `withLinkedState`) keep theirs. A real fix means deciding where the docs live across all four functions (and whether to repeat them on every overload), so it is left for its own decision rather than changed silently here. (2) `signalStoreFeature` types up to 10 features while `signalStore` types up to 15 — looks intentional, since larger sets compose by nesting, which the existing spec exercises.
+
+Verified: the 5 related spec files (`signal-store-feature`, its type spec, `signal-store`, `with-feature` and its type spec — 110 tests counting both the runtime and type-check passes, 0 type errors) pass, `npx nx run signals:build` is clean, `eslint` and prettier report nothing on the file.
 
 ---
 

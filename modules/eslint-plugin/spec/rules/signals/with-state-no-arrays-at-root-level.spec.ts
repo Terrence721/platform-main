@@ -130,11 +130,14 @@ const store = withState(function() { return function() { return { foo: 'bar' }; 
                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ [${messageId} { "property": "Function" }]`),
 ];
 
-ruleTester(rule.meta.docs?.requiresTypeChecking).run(
-  path.parse(__filename).name,
-  rule,
-  {
-    valid: valid(),
-    invalid: invalid(),
-  }
-);
+// Static describe so Vitest's typecheck mode finds a suite (see spec/utils/rule-tester.ts).
+describe('rule', () => {
+  ruleTester(rule.meta.docs?.requiresTypeChecking).run(
+    path.parse(__filename).name,
+    rule,
+    {
+      valid: valid(),
+      invalid: invalid(),
+    }
+  );
+});

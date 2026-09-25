@@ -119,6 +119,15 @@ export class DefaultDataService<T> implements EntityCollectionDataService<T> {
         : { fromObject: queryParams };
     const params = new HttpParams(qParams);
 
+    // Only a conflict is worth a warning: queryParams and options.httpParams
+    // both provided. `execute` cannot tell, because it always receives the
+    // `{ params }` built above, even when queryParams is undefined.
+    if (isDevMode() && queryParams != null && options?.httpParams) {
+      console.warn(
+        '@ngrx/data: options.httpParams will be merged with queryParams when both are provided to getWithQuery(). In the event of a conflict HttpOptions.httpParams will override queryParams. The queryParams parameter of getWithQuery() will be removed in next major release.'
+      );
+    }
+
     return this.execute(
       'GET',
       this.entitiesUrl,
@@ -181,12 +190,6 @@ export class DefaultDataService<T> implements EntityCollectionDataService<T> {
     // from the deprecated options parameter
     let mergedOptions: any = undefined;
     if (options || entityActionHttpClientOptions) {
-      if (isDevMode() && options && entityActionHttpClientOptions) {
-        console.warn(
-          '@ngrx/data: options.httpParams will be merged with queryParams when both are are provided to getWithQuery(). In the event of a conflict HttpOptions.httpParams will override queryParams`. The queryParams parameter of getWithQuery() will be removed in next major release.'
-        );
-      }
-
       mergedOptions = {
         ...options,
         headers: entityActionHttpClientOptions?.headers ?? options?.headers,

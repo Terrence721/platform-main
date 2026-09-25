@@ -26,7 +26,7 @@ import {
   QueryParams,
 } from '../../';
 import { HttpOptions } from '../../src/dataservices/interfaces';
-import { vi } from 'vitest';
+import { MockInstance, vi } from 'vitest';
 
 class Hero {
   id!: number;
@@ -292,13 +292,17 @@ describe('DefaultDataService', () => {
 
   describe('#getWithQuery', () => {
     let expectedHeroes: Hero[];
+    let warnSpy: MockInstance<typeof console.warn>;
 
     beforeEach(() => {
       expectedHeroes = [
         { id: 1, name: 'BA' },
         { id: 2, name: 'BB' },
       ] as Hero[];
+      warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     });
+
+    afterEach(() => warnSpy.mockRestore());
 
     it('should return expected selected heroes w/ object params', () =>
       new Promise<void>((done, fail) => {
@@ -421,6 +425,49 @@ describe('DefaultDataService', () => {
         // Respond with the mock heroes
         req.flush(expectedHeroes);
       }));
+    it('should not warn when only httpOptions are provided', () => {
+      const httpOptions = {
+        httpParams: { fromString: 'name=B' },
+      } as HttpOptions;
+
+      service.getWithQuery(undefined, httpOptions).subscribe();
+      httpTestingController
+        .expectOne(heroesUrl + '?name=B')
+        .flush(expectedHeroes);
+
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    it('should not warn when queryParams come with options that carry no httpParams', () => {
+      const httpOptions = {
+        httpHeaders: { MyHeader: 'MyHeaderValue' },
+      } as HttpOptions;
+
+      service.getWithQuery('name=B', httpOptions).subscribe();
+      httpTestingController
+        .expectOne(heroesUrl + '?name=B')
+        .flush(expectedHeroes);
+
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    it('should warn, and let httpOptions.httpParams win, when both it and queryParams are provided', () => {
+      const httpOptions = {
+        httpParams: { fromString: 'name=B' },
+      } as HttpOptions;
+
+      service.getWithQuery('name=A', httpOptions).subscribe();
+      httpTestingController
+        .expectOne(heroesUrl + '?name=B')
+        .flush(expectedHeroes);
+
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'options.httpParams will be merged with queryParams'
+        )
+      );
+    });
 
     it('should be OK returning no heroes', () =>
       new Promise<void>((done, fail) => {

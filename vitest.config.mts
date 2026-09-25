@@ -24,7 +24,17 @@ export const baseConfig = {
     include: ['**/*.{spec,test}.ts'],
     passWithNoTests: true,
     setupFiles: ['test-setup.ts'],
-    testTimeout: 30000,
+    // A ceiling for hung tests, not a performance gate. The slow tests here
+    // (spec/types/**, which start a TypeScript compiler per file) take ~12s on
+    // a quiet machine but measured 2.5x+ slower in the VS Code Testing panel
+    // (watch mode, VS Code's own runtime, all modules competing for memory),
+    // where a 30s limit was still being hit.
+    testTimeout: 60000,
+    // How long a finished forks worker may take to exit before Vitest logs
+    // "[vitest-pool]: Timeout terminating forks worker". Same reasoning: the
+    // default (10s) is too short for a loaded panel run, and the tests have
+    // already passed by then, so it only produced noise.
+    teardownTimeout: 30000,
     // Default (300ms) flags nearly every compile-time type-assertion test
     // (spec/types/**, invokes tsc/vue-tsc) and every schematics/migrations
     // test (SchematicTestRunner does real Tree/filesystem I/O) as "slow" -

@@ -24,7 +24,7 @@ describe('Entity utils', () => {
     });
 
     it('should not warn when key does exist', () => {
-      const spy = vi.spyOn(console, 'warn');
+      const spy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
       const key = selectIdValue(AClockworkOrange, (book) => book.id);
 
@@ -32,7 +32,7 @@ describe('Entity utils', () => {
     });
 
     it('should warn when key does not exist in dev mode', () => {
-      const spy = vi.spyOn(console, 'warn');
+      const spy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
       const key = selectIdValue(AClockworkOrange, (book: any) => book.foo);
 
@@ -40,7 +40,7 @@ describe('Entity utils', () => {
     });
 
     it('should warn when key is undefined in dev mode', () => {
-      const spy = vi.spyOn(console, 'warn');
+      const spy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
       const undefinedAClockworkOrange = { ...AClockworkOrange, id: undefined };
       const key = selectIdValue(
@@ -54,7 +54,7 @@ describe('Entity utils', () => {
     it('should not warn when key does not exist in prod mode', async () => {
       const { isDevMode } = await import('@angular/core');
       vi.mocked(isDevMode).mockReturnValue(false);
-      const spy = vi.spyOn(console, 'warn');
+      const spy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
       const key = selectIdValue(AClockworkOrange, (book: any) => book.foo);
 
@@ -64,7 +64,7 @@ describe('Entity utils', () => {
     it('should not warn when key is undefined in prod mode', async () => {
       const { isDevMode } = await import('@angular/core');
       vi.mocked(isDevMode).mockReturnValue(false);
-      const spy = vi.spyOn(console, 'warn');
+      const spy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
       const undefinedAClockworkOrange = { ...AClockworkOrange, id: undefined };
       const key = selectIdValue(

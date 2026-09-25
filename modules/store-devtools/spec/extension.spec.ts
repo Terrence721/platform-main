@@ -855,8 +855,12 @@ describe('DevtoolsExtension', () => {
         }));
       // Subscription needed or else extension connection will not be established.
       devtoolsExtension.actions$.subscribe();
-      consoleSpy = vi.spyOn(console, 'warn');
+      consoleSpy = vi
+        .spyOn(console, 'warn')
+        .mockImplementation(() => undefined);
     });
+
+    afterEach(() => consoleSpy.mockRestore());
 
     it('for normal action', () => {
       (extensionConnection.send as Mock).mockImplementation(() => {

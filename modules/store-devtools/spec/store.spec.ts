@@ -129,6 +129,8 @@ function createStore<T>(
 }
 
 describe('Store Devtools', () => {
+  afterEach(() => vi.restoreAllMocks());
+
   describe('reducer', () => {
     it('should call @ngrx/store-devtools/recompute action', () => {
       const fixture = createStore(doubleCounter);
@@ -348,7 +350,7 @@ describe('Store Devtools', () => {
     });
 
     it('should catch and record errors', () => {
-      vi.spyOn(console, 'error');
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
       fixture.replaceReducer(counterWithBug);
 
       store.dispatch({ type: 'INCREMENT' });
@@ -619,7 +621,7 @@ describe('Store Devtools', () => {
     });
 
     it('should not auto-commit errors', () => {
-      vi.spyOn(console, 'error');
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
       const fixture = createStore(counterWithBug, { maxAge: 3 });
 
       fixture.store.dispatch({ type: 'DECREMENT' });
@@ -633,7 +635,7 @@ describe('Store Devtools', () => {
     });
 
     it('should auto-commit actions after hot reload fixes error', () => {
-      vi.spyOn(console, 'error');
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
       const fixture = createStore(counterWithBug, { maxAge: 3 });
 
       fixture.store.dispatch({ type: 'DECREMENT' });
@@ -676,7 +678,7 @@ describe('Store Devtools', () => {
     });
 
     it('should continue to increment currentStateIndex while error blocks commit', () => {
-      vi.spyOn(console, 'error');
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
       const fixture = createStore(counterWithBug, { maxAge: 3 });
 
       fixture.store.dispatch({ type: 'DECREMENT' });
@@ -695,7 +697,7 @@ describe('Store Devtools', () => {
     });
 
     it('should adjust currentStateIndex correctly when multiple actions are committed', () => {
-      vi.spyOn(console, 'error');
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
       const fixture = createStore(counterWithBug, { maxAge: 3 });
 
       fixture.store.dispatch({ type: 'DECREMENT' });
@@ -715,7 +717,7 @@ describe('Store Devtools', () => {
     });
 
     it('should not allow currentStateIndex to drop below 0', () => {
-      vi.spyOn(console, 'error');
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
       const fixture = createStore(counterWithBug, { maxAge: 3 });
 
       fixture.store.dispatch({ type: 'DECREMENT' });

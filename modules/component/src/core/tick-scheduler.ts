@@ -41,7 +41,11 @@ export class ZonelessTickScheduler extends TickScheduler {
     if (!this.isScheduled) {
       this.isScheduled = true;
       this.scheduleFn(() => {
-        this.appRef.tick();
+        // The app can be destroyed before the frame fires (a test tearing down
+        // its TestBed, for one); ticking it then only logs NG0406.
+        if (!this.appRef.destroyed) {
+          this.appRef.tick();
+        }
         this.isScheduled = false;
       });
     }

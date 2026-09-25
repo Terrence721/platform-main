@@ -12,7 +12,7 @@ export type StateSignals<State> =
 
 export type SignalsDictionary = Record<string | symbol, Signal<unknown>>;
 
-export type MethodsDictionary = Record<string, Function>;
+export type MethodsDictionary = Record<string | symbol, Function>;
 
 export type SignalStoreHooks = {
   onInit?: () => void;

@@ -5,8 +5,8 @@ import { defineConfig } from 'vitest/config';
 
 /**
  * Every module is a Vitest project, named after its Nx project. The value
- * holds that module's overrides of the shared settings below; only
- * eslint-plugin has any.
+ * holds that module's overrides of the shared settings below; none has any
+ * today.
  */
 const modules: Record<string, { testTimeout?: number }> = {
   component: {},
@@ -14,7 +14,7 @@ const modules: Record<string, { testTimeout?: number }> = {
   data: {},
   effects: {},
   entity: {},
-  'eslint-plugin': { testTimeout: 8000 },
+  'eslint-plugin': {},
   operators: {},
   'router-store': {},
   schematics: {},

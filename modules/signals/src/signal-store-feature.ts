@@ -211,7 +211,7 @@ export function signalStoreFeature<
   F3 extends SignalStoreFeatureResult,
   F4 extends SignalStoreFeatureResult,
 >(
-  Input: Input,
+  input: Input,
   f1: SignalStoreFeature<EmptyFeatureResult & NoInfer<Input>, F1>,
   f2: SignalStoreFeature<NoInfer<Input> & F1, F2>,
   f3: SignalStoreFeature<NoInfer<Input> & F1 & F2, F3>,

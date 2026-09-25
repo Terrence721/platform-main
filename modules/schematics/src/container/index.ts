@@ -95,19 +95,22 @@ function addStateToComponent(options: Partial<ContainerOptions>) {
       (stm) => stm.kind === ts.SyntaxKind.ClassDeclaration
     ) as ts.ClassDeclaration;
     const membersPos = componentClass.members.pos;
-    // The empty class body's line terminator can be `\r\n` or `\n` depending
-    // on how the underlying @schematics/angular template got materialized -
-    // removing a hardcoded 1-character '\n' would only strip the `\r` half
-    // of a `\r\n` pair, leaving a stray `\n` that shows up as an extra blank
-    // line in the generated class body.
-    const lineEnding = source.getFullText().startsWith('\r\n', membersPos)
-      ? '\r\n'
-      : '\n';
+    // The class was just generated, so everything between its braces is the
+    // empty body. How many line terminators @schematics/angular puts there has
+    // changed between versions (`{\n\n}` before 22.2, `{\n}` from 22.2), and
+    // each one can be `\r\n` or `\n` depending on how the template got
+    // materialized. Replacing the whole body, rather than removing a fixed
+    // number of characters from it, always leaves the constructor on its own
+    // line with the closing brace on the next one.
+    const emptyBody = source
+      .getFullText()
+      .slice(membersPos, componentClass.end - 1);
+    const lineEnding = emptyBody.includes('\r\n') ? '\r\n' : '\n';
     const constructorUpdate = new ReplaceChange(
       componentPath,
       membersPos,
-      lineEnding,
-      `\n  constructor(private store: Store) {}`
+      emptyBody,
+      `\n  constructor(private store: Store) {}${lineEnding}`
     );
 
     const changes = [storeImport, stateImport, constructorUpdate];

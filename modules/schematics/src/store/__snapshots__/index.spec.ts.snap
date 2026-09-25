@@ -3,7 +3,6 @@
 exports[`Store Schematic > should add a feature key if not root 1`] = `
 "import { NgModule, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
-
 import { App } from './app';
 import { StoreModule } from '@ngrx/store';
 import * as fromFoo from './reducers';
@@ -68,7 +67,6 @@ import { StoreDevtoolsModule } from '@ngrx/store-devtools';
 exports[`Store Schematic > should create the initial store setup 1`] = `
 "import { NgModule, provideBrowserGlobalErrorListeners, isDevMode } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
-
 import { App } from './app';
 import { StoreModule } from '@ngrx/store';
 import { reducers, metaReducers } from './reducers';
@@ -119,7 +117,6 @@ export const metaReducers: MetaReducer<State>[] = isDevMode() ? [] : [];
 exports[`Store Schematic > should import a feature a specified module 1`] = `
 "import { NgModule, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
-
 import { App } from './app';
 import { StoreModule } from '@ngrx/store';
 import * as fromFoo from './reducers';
@@ -169,7 +166,6 @@ export const metaReducers: MetaReducer<State>[] = isDevMode() ? [] : [];
 exports[`Store Schematic > should import into a specified module 1`] = `
 "import { NgModule, provideBrowserGlobalErrorListeners, isDevMode } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
-
 import { App } from './app';
 import { StoreModule } from '@ngrx/store';
 import { reducers, metaReducers } from './reducers';
@@ -220,7 +216,6 @@ export const metaReducers: MetaReducer<State>[] = isDevMode() ? [] : [];
 exports[`Store Schematic > should not add a feature key if root 1`] = `
 "import { NgModule, provideBrowserGlobalErrorListeners, isDevMode } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
-
 import { App } from './app';
 import { StoreModule } from '@ngrx/store';
 import { reducers, metaReducers } from './reducers';
@@ -271,7 +266,6 @@ export const metaReducers: MetaReducer<State>[] = isDevMode() ? [] : [];
 exports[`Store Schematic > should not skip the initial store setup files if the minimal flag is provided with a feature 1`] = `
 "import { NgModule, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
-
 import { App } from './app';
 import { StoreModule } from '@ngrx/store';
 import * as fromFoo from './reducers';
@@ -321,7 +315,6 @@ export const metaReducers: MetaReducer<State>[] = isDevMode() ? [] : [];
 exports[`Store Schematic > should skip the initial store setup files if the minimal flag is provided 1`] = `
 "import { NgModule, provideBrowserGlobalErrorListeners, isDevMode } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
-
 import { App } from './app';
 import { StoreModule } from '@ngrx/store';
 import { StoreDevtoolsModule } from '@ngrx/store-devtools';
@@ -347,7 +340,6 @@ export class AppModule { }
 exports[`Store Schematic > should support a custom feature state interface name 1`] = `
 "import { NgModule, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
-
 import { App } from './app';
 import { StoreModule } from '@ngrx/store';
 import * as fromFeature from './reducers';
@@ -397,7 +389,6 @@ export const metaReducers: MetaReducer<FeatureState>[] = isDevMode() ? [] : [];
 exports[`Store Schematic > should support a custom root state interface name 1`] = `
 "import { NgModule, provideBrowserGlobalErrorListeners, isDevMode } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
-
 import { App } from './app';
 import { StoreModule } from '@ngrx/store';
 import { reducers, metaReducers } from './reducers';
@@ -448,7 +439,6 @@ export const metaReducers: MetaReducer<AppState>[] = isDevMode() ? [] : [];
 exports[`Store Schematic > should support a default feature state interface name 1`] = `
 "import { NgModule, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
-
 import { App } from './app';
 import { StoreModule } from '@ngrx/store';
 import * as fromFeature from './reducers';
@@ -498,7 +488,6 @@ export const metaReducers: MetaReducer<State>[] = isDevMode() ? [] : [];
 exports[`Store Schematic > should support a default root state interface name 1`] = `
 "import { NgModule, provideBrowserGlobalErrorListeners, isDevMode } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
-
 import { App } from './app';
 import { StoreModule } from '@ngrx/store';
 import { reducers, metaReducers } from './reducers';

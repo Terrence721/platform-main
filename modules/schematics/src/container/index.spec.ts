@@ -46,6 +46,23 @@ describe('Container Schematic', () => {
     expect(content).toMatchSnapshot();
   });
 
+  it('should put the constructor on its own line, with the closing brace on the next', async () => {
+    const options = { ...defaultOptions, state: undefined };
+    const tree = await schematicRunner.runSchematic(
+      'container',
+      options,
+      appTree
+    );
+    const content = tree.readContent(`${projectPath}/src/app/foo/foo.ts`);
+    // Deliberately not a snapshot: this has to hold however @schematics/angular
+    // lays out the empty class it generates (one or two line terminators
+    // between the braces), and `vitest -u` must not be able to bless a
+    // `constructor(...) {}}` result.
+    expect(content).toMatch(
+      /\{\n {2}constructor\(private store: Store\) \{\}\r?\n\}/
+    );
+  });
+
   it('should remove .ts from the state path if provided', async () => {
     const options = { ...defaultOptions, state: 'reducers/foo.ts' };
     appTree.create(`${projectPath}/src/app/reducers/foo.ts`, '');

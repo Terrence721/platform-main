@@ -28,7 +28,7 @@ describe('EffectsModule()', () => {
       expectSnippet(`
         EffectsModule.forRoot();
       `).toSucceed();
-    }, 10_000);
+    });
 
     it('should compile with a single effects class', () => {
       expectSnippet(`
@@ -170,4 +170,4 @@ describe('EffectsModule()', () => {
       `).toFail();
     });
   });
-}, 8_000);
+});

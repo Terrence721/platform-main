@@ -1197,4 +1197,4 @@ describe('signalStore', () => {
       `).toFail();
     });
   });
-}, 8_000);
+});

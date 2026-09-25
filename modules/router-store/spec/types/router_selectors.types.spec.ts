@@ -126,7 +126,7 @@ describe('getRouterSelectors', () => {
       'MemoizedSelector<State, string | undefined, (s1: string | undefined) => string | undefined>'
     );
   });
-}, 10_000);
+});
 
 describe('RouterStateSelectors', () => {
   const expectSnippet = expecter(
@@ -155,4 +155,4 @@ describe('RouterStateSelectors', () => {
       >;
     `).toInfer('result', 'true');
   });
-}, 8_000);
+});

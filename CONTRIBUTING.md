@@ -29,6 +29,16 @@ yarn vitest modules/schematics/src/effect/index.spec.ts --watch
 yarn vitest <relative path> --watch
 ```
 
+### Testing the repo scripts
+
+```shell
+yarn test:scripts
+```
+
+## Dependency ranges
+
+Each module declares its own dependency and peer-dependency ranges. `yarn check:versions` (also run in CI) checks that a package declared by several modules uses the same range in all of them, and that the version this repo develops against (the root `package.json`) falls inside every module's range. The few older deviations are listed, and pinned, in `scripts/check-version-ranges.ts`; remove an entry once its module is aligned.
+
 ## Submitting pull requests
 
 Please follow these steps to simplify review:

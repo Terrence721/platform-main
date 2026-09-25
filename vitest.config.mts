@@ -24,19 +24,27 @@ const modules: Record<string, { testTimeout?: number }> = {
   'store-devtools': {},
 };
 
+/**
+ * The repo's own tooling scripts (scripts/) are tested as one more project. It
+ * is not an Nx project, so `nx test` never runs it; CI runs it with
+ * `yarn test:scripts`.
+ */
+const scriptsProject = 'scripts';
+
 const workspaceRoot = fileURLToPath(new URL('.', import.meta.url));
 
 /**
- * Which module to run, when the run is scoped to one:
+ * Which project to run, when the run is scoped to one:
  * - Nx sets NX_TASK_TARGET_PROJECT for every task, so `nx test <module>` runs
  *   only that module even though the executor starts Vitest from the
  *   workspace root.
  * - Otherwise, a run started from inside a module folder
- *   (`cd modules/signals && npx vitest run`) is scoped to that module.
+ *   (`cd modules/signals && npx vitest run`) is scoped to that module, and
+ *   one started from inside scripts/ to the scripts project.
  * A run from the workspace root (`yarn test:report`, the VS Code Testing
- * panel) covers every module.
+ * panel) covers every module and the scripts.
  */
-function scopedModule(): string | undefined {
+function scopedProject(): string | undefined {
   const fromNx = process.env['NX_TASK_TARGET_PROJECT'];
   if (fromNx && fromNx in modules) return fromNx;
 
@@ -45,6 +53,8 @@ function scopedModule(): string | undefined {
     normalize(workspaceRoot),
     ''
   );
+  if (/^scripts(\/|$)/.test(relative)) return scriptsProject;
+
   const match = /^modules\/([^/]+)/.exec(relative);
   return match && match[1] in modules ? match[1] : undefined;
 }
@@ -55,7 +65,7 @@ function scopedModule(): string | undefined {
  * per-module files (setup file, tsconfig.spec.json) resolve as before.
  */
 export default defineConfig(({ mode }) => {
-  const only = scopedModule();
+  const only = scopedProject();
 
   return {
     plugins: [
@@ -126,13 +136,26 @@ export default defineConfig(({ mode }) => {
             // rather than decoding the html reporter's flatted-serialized data.
             ['json', { outputFile: './test-results/results.json' }],
           ],
-      projects: Object.entries(modules)
-        .filter(([name]) => !only || name === only)
-        .map(([name, overrides]) => ({
-          extends: true,
-          root: fileURLToPath(new URL(`./modules/${name}`, import.meta.url)),
-          test: { name, ...overrides },
-        })),
+      projects: [
+        ...Object.entries(modules)
+          .filter(([name]) => !only || name === only)
+          .map(([name, overrides]) => ({
+            extends: true,
+            root: fileURLToPath(new URL(`./modules/${name}`, import.meta.url)),
+            test: { name, ...overrides },
+          })),
+        ...(!only || only === scriptsProject
+          ? [
+              {
+                // Deliberately not `extends: true`: plain Node tooling needs none
+                // of the shared Angular plugins, setup file or type tests, and an
+                // inherited array such as setupFiles cannot be emptied again.
+                root: fileURLToPath(new URL('./scripts', import.meta.url)),
+                test: { name: scriptsProject, environment: 'node' },
+              },
+            ]
+          : []),
+      ],
     },
   };
 });

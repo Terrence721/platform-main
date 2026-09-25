@@ -28,6 +28,17 @@ import {
 import { createTestModule } from './utils';
 
 describe('integration spec', () => {
+  // zone.js can report a rejection as unhandled although it is handled a
+  // microtask later (see the canLoad test below). Its switch for that is
+  // scoped to that test and reset after every test.
+  const zone = (globalThis as any).Zone;
+  const ignoreUncaughtErrors = zone.__symbol__(
+    'ignoreConsoleErrorUncaughtError'
+  );
+  afterEach(() => {
+    zone[ignoreUncaughtErrors] = false;
+  });
+
   it('should work', () =>
     new Promise<void>((done) => {
       const reducer = (state = '', action: RouterAction<any>) => {
@@ -636,6 +647,13 @@ describe('integration spec', () => {
 
   it('should support cancellation of initial navigation when canLoad guard rejects', () =>
     new Promise<void>((done) => {
+      // Angular's router awaits `firstValueFrom(runCanLoadGuards(...))`. The
+      // guard's rejection reaches that promise before the native `await` has
+      // attached its handler, and zone.js checks for unhandled rejections at
+      // the end of that same microtask turn, so it logs "boom" although the
+      // navigation promise below does receive the rejection.
+      zone[ignoreUncaughtErrors] = true;
+
       const reducer = (state: any, action: RouterAction<any>) => {
         const r = routerReducer(state, action);
         return r && r.state

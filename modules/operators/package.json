@@ -20,7 +20,7 @@
   },
   "homepage": "https://github.com/Terrence721/platform-main#readme",
   "peerDependencies": {
-    "rxjs": "^6.5.3 || ^7.4.0",
+    "rxjs": "^6.5.3 || ^7.5.0",
     "@ngrx/schematics": "0.0.0"
   },
   "schematics": "./collection.json",

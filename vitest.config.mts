@@ -160,7 +160,7 @@ export default defineConfig(({ mode }) => {
         ? ['default']
         : [
             'default',
-            ['html', { outputFile: './test-results/index.html' }],
+            ['html', { outputDir: './test-results' }],
             // Plain JSON alongside the interactive report - scripts/generate-
             // test-summary.ts reads this to render the pie-chart summary page,
             // rather than decoding the html reporter's flatted-serialized data.
@@ -177,9 +177,12 @@ export default defineConfig(({ mode }) => {
         ...(!only || only === scriptsProject
           ? [
               {
-                // Deliberately not `extends: true`: plain Node tooling needs none
-                // of the shared Angular plugins, setup file or type tests, and an
-                // inherited array such as setupFiles cannot be emptied again.
+                // Deliberately not extending the shared config: plain Node tooling
+                // needs none of the Angular plugins, the setup file or the type
+                // tests, and an inherited array such as setupFiles cannot be
+                // emptied again. Vitest 5 made inheriting the default for inline
+                // projects, so opting out has to be explicit.
+                extends: false,
                 root: fileURLToPath(new URL('./scripts', import.meta.url)),
                 test: { name: scriptsProject, environment: 'node' },
               },

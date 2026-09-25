@@ -455,11 +455,14 @@ class Effect {
 }`),
 ];
 
-ruleTester(rule.meta.docs?.requiresTypeChecking).run(
-  path.parse(__filename).name,
-  rule,
-  {
-    valid: [...validConstructor(), ...validInject()],
-    invalid: [...invalidConstructor(), ...invalidInject()],
-  }
-);
+// Static describe so Vitest's typecheck mode finds a suite (see spec/utils/rule-tester.ts).
+describe('rule', () => {
+  ruleTester(rule.meta.docs?.requiresTypeChecking).run(
+    path.parse(__filename).name,
+    rule,
+    {
+      valid: [...validConstructor(), ...validInject()],
+      invalid: [...invalidConstructor(), ...invalidInject()],
+    }
+  );
+});

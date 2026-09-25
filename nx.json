@@ -54,6 +54,9 @@
     },
     "test": {
       "inputs": ["default", "^production", "{workspaceRoot}/vitest.config.mts"],
+      "options": {
+        "configFile": "../../vitest.config.mts"
+      },
       "cache": true
     },
     "lint": {

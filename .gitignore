@@ -107,3 +107,12 @@ projects/www/src/app/examples/**/*.txt
 .claude/worktrees
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
+
+# Yarn Berry
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions

@@ -46,12 +46,20 @@ describe('createFeature()', () => {
     });
 
     it('should return undefined when feature state is not defined', () => {
+      const warnSpy = vi
+        .spyOn(console, 'warn')
+        .mockImplementation(() => undefined);
       const { selectX } = createFeature({
         name: 'foo',
         reducer: createReducer({ x: 'y' }),
       });
 
       expect(selectX({})).toBe(undefined);
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('The feature name "foo" does not exist')
+      );
+
+      warnSpy.mockRestore();
     });
 
     it('should not create when feature state is a primitive value', () => {

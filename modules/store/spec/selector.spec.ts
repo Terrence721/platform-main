@@ -498,7 +498,7 @@ describe('Selectors', () => {
 
     beforeEach(() => {
       featureSelector = createFeatureSelector<FeatureValue>(featureName);
-      warnSpy = vi.spyOn(console, 'warn');
+      warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     });
 
     afterEach(() => warnSpy.mockReset());

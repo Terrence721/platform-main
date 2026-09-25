@@ -2,7 +2,10 @@
 
 ## Setup
 
+This repo uses [Yarn](https://yarnpkg.com) 4. [Corepack](https://nodejs.org/api/corepack.html) provisions the exact version pinned in the `packageManager` field of `package.json`, so enable it once and then install:
+
 ```shell
+corepack enable
 yarn install
 ```
 

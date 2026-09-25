@@ -80,6 +80,7 @@ All 13 modules are added. A per-module code review audit is now in progress (`st
 ## 🖥 Getting Started
 
 ```shell
+corepack enable    # once: provisions the Yarn version pinned in package.json
 yarn install
 yarn nx report
 ```

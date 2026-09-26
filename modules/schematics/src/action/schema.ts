@@ -1,16 +1,16 @@
 export interface Schema {
   /**
-   * The name of the component.
+   * The name of the action.
    */
   name: string;
 
   /**
-   * The prefix for the actions.
+   * The prefix for the actions. Defaults to `load`.
    */
-  prefix: string;
+  prefix?: string;
 
   /**
-   * The path to create the component.
+   * The path to create the action file.
    */
   path?: string;
 
@@ -20,9 +20,9 @@ export interface Schema {
   project?: string;
 
   /**
-   * Flag to indicate if a dir is created.
+   * When true (the default), creates the file in the path directly;
+   * when false, creates it in a folder named after the action.
    */
-
   flat?: boolean;
 
   /**

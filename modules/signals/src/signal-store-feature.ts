@@ -11,9 +11,69 @@ type PrettifyFeatureResult<Result extends SignalStoreFeatureResult> = Prettify<{
   methods: Prettify<Result['methods']>;
 }>;
 
+/**
+ * @description
+ *
+ * Combines multiple store features into a single feature.
+ *
+ * @usageNotes
+ *
+ * ```ts
+ * import {
+ *   patchState,
+ *   signalStore,
+ *   signalStoreFeature,
+ *   withMethods,
+ *   withState,
+ * } from '@ngrx/signals';
+ *
+ * export function withCounter() {
+ *   return signalStoreFeature(
+ *     withState({ count: 0 }),
+ *     withMethods((store) => ({
+ *       increment(): void {
+ *         patchState(store, ({ count }) => ({ count: count + 1 }));
+ *       },
+ *     }))
+ *   );
+ * }
+ *
+ * export const CounterStore = signalStore(withCounter());
+ * ```
+ */
 export function signalStoreFeature<F1 extends SignalStoreFeatureResult>(
   f1: SignalStoreFeature<EmptyFeatureResult, F1>
 ): SignalStoreFeature<EmptyFeatureResult, F1>;
+/**
+ * @description
+ *
+ * Combines multiple store features into a single feature.
+ *
+ * @usageNotes
+ *
+ * ```ts
+ * import {
+ *   patchState,
+ *   signalStore,
+ *   signalStoreFeature,
+ *   withMethods,
+ *   withState,
+ * } from '@ngrx/signals';
+ *
+ * export function withCounter() {
+ *   return signalStoreFeature(
+ *     withState({ count: 0 }),
+ *     withMethods((store) => ({
+ *       increment(): void {
+ *         patchState(store, ({ count }) => ({ count: count + 1 }));
+ *       },
+ *     }))
+ *   );
+ * }
+ *
+ * export const CounterStore = signalStore(withCounter());
+ * ```
+ */
 export function signalStoreFeature<
   F1 extends SignalStoreFeatureResult,
   F2 extends SignalStoreFeatureResult,
@@ -21,6 +81,36 @@ export function signalStoreFeature<
   f1: SignalStoreFeature<EmptyFeatureResult, F1>,
   f2: SignalStoreFeature<{} & F1, F2>
 ): SignalStoreFeature<EmptyFeatureResult, PrettifyFeatureResult<F1 & F2>>;
+/**
+ * @description
+ *
+ * Combines multiple store features into a single feature.
+ *
+ * @usageNotes
+ *
+ * ```ts
+ * import {
+ *   patchState,
+ *   signalStore,
+ *   signalStoreFeature,
+ *   withMethods,
+ *   withState,
+ * } from '@ngrx/signals';
+ *
+ * export function withCounter() {
+ *   return signalStoreFeature(
+ *     withState({ count: 0 }),
+ *     withMethods((store) => ({
+ *       increment(): void {
+ *         patchState(store, ({ count }) => ({ count: count + 1 }));
+ *       },
+ *     }))
+ *   );
+ * }
+ *
+ * export const CounterStore = signalStore(withCounter());
+ * ```
+ */
 export function signalStoreFeature<
   F1 extends SignalStoreFeatureResult,
   F2 extends SignalStoreFeatureResult,
@@ -30,6 +120,36 @@ export function signalStoreFeature<
   f2: SignalStoreFeature<{} & F1, F2>,
   f3: SignalStoreFeature<F1 & F2, F3>
 ): SignalStoreFeature<EmptyFeatureResult, PrettifyFeatureResult<F1 & F2 & F3>>;
+/**
+ * @description
+ *
+ * Combines multiple store features into a single feature.
+ *
+ * @usageNotes
+ *
+ * ```ts
+ * import {
+ *   patchState,
+ *   signalStore,
+ *   signalStoreFeature,
+ *   withMethods,
+ *   withState,
+ * } from '@ngrx/signals';
+ *
+ * export function withCounter() {
+ *   return signalStoreFeature(
+ *     withState({ count: 0 }),
+ *     withMethods((store) => ({
+ *       increment(): void {
+ *         patchState(store, ({ count }) => ({ count: count + 1 }));
+ *       },
+ *     }))
+ *   );
+ * }
+ *
+ * export const CounterStore = signalStore(withCounter());
+ * ```
+ */
 export function signalStoreFeature<
   F1 extends SignalStoreFeatureResult,
   F2 extends SignalStoreFeatureResult,
@@ -44,6 +164,36 @@ export function signalStoreFeature<
   EmptyFeatureResult,
   PrettifyFeatureResult<F1 & F2 & F3 & F4>
 >;
+/**
+ * @description
+ *
+ * Combines multiple store features into a single feature.
+ *
+ * @usageNotes
+ *
+ * ```ts
+ * import {
+ *   patchState,
+ *   signalStore,
+ *   signalStoreFeature,
+ *   withMethods,
+ *   withState,
+ * } from '@ngrx/signals';
+ *
+ * export function withCounter() {
+ *   return signalStoreFeature(
+ *     withState({ count: 0 }),
+ *     withMethods((store) => ({
+ *       increment(): void {
+ *         patchState(store, ({ count }) => ({ count: count + 1 }));
+ *       },
+ *     }))
+ *   );
+ * }
+ *
+ * export const CounterStore = signalStore(withCounter());
+ * ```
+ */
 export function signalStoreFeature<
   F1 extends SignalStoreFeatureResult,
   F2 extends SignalStoreFeatureResult,
@@ -60,6 +210,36 @@ export function signalStoreFeature<
   EmptyFeatureResult,
   PrettifyFeatureResult<F1 & F2 & F3 & F4 & F5>
 >;
+/**
+ * @description
+ *
+ * Combines multiple store features into a single feature.
+ *
+ * @usageNotes
+ *
+ * ```ts
+ * import {
+ *   patchState,
+ *   signalStore,
+ *   signalStoreFeature,
+ *   withMethods,
+ *   withState,
+ * } from '@ngrx/signals';
+ *
+ * export function withCounter() {
+ *   return signalStoreFeature(
+ *     withState({ count: 0 }),
+ *     withMethods((store) => ({
+ *       increment(): void {
+ *         patchState(store, ({ count }) => ({ count: count + 1 }));
+ *       },
+ *     }))
+ *   );
+ * }
+ *
+ * export const CounterStore = signalStore(withCounter());
+ * ```
+ */
 export function signalStoreFeature<
   F1 extends SignalStoreFeatureResult,
   F2 extends SignalStoreFeatureResult,
@@ -78,6 +258,36 @@ export function signalStoreFeature<
   EmptyFeatureResult,
   PrettifyFeatureResult<F1 & F2 & F3 & F4 & F5 & F6>
 >;
+/**
+ * @description
+ *
+ * Combines multiple store features into a single feature.
+ *
+ * @usageNotes
+ *
+ * ```ts
+ * import {
+ *   patchState,
+ *   signalStore,
+ *   signalStoreFeature,
+ *   withMethods,
+ *   withState,
+ * } from '@ngrx/signals';
+ *
+ * export function withCounter() {
+ *   return signalStoreFeature(
+ *     withState({ count: 0 }),
+ *     withMethods((store) => ({
+ *       increment(): void {
+ *         patchState(store, ({ count }) => ({ count: count + 1 }));
+ *       },
+ *     }))
+ *   );
+ * }
+ *
+ * export const CounterStore = signalStore(withCounter());
+ * ```
+ */
 export function signalStoreFeature<
   F1 extends SignalStoreFeatureResult,
   F2 extends SignalStoreFeatureResult,
@@ -98,6 +308,36 @@ export function signalStoreFeature<
   EmptyFeatureResult,
   PrettifyFeatureResult<F1 & F2 & F3 & F4 & F5 & F6 & F7>
 >;
+/**
+ * @description
+ *
+ * Combines multiple store features into a single feature.
+ *
+ * @usageNotes
+ *
+ * ```ts
+ * import {
+ *   patchState,
+ *   signalStore,
+ *   signalStoreFeature,
+ *   withMethods,
+ *   withState,
+ * } from '@ngrx/signals';
+ *
+ * export function withCounter() {
+ *   return signalStoreFeature(
+ *     withState({ count: 0 }),
+ *     withMethods((store) => ({
+ *       increment(): void {
+ *         patchState(store, ({ count }) => ({ count: count + 1 }));
+ *       },
+ *     }))
+ *   );
+ * }
+ *
+ * export const CounterStore = signalStore(withCounter());
+ * ```
+ */
 export function signalStoreFeature<
   F1 extends SignalStoreFeatureResult,
   F2 extends SignalStoreFeatureResult,
@@ -120,6 +360,36 @@ export function signalStoreFeature<
   EmptyFeatureResult,
   PrettifyFeatureResult<F1 & F2 & F3 & F4 & F5 & F6 & F7 & F8>
 >;
+/**
+ * @description
+ *
+ * Combines multiple store features into a single feature.
+ *
+ * @usageNotes
+ *
+ * ```ts
+ * import {
+ *   patchState,
+ *   signalStore,
+ *   signalStoreFeature,
+ *   withMethods,
+ *   withState,
+ * } from '@ngrx/signals';
+ *
+ * export function withCounter() {
+ *   return signalStoreFeature(
+ *     withState({ count: 0 }),
+ *     withMethods((store) => ({
+ *       increment(): void {
+ *         patchState(store, ({ count }) => ({ count: count + 1 }));
+ *       },
+ *     }))
+ *   );
+ * }
+ *
+ * export const CounterStore = signalStore(withCounter());
+ * ```
+ */
 export function signalStoreFeature<
   F1 extends SignalStoreFeatureResult,
   F2 extends SignalStoreFeatureResult,
@@ -144,6 +414,36 @@ export function signalStoreFeature<
   EmptyFeatureResult,
   PrettifyFeatureResult<F1 & F2 & F3 & F4 & F5 & F6 & F7 & F8 & F9>
 >;
+/**
+ * @description
+ *
+ * Combines multiple store features into a single feature.
+ *
+ * @usageNotes
+ *
+ * ```ts
+ * import {
+ *   patchState,
+ *   signalStore,
+ *   signalStoreFeature,
+ *   withMethods,
+ *   withState,
+ * } from '@ngrx/signals';
+ *
+ * export function withCounter() {
+ *   return signalStoreFeature(
+ *     withState({ count: 0 }),
+ *     withMethods((store) => ({
+ *       increment(): void {
+ *         patchState(store, ({ count }) => ({ count: count + 1 }));
+ *       },
+ *     }))
+ *   );
+ * }
+ *
+ * export const CounterStore = signalStore(withCounter());
+ * ```
+ */
 export function signalStoreFeature<
   F1 extends SignalStoreFeatureResult,
   F2 extends SignalStoreFeatureResult,
@@ -171,6 +471,36 @@ export function signalStoreFeature<
   PrettifyFeatureResult<F1 & F2 & F3 & F4 & F5 & F6 & F7 & F8 & F9 & F10>
 >;
 
+/**
+ * @description
+ *
+ * Combines multiple store features into a single feature.
+ *
+ * @usageNotes
+ *
+ * ```ts
+ * import {
+ *   patchState,
+ *   signalStore,
+ *   signalStoreFeature,
+ *   withMethods,
+ *   withState,
+ * } from '@ngrx/signals';
+ *
+ * export function withCounter() {
+ *   return signalStoreFeature(
+ *     withState({ count: 0 }),
+ *     withMethods((store) => ({
+ *       increment(): void {
+ *         patchState(store, ({ count }) => ({ count: count + 1 }));
+ *       },
+ *     }))
+ *   );
+ * }
+ *
+ * export const CounterStore = signalStore(withCounter());
+ * ```
+ */
 export function signalStoreFeature<
   Input extends Partial<SignalStoreFeatureResult>,
   F1 extends SignalStoreFeatureResult,
@@ -178,6 +508,36 @@ export function signalStoreFeature<
   input: Input,
   f1: SignalStoreFeature<EmptyFeatureResult & NoInfer<Input>, F1>
 ): SignalStoreFeature<Prettify<EmptyFeatureResult & Input>, F1>;
+/**
+ * @description
+ *
+ * Combines multiple store features into a single feature.
+ *
+ * @usageNotes
+ *
+ * ```ts
+ * import {
+ *   patchState,
+ *   signalStore,
+ *   signalStoreFeature,
+ *   withMethods,
+ *   withState,
+ * } from '@ngrx/signals';
+ *
+ * export function withCounter() {
+ *   return signalStoreFeature(
+ *     withState({ count: 0 }),
+ *     withMethods((store) => ({
+ *       increment(): void {
+ *         patchState(store, ({ count }) => ({ count: count + 1 }));
+ *       },
+ *     }))
+ *   );
+ * }
+ *
+ * export const CounterStore = signalStore(withCounter());
+ * ```
+ */
 export function signalStoreFeature<
   Input extends Partial<SignalStoreFeatureResult>,
   F1 extends SignalStoreFeatureResult,
@@ -190,6 +550,36 @@ export function signalStoreFeature<
   Prettify<EmptyFeatureResult & Input>,
   PrettifyFeatureResult<F1 & F2>
 >;
+/**
+ * @description
+ *
+ * Combines multiple store features into a single feature.
+ *
+ * @usageNotes
+ *
+ * ```ts
+ * import {
+ *   patchState,
+ *   signalStore,
+ *   signalStoreFeature,
+ *   withMethods,
+ *   withState,
+ * } from '@ngrx/signals';
+ *
+ * export function withCounter() {
+ *   return signalStoreFeature(
+ *     withState({ count: 0 }),
+ *     withMethods((store) => ({
+ *       increment(): void {
+ *         patchState(store, ({ count }) => ({ count: count + 1 }));
+ *       },
+ *     }))
+ *   );
+ * }
+ *
+ * export const CounterStore = signalStore(withCounter());
+ * ```
+ */
 export function signalStoreFeature<
   Input extends Partial<SignalStoreFeatureResult>,
   F1 extends SignalStoreFeatureResult,
@@ -204,6 +594,36 @@ export function signalStoreFeature<
   Prettify<EmptyFeatureResult & Input>,
   PrettifyFeatureResult<F1 & F2 & F3>
 >;
+/**
+ * @description
+ *
+ * Combines multiple store features into a single feature.
+ *
+ * @usageNotes
+ *
+ * ```ts
+ * import {
+ *   patchState,
+ *   signalStore,
+ *   signalStoreFeature,
+ *   withMethods,
+ *   withState,
+ * } from '@ngrx/signals';
+ *
+ * export function withCounter() {
+ *   return signalStoreFeature(
+ *     withState({ count: 0 }),
+ *     withMethods((store) => ({
+ *       increment(): void {
+ *         patchState(store, ({ count }) => ({ count: count + 1 }));
+ *       },
+ *     }))
+ *   );
+ * }
+ *
+ * export const CounterStore = signalStore(withCounter());
+ * ```
+ */
 export function signalStoreFeature<
   Input extends Partial<SignalStoreFeatureResult>,
   F1 extends SignalStoreFeatureResult,
@@ -220,6 +640,36 @@ export function signalStoreFeature<
   Prettify<EmptyFeatureResult & Input>,
   PrettifyFeatureResult<F1 & F2 & F3 & F4>
 >;
+/**
+ * @description
+ *
+ * Combines multiple store features into a single feature.
+ *
+ * @usageNotes
+ *
+ * ```ts
+ * import {
+ *   patchState,
+ *   signalStore,
+ *   signalStoreFeature,
+ *   withMethods,
+ *   withState,
+ * } from '@ngrx/signals';
+ *
+ * export function withCounter() {
+ *   return signalStoreFeature(
+ *     withState({ count: 0 }),
+ *     withMethods((store) => ({
+ *       increment(): void {
+ *         patchState(store, ({ count }) => ({ count: count + 1 }));
+ *       },
+ *     }))
+ *   );
+ * }
+ *
+ * export const CounterStore = signalStore(withCounter());
+ * ```
+ */
 export function signalStoreFeature<
   Input extends Partial<SignalStoreFeatureResult>,
   F1 extends SignalStoreFeatureResult,
@@ -238,6 +688,36 @@ export function signalStoreFeature<
   Prettify<EmptyFeatureResult & Input>,
   PrettifyFeatureResult<F1 & F2 & F3 & F4 & F5>
 >;
+/**
+ * @description
+ *
+ * Combines multiple store features into a single feature.
+ *
+ * @usageNotes
+ *
+ * ```ts
+ * import {
+ *   patchState,
+ *   signalStore,
+ *   signalStoreFeature,
+ *   withMethods,
+ *   withState,
+ * } from '@ngrx/signals';
+ *
+ * export function withCounter() {
+ *   return signalStoreFeature(
+ *     withState({ count: 0 }),
+ *     withMethods((store) => ({
+ *       increment(): void {
+ *         patchState(store, ({ count }) => ({ count: count + 1 }));
+ *       },
+ *     }))
+ *   );
+ * }
+ *
+ * export const CounterStore = signalStore(withCounter());
+ * ```
+ */
 export function signalStoreFeature<
   Input extends Partial<SignalStoreFeatureResult>,
   F1 extends SignalStoreFeatureResult,
@@ -258,6 +738,36 @@ export function signalStoreFeature<
   Prettify<EmptyFeatureResult & Input>,
   PrettifyFeatureResult<F1 & F2 & F3 & F4 & F5 & F6>
 >;
+/**
+ * @description
+ *
+ * Combines multiple store features into a single feature.
+ *
+ * @usageNotes
+ *
+ * ```ts
+ * import {
+ *   patchState,
+ *   signalStore,
+ *   signalStoreFeature,
+ *   withMethods,
+ *   withState,
+ * } from '@ngrx/signals';
+ *
+ * export function withCounter() {
+ *   return signalStoreFeature(
+ *     withState({ count: 0 }),
+ *     withMethods((store) => ({
+ *       increment(): void {
+ *         patchState(store, ({ count }) => ({ count: count + 1 }));
+ *       },
+ *     }))
+ *   );
+ * }
+ *
+ * export const CounterStore = signalStore(withCounter());
+ * ```
+ */
 export function signalStoreFeature<
   Input extends Partial<SignalStoreFeatureResult>,
   F1 extends SignalStoreFeatureResult,
@@ -280,6 +790,36 @@ export function signalStoreFeature<
   Prettify<EmptyFeatureResult & Input>,
   PrettifyFeatureResult<F1 & F2 & F3 & F4 & F5 & F6 & F7>
 >;
+/**
+ * @description
+ *
+ * Combines multiple store features into a single feature.
+ *
+ * @usageNotes
+ *
+ * ```ts
+ * import {
+ *   patchState,
+ *   signalStore,
+ *   signalStoreFeature,
+ *   withMethods,
+ *   withState,
+ * } from '@ngrx/signals';
+ *
+ * export function withCounter() {
+ *   return signalStoreFeature(
+ *     withState({ count: 0 }),
+ *     withMethods((store) => ({
+ *       increment(): void {
+ *         patchState(store, ({ count }) => ({ count: count + 1 }));
+ *       },
+ *     }))
+ *   );
+ * }
+ *
+ * export const CounterStore = signalStore(withCounter());
+ * ```
+ */
 export function signalStoreFeature<
   Input extends Partial<SignalStoreFeatureResult>,
   F1 extends SignalStoreFeatureResult,
@@ -304,6 +844,36 @@ export function signalStoreFeature<
   Prettify<EmptyFeatureResult & Input>,
   PrettifyFeatureResult<F1 & F2 & F3 & F4 & F5 & F6 & F7 & F8>
 >;
+/**
+ * @description
+ *
+ * Combines multiple store features into a single feature.
+ *
+ * @usageNotes
+ *
+ * ```ts
+ * import {
+ *   patchState,
+ *   signalStore,
+ *   signalStoreFeature,
+ *   withMethods,
+ *   withState,
+ * } from '@ngrx/signals';
+ *
+ * export function withCounter() {
+ *   return signalStoreFeature(
+ *     withState({ count: 0 }),
+ *     withMethods((store) => ({
+ *       increment(): void {
+ *         patchState(store, ({ count }) => ({ count: count + 1 }));
+ *       },
+ *     }))
+ *   );
+ * }
+ *
+ * export const CounterStore = signalStore(withCounter());
+ * ```
+ */
 export function signalStoreFeature<
   Input extends Partial<SignalStoreFeatureResult>,
   F1 extends SignalStoreFeatureResult,
@@ -333,6 +903,36 @@ export function signalStoreFeature<
   Prettify<EmptyFeatureResult & Input>,
   PrettifyFeatureResult<F1 & F2 & F3 & F4 & F5 & F6 & F7 & F8 & F9>
 >;
+/**
+ * @description
+ *
+ * Combines multiple store features into a single feature.
+ *
+ * @usageNotes
+ *
+ * ```ts
+ * import {
+ *   patchState,
+ *   signalStore,
+ *   signalStoreFeature,
+ *   withMethods,
+ *   withState,
+ * } from '@ngrx/signals';
+ *
+ * export function withCounter() {
+ *   return signalStoreFeature(
+ *     withState({ count: 0 }),
+ *     withMethods((store) => ({
+ *       increment(): void {
+ *         patchState(store, ({ count }) => ({ count: count + 1 }));
+ *       },
+ *     }))
+ *   );
+ * }
+ *
+ * export const CounterStore = signalStore(withCounter());
+ * ```
+ */
 export function signalStoreFeature<
   Input extends Partial<SignalStoreFeatureResult>,
   F1 extends SignalStoreFeatureResult,
@@ -367,36 +967,6 @@ export function signalStoreFeature<
   Prettify<EmptyFeatureResult & Input>,
   PrettifyFeatureResult<F1 & F2 & F3 & F4 & F5 & F6 & F7 & F8 & F9 & F10>
 >;
-/**
- * @description
- *
- * Combines multiple store features into a single feature.
- *
- * @usageNotes
- *
- * ```ts
- * import {
- *   patchState,
- *   signalStore,
- *   signalStoreFeature,
- *   withMethods,
- *   withState,
- * } from '@ngrx/signals';
- *
- * export function withCounter() {
- *   return signalStoreFeature(
- *     withState({ count: 0 }),
- *     withMethods((store) => ({
- *       increment(): void {
- *         patchState(store, ({ count }) => ({ count: count + 1 }));
- *       },
- *     }))
- *   );
- * }
- *
- * export const CounterStore = signalStore(withCounter());
- * ```
- */
 export function signalStoreFeature(
   ...args:
     | [Partial<SignalStoreFeatureResult>, ...SignalStoreFeature[]]

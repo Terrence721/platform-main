@@ -57,6 +57,21 @@ describe('signalStore', () => {
       expect(store1.foo()).toBe('bar');
     });
 
+    it('creates a store that is provided in platform when providedIn option is platform', () => {
+      const Store = signalStore(
+        { providedIn: 'platform' },
+        withState({ foo: 'bar' })
+      );
+      const store1 = TestBed.inject(Store);
+
+      // Only the platform injector outlives the testing module.
+      TestBed.resetTestingModule();
+      const store2 = TestBed.inject(Store);
+
+      expect(store2).toBe(store1);
+      expect(store1.foo()).toBe('bar');
+    });
+
     it('creates a store with state source as Record holding slices as signals by default', () => {
       const Store = signalStore(withState({ foo: 'bar' }));
       const store = new Store();
@@ -180,7 +195,7 @@ describe('signalStore', () => {
       );
       const store = new Store();
 
-      expect(store.x!()).toBe(10);
+      expect(store.x?.()).toBe(10);
       expect(store.y).toBe(undefined);
 
       patchState(store, { y: { z: 100 } });

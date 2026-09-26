@@ -3,6 +3,7 @@ import {
   effect,
   EnvironmentInjector,
   Injectable,
+  Injector,
   signal,
 } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
@@ -314,6 +315,23 @@ describe('StateSource', () => {
 
       expect(getState(store)).toEqual({});
     });
+
+    it('reads a state with many slices in linear time', () => {
+      const slices = Object.fromEntries(
+        Array.from({ length: 2_000 }, (_, index) => [`slice${index}`, index])
+      );
+      const state = signalState(slices);
+
+      const start = performance.now();
+      const result = getState(state);
+      const duration = performance.now() - start;
+
+      expect(Object.keys(result)).toHaveLength(2_000);
+      expect(result['slice1999']).toBe(1999);
+      // About 1ms when linear and about 1s when every slice copies the whole
+      // accumulator; the generous limit only has to tell those two apart.
+      expect(duration).toBeLessThan(250);
+    });
   });
 
   describe('watchState', () => {
@@ -374,6 +392,71 @@ describe('StateSource', () => {
         expect(stateHistory).toEqual([0, 1, 2]);
       });
 
+      it('does not run a watcher that another watcher destroyed in the same notification', () => {
+        const state = signalState({ count: 0 });
+        const calls: string[] = [];
+        let destroySecond: () => void = () => undefined;
+
+        TestBed.runInInjectionContext(() => {
+          watchState(state, ({ count }) => {
+            calls.push(`first:${count}`);
+
+            if (count === 1) {
+              destroySecond();
+            }
+          });
+          destroySecond = watchState(state, ({ count }) =>
+            calls.push(`second:${count}`)
+          ).destroy;
+        });
+
+        patchState(state, { count: 1 });
+
+        expect(calls).toEqual(['first:0', 'second:0', 'first:1']);
+      });
+
+      it('keeps a function watching until every registration of it is destroyed', () => {
+        const state = signalState({ count: 0 });
+        const stateHistory: number[] = [];
+        const watcher = ({ count }: { count: number }) =>
+          stateHistory.push(count);
+
+        const { destroy } = TestBed.runInInjectionContext(() => {
+          watchState(state, watcher);
+
+          return watchState(state, watcher);
+        });
+        stateHistory.length = 0;
+
+        // Destroying one registration, even repeatedly, leaves the other one.
+        destroy();
+        destroy();
+        patchState(state, { count: 1 });
+
+        expect(stateHistory).toEqual([1]);
+      });
+
+      it('unregisters its injector destroy callback on manual destroy', () => {
+        const unregister = vi.fn();
+        const destroyRef = { onDestroy: vi.fn(() => unregister) };
+        const injector = { get: () => destroyRef } as unknown as Injector;
+
+        const { destroy } = watchState(
+          signalState({ count: 0 }),
+          () => undefined,
+          {
+            injector,
+          }
+        );
+
+        expect(destroyRef.onDestroy).toHaveBeenCalledTimes(1);
+        expect(unregister).not.toHaveBeenCalled();
+
+        destroy();
+
+        expect(unregister).toHaveBeenCalledTimes(1);
+      });
+
       it('stops watching on provided injector destroy', () => {
         const injector1 = createEnvironmentInjector(
           [],
@@ -410,7 +493,7 @@ describe('StateSource', () => {
       });
 
       it('throws an error when called out of injection context', () => {
-        expect(() => watchState(signalState({}), () => {})).toThrow(
+        expect(() => watchState(signalState({}), () => undefined)).toThrow(
           /NG0203: watchState\(\) can only be used within an injection context/
         );
       });

@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: September 26, 2026** (`schematics-core` module COMPLETE — 16/16 files; `signals` module in progress — 8/18 files)
+**Last Updated: September 26, 2026** (`schematics-core` module COMPLETE — 16/16 files; `signals` module in progress — 9/18 files)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -1284,6 +1284,32 @@ A cross-file finding, first recorded as an observation in the `signal-store-feat
 
 Verified: `yarn nx test signals`, `yarn nx lint signals`, `yarn nx run signals:build`, and `npx prettier --check` on the changed files.
 
+### [`state-source.ts`](https://github.com/Terrence721/platform-main/blob/61e1fdc8421ded83cba45489338afd2fc4c82530/modules/signals/src/state-source.ts)
+
+**medium · Correctness / Performance** — Fixed via [issue #404](https://github.com/Terrence721/platform-main/issues/404)
+
+248 lines: the `STATE_SOURCE` symbol and its `StateSource` / `WritableStateSource` types, `isWritableSignal` / `isWritableStateSource`, `patchState`, `getState`, `watchState` and the watcher registry behind them. It is `patchState`'s implementation and the last of the `signals` writable-signal callers flagged for extra scrutiny after `deep-signal.ts`, so every function was probed with a throwaway spec rather than only read.
+
+**Sound, verified:** `patchState` hands each updater the accumulating state, sets only the slices whose value changed (identity check), warns about unknown slices in dev mode only, handles symbol keys through `Reflect.ownKeys`, and reads the current state untracked, so calling it inside an effect does not subscribe the effect. The watcher registry is a `WeakMap` keyed by the `STATE_SOURCE` record, so it cannot keep a store alive.
+
+**Four real defects, fixed:**
+
+1. **`getState` is quadratic in the number of slices.** It built the result with `reduce` and an object spread per slice, copying the accumulator once per key. Measured: 50 slices 0.99 ms against 0.02 ms for a one-pass build (49×), 500 slices 95.7 ms against 0.13 ms (762×), 2,000 slices 1.1 s against 1.4 ms (815×). `patchState` calls it once per call and every watcher calls it once per notification. Now `Object.fromEntries(Reflect.ownKeys(signals).map(...))`, which defines the same own data properties in the same order.
+2. **A watcher destroyed by an earlier watcher during the same notification still runs.** `notifyWatchers` iterates a snapshot of the list, so a removal made mid-loop was not seen. Probe: watcher A destroys watcher B on `count === 1`; the log was `A0 B0 A1 B1`, with `B1` running after B was destroyed. The loop now skips entries that are no longer registered.
+3. **Registering the same function twice, then destroying one registration, removes both.** Watchers were removed by function identity. Probe: one call expected after destroying one of two registrations of the same function, zero received. A shared module-level handler used by two component instances hits this. Each `watchState` call now registers its own entry.
+4. **`watchState` never unregisters its `DestroyRef.onDestroy` callback on a manual `destroy()`.** `onDestroy` returns the function that removes the callback, and it was ignored. Probe: 200 watch-then-destroy cycles left **200** callbacks on the injector (0 before), each retaining the watcher and the state source until the injector itself is destroyed.
+
+**Regression tests:** four new specs in `state-source.spec.ts`, one per defect (the `getState` one is a deliberately loose 250 ms limit for 2,000 slices: about 1 ms fixed against about 1 s before). Verified two-sided: with the source reverted, **all four fail** (the timing test took 2,993 ms), with the fix all pass. Also removed three `no-empty-function` warnings in that spec file (two in the new tests, one that was already there).
+
+**Observed, not changed:**
+
+- **A no-op `patchState` still notifies every watcher** (two identity patches produced two extra calls). An existing spec, "does not track signals read in the watcher within a reactive context", relies on an identity patch reaching the watchers, so this looks intended rather than accidental and is left for a decision.
+- **A throwing watcher stops the notification.** Later watchers are skipped and `patchState` rethrows although the state was already updated (log `A0 B0 A1`, state `1`, `patchState` threw).
+- **`patchState` compares slices with `!==`**, signals use `Object.is`: patching `-0` over `0` does not update the slice, and `NaN` is set every time (harmless, the signal ignores it).
+- **`STATE_SOURCE` and `isWritableSignal` are not exported from the barrel**, although `STATE_SOURCE` appears in the public `StateSource` type. Deferred to `index.ts`'s own review.
+
+Verified: `yarn nx test signals` (124 files, 935 tests, 0 type errors), `yarn nx lint signals` (0 errors, 68 warnings, one fewer than before), `yarn nx run signals:build`, `npx prettier --check` on the changed files.
+
 ---
 
-_More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, `component-store`, `component`, `operators`, and `schematics-core` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files, `component` found 1 real bug plus 2 barrel-export gaps (all fixed) across 10/10 files, `operators` found 2 barrel-export gaps (fixed) across 4/4 files, `schematics-core` found 9 real bugs plus 13 barrel-export gaps (all fixed) across 16/16 files. `signals` is in progress (8/18 files — `deep-computed.ts`, `signal-method.ts`, and `signal-state.ts` no findings, `deep-signal.ts` 1 severe real bug fixed, `signal-store-assertions.ts` a false-positive warning fixed in its callers, `signal-store-feature.ts` a parameter-name typo fixed, `signal-store-models.ts` a symbol-key type gap fixed, `signal-store.ts` a coverage gap closed). See [todo.md](../todo.md) for the live per-module status of the remaining modules._
+_More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, `component-store`, `component`, `operators`, and `schematics-core` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files, `component` found 1 real bug plus 2 barrel-export gaps (all fixed) across 10/10 files, `operators` found 2 barrel-export gaps (fixed) across 4/4 files, `schematics-core` found 9 real bugs plus 13 barrel-export gaps (all fixed) across 16/16 files. `signals` is in progress (9/18 files — `state-source.ts` 4 real defects fixed (a quadratic `getState`, and three `watchState` registration bugs), `deep-computed.ts`, `signal-method.ts`, and `signal-state.ts` no findings, `deep-signal.ts` 1 severe real bug fixed, `signal-store-assertions.ts` a false-positive warning fixed in its callers, `signal-store-feature.ts` a parameter-name typo fixed, `signal-store-models.ts` a symbol-key type gap fixed, `signal-store.ts` a coverage gap closed). See [todo.md](../todo.md) for the live per-module status of the remaining modules._

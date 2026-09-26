@@ -150,13 +150,12 @@ export function getState<State extends object>(
   const signals: Record<string | symbol, Signal<unknown>> = stateSource[
     STATE_SOURCE
   ];
-  return Reflect.ownKeys(stateSource[STATE_SOURCE]).reduce((state, key) => {
-    const value = signals[key]();
-    return {
-      ...state,
-      [key]: value,
-    };
-  }, {} as State);
+
+  // Built in one pass: spreading the accumulator on every key copies the
+  // object once per slice, which is quadratic in the number of slices.
+  return Object.fromEntries(
+    Reflect.ownKeys(signals).map((key) => [key, signals[key]()])
+  ) as State;
 }
 
 /**
@@ -193,11 +192,23 @@ export function watchState<State extends object>(
   const injector = config?.injector ?? inject(Injector);
   const destroyRef = injector.get(DestroyRef);
 
-  addWatcher(stateSource, watcher);
-  executeWatcher(stateSource, watcher);
+  // A distinct entry per registration: the same function registered twice must
+  // stay registered once until each registration has been destroyed itself.
+  const registration: StateWatcher<State> = (state) => watcher(state);
 
-  const destroy = () => removeWatcher(stateSource, watcher);
-  destroyRef.onDestroy(destroy);
+  addWatcher(stateSource, registration);
+  executeWatcher(stateSource, registration);
+
+  // `onDestroy` returns a function that unregisters the callback. Without
+  // calling it, every manually destroyed watcher would leave its callback
+  // (and the closures it retains) on a long-lived injector.
+  const unregisterOnDestroy = destroyRef.onDestroy(() =>
+    removeWatcher(stateSource, registration)
+  );
+  const destroy = () => {
+    unregisterOnDestroy();
+    removeWatcher(stateSource, registration);
+  };
 
   return { destroy };
 }
@@ -214,7 +225,11 @@ function notifyWatchers<State extends object>(
   const watchers = getWatchers(stateSource);
 
   for (const watcher of watchers) {
-    executeWatcher(stateSource, watcher);
+    // A watcher destroyed by an earlier watcher of this same notification must
+    // not run any more, although it is still part of the snapshot iterated here.
+    if (getWatchers(stateSource).includes(watcher)) {
+      executeWatcher(stateSource, watcher);
+    }
   }
 }
 

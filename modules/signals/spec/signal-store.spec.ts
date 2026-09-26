@@ -368,6 +368,42 @@ describe('signalStore', () => {
       expect(user()).toEqual({ name: 'Tom' });
     });
 
+    it('links a state slice signal of its own store instead of sharing it', () => {
+      const UserStore = signalStore(
+        { providedIn: 'root', protectedState: false },
+        withState({ userId: 1 }),
+        withLinkedState(({ userId }) => ({ value: userId }))
+      );
+      const userStore = TestBed.inject(UserStore);
+
+      patchState(userStore, { value: 5 });
+
+      expect(userStore.userId()).toBe(1);
+      expect(userStore.value()).toBe(5);
+
+      patchState(userStore, { userId: 2 });
+
+      expect(userStore.value()).toBe(2);
+    });
+
+    it('links a state slice signal of another store instead of sharing it', () => {
+      const OtherStore = signalStore(
+        { providedIn: 'root', protectedState: false },
+        withState({ id: 1 })
+      );
+      const otherStore = TestBed.inject(OtherStore);
+      const UserStore = signalStore(
+        { providedIn: 'root', protectedState: false },
+        withLinkedState(() => ({ id: otherStore.id }))
+      );
+      const userStore = TestBed.inject(UserStore);
+
+      patchState(userStore, { id: 9 });
+
+      expect(userStore.id()).toBe(9);
+      expect(otherStore.id()).toBe(1);
+    });
+
     it('has access to state signals', () => {
       const UserStore = signalStore(
         { providedIn: 'root' },

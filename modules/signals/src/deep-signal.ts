@@ -37,8 +37,19 @@ type DeepSignalNonRecordMembers<T> = [NonRecordMembers<T>] extends [never]
   ? never
   : Signal<NonRecordMembers<T>>;
 
+const deepSignals = new WeakSet<object>();
+
+/**
+ * Whether the value was created by `toDeepSignal`. A deep signal is a proxy
+ * that also exposes the `set`/`update` of the writable signal it wraps, so it
+ * cannot be told apart from a writable signal by looking at its properties.
+ */
+export function isDeepSignal(value: unknown): boolean {
+  return typeof value === 'function' && deepSignals.has(value);
+}
+
 export function toDeepSignal<T>(signal: Signal<T>): DeepSignalOf<T> {
-  return new Proxy(signal, {
+  const deepSignal = new Proxy(signal, {
     has(target: any, prop) {
       return !!this.get?.(target, prop, undefined);
     },
@@ -71,6 +82,10 @@ export function toDeepSignal<T>(signal: Signal<T>): DeepSignalOf<T> {
       return toDeepSignal(propSignal);
     },
   });
+
+  deepSignals.add(deepSignal);
+
+  return deepSignal;
 }
 
 const nonRecords = [

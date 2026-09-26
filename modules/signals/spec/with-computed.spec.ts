@@ -38,12 +38,12 @@ describe('withComputed', () => {
         [COMPUTED_SECRET]: signal(1).asReadonly(),
       })),
       withMethods(() => ({
-        m1() {},
-        m2() {},
+        m1: () => undefined,
+        m2: () => undefined,
       })),
     ].reduce((acc, feature) => feature(acc), getInitialInnerStore());
     const s2 = signal(10).asReadonly();
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
     withComputed(() => ({
       p: signal(0).asReadonly(),
@@ -143,5 +143,25 @@ describe('withComputed', () => {
     const store = TestBed.inject(Store);
 
     expect(store.user).toBe(user);
+  });
+
+  it('adds many computed signals in linear time', () => {
+    const computations = Object.fromEntries(
+      Array.from({ length: 2_000 }, (_, index) => [
+        `computed${index}`,
+        () => index,
+      ])
+    );
+    const Store = signalStore(withComputed(() => computations));
+
+    const start = performance.now();
+    const store = new Store();
+    const duration = performance.now() - start;
+
+    expect(Object.keys(store)).toHaveLength(2_000);
+    expect(store['computed1999']()).toBe(1999);
+    // About 10ms when linear and about 2s when every key copies the whole
+    // accumulator; the generous limit only has to tell those two apart.
+    expect(duration).toBeLessThan(400);
   });
 });

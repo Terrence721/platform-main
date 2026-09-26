@@ -37,19 +37,17 @@ export function signalState<State extends object>(
 ): SignalState<State> {
   const stateKeys = Reflect.ownKeys(initialState);
 
-  const stateSource = stateKeys.reduce(
-    (signalsDict, key) => ({
-      ...signalsDict,
-      [key]: signal((initialState as Record<string | symbol, unknown>)[key]),
-    }),
-    {} as SignalsDictionary
-  );
+  // Both objects are built in one pass: spreading an accumulator on every key
+  // copies it once per slice, which is quadratic in the number of slices.
+  const stateSource = Object.fromEntries(
+    stateKeys.map((key) => [
+      key,
+      signal((initialState as Record<string | symbol, unknown>)[key]),
+    ])
+  ) as SignalsDictionary;
 
   const signalState = computed(() =>
-    stateKeys.reduce(
-      (state, key) => ({ ...state, [key]: stateSource[key]() }),
-      {}
-    )
+    Object.fromEntries(stateKeys.map((key) => [key, stateSource[key]()]))
   );
 
   Object.defineProperty(signalState, STATE_SOURCE, {

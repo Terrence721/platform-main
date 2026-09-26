@@ -18,8 +18,8 @@ yarn test
 ### Testing for a specific library
 
 ```shell
-yarn nx test effects --watchAll
-yarn nx test <module-name> --watchAll
+yarn nx test effects --watch
+yarn nx test <module-name> --watch
 ```
 
 ### Testing for a specific schematic unit test
@@ -61,7 +61,7 @@ Please follow these steps to simplify review:
 
 ## Commit message guidelines
 
-Commit messages follow a fixed format so history stays readable and the `changelog` script can generate this repo's changelog from them.
+Commit messages follow a fixed format so history stays readable.
 
 ### Format
 

@@ -299,7 +299,7 @@
   <div class="diagram">
     <div class="tier-row">
       <span class="tier-label"
-        >Tier 0 — no internal @ngrx/* peer dependency</span
+        >Tier 0 — no @ngrx/store, effects or entity peer dependency</span
       >
       <span class="mod mod--tier0">store</span>
       <span class="mod mod--tier0">operators</span>
@@ -325,8 +325,9 @@
     </div>
     <div class="tier-row">
       <span class="tier-label"
-        >Cross-cutting infra — no peer-dependency edge, consumed via relative
-        import instead</span
+        >Cross-cutting infra — outside the tiers:
+        <code>schematics-core</code> via relative import,
+        <code>schematics</code> as a peer of every module</span
       >
       <span class="mod mod--infra">schematics-core</span>
       <span class="mod mod--infra">schematics</span>
@@ -340,7 +341,8 @@
       <h3>Tier 0 — standalone</h3>
       <ul>
         <li>
-          Only peer-depend on <code>@angular/core</code>/<code>rxjs</code>
+          Only peer-depend on <code>@angular/core</code>/<code>rxjs</code> (plus
+          <code>@ngrx/schematics</code>, like every module — see the note below)
         </li>
         <li>Ported first — nothing else in the workspace has to exist yet</li>
         <li>
@@ -402,10 +404,11 @@
     package holding every module's actual <code>ng-add</code> implementation —
     each module's own <code>package.json</code> once again resolves its own real
     <code>ng add @ngrx/&lt;name&gt;</code> too, via a thin wrapper delegating to
-    that shared implementation rather than a second copy of it. Both still get
-    their own full code-review pass under the same 13-module audit (<code
-      >schematics-core</code
-    >
+    that shared implementation rather than a second copy of it. That wrapper is
+    why all 11 other modules list <code>@ngrx/schematics</code> as a peer
+    dependency (added in #283–#298); the edge is the same for every module, so
+    it doesn't change the tiers. Both still get their own full code-review pass
+    under the same 13-module audit (<code>schematics-core</code>
     is issue #34) — they're infrastructure, not exceptions to the review scope.
   </div>
 

@@ -22,7 +22,11 @@ export function assertUniqueStoreMembers(
   }
 }
 
-export function assertPlainObject(value: object, feature: string): void {
+export function assertPlainObject(
+  value: object,
+  feature: string,
+  hint: string
+): void {
   const prototype = Object.getPrototypeOf(value);
   // An object literal, an object without a prototype, or a plain object of
   // another realm: nothing that the prototype chain could add to it.
@@ -34,7 +38,7 @@ export function assertPlainObject(value: object, feature: string): void {
     `@ngrx/signals: ${feature} expects a plain object, but received an instance of ${
       prototype.constructor?.name || 'an unnamed class'
     }.`,
-    'Only its own enumerable properties are added to the SignalStore; members it inherits from its prototype are ignored.',
-    'Return an object literal instead, e.g. { service: inject(Service) }.'
+    'Members that it inherits from its prototype are ignored.',
+    hint
   );
 }

@@ -95,7 +95,7 @@ describe('withProps', () => {
       expect(console.warn).toHaveBeenCalledTimes(1);
       expect(console.warn).toHaveBeenCalledWith(
         '@ngrx/signals: withProps expects a plain object, but received an instance of Api.',
-        'Only its own enumerable properties are added to the SignalStore; members it inherits from its prototype are ignored.',
+        'Members that it inherits from its prototype are ignored.',
         'Return an object literal instead, e.g. { service: inject(Service) }.'
       );
       // The props themselves are unchanged: only the own field is added.

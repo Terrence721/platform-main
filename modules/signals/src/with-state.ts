@@ -1,6 +1,9 @@
 import { Signal, signal } from '@angular/core';
 import { toDeepSignal } from './deep-signal';
-import { assertUniqueStoreMembers } from './signal-store-assertions';
+import {
+  assertPlainObject,
+  assertUniqueStoreMembers,
+} from './signal-store-assertions';
 import {
   EmptyFeatureResult,
   InnerSignalStore,
@@ -67,6 +70,11 @@ export function withState<State extends object>(
     const stateKeys = Reflect.ownKeys(state);
 
     if (typeof ngDevMode !== 'undefined' && ngDevMode) {
+      assertPlainObject(
+        state,
+        'withState',
+        'Pass an object literal with the state slices instead.'
+      );
       assertUniqueStoreMembers(store, stateKeys);
     }
 

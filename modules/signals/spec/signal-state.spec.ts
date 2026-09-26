@@ -219,6 +219,42 @@ describe('signalState', () => {
       expect(userCounter).toBe(1);
     }));
 
+  describe('plain object check', () => {
+    it('logs a warning if the state is an instance of a class', () => {
+      class Cart {
+        items = ['book'];
+
+        count(): number {
+          return this.items.length;
+        }
+      }
+      vi.spyOn(console, 'warn')
+        .mockImplementation(() => undefined)
+        .mockClear();
+
+      const state = signalState(new Cart());
+
+      expect(console.warn).toHaveBeenCalledTimes(1);
+      expect(console.warn).toHaveBeenCalledWith(
+        '@ngrx/signals: signalState expects a plain object, but received an instance of Cart.',
+        'Members that it inherits from its prototype are ignored.',
+        'Pass an object literal with the state slices instead.'
+      );
+      // The state itself is unchanged: only the own field becomes a slice.
+      expect(Reflect.ownKeys(state[STATE_SOURCE])).toEqual(['items']);
+    });
+
+    it('does not log a warning for an object literal', () => {
+      vi.spyOn(console, 'warn')
+        .mockImplementation(() => undefined)
+        .mockClear();
+
+      signalState({ s1: 1 });
+
+      expect(console.warn).not.toHaveBeenCalled();
+    });
+  });
+
   it('creates and reads a state with many slices in linear time', () => {
     const slices = Object.fromEntries(
       Array.from({ length: 2_000 }, (_, index) => [`slice${index}`, index])

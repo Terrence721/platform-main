@@ -54,7 +54,11 @@ export function withProps<
     // the props that are actually added to the store.
     const props = { ...propsResult };
     if (typeof ngDevMode !== 'undefined' && ngDevMode) {
-      assertPlainObject(propsResult, 'withProps');
+      assertPlainObject(
+        propsResult,
+        'withProps',
+        'Return an object literal instead, e.g. { service: inject(Service) }.'
+      );
       assertUniqueStoreMembers(store, Reflect.ownKeys(props));
     }
 

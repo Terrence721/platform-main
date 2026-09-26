@@ -2,6 +2,7 @@ import {
   computed,
   inject,
   Injectable,
+  InjectionToken,
   ResourceStatus,
   Signal,
 } from '@angular/core';
@@ -51,7 +52,7 @@ describe('withFeature', () => {
       { providedIn: 'root' },
       withMethods(() => ({
         findById(id: number) {
-          return of({ id: 1, name: 'Konrad' });
+          return of({ id, name: 'Konrad' });
         },
       })),
       withFeature((store) => {
@@ -71,7 +72,7 @@ describe('withFeature', () => {
   it('provides state signals', async () => {
     const withDouble = (n: Signal<number>) =>
       signalStoreFeature(
-        withComputed((state) => ({ double: computed(() => n() * 2) }))
+        withComputed(() => ({ double: computed(() => n() * 2) }))
       );
 
     const Store = signalStore(
@@ -202,5 +203,56 @@ describe('withFeature', () => {
     store.setFilter('Sabine');
     TestBed.tick();
     expect(store.entities()).toEqual([]);
+  });
+
+  it('provides symbol-keyed state signals, properties and methods', () => {
+    const STATE_SECRET = Symbol('STATE_SECRET');
+    const PROP_SECRET = Symbol('PROP_SECRET');
+    const METHOD_SECRET = Symbol('METHOD_SECRET');
+
+    const Store = signalStore(
+      { providedIn: 'root' },
+      withState({ [STATE_SECRET]: 'state' }),
+      withProps(() => ({ [PROP_SECRET]: 'prop' })),
+      withMethods(() => ({ [METHOD_SECRET]: () => 'method' })),
+      withFeature((store) =>
+        signalStoreFeature(
+          withProps(() => ({
+            combined: [
+              store[STATE_SECRET](),
+              store[PROP_SECRET],
+              store[METHOD_SECRET](),
+            ].join(' '),
+          }))
+        )
+      )
+    );
+
+    const store = TestBed.inject(Store);
+    expect(store.combined).toBe('state prop method');
+  });
+
+  it('executes the feature factory in injection context, once per store instance', () => {
+    const TOKEN = new InjectionToken('TOKEN', {
+      providedIn: 'root',
+      factory: () => 'injected',
+    });
+    const factoryCalls: string[] = [];
+
+    const Store = signalStore(
+      withState({ counter: 1 }),
+      withFeature(() => {
+        factoryCalls.push(inject(TOKEN));
+
+        return signalStoreFeature(withState({}));
+      })
+    );
+
+    TestBed.runInInjectionContext(() => {
+      new Store();
+      new Store();
+    });
+
+    expect(factoryCalls).toEqual(['injected', 'injected']);
   });
 });

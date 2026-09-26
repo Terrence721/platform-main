@@ -18,6 +18,16 @@ export type IsRecord<T> = T extends object
     : true
   : false;
 
+// A key that is a pattern (a template literal such as `id-${string}`) is an
+// index signature just like a plain `string` key. An empty object is only
+// assignable to `Record<K, unknown>` when K is such a pattern, because a
+// literal key would be required.
+type IsPatternKey<K> = K extends PropertyKey
+  ? Record<never, never> extends Record<K, unknown>
+    ? true
+    : false
+  : false;
+
 export type IsUnknownRecord<T> = keyof T extends never
   ? true
   : string extends keyof T
@@ -26,7 +36,9 @@ export type IsUnknownRecord<T> = keyof T extends never
       ? true
       : number extends keyof T
         ? true
-        : false;
+        : true extends IsPatternKey<keyof T>
+          ? true
+          : false;
 
 export type IsKnownRecord<T> =
   IsRecord<T> extends true

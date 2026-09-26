@@ -15,14 +15,12 @@ export const FooActions = createActionGroup({
 `;
 
 exports[`Action Schematic > should create an action with the defined prefix 1`] = `
-"import { createActionGroup, emptyProps, props } from '@ngrx/store';
+"import { createActionGroup, emptyProps } from '@ngrx/store';
 
 export const FooActions = createActionGroup({
   source: 'Foo',
   events: {
     'Prefix Foos': emptyProps(),
-    
-    
   }
 });
 "
@@ -43,14 +41,12 @@ export const FooActions = createActionGroup({
 `;
 
 exports[`Action Schematic > should define actions using createActionGroup 1`] = `
-"import { createActionGroup, emptyProps, props } from '@ngrx/store';
+"import { createActionGroup, emptyProps } from '@ngrx/store';
 
 export const FooActions = createActionGroup({
   source: 'Foo',
   events: {
     'Load Foos': emptyProps(),
-    
-    
   }
 });
 "

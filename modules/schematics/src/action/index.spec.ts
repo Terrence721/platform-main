@@ -71,6 +71,93 @@ describe('Action Schematic', () => {
     ).toBe(false);
   });
 
+  describe('generated file', () => {
+    const generate = async (options: ActionOptions) => {
+      const tree = await schematicRunner.runSchematic(
+        'action',
+        options,
+        appTree
+      );
+
+      return tree
+        .readContent(`${projectPath}/src/app/foo.actions.ts`)
+        .replace(/\r\n/g, '\n');
+    };
+
+    it('should only import what it uses when the api flag is not set', async () => {
+      const fileContent = await generate(defaultOptions);
+
+      expect(fileContent).toContain(
+        "import { createActionGroup, emptyProps } from '@ngrx/store';"
+      );
+      expect(fileContent).not.toContain('props<');
+    });
+
+    it('should import props when the api flag is set', async () => {
+      const fileContent = await generate({ ...defaultOptions, api: true });
+
+      expect(fileContent).toContain(
+        "import { createActionGroup, emptyProps, props } from '@ngrx/store';"
+      );
+    });
+
+    it.each([false, true])(
+      'should not leave lines with only whitespace (api: %s)',
+      async (api) => {
+        const fileContent = await generate({ ...defaultOptions, api });
+
+        expect(fileContent).not.toMatch(/^[ \t]+$/m);
+      }
+    );
+  });
+
+  describe('location', () => {
+    it('should create a folder named after the action if flat is false', async () => {
+      const tree = await schematicRunner.runSchematic(
+        'action',
+        { ...defaultOptions, flat: false },
+        appTree
+      );
+
+      expect(tree.files.filter((file) => file.endsWith('.actions.ts'))).toEqual(
+        [`${projectPath}/src/app/foo/foo.actions.ts`]
+      );
+    });
+
+    it('should create that folder within the "actions" folder if group is set as well', async () => {
+      const tree = await schematicRunner.runSchematic(
+        'action',
+        { ...defaultOptions, flat: false, group: true },
+        appTree
+      );
+
+      expect(tree.files.filter((file) => file.endsWith('.actions.ts'))).toEqual(
+        [`${projectPath}/src/app/actions/foo/foo.actions.ts`]
+      );
+    });
+
+    it('should create the file within the folders of a nested name', async () => {
+      const tree = await schematicRunner.runSchematic(
+        'action',
+        { ...defaultOptions, name: 'bar/foo' },
+        appTree
+      );
+
+      expect(tree.files.filter((file) => file.endsWith('.actions.ts'))).toEqual(
+        [`${projectPath}/src/app/bar/foo.actions.ts`]
+      );
+      expect(
+        tree.readContent(`${projectPath}/src/app/bar/foo.actions.ts`)
+      ).toContain('export const FooActions = createActionGroup({');
+    });
+  });
+
+  it('should fail with a validation error if the name is missing', async () => {
+    await expect(
+      schematicRunner.runSchematic('action', { project: 'bar' }, appTree)
+    ).rejects.toThrow("must have required property 'name'");
+  });
+
   it('should define actions using createActionGroup', async () => {
     const options = {
       ...defaultOptions,

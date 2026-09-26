@@ -91,4 +91,43 @@ describe('withState', () => {
       'p2, s2, m2, Symbol(computed_secret), Symbol(method_secret)'
     );
   });
+
+  describe('plain object check', () => {
+    it('logs a warning if the state is an instance of a class', () => {
+      class Cart {
+        items = ['book'];
+
+        count(): number {
+          return this.items.length;
+        }
+      }
+      vi.spyOn(console, 'warn')
+        .mockImplementation(() => undefined)
+        .mockClear();
+
+      const store = withState(() => new Cart())(getInitialInnerStore());
+
+      expect(console.warn).toHaveBeenCalledTimes(1);
+      expect(console.warn).toHaveBeenCalledWith(
+        '@ngrx/signals: withState expects a plain object, but received an instance of Cart.',
+        'Members that it inherits from its prototype are ignored.',
+        'Pass an object literal with the state slices instead.'
+      );
+      // The state itself is unchanged: only the own field becomes a slice.
+      expect(Object.keys(store.stateSignals)).toEqual(['items']);
+    });
+
+    it('does not log a warning for an object literal or an object without a prototype', () => {
+      vi.spyOn(console, 'warn')
+        .mockImplementation(() => undefined)
+        .mockClear();
+
+      withState({ s1: 1 })(getInitialInnerStore());
+      withState(() => Object.assign(Object.create(null), { s2: 2 }))(
+        getInitialInnerStore()
+      );
+
+      expect(console.warn).not.toHaveBeenCalled();
+    });
+  });
 });

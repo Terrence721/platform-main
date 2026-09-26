@@ -1,5 +1,6 @@
 import { computed, signal } from '@angular/core';
 import { DeepSignal, toDeepSignal } from './deep-signal';
+import { assertPlainObject } from './signal-store-assertions';
 import { SignalsDictionary } from './signal-store-models';
 import { STATE_SOURCE, WritableStateSource } from './state-source';
 
@@ -35,6 +36,14 @@ export type SignalState<State extends object> = DeepSignal<State> &
 export function signalState<State extends object>(
   initialState: State
 ): SignalState<State> {
+  if (typeof ngDevMode !== 'undefined' && ngDevMode) {
+    assertPlainObject(
+      initialState,
+      'signalState',
+      'Pass an object literal with the state slices instead.'
+    );
+  }
+
   const stateKeys = Reflect.ownKeys(initialState);
 
   // Both objects are built in one pass: spreading an accumulator on every key

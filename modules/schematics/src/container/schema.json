@@ -64,7 +64,7 @@
     },
     "flat": {
       "type": "boolean",
-      "description": "Flag to indicate if a dir is created."
+      "description": "When true, creates the files in the path directly; when false (Angular's default), creates them in a folder named after the component."
     },
     "skipImport": {
       "type": "boolean",
@@ -91,7 +91,7 @@
     "stateInterface": {
       "type": "string",
       "default": "State",
-      "description": "Specifies the interface for the state."
+      "description": "The interface the state file exports; with --state, the injected store is typed as Store<fromStore.<name>>."
     },
     "testDepth": {
       "description": "Specifies whether to create a unit test or an integration test.",

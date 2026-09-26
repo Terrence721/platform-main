@@ -21,7 +21,7 @@ import * as fromStore from '../reducers';
   templateUrl: './foo.html',
 })
 export class Foo {
-  constructor(private store: Store) {}
+  constructor(private store: Store<fromStore.State>) {}
 }
 "
 `;

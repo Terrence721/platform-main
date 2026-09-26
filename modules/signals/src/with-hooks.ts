@@ -111,7 +111,9 @@ export function withHooks<Input extends SignalStoreFeatureResult>(
               currentHook();
             }
 
-            hook(storeMembers);
+            // A method of the hooks object, so `this` still refers to that
+            // object, e.g. for hooks written as methods of a class instance.
+            hook.call(hooks, storeMembers);
           }
         : currentHook;
     };

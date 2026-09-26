@@ -22,7 +22,7 @@ export interface Schema {
   /**
    * Specifies the view encapsulation strategy.
    */
-  viewEncapsulation?: 'Emulated' | 'Native' | 'None';
+  viewEncapsulation?: 'Emulated' | 'None' | 'ShadowDom';
   /**
    * Specifies the change detection strategy.
    */

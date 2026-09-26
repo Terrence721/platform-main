@@ -2,6 +2,7 @@ import {
   SchematicTestRunner,
   UnitTestTree,
 } from '@angular-devkit/schematics/testing';
+import * as fs from 'fs';
 import * as path from 'path';
 import { Schema as ContainerOptions } from './schema';
 import {
@@ -71,7 +72,9 @@ describe('Container Schematic', () => {
       options,
       appTree
     );
-    expect(tree.exists(`${projectPath}/src/app/foo/foo.ts`)).toBeTruthy();
+    expect(tree.readContent(`${projectPath}/src/app/foo/foo.ts`)).toContain(
+      "import * as fromStore from '../reducers/foo';"
+    );
   });
 
   it('should remove index.ts from the state path if provided', async () => {
@@ -82,7 +85,9 @@ describe('Container Schematic', () => {
       options,
       appTree
     );
-    expect(tree.exists(`${projectPath}/src/app/foo/foo.ts`)).toBeTruthy();
+    expect(tree.readContent(`${projectPath}/src/app/foo/foo.ts`)).toContain(
+      "import * as fromStore from '../reducers';"
+    );
   });
 
   it('should import Store into the component', async () => {
@@ -105,9 +110,9 @@ describe('Container Schematic', () => {
       options,
       appTree
     );
-    const content = tree.readContent(
-      `${projectPath}/src/app/foo/foo-component.spec.ts`
-    );
+    const content = tree.readContent(`${projectPath}/src/app/foo/foo.spec.ts`);
+    expect(content).toContain("import { Foo } from './foo';");
+    expect(content).toContain('store = TestBed.inject(MockStore);');
     expect(content).toMatchSnapshot();
   });
 
@@ -118,10 +123,140 @@ describe('Container Schematic', () => {
       options,
       appTree
     );
-    const content = tree.readContent(
-      `${projectPath}/src/app/foo/foo-component.spec.ts`
-    );
+    const content = tree.readContent(`${projectPath}/src/app/foo/foo.spec.ts`);
+    expect(content).toContain("import { Foo } from './foo';");
+    expect(content).toContain('imports: [StoreModule.forRoot({}), Foo],');
     expect(content).toMatchSnapshot();
+  });
+
+  describe('component spec', () => {
+    const generate = async (options: Partial<ContainerOptions>) => {
+      const tree = await schematicRunner.runSchematic(
+        'container',
+        { ...defaultOptions, ...options },
+        appTree
+      );
+
+      return tree;
+    };
+    // `readContent` returns '' for a missing file, which would let the
+    // `not.toMatch` assertions below pass without reading anything.
+    const readSpec = (tree: UnitTestTree) => {
+      const file = `${projectPath}/src/app/foo/foo.spec.ts`;
+      expect(tree.exists(file)).toBe(true);
+
+      return tree.readContent(file).replace(/\r\n/g, '\n');
+    };
+
+    it('should sit next to the component and import it by its generated names', async () => {
+      const tree = await generate({});
+
+      expect(tree.exists(`${projectPath}/src/app/foo/foo.ts`)).toBe(true);
+      expect(tree.files.filter((file) => file.endsWith('.spec.ts'))).toContain(
+        `${projectPath}/src/app/foo/foo.spec.ts`
+      );
+      expect(
+        tree.files.some((file) => file.endsWith('foo-component.spec.ts'))
+      ).toBe(false);
+    });
+
+    it('should not use Jasmine globals, which the default Vitest runner does not have', async () => {
+      const spec = readSpec(await generate({}));
+
+      expect(spec).not.toMatch(/\bspyOn\(/);
+    });
+
+    it.each(['unit', 'integration'])(
+      'should declare a non-standalone component instead of importing it (%s)',
+      async (testDepth) => {
+        const spec = readSpec(await generate({ standalone: false, testDepth }));
+
+        expect(spec).toContain('declarations: [Foo],');
+        expect(spec).not.toMatch(/imports: \[[^\]]*\bFoo\]/);
+      }
+    );
+
+    it.each([
+      ['unit', true],
+      ['unit', false],
+      ['integration', true],
+      ['integration', false],
+    ])(
+      'should not leave blank or whitespace-only lines (%s, standalone: %s)',
+      async (testDepth, standalone) => {
+        const spec = readSpec(
+          await generate({ testDepth: testDepth as string, standalone })
+        );
+
+        expect(spec).not.toMatch(/^[ \t]+$/m);
+        expect(spec).not.toMatch(/configureTestingModule\(\{\n\s*\n/);
+      }
+    );
+
+    it('should not create a spec if skipTests is set', async () => {
+      const tree = await generate({ skipTests: true });
+
+      expect(
+        tree.files.filter((file) => file.endsWith('.spec.ts'))
+      ).not.toContain(`${projectPath}/src/app/foo/foo.spec.ts`);
+    });
+  });
+
+  describe('schema', () => {
+    const generate = (options: Partial<ContainerOptions>) =>
+      schematicRunner.runSchematic(
+        'container',
+        { ...defaultOptions, ...options },
+        appTree
+      );
+
+    it('should fail with a validation error if the name is missing', async () => {
+      await expect(
+        schematicRunner.runSchematic('container', { project: 'bar' }, appTree)
+      ).rejects.toThrow("must have required property 'name'");
+    });
+
+    it('should accept the ShadowDom view encapsulation', async () => {
+      const tree = await generate({ viewEncapsulation: 'ShadowDom' });
+
+      expect(tree.readContent(`${projectPath}/src/app/foo/foo.ts`)).toContain(
+        'encapsulation: ViewEncapsulation.ShadowDom'
+      );
+    });
+
+    it('should only offer the view encapsulations Angular accepts', () => {
+      const own = JSON.parse(
+        fs.readFileSync(path.join(__dirname, 'schema.json'), 'utf8')
+      );
+      const angular = JSON.parse(
+        fs.readFileSync(
+          path.join(
+            process.cwd(),
+            'node_modules/@schematics/angular/component/schema.json'
+          ),
+          'utf8'
+        )
+      );
+
+      expect(own.properties.viewEncapsulation.enum).toEqual(
+        angular.properties.viewEncapsulation.enum
+      );
+    });
+
+    it('should not give two options the same alias', () => {
+      // The CLI merges options that share an alias: `-p app` would set both
+      // `project` and `prefix`.
+      const schema = JSON.parse(
+        fs.readFileSync(path.join(__dirname, 'schema.json'), 'utf8')
+      ) as {
+        properties: Record<string, { alias?: string; aliases?: string[] }>;
+      };
+      const aliases = Object.values(schema.properties).flatMap(
+        ({ alias, aliases = [] }) => (alias ? [alias, ...aliases] : aliases)
+      );
+
+      expect(aliases).toEqual([...new Set(aliases)]);
+    });
   });
 
   describe('standalone', () => {

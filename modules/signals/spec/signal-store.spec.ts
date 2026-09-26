@@ -603,6 +603,26 @@ describe('signalStore', () => {
       expect(message).toBe('onDestroy');
     });
 
+    it('calls the hooks of a class instance as its methods', () => {
+      class LifecycleHooks {
+        readonly messages: string[] = [];
+
+        onInit(): void {
+          this.messages.push('onInit');
+        }
+
+        onDestroy(): void {
+          this.messages.push('onDestroy');
+        }
+      }
+      const hooks = new LifecycleHooks();
+      const Store = signalStore(withHooks(hooks));
+
+      createLocalService(Store).destroy();
+
+      expect(hooks.messages).toEqual(['onInit', 'onDestroy']);
+    });
+
     it('provides previously defined store properties as onInit input argument', () => {
       let message = '';
       const Store = signalStore(

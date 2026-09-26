@@ -1,5 +1,22 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`component-store > should create the component store 1`] = `
+"import { Injectable } from '@angular/core';
+import { ComponentStore } from '@ngrx/component-store';
+
+export interface FooState {}
+
+const initialState: FooState = {};
+
+@Injectable()
+export class FooStore extends ComponentStore<FooState> {
+  constructor() {
+    super(initialState);
+  }
+}
+"
+`;
+
 exports[`component-store > should import into a specified module when the module provided 1`] = `
 "import { NgModule, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';

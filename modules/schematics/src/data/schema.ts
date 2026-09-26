@@ -1,11 +1,11 @@
 export interface Schema {
   /**
-   * The name of the component.
+   * The name of the data entity.
    */
   name: string;
 
   /**
-   * The path to create the component.
+   * The path to create the entity model, service and spec.
    */
   path?: string;
 
@@ -20,13 +20,13 @@ export interface Schema {
   skipTests?: boolean;
 
   /**
-   * Flag to indicate if a dir is created.
+   * When true (the default), creates the files in the path directly;
+   * when false, creates them in a folder named after the entity.
    */
-
   flat?: boolean;
 
   /**
-   * Group entity metadata files within 'data' folder
+   * When true, creates the files within a 'data' folder.
    */
   group?: boolean;
 }

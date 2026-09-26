@@ -497,10 +497,23 @@
     </div>
     <div class="status-row">
       <div class="status-cell">
-        <span class="pill pill--pending">not started</span> 3 modules
+        <span class="pill pill--active">in progress</span> schematics
+      </div>
+      <div class="status-cell"><code>1/25</code></div>
+      <div class="status-cell">
+        <code>action/index.ts</code> the default output had an unused
+        <code>props</code> import and two whitespace-only lines, and a missing
+        <code>name</code> crashed with a raw <code>TypeError</code> because
+        <code>schema.json</code> did not require it; both fixed, plus a coverage
+        gap closed
+      </div>
+    </div>
+    <div class="status-row">
+      <div class="status-cell">
+        <span class="pill pill--pending">not started</span> 2 modules
       </div>
       <div class="status-cell">—</div>
-      <div class="status-cell">data, eslint-plugin, schematics</div>
+      <div class="status-cell">data, eslint-plugin</div>
     </div>
   </div>
 
@@ -514,6 +527,6 @@
     <a href="https://terrence721.github.io/platform-main/portfolio.html"
       >Portfolio page</a
     >
-    platform-main · issue #32 · 129/270 files reviewed so far
+    platform-main · issue #32 · 130/270 files reviewed so far
   </footer>
 </div>

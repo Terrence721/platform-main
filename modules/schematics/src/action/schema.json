@@ -52,5 +52,5 @@
       "x-prompt": "Should we generate success and failure actions?"
     }
   },
-  "required": []
+  "required": ["name"]
 }

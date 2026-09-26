@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: September 26, 2026** (`schematics-core` module COMPLETE — 16/16 files; `signals` module COMPLETE — 18/18 files)
+**Last Updated: September 26, 2026** (`schematics-core` module COMPLETE — 16/16 files; `signals` module COMPLETE — 18/18 files; `schematics` module in progress — 1/25 files)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -1514,6 +1514,50 @@ The package barrel: 31 exported names, re-exported unchanged by `modules/signals
 
 **This is the last file of the `signals` module: 18/18.** Verified in the scratch worktree: `yarn nx test signals` (130 files, 999 tests passed), `yarn nx lint signals` (0 errors, 59 warnings, none new), `yarn nx run signals:build`; `npx prettier --check` is clean on the changed files.
 
+### [`action/index.ts`](https://github.com/Terrence721/platform-main/blob/c10a528a951521dc75d1d4a208fc7e71f3b2ba53/modules/schematics/src/action/index.ts)
+
+**low · Correctness (generated output)** — Fixed via [issue #424](https://github.com/Terrence721/platform-main/issues/424)
+
+The action schematic (`ng generate @ngrx/schematics:action`): `index.ts` is 49 lines, but what it does is decided together with the template it renders (`files/__name@dasherize@if-flat__/__name@dasherize__.actions.ts.template`) and the `schema.json` its options are validated against, so this review covers the three. It was done by running the built schematic (`dist/`) against a real `@schematics/angular` workspace and reading what it wrote, not from the source alone.
+
+**Real defect, fixed: the default output was not clean code.** With the default options (`api: false`) the generated file was
+
+```ts
+import { createActionGroup, emptyProps, props } from '@ngrx/store';
+
+export const FooActions = createActionGroup({
+  source: 'Foo',
+  events: {
+    'Load Foos': emptyProps(),
+    ····
+    ····
+  }
+});
+```
+
+(`·` = a space): an import of `props` that nothing uses (`TS6133` under `noUnusedLocals`, and `@typescript-eslint/no-unused-vars` in a default Angular lint setup), and two lines that hold only four spaces, left behind by the two `<% if (api) { %>…<% } %>` lines. Both were recorded in the committed snapshots, so they read as expected output. The `props` import and the two api events are now inside the conditional; the default output is `import { createActionGroup, emptyProps } from '@ngrx/store';` and a single event, and the `api: true` output is unchanged.
+
+**Real defect, fixed (declared vs actual): `name` is required, the schema said it was not.** `Schema.name` is a required `string`, but `schema.json` said `"required": []`, so nothing rejected a call without a name and `parseName(options.path, undefined)` crashed with `TypeError: Cannot read properties of undefined (reading 'lastIndexOf')` (probe against the built schematic). `required` is now `["name"]`: interactive `ng generate` still prompts for it (`x-prompt`), and a call without it fails with `Data path "" must have required property 'name'`, the message Angular's own schematics give (its `component`, `service` and `class` schemas require `name`). **The other 9 schematics that take a name (`component-store`, `container`, `data`, `effect`, `entity`, `feature`, `reducer`, `selector`, `store`) have the same `"required": []`.** It is not changed here, to keep this one file per PR: each one gets the same fix and test in the review of its own `index.ts`, so it is not to be re-flagged as new there.
+
+**Coverage gap, closed:** `flat: false`, `flat: false` together with `group`, and a nested name (`bar/foo`) had no test; the existing ones cover the default, `group`, `project` and `prefix`. Probing showed all three behave correctly (`foo/foo.actions.ts`, `actions/foo/foo.actions.ts`, `bar/foo.actions.ts`), so they are pinned by new specs rather than changed.
+
+**Sound, verified:**
+
+- The `if-flat` template function reads `options.flat` and `options.group` when the path is rendered. The boolean option `group` does not shadow `stringUtils.group` in the template scope, because `if-flat` captured the function directly and the template never calls `group(…)`.
+- The options object is overwritten (`path`, `prefix`, `name`), as in every schematic here. It is idempotent (a second pass resolves to the same values) and the engine gives each call a fresh object.
+- The template reads `api` unguarded, which would be a `ReferenceError` if it were undefined, but the schema default (`false`) is applied both by the CLI and for `schematic('action', …)` as called by `feature`, and `getPrefix` covers a missing `prefix`.
+
+**Observed, not changed:**
+
+- The event name is `<Prefix> <Name>s`, a naive plural: `category` gives `Load Categorys` and `status` gives `Load Statuss` (probe). Other generated code depends on that exact spelling (the `effect` template's `ofType(FooActions.loadFoos)` is built from `<%= prefix %><%= classify(name) %>s`, and the `entity` actions and reducer), so it could only change in all of them together.
+- `chain([branchAndMerge(chain([mergeWith(templateSource)]))])(host, context)` nests three rules where one would do; every schematic here has the same shape.
+- Spec hygiene: two tests generate the same output (`should create api actions` and `should create api actions (load, success, error) when the api flag is set`, the second one misnamed since the events are `Success` and `Failure`), and the `group` test sits inside `describe('api')`.
+- `schema.ts` documents `name` as "The name of the component." (copy-paste; `schema.json` says action). That file is the next row, `action/schema.ts`, and is left to its own review.
+
+**Regression tests** (`index.spec.ts`, 8 new, `it.each` counted per case): the three that pin the fixes fail against the unchanged build: `should only import what it uses when the api flag is not set`, `should not leave lines with only whitespace (api: false)` and `should fail with a validation error if the name is missing`; the other five (the `api: true` variants and the three location specs) pass on both sides, as they document behavior that was already right. The line-ending of the generated file is normalised first: on a Windows checkout the template is CRLF, and `/^[ \t]+$/m` would not match `····\r` and pass vacuously.
+
+**Verification** (in a scratch git worktree, the checkout was given only the finished files): against the unchanged build the three tests above fail; with the change `yarn nx test schematics` passes (50 files, 413 tests, 0 type errors), `yarn nx lint schematics` has 0 errors (16 warnings, none in the changed files), `yarn nx build schematics` is clean. Two snapshots change (the default-output and the custom-prefix one, each losing the `props` import and the two blank lines); the `feature` and `entity` snapshots are unchanged.
+
 ---
 
-_More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, `component-store`, `component`, `operators`, `schematics-core`, and `signals` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files, `component` found 1 real bug plus 2 barrel-export gaps (all fixed) across 10/10 files, `operators` found 2 barrel-export gaps (fixed) across 4/4 files, `schematics-core` found 9 real bugs plus 13 barrel-export gaps (all fixed) across 16/16 files. `signals` found 14 defects (all fixed, 2 of them high severity) plus 1 barrel-export gap and 2 test-coverage gaps across 18/18 files (`index.ts` three types that exported members are made of were missing from the barrel, `with-state.ts` the types promised the prototype members of a class instance passed as the state, now a dev-mode warning also in `signalState`, `with-props.ts` the types promised members that a class instance returned as the props silently loses, now a dev-mode warning, `with-methods.ts` no findings, `with-linked-state.ts` a state slice signal returned as-is was aliased instead of linked, so writing the linked slice silently wrote its source (fixed in `isWritableSignal`), `with-hooks.ts` hooks were called without their receiver, so `this` was `undefined` in a hook written as a method (fixed, plus a new type spec), `with-feature.ts` no bug, a coverage gap closed (symbol keys and injection context), `with-computed.ts` a quadratic build fixed (the same defect also fixed in the closed `signal-state.ts`, whose "no findings" this corrects), `ts-helpers.ts` 1 type-level gap fixed (template-literal dictionaries were classified as known records), `state-source.ts` 4 real defects fixed (a quadratic `getState`, and three `watchState` registration bugs), `deep-computed.ts`, `signal-method.ts`, and `signal-state.ts` no findings, `deep-signal.ts` 1 severe real bug fixed, `signal-store-assertions.ts` a false-positive warning fixed in its callers, `signal-store-feature.ts` a parameter-name typo fixed, `signal-store-models.ts` a symbol-key type gap fixed, `signal-store.ts` a coverage gap closed). See [todo.md](../todo.md) for the live per-module status of the remaining modules._
+_More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, `component-store`, `component`, `operators`, `schematics-core`, and `signals` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files, `component` found 1 real bug plus 2 barrel-export gaps (all fixed) across 10/10 files, `operators` found 2 barrel-export gaps (fixed) across 4/4 files, `schematics-core` found 9 real bugs plus 13 barrel-export gaps (all fixed) across 16/16 files. `signals` found 14 defects (all fixed, 2 of them high severity) plus 1 barrel-export gap and 2 test-coverage gaps across 18/18 files (`index.ts` three types that exported members are made of were missing from the barrel, `with-state.ts` the types promised the prototype members of a class instance passed as the state, now a dev-mode warning also in `signalState`, `with-props.ts` the types promised members that a class instance returned as the props silently loses, now a dev-mode warning, `with-methods.ts` no findings, `with-linked-state.ts` a state slice signal returned as-is was aliased instead of linked, so writing the linked slice silently wrote its source (fixed in `isWritableSignal`), `with-hooks.ts` hooks were called without their receiver, so `this` was `undefined` in a hook written as a method (fixed, plus a new type spec), `with-feature.ts` no bug, a coverage gap closed (symbol keys and injection context), `with-computed.ts` a quadratic build fixed (the same defect also fixed in the closed `signal-state.ts`, whose "no findings" this corrects), `ts-helpers.ts` 1 type-level gap fixed (template-literal dictionaries were classified as known records), `state-source.ts` 4 real defects fixed (a quadratic `getState`, and three `watchState` registration bugs), `deep-computed.ts`, `signal-method.ts`, and `signal-state.ts` no findings, `deep-signal.ts` 1 severe real bug fixed, `signal-store-assertions.ts` a false-positive warning fixed in its callers, `signal-store-feature.ts` a parameter-name typo fixed, `signal-store-models.ts` a symbol-key type gap fixed, `signal-store.ts` a coverage gap closed). `schematics` is in progress (1/25 files — `action/index.ts` the generated file had an unused import and whitespace-only lines by default, and a missing name crashed with a raw `TypeError` because the schema did not require it, both fixed, plus a coverage gap closed). See [todo.md](../todo.md) for the live per-module status of the remaining modules._

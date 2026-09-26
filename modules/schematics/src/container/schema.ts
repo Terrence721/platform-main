@@ -40,7 +40,8 @@ export interface Schema {
    */
   skipTests?: boolean;
   /**
-   * Flag to indicate if a dir is created.
+   * When true, creates the files in the path directly; when false (Angular's
+   * default), creates them in a folder named after the component.
    */
   flat?: boolean;
   /**
@@ -60,22 +61,23 @@ export interface Schema {
    */
   export?: boolean;
   /**
-   * Specifies the path to the state exports
+   * Specifies the path to the state exports.
    */
   state?: string;
 
   /**
-   * Specifies the interface for the state
+   * The interface the state file exports; with `state`, the injected store
+   * is typed as `Store<fromStore.<name>>`.
    */
   stateInterface?: string;
 
   /**
    * Specifies whether to create a unit test or an integration test.
    */
-  testDepth?: string;
+  testDepth?: 'unit' | 'integration';
 
   /**
-   * Whether the generated component is standalone
+   * Whether the generated component is standalone.
    */
   standalone?: boolean;
 

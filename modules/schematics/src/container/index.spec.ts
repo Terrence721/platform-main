@@ -103,8 +103,50 @@ describe('Container Schematic', () => {
     expect(content).toMatchSnapshot();
   });
 
+  describe('stateInterface', () => {
+    const generateWithState = async (options: Partial<ContainerOptions>) => {
+      appTree.create(
+        `${projectPath}/src/app/reducers/index.ts`,
+        'export interface State {}\nexport interface AppState {}\n'
+      );
+      const tree = await schematicRunner.runSchematic(
+        'container',
+        { ...defaultOptions, ...options },
+        appTree
+      );
+
+      return tree.readContent(`${projectPath}/src/app/foo/foo.ts`);
+    };
+
+    it('should type the store with the default State interface of the state file', async () => {
+      const content = await generateWithState({ state: 'reducers/index.ts' });
+
+      expect(content).toContain(
+        'constructor(private store: Store<fromStore.State>) {}'
+      );
+    });
+
+    it('should type the store with the given interface of the state file', async () => {
+      const content = await generateWithState({
+        state: 'reducers/index.ts',
+        stateInterface: 'AppState',
+      });
+
+      expect(content).toContain(
+        'constructor(private store: Store<fromStore.AppState>) {}'
+      );
+    });
+
+    it('should leave the store untyped without a state file', async () => {
+      const content = await generateWithState({ stateInterface: 'AppState' });
+
+      expect(content).toContain('constructor(private store: Store) {}');
+      expect(content).not.toMatch(/fromStore/);
+    });
+  });
+
   it('should update the component spec', async () => {
-    const options = { ...defaultOptions, testDepth: 'unit' };
+    const options: ContainerOptions = { ...defaultOptions, testDepth: 'unit' };
     const tree = await schematicRunner.runSchematic(
       'container',
       options,
@@ -166,7 +208,7 @@ describe('Container Schematic', () => {
       expect(spec).not.toMatch(/\bspyOn\(/);
     });
 
-    it.each(['unit', 'integration'])(
+    it.each(['unit', 'integration'] as const)(
       'should declare a non-standalone component instead of importing it (%s)',
       async (testDepth) => {
         const spec = readSpec(await generate({ standalone: false, testDepth }));
@@ -181,12 +223,10 @@ describe('Container Schematic', () => {
       ['unit', false],
       ['integration', true],
       ['integration', false],
-    ])(
+    ] as const)(
       'should not leave blank or whitespace-only lines (%s, standalone: %s)',
       async (testDepth, standalone) => {
-        const spec = readSpec(
-          await generate({ testDepth: testDepth as string, standalone })
-        );
+        const spec = readSpec(await generate({ testDepth, standalone }));
 
         expect(spec).not.toMatch(/^[ \t]+$/m);
         expect(spec).not.toMatch(/configureTestingModule\(\{\n\s*\n/);

@@ -181,11 +181,16 @@ function addStateToComponent(options: Partial<ContainerOptions>) {
       .getFullText()
       .slice(membersPos, componentClass.end - 1);
     const lineEnding = emptyBody.includes('\r\n') ? '\r\n' : '\n';
+    // With a state file, the store is typed by the interface it exports.
+    const storeType =
+      options.state && options.stateInterface
+        ? `Store<fromStore.${options.stateInterface}>`
+        : 'Store';
     const constructorUpdate = new ReplaceChange(
       componentPath,
       membersPos,
       emptyBody,
-      `\n  constructor(private store: Store) {}${lineEnding}`
+      `\n  constructor(private store: ${storeType}) {}${lineEnding}`
     );
 
     const changes = [storeImport, stateImport, constructorUpdate];

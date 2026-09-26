@@ -41,7 +41,6 @@
       "type": "string",
       "default": "",
       "description": "Allows specification of the declaring component.",
-      "alias": "m",
       "subtype": "filepath",
       "x-prompt": "To which component (path) should the component store be provided in?"
     },
@@ -54,5 +53,5 @@
       "x-prompt": "To which module (path) should the component store be provided in?"
     }
   },
-  "required": []
+  "required": ["name"]
 }

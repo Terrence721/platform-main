@@ -499,7 +499,7 @@
       <div class="status-cell">
         <span class="pill pill--active">in progress</span> schematics
       </div>
-      <div class="status-cell"><code>2/25</code></div>
+      <div class="status-cell"><code>3/25</code></div>
       <div class="status-cell">
         <code>action/index.ts</code> the default output had an unused
         <code>props</code> import and two whitespace-only lines, and a missing
@@ -507,7 +507,11 @@
         <code>schema.json</code> did not require it; both fixed, plus a coverage
         gap closed; <code>action/schema.ts</code> <code>prefix</code> was
         declared required although it has a default, plus three wrong doc
-        comments, all fixed
+        comments, all fixed; <code>component-store/index.ts</code>
+        <code>--component</code> also set <code>module</code> through a shared
+        <code>-m</code> alias, so a file holding both a component and its
+        NgModule got the store twice, a missing name crashed, and the generated
+        store had a stray semicolon, all fixed
       </div>
     </div>
     <div class="status-row">
@@ -529,6 +533,6 @@
     <a href="https://terrence721.github.io/platform-main/portfolio.html"
       >Portfolio page</a
     >
-    platform-main · issue #32 · 131/270 files reviewed so far
+    platform-main · issue #32 · 132/270 files reviewed so far
   </footer>
 </div>

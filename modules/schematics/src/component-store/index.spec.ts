@@ -2,6 +2,7 @@ import {
   SchematicTestRunner,
   UnitTestTree,
 } from '@angular-devkit/schematics/testing';
+import * as fs from 'fs';
 import * as path from 'path';
 import { Schema as ComponentStoreOptions } from '../component-store/schema';
 import {
@@ -98,17 +99,13 @@ describe('component-store', () => {
   });
 
   it('should fail if specified module does not exist', async () => {
-    const options = {
-      ...defaultOptions,
-      module: `${projectPath}/src/app/app-moduleXXX.ts`,
-    };
-    let thrownError: Error | null = null;
-    try {
-      await schematicRunner.runSchematic('component-store', options, appTree);
-    } catch (err: any) {
-      thrownError = err;
-    }
-    expect(thrownError).toBeDefined();
+    const options = { ...defaultOptions, module: 'app-moduleXXX.ts' };
+
+    await expect(
+      schematicRunner.runSchematic('component-store', options, appTree)
+    ).rejects.toThrow(
+      `Specified module path ${projectPath}/src/app/app-moduleXXX.ts does not exist`
+    );
   });
 
   it('should respect the skipTests flag', async () => {
@@ -143,14 +140,55 @@ describe('component-store', () => {
   });
 
   it('should fail if specified component does not exist', async () => {
-    const options = {
-      ...defaultOptions,
-      component: `${projectPath}/src/app/appnotexist.ts`,
-    };
+    const options = { ...defaultOptions, component: 'appnotexist.ts' };
 
     await expect(
       schematicRunner.runSchematic('component-store', options, appTree)
-    ).rejects.toThrowError();
+    ).rejects.toThrow(
+      `Specified component path ${projectPath}/src/app/appnotexist.ts does not exist`
+    );
+  });
+
+  it('should create the component store', async () => {
+    const tree = await schematicRunner.runSchematic(
+      'component-store',
+      defaultOptions,
+      appTree
+    );
+    const content = tree
+      .readContent(`${projectPath}/src/app/foo/foo.store.ts`)
+      .replace(/\r\n/g, '\n');
+
+    expect(content).toContain('export interface FooState {}\n');
+    expect(content).toContain(
+      'export class FooStore extends ComponentStore<FooState> {'
+    );
+    expect(content).toMatchSnapshot();
+  });
+
+  it('should fail with a validation error if the name is missing', async () => {
+    await expect(
+      schematicRunner.runSchematic(
+        'component-store',
+        { project: 'bar' },
+        appTree
+      )
+    ).rejects.toThrow("must have required property 'name'");
+  });
+
+  it('should not give two options the same alias', () => {
+    // The CLI merges options that share an alias: `--component x.ts` would
+    // also set `module`, and the reverse.
+    const schema = JSON.parse(
+      fs.readFileSync(path.join(__dirname, 'schema.json'), 'utf8')
+    ) as {
+      properties: Record<string, { alias?: string; aliases?: string[] }>;
+    };
+    const aliases = Object.values(schema.properties).flatMap(
+      ({ alias, aliases = [] }) => (alias ? [alias, ...aliases] : aliases)
+    );
+
+    expect(aliases).toEqual([...new Set(aliases)]);
   });
 
   it('should inject the component store correctly into the spec', async () => {

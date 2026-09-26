@@ -15,7 +15,8 @@ export interface Schema {
   project?: string;
 
   /**
-   * Flag to indicate if a dir is created.
+   * When true (the default), creates the files in the path directly;
+   * when false, creates them in a folder named after the component store.
    */
   flat?: boolean;
 
@@ -25,12 +26,12 @@ export interface Schema {
   skipTests?: boolean;
 
   /**
-   * Allows specification of the declaring component.
+   * The component (path) to provide the component store in.
    */
   component?: string;
 
   /**
-   * Allows specification of the declaring module.
+   * The NgModule (path) to provide the component store in.
    */
   module?: string;
 }

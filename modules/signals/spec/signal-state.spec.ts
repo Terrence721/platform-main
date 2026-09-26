@@ -218,4 +218,27 @@ describe('signalState', () => {
       expect(stateCounter).toBe(1);
       expect(userCounter).toBe(1);
     }));
+
+  it('creates and reads a state with many slices in linear time', () => {
+    const slices = Object.fromEntries(
+      Array.from({ length: 2_000 }, (_, index) => [`slice${index}`, index])
+    );
+
+    const createStart = performance.now();
+    const state = signalState(slices);
+    const createDuration = performance.now() - createStart;
+
+    const readStart = performance.now();
+    const snapshot = state();
+    patchState(state, { slice0: -1 });
+    const changedSnapshot = state();
+    const readDuration = performance.now() - readStart;
+
+    expect(Object.keys(snapshot)).toHaveLength(2_000);
+    expect(changedSnapshot['slice0']).toBe(-1);
+    // About 10ms when linear and seconds when every slice copies the whole
+    // accumulator; the generous limits only have to tell those two apart.
+    expect(createDuration).toBeLessThan(400);
+    expect(readDuration).toBeLessThan(400);
+  });
 });

@@ -60,14 +60,19 @@ export function withComputed<
     const computedResult = computedFactory(store);
     const computedResultKeys = Reflect.ownKeys(computedResult);
 
-    return computedResultKeys.reduce((prev, key) => {
-      const signalOrComputation = computedResult[key];
-      return {
-        ...prev,
-        [key]: isSignal(signalOrComputation)
-          ? signalOrComputation
-          : computed(signalOrComputation),
-      };
-    }, {} as ComputedResult<ComputedDictionary>);
+    // Built in one pass: spreading an accumulator on every key copies it once
+    // per key, which is quadratic in the number of computed signals.
+    return Object.fromEntries(
+      computedResultKeys.map((key) => {
+        const signalOrComputation = computedResult[key];
+
+        return [
+          key,
+          isSignal(signalOrComputation)
+            ? signalOrComputation
+            : computed(signalOrComputation),
+        ];
+      })
+    ) as ComputedResult<ComputedDictionary>;
   });
 }

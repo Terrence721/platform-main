@@ -30,7 +30,7 @@
     "flat": {
       "type": "boolean",
       "default": true,
-      "description": "Flag to indicate if a dir is created."
+      "description": "When true (the default), creates the files in the path directly; when false, creates them in a folder named after the component store."
     },
     "skipTests": {
       "type": "boolean",
@@ -40,14 +40,14 @@
     "component": {
       "type": "string",
       "default": "",
-      "description": "Allows specification of the declaring component.",
+      "description": "The component (path) to provide the component store in.",
       "subtype": "filepath",
       "x-prompt": "To which component (path) should the component store be provided in?"
     },
     "module": {
       "type": "string",
       "default": "",
-      "description": "Allows specification of the declaring module.",
+      "description": "The NgModule (path) to provide the component store in.",
       "alias": "m",
       "subtype": "filepath",
       "x-prompt": "To which module (path) should the component store be provided in?"

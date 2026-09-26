@@ -8,6 +8,7 @@ import {
   untracked,
   WritableSignal,
 } from '@angular/core';
+import { isDeepSignal } from './deep-signal';
 
 const STATE_WATCHERS = new WeakMap<object, Array<StateWatcher<any>>>();
 
@@ -36,6 +37,9 @@ export function isWritableSignal(
 ): value is WritableSignal<unknown> {
   return (
     isSignal(value) &&
+    // A deep signal is a read-only view typed as `Signal`, although its proxy
+    // exposes the `set`/`update` of the writable signal it wraps.
+    !isDeepSignal(value) &&
     'set' in value &&
     'update' in value &&
     typeof value.set === 'function' &&

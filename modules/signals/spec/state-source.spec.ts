@@ -1,4 +1,5 @@
 import {
+  computed,
   createEnvironmentInjector,
   effect,
   EnvironmentInjector,
@@ -8,6 +9,7 @@ import {
 } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import {
+  deepComputed,
   getState,
   isWritableStateSource,
   patchState,
@@ -19,7 +21,7 @@ import {
   withMethods,
   withState,
 } from '../src';
-import { STATE_SOURCE } from '../src/state-source';
+import { isWritableSignal, STATE_SOURCE } from '../src/state-source';
 import { assertStateSource, createLocalService } from './helpers';
 
 const SECRET = Symbol('SECRET');
@@ -41,6 +43,26 @@ describe('StateSource', () => {
 
   beforeEach(() => {
     consoleWarnSpy.mockClear();
+  });
+
+  describe('isWritableSignal', () => {
+    it('returns true for a writable signal', () => {
+      expect(isWritableSignal(signal(1))).toBe(true);
+    });
+
+    it('returns false for a readonly signal', () => {
+      expect(isWritableSignal(computed(() => 1))).toBe(false);
+      expect(isWritableSignal(signal(1).asReadonly())).toBe(false);
+    });
+
+    it('returns false for a deep signal, although it exposes the set and update of the signal it wraps', () => {
+      const state = signalState({ count: 1, user: { name: 'John' } });
+
+      expect(isWritableSignal(state.count)).toBe(false);
+      expect(isWritableSignal(state.user)).toBe(false);
+      expect(isWritableSignal(state.user.name)).toBe(false);
+      expect(isWritableSignal(deepComputed(() => ({ a: 1 })))).toBe(false);
+    });
   });
 
   describe('isWritableStateSource', () => {

@@ -22,7 +22,7 @@
     "path": {
       "type": "string",
       "format": "path",
-      "description": "The path to create the component.",
+      "description": "The path to create the action file.",
       "visible": false,
       "$default": {
         "$source": "workingDirectory"
@@ -36,7 +36,7 @@
     "flat": {
       "type": "boolean",
       "default": true,
-      "description": "Flag to indicate if a dir is created."
+      "description": "When true (the default), creates the file in the path directly; when false, creates it in a folder named after the action."
     },
     "group": {
       "type": "boolean",

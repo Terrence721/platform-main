@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: September 26, 2026** (`schematics-core` module COMPLETE — 16/16 files; `signals` module in progress — 11/18 files)
+**Last Updated: September 26, 2026** (`schematics-core` module COMPLETE — 16/16 files; `signals` module in progress — 12/18 files)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -1355,6 +1355,31 @@ Verified: `yarn nx test signals` (126 files, 945 tests, 0 type errors), `yarn nx
 
 Verified: `yarn nx test signals` (126 files, 949 tests, 0 type errors), `yarn nx lint signals` (0 errors, 65 warnings, 3 fewer than before), `yarn nx run signals:build`, `npx prettier --check` on the changed files.
 
+### [`with-feature.ts`](https://github.com/Terrence721/platform-main/blob/61e1fdc8421ded83cba45489338afd2fc4c82530/modules/signals/src/with-feature.ts)
+
+**low · Test coverage** — Fixed via [issue #410](https://github.com/Terrence721/platform-main/issues/410)
+
+56 lines: `withFeature` gives a feature factory the store's state signals, props, methods and writable state source, then applies the feature the factory returns to the real inner store. There is no logic of its own beyond building that argument object and calling the factory.
+
+**No functional bug.** Verified with throwaway probes rather than by reading only:
+
+- **Symbol keys reach the factory** for all three member kinds (state signal, prop, method), because the argument object is built with object spread.
+- **The factory runs in an injection context** (`inject()` inside it resolves) and **once per store instance** (two instances, two calls), so nothing is shared between stores.
+- **Name collisions resolve like the final store does.** With a state slice, a prop and a method all called `x`, the factory sees the method and the built store's `x()` returns the method's value, so the factory never sees a different member than the store ends up with.
+- **`patchState` on the store the factory receives updates the real store** (the state source is the same object).
+- The unique-member warning comes from whatever feature the factory returns (`withProps`, `withMethods` and so on), so this file has no guard of its own to get wrong. The argument object is built exactly like the ones in `withProps` and `withMethods`; the type includes `WritableStateSource`, the same as theirs (unlike `withComputed`, whose type hides it).
+
+**Real gap, fixed:** the existing spec covered methods, state signals, properties, the writable state source and input types, but not the two contracts its siblings pin: symbol-keyed members and the injection context. Two tests added: `provides symbol-keyed state signals, properties and methods`, and `executes the feature factory in injection context, once per store instance`. Verified two-sided by mutating `with-feature.ts` and restoring it: copying the members without their symbol keys fails the first (and only that) test, and memoizing the feature across instances (which would share one feature's state between stores) fails the second (and only that) test.
+
+Also removed the two `no-unused-vars` warnings that were already in the spec (an unused `id` parameter now used, an unused `state` parameter dropped).
+
+**Observed, not changed:**
+
+- The argument-object construction (`[STATE_SOURCE]` plus the three spreads) exists as a separate copy in `with-props.ts`, `with-methods.ts` and here; a shared helper would remove the duplication, but each copy is four lines and identical, so it is a maintainability note, not a defect.
+- The JSDoc example uses `User` and `withEntityLoader`, which are illustrative and not defined, so it is not compilable verbatim (unlike the `signalStoreFeature` example that was checked); it reads correctly as documentation.
+
+Verified: `yarn nx test signals` (126 files, 953 tests, 0 type errors), `yarn nx lint signals` (0 errors, 63 warnings, 2 fewer than before), `npx prettier --check` on the changed files. No source file changed, so no build was needed.
+
 ---
 
-_More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, `component-store`, `component`, `operators`, and `schematics-core` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files, `component` found 1 real bug plus 2 barrel-export gaps (all fixed) across 10/10 files, `operators` found 2 barrel-export gaps (fixed) across 4/4 files, `schematics-core` found 9 real bugs plus 13 barrel-export gaps (all fixed) across 16/16 files. `signals` is in progress (11/18 files — `with-computed.ts` a quadratic build fixed (the same defect also fixed in the closed `signal-state.ts`, whose "no findings" this corrects), `ts-helpers.ts` 1 type-level gap fixed (template-literal dictionaries were classified as known records), `state-source.ts` 4 real defects fixed (a quadratic `getState`, and three `watchState` registration bugs), `deep-computed.ts`, `signal-method.ts`, and `signal-state.ts` no findings, `deep-signal.ts` 1 severe real bug fixed, `signal-store-assertions.ts` a false-positive warning fixed in its callers, `signal-store-feature.ts` a parameter-name typo fixed, `signal-store-models.ts` a symbol-key type gap fixed, `signal-store.ts` a coverage gap closed). See [todo.md](../todo.md) for the live per-module status of the remaining modules._
+_More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, `component-store`, `component`, `operators`, and `schematics-core` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files, `component` found 1 real bug plus 2 barrel-export gaps (all fixed) across 10/10 files, `operators` found 2 barrel-export gaps (fixed) across 4/4 files, `schematics-core` found 9 real bugs plus 13 barrel-export gaps (all fixed) across 16/16 files. `signals` is in progress (12/18 files — `with-feature.ts` no bug, a coverage gap closed (symbol keys and injection context), `with-computed.ts` a quadratic build fixed (the same defect also fixed in the closed `signal-state.ts`, whose "no findings" this corrects), `ts-helpers.ts` 1 type-level gap fixed (template-literal dictionaries were classified as known records), `state-source.ts` 4 real defects fixed (a quadratic `getState`, and three `watchState` registration bugs), `deep-computed.ts`, `signal-method.ts`, and `signal-state.ts` no findings, `deep-signal.ts` 1 severe real bug fixed, `signal-store-assertions.ts` a false-positive warning fixed in its callers, `signal-store-feature.ts` a parameter-name typo fixed, `signal-store-models.ts` a symbol-key type gap fixed, `signal-store.ts` a coverage gap closed). See [todo.md](../todo.md) for the live per-module status of the remaining modules._

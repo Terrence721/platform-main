@@ -1,5 +1,8 @@
 import { STATE_SOURCE, WritableStateSource } from './state-source';
-import { assertUniqueStoreMembers } from './signal-store-assertions';
+import {
+  assertPlainObject,
+  assertUniqueStoreMembers,
+} from './signal-store-assertions';
 import {
   InnerSignalStore,
   SignalStoreFeature,
@@ -41,17 +44,17 @@ export function withProps<
   ) => Props
 ): SignalStoreFeature<Input, { state: {}; props: Props; methods: {} }> {
   return (store) => {
+    const propsResult = propsFactory({
+      [STATE_SOURCE]: store[STATE_SOURCE],
+      ...store.stateSignals,
+      ...store.props,
+      ...store.methods,
+    });
     // Spreading drops non-enumerable keys, so the assertion below only sees
     // the props that are actually added to the store.
-    const props = {
-      ...propsFactory({
-        [STATE_SOURCE]: store[STATE_SOURCE],
-        ...store.stateSignals,
-        ...store.props,
-        ...store.methods,
-      }),
-    };
+    const props = { ...propsResult };
     if (typeof ngDevMode !== 'undefined' && ngDevMode) {
+      assertPlainObject(propsResult, 'withProps');
       assertUniqueStoreMembers(store, Reflect.ownKeys(props));
     }
 

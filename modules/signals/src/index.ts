@@ -6,9 +6,12 @@ export { signalStore } from './signal-store';
 export { signalStoreFeature, type } from './signal-store-feature';
 export {
   EmptyFeatureResult,
+  InnerSignalStore,
+  MethodsDictionary,
   SignalStoreFeature,
   SignalStoreFeatureResult,
   SignalStoreFeatureType,
+  SignalStoreHooks,
   StateSignals,
 } from './signal-store-models';
 export {

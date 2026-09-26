@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: September 26, 2026** (`schematics-core` module COMPLETE — 16/16 files; `signals` module in progress — 14/18 files)
+**Last Updated: September 26, 2026** (`schematics-core` module COMPLETE — 16/16 files; `signals` module in progress — 15/18 files)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -1422,6 +1422,28 @@ Verified: `yarn nx test signals` (128 files, 971 tests, 0 type errors), `yarn nx
 
 Verified: `yarn nx test signals` (128 files, 981 tests, 0 type errors), `yarn nx lint signals` (0 errors, 63 warnings, none new), `yarn nx run signals:build`, `npx prettier --check` on the changed files.
 
+### [`with-methods.ts`](https://github.com/Terrence721/platform-main/blob/61e1fdc8421ded83cba45489338afd2fc4c82530/modules/signals/src/with-methods.ts)
+
+**n/a · Maintainability** — Reviewed, no findings ([issue #416](https://github.com/Terrence721/platform-main/issues/416))
+
+69 lines: `withMethods` builds the argument object (state source, state signals, props and earlier methods), runs the factory, spreads its result, runs the dev-mode unique-member guard and returns the store with the new methods merged in. The key derivation (the guard sees the spread copy, so a non-enumerable key never triggers a false warning) was fixed in the `signal-store-assertions.ts` review (#352) and is not re-flagged here.
+
+**No bug found.** Verified with throwaway probes and a compiler-API check rather than only by reading:
+
+- **`this` behaves as ordinary JavaScript.** A method written with method syntax gets the store as `this` when called as `store.method()` (`this === store`, and sibling members are visible), and `undefined` when called detached. The library never calls the methods itself, so, unlike `withHooks` (#412), it has no receiver to lose.
+- **A getter in the returned dictionary is read once, when the feature is applied,** so a getter-based dictionary is a snapshot (probe: one read for two calls).
+- **A later feature that redefines a method replaces it for the store, but methods of earlier features keep calling the old one** (probe: `store.foo()` ran the new `foo`, `store.callFoo()`, defined before the override, still ran the old one). That matches the documented "SignalStore members cannot be overridden" warning, which still fires.
+- **A class instance is rejected as a methods dictionary by the types** (`Index signature for type 'string' is missing in type 'Service'`), so methods on a prototype cannot be silently dropped by the spread; an object literal compiles.
+
+Already covered by the existing specs: immutability of the input store, the unique-member warning, the non-enumerable case, the input argument, injection context, symbol keys (`signal-store.spec.ts`) and the type spec added in #357. Nothing failed, so no test was added.
+
+**Observed, not changed:**
+
+- The result is cast to `InnerSignalStore<Record<string, unknown>, SignalsDictionary, Methods>`, which widens the state type to `Record<string, unknown>`. The cast is unchecked, but callers only ever see the declared `SignalStoreFeature<Input, …>` return type, so it has no visible effect.
+- The argument-object construction (`[STATE_SOURCE]` plus three spreads) is now four separate identical copies (`with-props.ts`, `with-methods.ts`, `with-feature.ts`, `with-hooks.ts`); a shared helper would remove them, but each copy is four lines.
+
+Verified: nothing changed in `modules/signals/src` or its specs; `yarn spell` and `npx prettier --check` on the two docs files.
+
 ---
 
-_More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, `component-store`, `component`, `operators`, and `schematics-core` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files, `component` found 1 real bug plus 2 barrel-export gaps (all fixed) across 10/10 files, `operators` found 2 barrel-export gaps (fixed) across 4/4 files, `schematics-core` found 9 real bugs plus 13 barrel-export gaps (all fixed) across 16/16 files. `signals` is in progress (14/18 files — `with-linked-state.ts` a state slice signal returned as-is was aliased instead of linked, so writing the linked slice silently wrote its source (fixed in `isWritableSignal`), `with-hooks.ts` hooks were called without their receiver, so `this` was `undefined` in a hook written as a method (fixed, plus a new type spec), `with-feature.ts` no bug, a coverage gap closed (symbol keys and injection context), `with-computed.ts` a quadratic build fixed (the same defect also fixed in the closed `signal-state.ts`, whose "no findings" this corrects), `ts-helpers.ts` 1 type-level gap fixed (template-literal dictionaries were classified as known records), `state-source.ts` 4 real defects fixed (a quadratic `getState`, and three `watchState` registration bugs), `deep-computed.ts`, `signal-method.ts`, and `signal-state.ts` no findings, `deep-signal.ts` 1 severe real bug fixed, `signal-store-assertions.ts` a false-positive warning fixed in its callers, `signal-store-feature.ts` a parameter-name typo fixed, `signal-store-models.ts` a symbol-key type gap fixed, `signal-store.ts` a coverage gap closed). See [todo.md](../todo.md) for the live per-module status of the remaining modules._
+_More findings are appended here as each file's PR merges. `store`, `entity`, `effects`, `router-store`, `store-devtools`, `component-store`, `component`, `operators`, and `schematics-core` are complete — `store` found 3 real bugs (all fixed), `entity` and `effects` found none, `router-store` found 7 (all fixed) across 12/12 files, `store-devtools` found 6 (all fixed) plus 1 minor cleanup across 11/11 files, `component-store` found 1 real gap (fixed) across 4/4 files, `component` found 1 real bug plus 2 barrel-export gaps (all fixed) across 10/10 files, `operators` found 2 barrel-export gaps (fixed) across 4/4 files, `schematics-core` found 9 real bugs plus 13 barrel-export gaps (all fixed) across 16/16 files. `signals` is in progress (15/18 files — `with-methods.ts` no findings, `with-linked-state.ts` a state slice signal returned as-is was aliased instead of linked, so writing the linked slice silently wrote its source (fixed in `isWritableSignal`), `with-hooks.ts` hooks were called without their receiver, so `this` was `undefined` in a hook written as a method (fixed, plus a new type spec), `with-feature.ts` no bug, a coverage gap closed (symbol keys and injection context), `with-computed.ts` a quadratic build fixed (the same defect also fixed in the closed `signal-state.ts`, whose "no findings" this corrects), `ts-helpers.ts` 1 type-level gap fixed (template-literal dictionaries were classified as known records), `state-source.ts` 4 real defects fixed (a quadratic `getState`, and three `watchState` registration bugs), `deep-computed.ts`, `signal-method.ts`, and `signal-state.ts` no findings, `deep-signal.ts` 1 severe real bug fixed, `signal-store-assertions.ts` a false-positive warning fixed in its callers, `signal-store-feature.ts` a parameter-name typo fixed, `signal-store-models.ts` a symbol-key type gap fixed, `signal-store.ts` a coverage gap closed). See [todo.md](../todo.md) for the live per-module status of the remaining modules._

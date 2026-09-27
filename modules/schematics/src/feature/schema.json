@@ -30,11 +30,11 @@
     "flat": {
       "type": "boolean",
       "default": true,
-      "description": "Flag to indicate if a dir is created."
+      "description": "When true (the default), creates the files in the path directly; when false, creates them in a folder named after the feature."
     },
     "module": {
       "type": "string",
-      "description": "Specifies the declaring module.",
+      "description": "The NgModule (path) to register the reducer and effects in.",
       "aliases": ["m"]
     },
     "skipImport": {
@@ -49,30 +49,30 @@
     },
     "reducers": {
       "type": "string",
-      "description": "Specifies the reducers file.",
+      "description": "The reducers file (path) to add the feature reducer to.",
       "aliases": ["r"]
     },
     "group": {
       "type": "boolean",
       "default": false,
-      "description": "Group actions, reducers and effects within relative subfolders",
+      "description": "When true, puts each file in a folder for its kind: actions, reducers, selectors, effects (and models with an entity).",
       "aliases": ["g"]
     },
     "api": {
       "type": "boolean",
       "default": false,
-      "description": "Specifies if api success and failure actions, reducer, and effects should be generated as part of this feature.",
+      "description": "Specifies if api success and failure actions, reducer, and effects should be generated as part of this feature. Has no effect with entity, whose actions have no success or failure actions.",
       "aliases": ["a"],
       "x-prompt": "Should we generate and wire success and failure actions?"
     },
     "prefix": {
-      "description": "The prefix of the action, effect and reducer.",
+      "description": "The prefix of the action, effect and reducer. Has no effect with entity, whose actions have fixed names.",
       "type": "string",
       "default": "load",
       "x-prompt": "What should be the prefix of the action, effect and reducer?"
     },
     "entity": {
-      "description": "Toggle whether an entity is created as part of the feature",
+      "description": "When true, creates an @ngrx/entity model, actions and reducer (instead of the action, reducer and selector schematics), and an effect that uses those actions.",
       "type": "boolean",
       "aliases": ["e"],
       "x-prompt": "Should we use @ngrx/entity to create the reducer?",

@@ -16,7 +16,7 @@
     "path": {
       "type": "string",
       "format": "path",
-      "description": "The path to create the component.",
+      "description": "The path to create the entity files.",
       "visible": false,
       "$default": {
         "$source": "workingDirectory"
@@ -34,29 +34,29 @@
     },
     "reducers": {
       "type": "string",
-      "description": "Specifies the reducers file.",
+      "description": "The reducers file (path) to add the entity reducer to.",
       "aliases": ["r"]
     },
     "module": {
       "type": "string",
-      "description": "Specifies the declaring module.",
+      "description": "The NgModule (path) to register the reducer in. Without it, the nearest NgModule is used, if the app has one.",
       "aliases": ["m"]
     },
     "flat": {
       "type": "boolean",
       "default": true,
-      "description": "Flag to indicate if a dir is created."
+      "description": "When true (the default), creates the files in the path directly; when false, creates them in a folder named after the entity."
     },
     "group": {
       "type": "boolean",
       "default": false,
-      "description": "Group actions, reducers and effects within relative subfolders",
+      "description": "When true, puts the actions, model and reducer in actions, models and reducers folders.",
       "aliases": ["g"]
     },
     "feature": {
       "type": "boolean",
       "default": false,
-      "description": "Flag to indicate if part of a feature schematic.",
+      "description": "Set by the feature schematic. It does not change what this schematic generates.",
       "visible": false
     }
   },

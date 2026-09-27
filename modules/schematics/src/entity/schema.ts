@@ -1,44 +1,50 @@
 export interface Schema {
   /**
-   * The name of the component.
+   * The name of the entity.
    */
-
   name: string;
-  /**
-   * The path to create the effect.
-   */
 
+  /**
+   * The path to create the entity files.
+   */
   path?: string;
+
   /**
    * The name of the project.
    */
   project?: string;
+
   /**
-   * Flag to indicate if a dir is created.
+   * When true (the default), creates the files in the path directly;
+   * when false, creates them in a folder named after the entity.
    */
   flat?: boolean;
+
   /**
    * When true, does not create test files.
    */
   skipTests?: boolean;
-  /**
-   * Allows specification of the declaring module.
-   */
 
+  /**
+   * The NgModule (path) to register the reducer in. Without it, the nearest
+   * NgModule is used, if the app has one.
+   */
   module?: string;
-  /**
-   * Allows specification of the declaring reducers.
-   */
 
+  /**
+   * The reducers file (path) to add the entity reducer to.
+   */
   reducers?: string;
-  /**
-   * Specifies if this is grouped within sub folders
-   */
 
+  /**
+   * When true, puts the actions, model and reducer in 'actions', 'models'
+   * and 'reducers' folders.
+   */
   group?: boolean;
 
   /**
-   * Specifies if this is grouped within a feature
+   * Set by the feature schematic. It does not change what this schematic
+   * generates.
    */
   feature?: boolean;
 }

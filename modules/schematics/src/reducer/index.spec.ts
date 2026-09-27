@@ -209,4 +209,82 @@ describe('Reducer Schematic', () => {
 
     expect(fileContent).toMatchSnapshot();
   });
+
+  it('should register the reducer from where it is created when nested and grouped', async () => {
+    // The file goes to reducers/foo/, not the foo/reducers/ layout of the
+    // entity schematic that schematics-core assumes by default.
+    const tree = await schematicRunner.runSchematic(
+      'reducer',
+      {
+        ...defaultOptions,
+        module: 'app-module.ts',
+        reducers: 'reducers/index.ts',
+        flat: false,
+        group: true,
+        skipTests: true,
+      },
+      appTree
+    );
+
+    expect(tree.files).toContain(
+      `${projectPath}/src/app/reducers/foo/foo.reducer.ts`
+    );
+    expect(tree.readContent(`${projectPath}/src/app/app-module.ts`)).toContain(
+      "import * as fromFoo from './reducers/foo/foo.reducer';"
+    );
+    expect(
+      tree.readContent(`${projectPath}/src/app/reducers/index.ts`)
+    ).toContain("import * as fromFoo from './foo/foo.reducer';");
+  });
+
+  describe('without a module', () => {
+    it('should register in the nearest NgModule', async () => {
+      const tree = await schematicRunner.runSchematic(
+        'reducer',
+        defaultOptions,
+        appTree
+      );
+
+      expect(
+        tree.readContent(`${projectPath}/src/app/app-module.ts`)
+      ).toContain("import * as fromFoo from './foo.reducer';");
+    });
+
+    it('should create the reducer in a standalone app, which has no NgModule', async () => {
+      const standaloneProjectPath = getTestProjectPath(
+        defaultWorkspaceOptions,
+        { ...defaultAppOptions, name: 'bar-standalone' }
+      );
+
+      const tree = await schematicRunner.runSchematic(
+        'reducer',
+        { ...defaultOptions, project: 'bar-standalone' },
+        appTree
+      );
+
+      expect(tree.files).toContain(
+        `${standaloneProjectPath}/src/app/foo.reducer.ts`
+      );
+    });
+  });
+
+  it('should not import actions or on when not part of a feature', async () => {
+    // The reducer schematic does not create the actions file; only the
+    // feature schematic does.
+    const tree = await schematicRunner.runSchematic(
+      'reducer',
+      defaultOptions,
+      appTree
+    );
+    const content = tree.readContent(`${projectPath}/src/app/foo.reducer.ts`);
+
+    expect(content).toContain("import { createReducer } from '@ngrx/store';");
+    expect(content).not.toContain('.actions');
+  });
+
+  it('should fail with a validation error if the name is missing', async () => {
+    await expect(
+      schematicRunner.runSchematic('reducer', { project: 'bar' }, appTree)
+    ).rejects.toThrow("must have required property 'name'");
+  });
 });

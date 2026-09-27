@@ -1,5 +1,5 @@
-import {<% if(feature) { %> createFeature,<% } %> createReducer, on } from '@ngrx/store';
-import { <%= classify(name) %>Actions } from '<%= featurePath(group, flat, "actions", dasherize(name)) %><%= dasherize(name) %>.actions';
+import {<% if(feature) { %> createFeature,<% } %> createReducer<% if(feature) { %>, on<% } %> } from '@ngrx/store';<% if(feature) { %>
+import { <%= classify(name) %>Actions } from '<%= featurePath(group, flat, "actions", dasherize(name)) %><%= dasherize(name) %>.actions';<% } %>
 
 export const <%= camelize(name) %>FeatureKey = '<%= camelize(name) %>';
 

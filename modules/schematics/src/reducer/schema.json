@@ -58,6 +58,11 @@
       "description": "Group reducer file within 'reducers' folder",
       "aliases": ["g"]
     },
+    "prefix": {
+      "description": "The prefix of the action the reducer handles (with feature).",
+      "type": "string",
+      "default": "load"
+    },
     "api": {
       "type": "boolean",
       "default": false,
@@ -72,5 +77,5 @@
     "default": "load",
     "x-prompt": "What should be the prefix of the reducer?"
   },
-  "required": []
+  "required": ["name"]
 }

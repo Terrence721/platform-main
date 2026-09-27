@@ -6,6 +6,25 @@ import { normalize } from '@angular-devkit/core';
 import { buildRelativePath } from './find-module';
 import { addImportToModule, insertImport } from './ast-utils';
 
+/**
+ * The reducer file (without `.ts`) to import. `options.reducerPath` is the
+ * path the caller wrote it to; without it, the layout of the entity schematic:
+ * `<name>/` for a non-flat entity, then `reducers/` when grouped.
+ */
+function getReducerPath(options: any): string {
+  if (options.reducerPath) {
+    return options.reducerPath;
+  }
+
+  return (
+    `/${options.path}/` +
+    (options.flat ? '' : stringUtils.dasherize(options.name) + '/') +
+    (options.group ? 'reducers/' : '') +
+    stringUtils.dasherize(options.name) +
+    '.reducer'
+  );
+}
+
 export function addReducerToState(options: any): Rule {
   return (host: Tree) => {
     if (!options.reducers) {
@@ -32,12 +51,7 @@ export function addReducerToState(options: any): Rule {
       true
     );
 
-    const reducerPath =
-      `/${options.path}/` +
-      (options.flat ? '' : stringUtils.dasherize(options.name) + '/') +
-      (options.group ? 'reducers/' : '') +
-      stringUtils.dasherize(options.name) +
-      '.reducer';
+    const reducerPath = getReducerPath(options);
 
     const relativePath = buildRelativePath(reducersPath, reducerPath);
     const reducerImport = insertImport(
@@ -225,12 +239,7 @@ export function addReducerImportToNgModule(options: any): Rule {
       insertImport(source, modulePath, 'StoreModule', '@ngrx/store'),
     ];
 
-    const reducerPath =
-      `/${options.path}/` +
-      (options.flat ? '' : stringUtils.dasherize(options.name) + '/') +
-      (options.group ? 'reducers/' : '') +
-      stringUtils.dasherize(options.name) +
-      '.reducer';
+    const reducerPath = getReducerPath(options);
     const relativePath = buildRelativePath(modulePath, reducerPath);
     const reducerImport = insertImport(
       source,

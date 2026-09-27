@@ -140,10 +140,12 @@ describe('Store Schematic', () => {
   });
 
   it('should fail if specified module does not exist', async () => {
-    const options = { ...defaultOptions, module: '/src/app/app.moduleXXX.ts' };
+    const options = { ...defaultOptions, module: 'app.moduleXXX.ts' };
     await expect(
       schematicRunner.runSchematic('store', options, appTree)
-    ).rejects.toThrow();
+    ).rejects.toThrow(
+      `Specified module path ${projectPath}/src/app/app.moduleXXX.ts does not exist`
+    );
   });
 
   it('should import a feature a specified module', async () => {
@@ -234,18 +236,20 @@ describe('Store Schematic', () => {
 
     await expect(
       schematicRunner.runSchematic('store', options, appTree)
-    ).rejects.toThrow();
+    ).rejects.toThrow('Please provide a name for the feature state');
   });
 
-  it('should pass if a root state name is not specified', () => {
+  it('should pass if a root state name is not specified', async () => {
     const options = {
       ...defaultOptions,
       name: undefined,
     };
 
-    expect(async () => {
-      await schematicRunner.runSchematic('store', options, appTree);
-    }).not.toThrow();
+    // Awaited: an async callback in expect(...).not.toThrow() returns a
+    // promise and can never throw synchronously.
+    const tree = await schematicRunner.runSchematic('store', options, appTree);
+
+    expect(tree.files).toContain(`${projectPath}/src/app/reducers/index.ts`);
   });
 
   it('should add a feature key if not root', async () => {
@@ -299,5 +303,58 @@ describe('Store Schematic', () => {
     const content = tree.readContent(`${projectPath}/src/app/empty.module.ts`);
 
     expect(content).toMatchSnapshot();
+  });
+
+  describe('in a standalone app, which has no NgModule', () => {
+    const standaloneProjectPath = getTestProjectPath(defaultWorkspaceOptions, {
+      ...defaultAppOptions,
+      name: 'bar-standalone',
+    });
+
+    it('should create the root state', async () => {
+      const tree = await schematicRunner.runSchematic(
+        'store',
+        { ...defaultOptions, project: 'bar-standalone' },
+        appTree
+      );
+
+      expect(tree.files).toContain(
+        `${standaloneProjectPath}/src/app/reducers/index.ts`
+      );
+    });
+
+    it('should create a feature state', async () => {
+      const tree = await schematicRunner.runSchematic(
+        'store',
+        { ...defaultOptions, project: 'bar-standalone', root: false },
+        appTree
+      );
+
+      expect(
+        tree.readContent(`${standaloneProjectPath}/src/app/reducers/index.ts`)
+      ).toContain("export const fooFeatureKey = 'foo';");
+    });
+  });
+
+  it('should only import what the state file uses', async () => {
+    const tree = await schematicRunner.runSchematic(
+      'store',
+      { ...defaultOptions, root: false },
+      appTree
+    );
+    const content = tree.readContent(
+      `${projectPath}/src/app/reducers/index.ts`
+    );
+
+    expect(content).toContain(
+      "import { ActionReducerMap, MetaReducer } from '@ngrx/store';"
+    );
+    for (const unused of [
+      'ActionReducer,',
+      'createFeatureSelector',
+      'createSelector',
+    ]) {
+      expect(content).not.toContain(unused);
+    }
   });
 });

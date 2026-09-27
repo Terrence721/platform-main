@@ -483,13 +483,7 @@ describe('User Reducer', () => {
 
 exports[`Entity Schematic > should update the state to plural 5`] = `
 "import { isDevMode } from '@angular/core';
-import {
-  ActionReducer,
-  ActionReducerMap,
-  createFeatureSelector,
-  createSelector,
-  MetaReducer
-} from '@ngrx/store';
+import { ActionReducerMap, MetaReducer } from '@ngrx/store';
 import * as fromUser from '../user.reducer';
 
 export const userFeatureKey = 'user';
@@ -503,7 +497,6 @@ export const reducers: ActionReducerMap<State> = {
 
   [fromUser.usersFeatureKey]: fromUser.reducer,
 };
-
 
 export const metaReducers: MetaReducer<State>[] = isDevMode() ? [] : [];
 "

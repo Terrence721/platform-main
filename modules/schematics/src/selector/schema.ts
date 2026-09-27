@@ -15,7 +15,8 @@ export interface Schema {
   project?: string;
 
   /**
-   * Flag to indicate if a dir is created.
+   * When true (the default), creates the files in the path directly;
+   * when false, creates them in a folder named after the selector.
    */
   flat?: boolean;
 
@@ -25,12 +26,13 @@ export interface Schema {
   skipTests?: boolean;
 
   /**
-   * Specifies if this is grouped within a feature
+   * When true, selects the state of the reducer the feature schematic creates
+   * (typed by its `State`); without it, the feature state is typed `unknown`.
    */
   feature?: boolean;
 
   /**
-   * Specifies if this is grouped within an 'selectors' folder
+   * When true, creates the selector files within a 'selectors' folder.
    */
   group?: boolean;
 }

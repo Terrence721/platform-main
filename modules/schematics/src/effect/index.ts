@@ -63,7 +63,9 @@ function addImportToNgModule(options: EffectOptions): Rule {
       true
     );
 
-    const effectsName = `${stringUtils.classify(`${options.name}Effects`)}`;
+    // Set by the default rule before this runs ('' only with --root --minimal).
+    const name = options.name ?? '';
+    const effectsName = `${stringUtils.classify(`${name}Effects`)}`;
 
     const effectsModuleImport = insertImport(
       source,
@@ -76,8 +78,8 @@ function addImportToNgModule(options: EffectOptions): Rule {
     // points at a file that does not exist.
     const effectsPath = [
       options.path,
-      effectsFolder(options, stringUtils.dasherize(options.name)),
-      `${stringUtils.dasherize(options.name)}.effects`,
+      effectsFolder(options, stringUtils.dasherize(name)),
+      `${stringUtils.dasherize(name)}.effects`,
     ]
       .join('/')
       .replace(/\/+/g, '/')
@@ -144,7 +146,10 @@ export default function (options: EffectOptions): Rule {
     options.prefix = getPrefix(options);
 
     if (options.module) {
-      options.module = findModuleFromOptions(host, options);
+      options.module = findModuleFromOptions(host, {
+        ...options,
+        name: options.name,
+      });
     }
 
     const templateSource = apply(url('./files'), [

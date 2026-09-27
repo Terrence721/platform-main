@@ -5,7 +5,7 @@
   "type": "object",
   "properties": {
     "name": {
-      "description": "The name of the effect.",
+      "description": "The name of the effect. Not needed with --root --minimal.",
       "type": "string",
       "$default": {
         "$source": "argv",
@@ -16,7 +16,7 @@
     "path": {
       "type": "string",
       "format": "path",
-      "description": "The path to create the component.",
+      "description": "The path to create the effect.",
       "visible": false,
       "$default": {
         "$source": "workingDirectory"
@@ -30,7 +30,7 @@
     "flat": {
       "type": "boolean",
       "default": true,
-      "description": "Flag to indicate if a dir is created."
+      "description": "When true (the default), creates the files in the path directly; when false, creates them in a folder named after the effect."
     },
     "skipTests": {
       "type": "boolean",
@@ -40,7 +40,7 @@
     "module": {
       "type": "string",
       "default": "",
-      "description": "Allows specification of the declaring module.",
+      "description": "The NgModule (path) to register the effects in.",
       "alias": "m",
       "subtype": "filepath",
       "x-prompt": "To which module (path) should the effect be registered in?"
@@ -53,7 +53,7 @@
     "feature": {
       "type": "boolean",
       "default": false,
-      "description": "Flag to indicate if part of a feature schematic."
+      "description": "When true, generates a sample effect wired to the feature's actions, as the feature schematic does."
     },
     "group": {
       "type": "boolean",

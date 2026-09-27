@@ -1,8 +1,9 @@
 export interface Schema {
   /**
-   * The name of the component.
+   * The name of the effect. Not needed with `root` and `minimal`, which only
+   * register `EffectsModule.forRoot([])`.
    */
-  name: string;
+  name?: string;
 
   /**
    * The path to create the effect.
@@ -15,7 +16,8 @@ export interface Schema {
   project?: string;
 
   /**
-   * Flag to indicate if a dir is created.
+   * When true (the default), creates the files in the path directly;
+   * when false, creates them in a folder named after the effect.
    */
   flat?: boolean;
 
@@ -25,27 +27,28 @@ export interface Schema {
   skipTests?: boolean;
 
   /**
-   * Allows specification of the declaring module.
+   * The NgModule (path) to register the effects in.
    */
   module?: string;
 
   /**
-   * Specifies if this is a root-level effect
+   * Specifies if the effects are registered with `EffectsModule.forRoot`.
    */
   root?: boolean;
 
   /**
-   * Specifies if this is grouped within a feature
+   * When true, generates a sample effect wired to the feature's actions, as
+   * the feature schematic does.
    */
   feature?: boolean;
 
   /**
-   * Specifies if this is grouped within an 'effects' folder
+   * Specifies if this is grouped within an 'effects' folder.
    */
   group?: boolean;
 
   /**
-   * Specifies if effect has api success and failure actions wired up
+   * Specifies if effect has api success and failure actions wired up.
    */
   api?: boolean;
 

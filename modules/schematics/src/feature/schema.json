@@ -79,5 +79,5 @@
       "default": false
     }
   },
-  "required": []
+  "required": ["name"]
 }

@@ -1,2 +1,4 @@
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
-export interface Schema {}
+/**
+ * `ng add @ngrx/schematics` takes no options (`schema.json` defines none).
+ */
+export type Schema = Record<string, never>;

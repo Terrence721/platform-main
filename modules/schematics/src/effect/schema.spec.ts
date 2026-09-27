@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import * as ts from 'typescript';
+import ts from 'typescript';
 
 // `Schema` is the type `index.ts` reads the options through, `schema.json` is
 // what the options are validated against; the two must describe the same

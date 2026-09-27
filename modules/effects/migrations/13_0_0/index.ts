@@ -1,4 +1,4 @@
-import * as ts from 'typescript';
+import ts from 'typescript';
 import { Path } from '@angular-devkit/core';
 import { Tree, Rule, chain } from '@angular-devkit/schematics';
 import {

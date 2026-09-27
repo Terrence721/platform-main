@@ -6,7 +6,7 @@ import {
   visitTSSourceFiles,
 } from '../../../schematics-core';
 import { Rule, SchematicContext, Tree } from '@angular-devkit/schematics';
-import * as ts from 'typescript';
+import ts from 'typescript';
 
 const EVENTS_PKG = '@ngrx/signals/events';
 const OLD_NAME = 'withEffects';

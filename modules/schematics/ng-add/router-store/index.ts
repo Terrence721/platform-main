@@ -8,7 +8,7 @@ import {
   noop,
 } from '@angular-devkit/schematics';
 import { NodePackageInstallTask } from '@angular-devkit/schematics/tasks';
-import * as ts from 'typescript';
+import ts from 'typescript';
 import {
   InsertChange,
   addImportToModule,

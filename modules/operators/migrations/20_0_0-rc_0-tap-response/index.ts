@@ -6,7 +6,7 @@ import {
   Change,
 } from '../../../schematics-core';
 import { visitCallExpression } from '../../../schematics-core/utility/visitors';
-import * as ts from 'typescript';
+import ts from 'typescript';
 
 export default function migrateTapResponse(): Rule {
   return (tree: Tree, context: SchematicContext) => {

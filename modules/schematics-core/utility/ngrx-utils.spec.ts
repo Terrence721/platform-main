@@ -1,4 +1,4 @@
-import * as ts from 'typescript';
+import ts from 'typescript';
 import { addReducerToActionReducerMap } from './ngrx-utils';
 
 function parse(source: string) {

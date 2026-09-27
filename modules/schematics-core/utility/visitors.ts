@@ -1,4 +1,4 @@
-import * as ts from 'typescript';
+import ts from 'typescript';
 import { normalize, resolve } from '@angular-devkit/core';
 import { Tree, DirEntry } from '@angular-devkit/schematics';
 

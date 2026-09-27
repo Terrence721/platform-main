@@ -1,4 +1,4 @@
-import * as ts from 'typescript';
+import ts from 'typescript';
 import { Path } from '@angular-devkit/core';
 import { replaceImport } from './ast-utils';
 import { InsertChange, RemoveChange, ReplaceChange } from './change';

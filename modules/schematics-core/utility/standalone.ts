@@ -7,7 +7,7 @@ import {
 import { dirname, join, normalize } from '@angular-devkit/core';
 import { insertImport } from './ast-utils';
 import { InsertChange } from './change';
-import * as ts from 'typescript';
+import ts from 'typescript';
 
 /** App config that was resolved to its source node. */
 interface ResolvedAppConfig {

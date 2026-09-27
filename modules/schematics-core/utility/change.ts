@@ -1,4 +1,4 @@
-import * as ts from 'typescript';
+import ts from 'typescript';
 import { Tree, UpdateRecorder } from '@angular-devkit/schematics';
 import { Path } from '@angular-devkit/core';
 

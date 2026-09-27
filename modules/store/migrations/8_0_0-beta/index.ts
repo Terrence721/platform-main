@@ -1,4 +1,4 @@
-import * as ts from 'typescript';
+import ts from 'typescript';
 import { tags, logging } from '@angular-devkit/core';
 import {
   Rule,

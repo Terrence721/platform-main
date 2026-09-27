@@ -1,5 +1,5 @@
 import type { Rule, SchematicContext, Tree } from '@angular-devkit/schematics';
-import * as ts from 'typescript';
+import ts from 'typescript';
 import type { Schema } from './schema';
 
 export const possibleFlatConfigPaths = [

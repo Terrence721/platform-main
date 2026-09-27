@@ -1,6 +1,6 @@
 import { ESLintUtils, type TSESTree } from '@typescript-eslint/utils';
 import * as path from 'path';
-import * as ts from 'typescript';
+import ts from 'typescript';
 import { createRule } from '../../rule-creator';
 import {
   asPattern,

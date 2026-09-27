@@ -1,6 +1,6 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import * as ts from 'typescript';
+import ts from 'typescript';
 
 // TypeScript publishes the JSDoc of each overload signature and never the JSDoc
 // of the implementation signature (callers cannot see that one), so an

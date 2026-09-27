@@ -5,7 +5,7 @@ import {
   commitChanges,
 } from '../../../schematics-core';
 import { Rule, SchematicContext, Tree } from '@angular-devkit/schematics';
-import * as ts from 'typescript';
+import ts from 'typescript';
 import { visitImportDeclaration } from '../../../schematics-core/utility/visitors';
 
 export default function migrateWritableStateSource(): Rule {

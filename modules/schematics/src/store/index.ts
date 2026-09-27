@@ -13,7 +13,7 @@ import {
   filter,
   noop,
 } from '@angular-devkit/schematics';
-import * as ts from 'typescript';
+import ts from 'typescript';
 import {
   stringUtils,
   buildRelativePath,

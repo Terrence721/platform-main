@@ -17,7 +17,7 @@ import {
   visitTypeLiteral,
   visitTypeReference,
 } from '../../../schematics-core/utility/visitors';
-import * as ts from 'typescript';
+import ts from 'typescript';
 
 function migratedToEntityProps(sourceFile: ts.SourceFile) {
   const changes: Change[] = [];

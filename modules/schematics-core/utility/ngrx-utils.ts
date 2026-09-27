@@ -1,4 +1,4 @@
-import * as ts from 'typescript';
+import ts from 'typescript';
 import * as stringUtils from './strings';
 import { InsertChange, Change, NoopChange } from './change';
 import { Tree, SchematicsException, Rule } from '@angular-devkit/schematics';

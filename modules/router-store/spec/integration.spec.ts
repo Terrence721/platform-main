@@ -9,6 +9,7 @@ import {
   ActivatedRouteSnapshot,
 } from '@angular/router';
 import { Store, ScannedActionsSubject } from '@ngrx/store';
+import { config } from 'rxjs';
 import { filter, first, map, take } from 'rxjs/operators';
 
 import {
@@ -128,7 +129,6 @@ describe('integration spec', () => {
       });
 
       const router = TestBed.inject(Router);
-      const log = logOfRouterAndActionsAndStore();
 
       const hasRouterState = (action: RouterAction<any>) =>
         !!action.payload.routerState;
@@ -152,51 +152,67 @@ describe('integration spec', () => {
         });
     }));
 
-  // Un-skipping this reliably times out: the reducer's throw becomes an
-  // uncaught exception (visible in the console as "Error: You shall not
-  // pass!"), not a rejection the .catch() below ever sees, so
-  // navigateByUrl()'s promise never settles. Confirmed empirically during
-  // the router_store_module.ts code review (#186) - not fixed here, since
-  // making a reducer throw actually cancel navigation would need Angular
-  // Router visibility into the store dispatch this module's subscriber
-  // makes, which the Router has no hook for. Real, pre-existing gap in the
-  // module's documented behavior, not something this repo's adaptation
-  // introduced - inherited already-skipped from the original upstream import.
-  test.skip('should support preventing navigation', () =>
-    new Promise<void>((done) => {
+  // A reducer that throws does not cancel the navigation. The test that used
+  // to stand here expected it to (it was inherited skipped, and #186 showed
+  // it timed out). The throw happens inside the store's own state stream,
+  // which the Router does not wait on, so:
+  // - the navigation completes (NavigationEnd, the promise resolves true);
+  // - the error goes to RxJS's unhandled-error hook, not Angular's
+  //   ErrorHandler;
+  // - the state stream ends, so the store reduces no action after it,
+  //   including ROUTER_NAVIGATION itself (NgRx treats a throwing reducer as
+  //   fatal: reducers must not throw).
+  it('should not cancel navigation when a reducer throws, and report the error as unhandled', async () => {
+    const unhandled: unknown[] = [];
+    const previousOnUnhandledError = config.onUnhandledError;
+    config.onUnhandledError = (error) => unhandled.push(error);
+
+    try {
       const reducer = (state = '', action: RouterAction<any>) => {
         if (
           action.type === ROUTER_NAVIGATION &&
           action.payload.routerState.url.toString() === '/next'
         ) {
           throw new Error('You shall not pass!');
-        } else {
-          return state;
         }
+        return state;
       };
 
       createTestModule({ reducers: { reducer } });
 
       const router = TestBed.inject(Router);
+      const handleError = vi.spyOn(TestBed.inject(ErrorHandler), 'handleError');
       const log = logOfRouterAndActionsAndStore();
 
-      router
-        .navigateByUrl('/')
-        .then(() => {
-          log.splice(0);
-          return router.navigateByUrl('next');
-        })
-        .catch((e) => {
-          expect(e.message).toEqual('You shall not pass!');
-          expect(log).toEqual([
-            { type: 'router', event: 'NavigationStart', url: '/next' },
-            { type: 'router', event: 'RoutesRecognized', url: '/next' },
-            { type: 'router', event: 'NavigationError', url: '/next' },
-          ]);
+      await router.navigateByUrl('/');
+      log.splice(0);
 
-          done();
-        });
-    }));
+      await expect(router.navigateByUrl('next')).resolves.toBe(true);
+      expect(router.url).toBe('/next');
+      expect(log).toEqual([
+        { type: 'store', state: '' },
+        { type: 'action', action: ROUTER_REQUEST },
+        { type: 'router', event: 'NavigationStart', url: '/next' },
+        { type: 'router', event: 'RoutesRecognized', url: '/next' },
+        { type: 'router', event: 'GuardsCheckStart', url: '/next' },
+        { type: 'router', event: 'GuardsCheckEnd', url: '/next' },
+        { type: 'router', event: 'ResolveStart', url: '/next' },
+        { type: 'router', event: 'ResolveEnd', url: '/next' },
+        { type: 'router', event: 'NavigationEnd', url: '/next' },
+      ]);
+
+      // RxJS reports an unhandled error from a timeout.
+      await new Promise((resolve) => setTimeout(resolve));
+      expect(unhandled).toEqual([new Error('You shall not pass!')]);
+      expect(handleError).not.toHaveBeenCalled();
+
+      log.splice(0);
+      TestBed.inject(Store).dispatch({ type: 'after the throw' });
+      expect(log).toEqual([]);
+    } finally {
+      config.onUnhandledError = previousOnUnhandledError;
+    }
+  });
 
   it('should ignore routing actions for the URL that is currently open', async () => {
     createTestModule({

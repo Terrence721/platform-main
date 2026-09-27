@@ -74,4 +74,35 @@ describe('ng-add Schematic', () => {
       '@ngrx/schematics',
     ]);
   });
+
+  it('should not add @ngrx/schematics again when ng-add runs twice', async () => {
+    appTree.overwrite(
+      '/angular.json',
+      JSON.stringify(defaultWorkspace, undefined, 2)
+    );
+
+    const once = await schematicRunner.runSchematic('ng-add', {}, appTree);
+    const twice = await schematicRunner.runSchematic('ng-add', {}, once);
+    const workspace = JSON.parse(twice.readContent('/angular.json'));
+    expect(workspace.cli.schematicCollections).toEqual(['@ngrx/schematics']);
+  });
+
+  it('should not list @ngrx/schematics twice when it was the defaultCollection', async () => {
+    appTree.overwrite(
+      '/angular.json',
+      JSON.stringify(
+        {
+          ...defaultWorkspace,
+          cli: { defaultCollection: '@ngrx/schematics' },
+        },
+        undefined,
+        2
+      )
+    );
+
+    const tree = await schematicRunner.runSchematic('ng-add', {}, appTree);
+    const workspace = JSON.parse(tree.readContent('/angular.json'));
+    expect(workspace.cli.schematicCollections).toEqual(['@ngrx/schematics']);
+    expect(workspace.cli.defaultCollection).toBeUndefined();
+  });
 });

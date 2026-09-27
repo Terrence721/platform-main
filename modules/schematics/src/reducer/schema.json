@@ -16,7 +16,7 @@
     "path": {
       "type": "string",
       "format": "path",
-      "description": "The path to create the component.",
+      "description": "The path to create the reducer.",
       "visible": false,
       "$default": {
         "$source": "workingDirectory"
@@ -34,28 +34,28 @@
     },
     "module": {
       "type": "string",
-      "description": "Specifies the declaring module.",
+      "description": "The NgModule (path) to register the reducer in. Without it, the nearest NgModule is used, if the app has one.",
       "aliases": ["m"]
     },
     "flat": {
       "type": "boolean",
       "default": true,
-      "description": "Flag to indicate if a dir is created."
+      "description": "When true (the default), creates the files in the path directly; when false, creates them in a folder named after the reducer."
     },
     "feature": {
       "type": "boolean",
       "default": false,
-      "description": "Flag to indicate if part of a feature schematic."
+      "description": "When true, the reducer handles the feature's actions (from the action schematic) and is exported through createFeature, as the feature schematic generates it."
     },
     "reducers": {
       "type": "string",
-      "description": "Specifies the reducers file.",
+      "description": "The reducers file (path) to add the reducer to.",
       "aliases": ["r"]
     },
     "group": {
       "type": "boolean",
       "default": false,
-      "description": "Group reducer file within 'reducers' folder",
+      "description": "When true, creates the reducer within a reducers folder.",
       "aliases": ["g"]
     },
     "prefix": {
@@ -66,7 +66,7 @@
     "api": {
       "type": "boolean",
       "default": false,
-      "description": "Specifies if api success and failure actions should be added to the reducer",
+      "description": "Specifies if api success and failure actions should be added to the reducer (with feature).",
       "aliases": ["a"],
       "x-prompt": "Should we add success and failure actions to the reducer?"
     }

@@ -71,8 +71,11 @@ export default function (options: FeatureOptions): Rule {
           project: options.project,
           skipTests: options.skipTests,
           feature: true,
-          api: options.api,
-          prefix: options.prefix,
+          // The entity actions have fixed names (`Load Foos`, ...) and no
+          // success or failure actions, so the effect must not reference
+          // `api` or `prefix` actions that only the action schematic creates.
+          api: options.entity ? false : options.api,
+          prefix: options.entity ? 'load' : options.prefix,
         }),
       ])
     )(host, context);

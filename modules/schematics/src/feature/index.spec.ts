@@ -298,4 +298,46 @@ describe('Feature Schematic', () => {
       expect(tree.readContent(path)).toMatchSnapshot();
     });
   });
+
+  describe('with an entity', () => {
+    // The entity actions have fixed names and no success or failure
+    // actions; the effect may only use actions that exist.
+    const effects = async (options: Partial<FeatureOptions>) => {
+      const tree = await schematicRunner.runSchematic(
+        'feature',
+        { ...defaultOptions, entity: true, ...options },
+        appTree
+      );
+
+      return {
+        actions: tree.readContent(`${projectPath}/src/app/foo.actions.ts`),
+        effects: tree.readContent(`${projectPath}/src/app/foo.effects.ts`),
+      };
+    };
+
+    it('should not use api actions the entity actions do not have', async () => {
+      const { actions, effects: content } = await effects({ api: true });
+
+      expect(actions).not.toContain('Success');
+      expect(content).not.toContain('loadFoosSuccess');
+      expect(content).not.toContain('loadFoosFailure');
+      expect(content).toContain('ofType(FooActions.loadFoos)');
+    });
+
+    it('should not use a prefix the entity actions do not have', async () => {
+      const { actions, effects: content } = await effects({
+        prefix: 'custom',
+      });
+
+      expect(actions).toContain("'Load Foos'");
+      expect(content).not.toContain('customFoos');
+      expect(content).toContain('ofType(FooActions.loadFoos)');
+    });
+  });
+
+  it('should fail with a validation error if the name is missing', async () => {
+    await expect(
+      schematicRunner.runSchematic('feature', { project: 'bar' }, appTree)
+    ).rejects.toThrow("must have required property 'name'");
+  });
 });

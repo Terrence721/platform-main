@@ -113,7 +113,6 @@ describe('Foo Reducer', () => {
 exports[`Feature Schematic > should create all files of a feature with an entity 4`] = `
 "import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
-
 import { concatMap } from 'rxjs/operators';
 import { Observable, EMPTY } from 'rxjs';
 import { FooActions } from './foo.actions';
@@ -122,16 +121,13 @@ import { FooActions } from './foo.actions';
 export class FooEffects {
   private actions$ = inject(Actions);
 
-
   loadFoos$ = createEffect(() => {
     return this.actions$.pipe(
-
       ofType(FooActions.loadFoos),
       /** An EMPTY observable only emits completion. Replace with your own observable API request */
       concatMap(() => EMPTY as Observable<{ type: string }>)
     );
   });
-
 }
 "
 `;
@@ -234,9 +230,8 @@ exports[`Feature Schematic > should have all api effect if api flag enabled 1`] 
 "import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { catchError, map, concatMap } from 'rxjs/operators';
-import { Observable, EMPTY, of } from 'rxjs';
+import { EMPTY, of } from 'rxjs';
 import { FooActions } from './foo.actions';
-
 
 @Injectable()
 export class FooEffects {
@@ -244,7 +239,6 @@ export class FooEffects {
 
   loadFoos$ = createEffect(() => {
     return this.actions$.pipe(
-
       ofType(FooActions.loadFoos),
       concatMap(() =>
         /** An EMPTY observable only emits completion. Replace with your own observable API request */
@@ -254,8 +248,6 @@ export class FooEffects {
       )
     );
   });
-
-
 }
 "
 `;
@@ -264,9 +256,8 @@ exports[`Feature Schematic > should have all api effect with prefix if api flag 
 "import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { catchError, map, concatMap } from 'rxjs/operators';
-import { Observable, EMPTY, of } from 'rxjs';
+import { EMPTY, of } from 'rxjs';
 import { FooActions } from './foo.actions';
-
 
 @Injectable()
 export class FooEffects {
@@ -274,7 +265,6 @@ export class FooEffects {
 
   customFoos$ = createEffect(() => {
     return this.actions$.pipe(
-
       ofType(FooActions.customFoos),
       concatMap(() =>
         /** An EMPTY observable only emits completion. Replace with your own observable API request */
@@ -284,8 +274,6 @@ export class FooEffects {
       )
     );
   });
-
-
 }
 "
 `;

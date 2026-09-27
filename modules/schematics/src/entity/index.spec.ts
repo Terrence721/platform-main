@@ -143,6 +143,62 @@ describe('Entity Schematic', () => {
 
     expect(content).toMatchSnapshot();
   });
+
+  describe('without a module', () => {
+    it('should register in the nearest NgModule', async () => {
+      const tree = await schematicRunner.runSchematic(
+        'entity',
+        defaultOptions,
+        appTree
+      );
+
+      expect(
+        tree.readContent(`${projectPath}/src/app/app-module.ts`)
+      ).toContain(
+        'StoreModule.forFeature(fromFoo.foosFeatureKey, fromFoo.reducer)'
+      );
+    });
+
+    it('should create the files in a standalone app, which has no NgModule', async () => {
+      const standaloneProjectPath = getTestProjectPath(
+        defaultWorkspaceOptions,
+        { ...defaultAppOptions, name: 'bar-standalone' }
+      );
+
+      const tree = await schematicRunner.runSchematic(
+        'entity',
+        { ...defaultOptions, project: 'bar-standalone' },
+        appTree
+      );
+
+      expect(tree.files).toEqual(
+        expect.arrayContaining([
+          `${standaloneProjectPath}/src/app/foo.actions.ts`,
+          `${standaloneProjectPath}/src/app/foo.model.ts`,
+          `${standaloneProjectPath}/src/app/foo.reducer.ts`,
+          `${standaloneProjectPath}/src/app/foo.reducer.spec.ts`,
+        ])
+      );
+    });
+  });
+
+  it('should fail if the specified module does not exist', async () => {
+    await expect(
+      schematicRunner.runSchematic(
+        'entity',
+        { ...defaultOptions, module: 'app.moduleXXX.ts' },
+        appTree
+      )
+    ).rejects.toThrow(
+      `Specified module path ${projectPath}/src/app/app.moduleXXX.ts does not exist`
+    );
+  });
+
+  it('should fail with a validation error if the name is missing', async () => {
+    await expect(
+      schematicRunner.runSchematic('entity', { project: 'bar' }, appTree)
+    ).rejects.toThrow("must have required property 'name'");
+  });
   it('should create all files of an entity within grouped and nested folders', async () => {
     const options = { ...defaultOptions, flat: false, group: true };
 

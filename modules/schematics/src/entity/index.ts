@@ -25,6 +25,29 @@ import {
 } from '../../../schematics-core';
 import { Schema as EntityOptions } from './schema';
 
+/**
+ * The NgModule to register the reducer in: the one given with `--module`, or
+ * else the nearest one. A standalone app has no NgModule; its files are still
+ * created, and registering the feature (`provideState`) is left to the app.
+ */
+function findModuleToRegisterIn(host: Tree, options: EntityOptions) {
+  if (options.module) {
+    return findModuleFromOptions(host, options);
+  }
+
+  try {
+    return findModuleFromOptions(host, options);
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.startsWith('Could not find an NgModule')
+    ) {
+      return undefined;
+    }
+    throw error;
+  }
+}
+
 export default function (options: EntityOptions): Rule {
   return (host: Tree, context: SchematicContext) => {
     const projectConfig = getProject(host, options);
@@ -34,7 +57,7 @@ export default function (options: EntityOptions): Rule {
     options.name = parsedPath.name;
     options.path = parsedPath.path;
 
-    options.module = findModuleFromOptions(host, options);
+    options.module = findModuleToRegisterIn(host, options);
 
     const templateOptions = {
       ...stringUtils,

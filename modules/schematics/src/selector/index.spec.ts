@@ -27,6 +27,62 @@ describe('Selector Schematic', () => {
     appTree = await createWorkspace(schematicRunner, appTree);
   });
 
+  describe('without the feature flag', () => {
+    it('should create a feature selector and import only what it uses', async () => {
+      const tree = await schematicRunner.runSchematic(
+        'selector',
+        defaultOptions,
+        appTree
+      );
+      const content = tree.readContent(
+        `${projectPath}/src/app/foo.selectors.ts`
+      );
+
+      expect(content).toContain(
+        "import { createFeatureSelector } from '@ngrx/store';"
+      );
+      expect(content).toContain(
+        "export const selectFooState = createFeatureSelector<unknown>('foo');"
+      );
+      expect(content).not.toContain('createSelector');
+    });
+
+    it('should create a spec that tests the selector', async () => {
+      const tree = await schematicRunner.runSchematic(
+        'selector',
+        defaultOptions,
+        appTree
+      );
+      const spec = tree
+        .readContent(`${projectPath}/src/app/foo.selectors.spec.ts`)
+        .replace(/\r\n/g, '\n');
+
+      expect(spec).toContain(
+        "import { selectFooState } from './foo.selectors';"
+      );
+      expect(spec).toContain('expect(result).toEqual({});');
+      expect(spec).not.toMatch(/^[ \t]+$/m);
+    });
+  });
+
+  it('should not import createSelector with the feature flag either', async () => {
+    const tree = await schematicRunner.runSchematic(
+      'selector',
+      { ...defaultOptions, feature: true },
+      appTree
+    );
+
+    expect(
+      tree.readContent(`${projectPath}/src/app/foo.selectors.ts`)
+    ).not.toContain('createSelector');
+  });
+
+  it('should fail with a validation error if the name is missing', async () => {
+    await expect(
+      schematicRunner.runSchematic('selector', { project: 'bar' }, appTree)
+    ).rejects.toThrow("must have required property 'name'");
+  });
+
   it('should create selector files', async () => {
     const tree = await schematicRunner.runSchematic(
       'selector',

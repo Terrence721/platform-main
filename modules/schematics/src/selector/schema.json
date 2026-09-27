@@ -49,5 +49,5 @@
       "visible": false
     }
   },
-  "required": []
+  "required": ["name"]
 }

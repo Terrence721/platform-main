@@ -23,7 +23,7 @@ export default function (options: SelectorOptions): Rule {
   return (host: Tree, context: SchematicContext) => {
     options.path = getProjectPath(host, options);
 
-    const parsedPath = parseName(options.path, options.name || '');
+    const parsedPath = parseName(options.path, options.name);
     options.name = parsedPath.name;
     options.path = parsedPath.path;
 

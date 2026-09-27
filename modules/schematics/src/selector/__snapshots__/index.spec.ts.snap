@@ -1,7 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`Selector Schematic > With feature flag > should create a selector 1`] = `
-"import { createFeatureSelector, createSelector } from '@ngrx/store';
+"import { createFeatureSelector } from '@ngrx/store';
 import * as fromFoo from './foo.reducer';
 
 export const selectFooState = createFeatureSelector<fromFoo.State>(
@@ -17,7 +17,7 @@ import { selectFooState } from './foo.selectors';
 describe('Foo Selectors', () => {
   it('should select the feature state', () => {
     const result = selectFooState({
-      [fromFoo.fooFeatureKey]: {}
+      [fromFoo.fooFeatureKey]: {},
     });
 
     expect(result).toEqual({});
@@ -27,7 +27,7 @@ describe('Foo Selectors', () => {
 `;
 
 exports[`Selector Schematic > With feature flag > should group and nest the selectors within a feature 1`] = `
-"import { createFeatureSelector, createSelector } from '@ngrx/store';
+"import { createFeatureSelector } from '@ngrx/store';
 import * as fromFoo from '../../reducers/foo/foo.reducer';
 
 export const selectFooState = createFeatureSelector<fromFoo.State>(
@@ -43,7 +43,7 @@ import { selectFooState } from './foo.selectors';
 describe('Foo Selectors', () => {
   it('should select the feature state', () => {
     const result = selectFooState({
-      [fromFoo.fooFeatureKey]: {}
+      [fromFoo.fooFeatureKey]: {},
     });
 
     expect(result).toEqual({});
@@ -53,51 +53,66 @@ describe('Foo Selectors', () => {
 `;
 
 exports[`Selector Schematic > should create selector files 1`] = `
-"import { createFeatureSelector, createSelector } from '@ngrx/store';
+"import { createFeatureSelector } from '@ngrx/store';
 
+export const selectFooState = createFeatureSelector<unknown>('foo');
 "
 `;
 
 exports[`Selector Schematic > should create selector files 2`] = `
-"
+"import { selectFooState } from './foo.selectors';
 
 describe('Foo Selectors', () => {
   it('should select the feature state', () => {
-    
+    const result = selectFooState({
+      foo: {},
+    });
+
+    expect(result).toEqual({});
   });
 });
 "
 `;
 
 exports[`Selector Schematic > should group selectors if group is true 1`] = `
-"import { createFeatureSelector, createSelector } from '@ngrx/store';
+"import { createFeatureSelector } from '@ngrx/store';
 
+export const selectFooState = createFeatureSelector<unknown>('foo');
 "
 `;
 
 exports[`Selector Schematic > should group selectors if group is true 2`] = `
-"
+"import { selectFooState } from './foo.selectors';
 
 describe('Foo Selectors', () => {
   it('should select the feature state', () => {
-    
+    const result = selectFooState({
+      foo: {},
+    });
+
+    expect(result).toEqual({});
   });
 });
 "
 `;
 
 exports[`Selector Schematic > should not flatten selectors if flat is false 1`] = `
-"import { createFeatureSelector, createSelector } from '@ngrx/store';
+"import { createFeatureSelector } from '@ngrx/store';
 
+export const selectFooState = createFeatureSelector<unknown>('foo');
 "
 `;
 
 exports[`Selector Schematic > should not flatten selectors if flat is false 2`] = `
-"
+"import { selectFooState } from './foo.selectors';
 
 describe('Foo Selectors', () => {
   it('should select the feature state', () => {
-    
+    const result = selectFooState({
+      foo: {},
+    });
+
+    expect(result).toEqual({});
   });
 });
 "

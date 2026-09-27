@@ -11,12 +11,20 @@ function updateSchematicCollections(host: Tree) {
   const path = getWorkspacePath(host);
 
   workspace.cli = workspace.cli || {};
-  workspace.cli.schematicCollections = workspace.cli.schematicCollections || [];
+  const collections: string[] = (workspace.cli.schematicCollections =
+    workspace.cli.schematicCollections || []);
+  // Each collection is added once, so running ng-add again changes nothing.
+  const addCollection = (collection: string) => {
+    if (!collections.includes(collection)) {
+      collections.push(collection);
+    }
+  };
+
   if (workspace.cli.defaultCollection) {
-    workspace.cli.schematicCollections.push(workspace.cli.defaultCollection);
+    addCollection(workspace.cli.defaultCollection);
     delete workspace.cli.defaultCollection;
   }
-  workspace.cli.schematicCollections.push('@ngrx/schematics');
+  addCollection('@ngrx/schematics');
 
   host.overwrite(path, JSON.stringify(workspace, null, 2));
 }

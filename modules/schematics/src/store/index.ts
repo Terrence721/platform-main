@@ -29,6 +29,30 @@ import {
 } from '../../../schematics-core';
 import { Schema as StoreOptions } from './schema';
 
+/**
+ * The NgModule to register the store in: the one given with `--module`, or
+ * else the nearest one. A standalone app has no NgModule; the state files are
+ * still created, and registering them (`provideStore`/`provideState`) is left
+ * to the app.
+ */
+function findModuleToRegisterIn(host: Tree, options: StoreOptions) {
+  if (options.module) {
+    return findModuleFromOptions(host, options);
+  }
+
+  try {
+    return findModuleFromOptions(host, options);
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.startsWith('Could not find an NgModule')
+    ) {
+      return undefined;
+    }
+    throw error;
+  }
+}
+
 function addImportToNgModule(options: StoreOptions): Rule {
   return (host: Tree) => {
     const modulePath = options.module;
@@ -160,7 +184,7 @@ export default function (options: StoreOptions): Rule {
     options.name = parsedPath.name;
     options.path = parsedPath.path;
 
-    options.module = findModuleFromOptions(host, options);
+    options.module = findModuleToRegisterIn(host, options);
 
     if (
       options.root &&

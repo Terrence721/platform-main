@@ -27,6 +27,17 @@ import {
 } from '../../../schematics-core';
 import { Schema as EffectOptions } from './schema';
 
+/**
+ * The folder the effects file goes in, relative to the path: `flat` decides
+ * whether it gets its own folder, and `group` puts it within `effects`.
+ */
+function effectsFolder(options: EffectOptions, folderName: string): string {
+  return stringUtils.group(
+    options.flat ? '' : folderName,
+    options.group ? 'effects' : ''
+  );
+}
+
 function addImportToNgModule(options: EffectOptions): Rule {
   return (host: Tree) => {
     const modulePath = options.module;
@@ -61,12 +72,16 @@ function addImportToNgModule(options: EffectOptions): Rule {
       '@ngrx/effects'
     );
 
-    const effectsPath =
-      `/${options.path}/` +
-      (options.flat ? '' : stringUtils.dasherize(options.name) + '/') +
-      (options.group ? 'effects/' : '') +
-      stringUtils.dasherize(options.name) +
-      '.effects';
+    // The same folder the template is written to (`if-flat`), or the import
+    // points at a file that does not exist.
+    const effectsPath = [
+      options.path,
+      effectsFolder(options, stringUtils.dasherize(options.name)),
+      `${stringUtils.dasherize(options.name)}.effects`,
+    ]
+      .join('/')
+      .replace(/\/+/g, '/')
+      .replace(/^(?!\/)/, '/');
     const relativePath = buildRelativePath(modulePath, effectsPath);
     const effectsImport = insertImport(
       source,
@@ -115,6 +130,14 @@ function getEffectStart(name: string, effectPrefix: string): string {
 export default function (options: EffectOptions): Rule {
   return (host: Tree, context: SchematicContext) => {
     options.path = getProjectPath(host, options);
+    // Only `--root --minimal` works without a name: it registers
+    // `EffectsModule.forRoot([])` and creates no file. Anything else would
+    // write nameless `.effects.ts` files.
+    if (!options.name && !(options.root && options.minimal)) {
+      throw new SchematicsException(
+        'A name is required, except with --root --minimal.'
+      );
+    }
     const parsedPath = parseName(options.path, options.name || '');
     options.name = parsedPath.name;
     options.path = parsedPath.path;
@@ -131,11 +154,7 @@ export default function (options: EffectOptions): Rule {
       options.root && options.minimal ? filter((_) => false) : noop(),
       applyTemplates({
         ...stringUtils,
-        'if-flat': (s: string) =>
-          stringUtils.group(
-            options.flat ? '' : s,
-            options.group ? 'effects' : ''
-          ),
+        'if-flat': (s: string) => effectsFolder(options, s),
         effectMethod: 'createEffect',
         effectStart: getEffectStart(options.name, options.prefix),
         effectEnd: '  );\n' + '  });',

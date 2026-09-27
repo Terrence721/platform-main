@@ -90,13 +90,81 @@ describe('Effect Schematic', () => {
   });
 
   it('should fail if specified module does not exist', async () => {
+    const options = { ...defaultOptions, module: 'app.moduleXXX.ts' };
+
+    await expect(
+      schematicRunner.runSchematic('effect', options, appTree)
+    ).rejects.toThrow(
+      `Specified module path ${projectPath}/src/app/app.moduleXXX.ts does not exist`
+    );
+  });
+
+  it('should import the effects from where they are created when nested and grouped', async () => {
     const options = {
       ...defaultOptions,
-      module: `${projectPath}/src/app/app.moduleXXX.ts`,
+      module: 'app-module.ts',
+      flat: false,
+      group: true,
+      skipTests: true,
     };
+
+    const tree = await schematicRunner.runSchematic('effect', options, appTree);
+
+    expect(tree.files).toContain(
+      `${projectPath}/src/app/effects/foo/foo.effects.ts`
+    );
+    expect(tree.readContent(`${projectPath}/src/app/app-module.ts`)).toContain(
+      "import { FooEffects } from './effects/foo/foo.effects';"
+    );
+  });
+
+  it('should fail if the name is missing, instead of creating nameless files', async () => {
     await expect(
-      schematicRunner.runSchematic('effects', options, appTree)
-    ).rejects.toThrowError();
+      schematicRunner.runSchematic('effect', { project: 'bar' }, appTree)
+    ).rejects.toThrow('A name is required, except with --root --minimal.');
+  });
+
+  describe('generated file', () => {
+    const generate = async (options: Partial<EffectOptions>) => {
+      const tree = await schematicRunner.runSchematic(
+        'effect',
+        { ...defaultOptions, ...options },
+        appTree
+      );
+      const file = `${projectPath}/src/app/foo/foo.effects.ts`;
+      expect(tree.exists(file)).toBe(true);
+
+      return tree.readContent(file).replace(/\r\n/g, '\n');
+    };
+
+    it('should only import Actions when not part of a feature', async () => {
+      const content = await generate({});
+
+      expect(content).toContain("import { Actions } from '@ngrx/effects';");
+      expect(content).not.toContain('createEffect');
+    });
+
+    it('should not import Observable when the api effect does not use it', async () => {
+      const content = await generate({ feature: true, api: true });
+
+      expect(content).toContain("import { EMPTY, of } from 'rxjs';");
+      expect(content).not.toContain('Observable');
+    });
+
+    it.each([
+      [{}],
+      [{ feature: true }],
+      [{ feature: true, api: true }],
+    ] as Partial<EffectOptions>[][])(
+      'should not leave runs of blank lines or a blank line in the pipe (%o)',
+      async (options) => {
+        const content = await generate(options);
+
+        expect(content).not.toMatch(/\n\n\n/);
+        expect(content).not.toMatch(/\{\n\n|\n\n\}/);
+        expect(content).not.toMatch(/\.pipe\(\n\n/);
+      }
+    );
   });
 
   it('should respect the skipTests flag', async () => {

@@ -1,8 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`Reducer Schematic > should create a reducer 1`] = `
-"import { createReducer, on } from '@ngrx/store';
-import { FooActions } from './foo.actions';
+"import { createReducer } from '@ngrx/store';
 
 export const fooFeatureKey = 'foo';
 
@@ -163,8 +162,7 @@ export const fooFeature = createFeature({
 `;
 
 exports[`Reducer Schematic > should group within a "reducers" folder if group is set 1`] = `
-"import { createReducer, on } from '@ngrx/store';
-import { FooActions } from '../actions/foo.actions';
+"import { createReducer } from '@ngrx/store';
 
 export const fooFeatureKey = 'foo';
 

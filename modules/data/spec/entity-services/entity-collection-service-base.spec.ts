@@ -1,7 +1,11 @@
+import { of } from 'rxjs';
 import {
+  EntityAction,
   EntityActionOptions,
+  EntityCollectionService,
   EntityCollectionServiceBase,
   EntityCollectionServiceElementsFactory,
+  EntityOp,
 } from '../..';
 
 interface Hero {
@@ -27,10 +31,43 @@ describe('EntityCollectionServiceBase', () => {
           },
       }
     );
-    const factory = {
-      create: () => ({ dispatcher, selectors: {}, selectors$: {} }),
+    service = new EntityCollectionServiceBase<Hero>(
+      'Hero',
+      elementsFactory(dispatcher, {})
+    );
+  });
+
+  function elementsFactory(dispatcher: object, selectors$: object) {
+    return {
+      create: () => ({ dispatcher, selectors: {}, selectors$ }),
     } as unknown as EntityCollectionServiceElementsFactory;
-    service = new EntityCollectionServiceBase<Hero>('Hero', factory);
+  }
+
+  it('exposes custom selectors$ on the service, without replacing its own members', () => {
+    const entities$ = of([]);
+    const foo$ = of('Foo');
+    // Typed as apps get it from EntityServices: the interface is what offers
+    // custom selectors$ on the service.
+    const custom: EntityCollectionService<Hero> =
+      new EntityCollectionServiceBase<Hero>(
+        'Hero',
+        elementsFactory(
+          {},
+          { entityName: 'Hero', entities$, foo$, add: 'not the add command' }
+        )
+      );
+
+    expect(custom.foo$).toBe(foo$);
+    expect(custom.selectors$.foo$).toBe(foo$);
+    expect(custom.entities$).toBe(entities$);
+    expect(custom.add).toBe(EntityCollectionServiceBase.prototype.add);
+  });
+
+  it('types createEntityAction by its data, not by the entity type', () => {
+    const collectionService: EntityCollectionService<Hero> = service;
+    expectTypeOf(
+      collectionService.createEntityAction(EntityOp.QUERY_BY_KEY, 42)
+    ).toEqualTypeOf<EntityAction<number>>();
   });
 
   it('passes options through to the dispatcher for the cache commands', () => {

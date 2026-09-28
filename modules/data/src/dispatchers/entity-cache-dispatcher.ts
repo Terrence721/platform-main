@@ -82,7 +82,8 @@ export class EntityCacheDispatcher {
     entityNames?: string[],
     tag?: string
   ): void {
-    if (!correlationId) {
+    // Only a missing id: 0 is valid, as in saveEntities and EntityCacheEffects.
+    if (correlationId == null) {
       throw new Error('Missing correlationId');
     }
     const action = new SaveEntitiesCancel(
@@ -104,11 +105,11 @@ export class EntityCacheDispatcher {
   }
 
   /**
-   * Load multiple entity collections at the same time.
+   * Load multiple entity collections at the same time,
    * before any selectors$ observables emit.
-   * @param collections The collections to load, typically the result of a query.
-   * @param [tag] tag to identify the operation from the app perspective.
+   * @param collections The collections to load, typically the result of a query,
    * in the form of a map of entity collections.
+   * @param [tag] tag to identify the operation from the app perspective.
    */
   loadCollections(collections: EntityCacheQuerySet, tag?: string) {
     this.dispatch(new LoadCollections(collections, tag));
@@ -206,13 +207,14 @@ export class EntityCacheDispatcher {
       mergeMap((act) => {
         return act.type === EntityCacheAction.SAVE_ENTITIES_CANCEL
           ? throwError(
-              new PersistenceCanceled(
-                (act as SaveEntitiesCancel).payload.reason
-              )
+              () =>
+                new PersistenceCanceled(
+                  (act as SaveEntitiesCancel).payload.reason
+                )
             )
           : act.type === EntityCacheAction.SAVE_ENTITIES_SUCCESS
             ? of((act as SaveEntitiesSuccess).payload.changeSet)
-            : throwError((act as SaveEntitiesError).payload);
+            : throwError(() => (act as SaveEntitiesError).payload);
       })
     );
   }

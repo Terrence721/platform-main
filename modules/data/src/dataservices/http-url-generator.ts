@@ -2,8 +2,8 @@ import { Injectable } from '@angular/core';
 import { Pluralizer } from '../utils/interfaces';
 
 /**
- * Known resource URLS for specific entity types.
- * Each entity's resource URLS are endpoints that
+ * Known resource URLs for specific entity types.
+ * Each entity's resource URLs are endpoints that
  * target single entity and multi-entity HTTP operations.
  * Used by the `DefaultHttpUrlGenerator`.
  */
@@ -12,7 +12,7 @@ export abstract class EntityHttpResourceUrls {
 }
 
 /**
- * Resource URLS for HTTP operations that target single entity
+ * Resource URLs for HTTP operations that target single entity
  * and multi-entity endpoints.
  */
 export interface HttpResourceUrls {
@@ -66,8 +66,8 @@ export abstract class HttpUrlGenerator {
 export class DefaultHttpUrlGenerator implements HttpUrlGenerator {
   /**
    * Known single-entity and collection resource URLs for HTTP calls.
-   * Generator methods returns these resource URLs for a given entity type name.
-   * If the resources for an entity type name are not know, it generates
+   * Generator methods return these resource URLs for a given entity type name.
+   * If the resources for an entity type name are not known, it generates
    * and caches a resource name for future use
    */
   protected knownHttpResourceUrls: EntityHttpResourceUrls = {};
@@ -77,21 +77,29 @@ export class DefaultHttpUrlGenerator implements HttpUrlGenerator {
   /**
    * Get or generate the entity and collection resource URLs for the given entity type name
    * @param entityName {string} Name of the entity type, e.g, 'Hero'
-   * @param root {string} Root path to the resource, e.g., 'some-api`
+   * @param root {string} Root path to the resource, e.g., 'some-api'
    */
   protected getResourceUrls(
     entityName: string,
     root: string,
     trailingSlashEndpoints = false
   ): HttpResourceUrls {
-    let resourceUrls = this.knownHttpResourceUrls[entityName];
+    // Own entries only: an entity named e.g. "constructor" must not get
+    // Object.prototype.constructor.
+    let resourceUrls = Object.hasOwn(this.knownHttpResourceUrls, entityName)
+      ? this.knownHttpResourceUrls[entityName]
+      : undefined;
     if (!resourceUrls) {
       const nRoot = trailingSlashEndpoints ? root : normalizeRoot(root);
+      // Lowercase the entity segment only: the root is used as configured,
+      // since URL paths are case-sensitive.
+      const entitySegment = entityName.toLowerCase();
+      const collectionSegment = this.pluralizer
+        .pluralize(entityName)
+        .toLowerCase();
       resourceUrls = {
-        entityResourceUrl: `${nRoot}/${entityName}/`.toLowerCase(),
-        collectionResourceUrl: `${nRoot}/${this.pluralizer.pluralize(
-          entityName
-        )}/`.toLowerCase(),
+        entityResourceUrl: `${nRoot}/${entitySegment}/`,
+        collectionResourceUrl: `${nRoot}/${collectionSegment}/`,
       };
       this.registerHttpResourceUrls({ [entityName]: resourceUrls });
     }
@@ -101,7 +109,7 @@ export class DefaultHttpUrlGenerator implements HttpUrlGenerator {
   /**
    * Create the path to a single entity resource
    * @param entityName {string} Name of the entity type, e.g, 'Hero'
-   * @param root {string} Root path to the resource, e.g., 'some-api`
+   * @param root {string} Root path to the resource, e.g., 'some-api'
    * @returns complete path to resource, e.g, 'some-api/hero'
    */
   entityResource(
@@ -116,7 +124,7 @@ export class DefaultHttpUrlGenerator implements HttpUrlGenerator {
   /**
    * Create the path to a multiple entity (collection) resource
    * @param entityName {string} Name of the entity type, e.g, 'Hero'
-   * @param root {string} Root path to the resource, e.g., 'some-api`
+   * @param root {string} Root path to the resource, e.g., 'some-api'
    * @returns complete path to resource, e.g, 'some-api/heroes'
    */
   collectionResource(entityName: string, root: string): string {

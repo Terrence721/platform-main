@@ -3,6 +3,11 @@ import { Injectable, Optional } from '@angular/core';
 import { EntityCollection } from './entity-collection';
 import { EntityDefinitionService } from '../entity-metadata/entity-definition.service';
 
+/**
+ * Creates the starting collection for an entity type: its registered
+ * definition's initial state, or an empty collection when it has none
+ * (or no EntityDefinitionService is provided).
+ */
 @Injectable()
 export class EntityCollectionCreator {
   constructor(
@@ -29,6 +34,11 @@ export class EntityCollectionCreator {
   }
 }
 
+/**
+ * An empty collection: no entities, not loaded or loading, no tracked changes
+ * and no filter.
+ * @param [entityName] name of the entity type
+ */
 export function createEmptyEntityCollection<T>(
   entityName?: string
 ): EntityCollection<T> {

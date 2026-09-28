@@ -172,6 +172,16 @@ export function provideEntityDataConfig(
       multi: true,
       useValue: config.entityMetadata ? config.entityMetadata : [],
     },
+    // Only when set, so an INITIAL_ENTITY_CACHE_STATE provided directly
+    // still applies otherwise.
+    ...(config.initialEntityCacheState
+      ? [
+          {
+            provide: INITIAL_ENTITY_CACHE_STATE,
+            useValue: config.initialEntityCacheState,
+          },
+        ]
+      : []),
   ];
 }
 

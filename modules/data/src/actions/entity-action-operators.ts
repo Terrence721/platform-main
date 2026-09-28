@@ -25,7 +25,8 @@ export function ofEntityOp<T extends EntityAction>(
 export function ofEntityOp<T extends EntityAction>(
   ...allowedEntityOps: any[]
 ): OperatorFunction<EntityAction, T> {
-  const ops: string[] = flattenArgs(allowedEntityOps);
+  // A missing list (`undefined`) means any operation, as with no arguments.
+  const ops = flattenArgs<string>(allowedEntityOps).filter((op) => op != null);
   switch (ops.length) {
     case 0:
       return filter(
@@ -51,7 +52,7 @@ export function ofEntityOp<T extends EntityAction>(
  * @param allowedEntityNames Entity-type names (e.g, 'Hero') whose actions should be selected
  * Example:
  * ```
- *  this.actions.pipe(ofEntityType(), ...) // ayn EntityAction with a defined entity type property
+ *  this.actions.pipe(ofEntityType(), ...) // any EntityAction with a defined entity type property
  *  this.actions.pipe(ofEntityType('Hero'), ...) // EntityActions for the Hero entity
  *  this.actions.pipe(ofEntityType('Hero', 'Villain', 'Sidekick'), ...)
  *  this.actions.pipe(ofEntityType(...theChosen), ...)
@@ -67,7 +68,10 @@ export function ofEntityType<T extends EntityAction>(
 export function ofEntityType<T extends EntityAction>(
   ...allowedEntityNames: any[]
 ): OperatorFunction<EntityAction, T> {
-  const names: string[] = flattenArgs(allowedEntityNames);
+  // A missing list (`undefined`) means any entity type, as with no arguments.
+  const names = flattenArgs<string>(allowedEntityNames).filter(
+    (name) => name != null
+  );
   switch (names.length) {
     case 0:
       return filter(

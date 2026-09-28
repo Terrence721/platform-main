@@ -3,6 +3,7 @@ import {
   EntityCollectionCreator,
   EntityDefinitionService,
   createEntityDefinition,
+  createEmptyEntityCollection,
   EntityCollection,
 } from '../..';
 
@@ -38,13 +39,17 @@ describe('EntityCollectionCreator', () => {
     const hdef = eds.getDefinition('Hero');
     hdef.initialState = undefined as any; // ZAP!
     const collection = creator.create<Hero, HeroCollection>('Hero');
-    expect(collection.foo).toBeUndefined();
-    expect(collection.ids).toBeDefined();
+    expect(collection).toEqual(createEmptyEntityCollection('Hero'));
   });
 
   it('should create empty collection even when no def for entity type', () => {
     const collection = creator.create('Bazinga');
-    expect(collection.ids).toBeDefined();
+    expect(collection).toEqual(createEmptyEntityCollection('Bazinga'));
+  });
+
+  it('should create empty collection when there is no EntityDefinitionService', () => {
+    const collection = new EntityCollectionCreator().create('Hero');
+    expect(collection).toEqual(createEmptyEntityCollection('Hero'));
   });
 });
 

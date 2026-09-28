@@ -5,14 +5,9 @@ interface Hero {
   name: string;
 }
 
-interface NonIdClass {
-  key: string;
-  something: any;
-}
+const sorter = <T>(_a: T, _b: T) => 1;
 
-const sorter = <T>(a: T, b: T) => 1;
-
-const filter = <T>(entities: T[], pattern?: any) => entities;
+const filter = <T>(entities: T[], _pattern?: any) => entities;
 
 const selectIdForNonId = (entity: any) => entity.key;
 
@@ -102,6 +97,15 @@ describe('EntityDefinition', () => {
     it('throws error if missing `entityName`', () => {
       const metadata: EntityMetadata = <any>{};
       expect(() => createEntityDefinition(metadata)).toThrowError(/entityName/);
+    });
+
+    it("normalizes a copy and leaves the caller's metadata unchanged", () => {
+      const metadata: EntityMetadata = Object.freeze({ entityName: ' Hero ' });
+      const def = createEntityDefinition(metadata);
+
+      expect(def.entityName).toBe('Hero');
+      expect(def.metadata).toEqual({ entityName: 'Hero', sortComparer: false });
+      expect(metadata).toEqual({ entityName: ' Hero ' });
     });
   });
 });

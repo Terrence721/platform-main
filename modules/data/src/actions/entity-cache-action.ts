@@ -3,7 +3,7 @@
  */
 import { Action } from '@ngrx/store';
 
-import { ChangeSet, ChangeSetOperation } from './entity-cache-change-set';
+import { ChangeSet } from './entity-cache-change-set';
 export { ChangeSet, ChangeSetOperation } from './entity-cache-change-set';
 
 import { DataServiceError } from '../dataservices/data-service-error';
@@ -49,11 +49,11 @@ export class ClearCollections implements Action {
 }
 
 /**
- * Create entity cache action that loads multiple entity collections at the same time.
+ * Create entity cache action that loads multiple entity collections at the same time,
  * before any selectors$ observables emit.
- * @param querySet The collections to load, typically the result of a query.
- * @param [tag] Optional tag to identify the operation from the app perspective.
+ * @param collections The collections to load, typically the result of a query,
  * in the form of a map of entity collections.
+ * @param [tag] Optional tag to identify the operation from the app perspective.
  */
 export class LoadCollections implements Action {
   readonly payload: { collections: EntityCacheQuerySet; tag?: string };
@@ -118,6 +118,16 @@ export class SetEntityCache implements Action {
 }
 
 // #region SaveEntities
+
+/**
+ * The change set with the given tag, copied rather than written onto the
+ * caller's own change set, which the caller may reuse (a retry with another
+ * tag) or have frozen (one kept in store state).
+ */
+function withTag(changeSet: ChangeSet, tag: string | undefined): ChangeSet {
+  return changeSet && changeSet.tag !== tag ? { ...changeSet, tag } : changeSet;
+}
+
 export class SaveEntities implements Action {
   readonly payload: {
     readonly changeSet: ChangeSet;
@@ -137,10 +147,8 @@ export class SaveEntities implements Action {
     options?: EntityActionOptions
   ) {
     options = options || {};
-    if (changeSet) {
-      changeSet.tag = changeSet.tag || options.tag;
-    }
-    this.payload = { changeSet, url, ...options, tag: changeSet.tag };
+    const tag = changeSet?.tag || options.tag;
+    this.payload = { changeSet: withTag(changeSet, tag), url, ...options, tag };
   }
 }
 
@@ -176,7 +184,7 @@ export class SaveEntitiesCanceled implements Action {
   }
 }
 
-export class SaveEntitiesError {
+export class SaveEntitiesError implements Action {
   readonly payload: {
     readonly error: DataServiceError;
     readonly originalAction: SaveEntities;
@@ -208,10 +216,8 @@ export class SaveEntitiesSuccess implements Action {
     options?: EntityActionOptions
   ) {
     options = options || {};
-    if (changeSet) {
-      changeSet.tag = changeSet.tag || options.tag;
-    }
-    this.payload = { changeSet, url, ...options, tag: changeSet.tag };
+    const tag = changeSet?.tag || options.tag;
+    this.payload = { changeSet: withTag(changeSet, tag), url, ...options, tag };
   }
 }
 // #endregion SaveEntities

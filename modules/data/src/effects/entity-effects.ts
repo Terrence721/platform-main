@@ -16,6 +16,12 @@ import { UpdateResponseData } from '../actions/update-response-data';
 import { EntityDataService } from '../dataservices/entity-data.service';
 import { PersistenceResultHandler } from '../dataservices/persistence-result-handler.service';
 
+/**
+ * The ops `persist$` sends to the entity's data service. The `SAVE_*_MANY`
+ * ops are not here on purpose: only `saveEntities` produces them, as
+ * collection actions applied inside the entity cache reducer, and they are
+ * persisted through `EntityCacheEffects` instead.
+ */
 export const persistOps: EntityOp[] = [
   EntityOp.QUERY_ALL,
   EntityOp.QUERY_LOAD,
@@ -29,7 +35,7 @@ export const persistOps: EntityOp[] = [
 
 @Injectable()
 export class EntityEffects {
-  // See https://github.com/ReactiveX/rxjs/blob/master/doc/marble-testing.md
+  // See https://rxjs.dev/guide/testing/marble-testing
   /** Delay for error and skip observables. Must be multiple of 10 for marble testing. */
   private responseDelay = 10;
 
@@ -87,7 +93,7 @@ export class EntityEffects {
       // whose correlationId matches cancellation correlationId
       const c = this.cancel$.pipe(
         filter((id) => action.payload.correlationId === id),
-        map((id) =>
+        map(() =>
           this.entityActionFactory.createFromAction(action, {
             entityOp: EntityOp.CANCELED_PERSIST,
           })
@@ -194,8 +200,8 @@ export class EntityEffects {
         entityOp: successOp,
       }
     );
-    // Although returns immediately,
-    // ensure observable takes one tick (by using a promise),
+    // Although it could return immediately, delay it by responseDelay
+    // (on the injected scheduler, if any),
     // as app likely assumes asynchronous response.
     return of(successAction).pipe(
       delay(this.responseDelay, this.scheduler || asyncScheduler)

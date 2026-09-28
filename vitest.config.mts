@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import angular from '@analogjs/vite-plugin-angular';
 import tsconfigPaths from 'vite-tsconfig-paths';
 import { defineConfig } from 'vitest/config';
+import type { Vitest } from 'vitest/node';
 
 const workspaceRoot = fileURLToPath(new URL('.', import.meta.url));
 
@@ -129,6 +130,33 @@ for (const stream of [process.stdout, process.stderr]) {
 }
 
 /**
+ * The VS Code Vitest extension (1.52.1) still calls
+ * `experimental_parseSpecifications`, which Vitest 5 deprecated: it prints
+ * "DEPRECATED ... Use parseSpecifications instead" to the panel on every
+ * collection, then calls `parseSpecifications`. This points the old method at
+ * the new one, minus the warning. Panel only, and only while Vitest still has
+ * both methods. Remove once the extension calls `parseSpecifications`
+ * (https://github.com/vitest-dev/vscode/issues/834).
+ */
+const parseSpecificationsShim = {
+  name: 'ngrx:vscode-parse-specifications',
+  configureVitest({ vitest }: { vitest: Vitest }) {
+    // Typed locally: replacing the deprecated method is the point here, so
+    // the editor's "is deprecated" hint on it would only be noise.
+    const extensionApi = vitest as unknown as {
+      experimental_parseSpecifications?: Vitest['parseSpecifications'];
+    };
+    if (
+      typeof extensionApi.experimental_parseSpecifications === 'function' &&
+      typeof vitest.parseSpecifications === 'function'
+    ) {
+      extensionApi.experimental_parseSpecifications =
+        vitest.parseSpecifications.bind(vitest);
+    }
+  },
+};
+
+/**
  * Single Vitest configuration for the whole workspace. All modules share the
  * settings below; each one becomes a project rooted at its own folder, so
  * per-module files (setup file, tsconfig.spec.json) resolve as before.
@@ -150,6 +178,7 @@ export default defineConfig(({ mode }) => {
         root: workspaceRoot,
         projects: [fileURLToPath(new URL('./tsconfig.json', import.meta.url))],
       }),
+      ...(inTestingPanel ? [parseSpecificationsShim] : []),
     ],
     resolve: {
       // Vite's default extension-resolution order checks .js before .ts, so

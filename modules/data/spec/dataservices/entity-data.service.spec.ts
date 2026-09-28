@@ -43,25 +43,25 @@ export class BazingaDataService implements EntityCollectionDataService<Bazinga> 
     this.name = 'Bazinga custom data service';
   }
 
-  add(entity: Bazinga): Observable<Bazinga> {
+  add(_entity: Bazinga): Observable<Bazinga> {
     return this.bazinga();
   }
-  delete(id: any): Observable<number | string> {
+  delete(_id: any): Observable<number | string> {
     return this.bazinga();
   }
   getAll(): Observable<Bazinga[]> {
     return this.bazinga();
   }
-  getById(id: any): Observable<Bazinga> {
+  getById(_id: any): Observable<Bazinga> {
     return this.bazinga();
   }
-  getWithQuery(params: string | QueryParams): Observable<Bazinga[]> {
+  getWithQuery(_params: string | QueryParams): Observable<Bazinga[]> {
     return this.bazinga();
   }
-  update(update: Update<Bazinga>): Observable<Bazinga> {
+  update(_update: Update<Bazinga>): Observable<Bazinga> {
     return this.bazinga();
   }
-  upsert(entity: Bazinga): Observable<Bazinga> {
+  upsert(_entity: Bazinga): Observable<Bazinga> {
     return this.bazinga();
   }
 
@@ -89,15 +89,17 @@ function bazingaFail() {
 
 /** Test version always returns canned Hero resource base URLs  */
 class TestHttpUrlGenerator implements HttpUrlGenerator {
-  entityResource(entityName: string, root: string): string {
+  entityResource(_entityName: string, _root: string): string {
     return 'api/hero/';
   }
-  collectionResource(entityName: string, root: string): string {
+  collectionResource(_entityName: string, _root: string): string {
     return 'api/heroes/';
   }
   registerHttpResourceUrls(
-    entityHttpResourceUrls: EntityHttpResourceUrls
-  ): void {}
+    _entityHttpResourceUrls: EntityHttpResourceUrls
+  ): void {
+    // canned URLs only; nothing to register
+  }
 }
 
 // endregion
@@ -136,6 +138,14 @@ describe('EntityDataService', () => {
       const service2 = entityDataService.getService('Hero');
       expect(service1).toBe(service2);
     });
+
+    it('creates a data service for entity names that Object.prototype also has', () => {
+      for (const name of ['constructor', 'toString', 'hasOwnProperty']) {
+        const service = entityDataService.getService(name);
+        expect(service instanceof DefaultDataService).toBe(true);
+        expect(service.name).toBe(`${name} DefaultDataService`);
+      }
+    });
   });
 
   describe('#register...', () => {
@@ -165,6 +175,15 @@ describe('EntityDataService', () => {
       // Other services are still DefaultDataServices
       service = entityDataService.getService('Foo');
       expect(service.name).toBe('Foo DefaultDataService');
+    });
+
+    it('trims entity names when registering a batch, like registerService', () => {
+      const customVillainService: any = new CustomDataService('Villain');
+      entityDataService.registerServices({ ' Villain ': customVillainService });
+
+      expect(entityDataService.getService('Villain')).toBe(
+        customVillainService
+      );
     });
 
     it('can register a custom service using a module import', () => {

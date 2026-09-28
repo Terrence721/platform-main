@@ -25,7 +25,11 @@ export class EntityDataService {
    */
   getService<T>(entityName: string): EntityCollectionDataService<T> {
     entityName = entityName.trim();
-    let service = this.services[entityName];
+    // Own entries only: an entity named e.g. "constructor" must not get
+    // Object.prototype.constructor.
+    let service = Object.hasOwn(this.services, entityName)
+      ? this.services[entityName]
+      : undefined;
     if (!service) {
       service = this.defaultDataServiceFactory.create(entityName);
       this.services[entityName] = service;
@@ -62,6 +66,9 @@ export class EntityDataService {
   registerServices(services: {
     [name: string]: EntityCollectionDataService<any>;
   }) {
-    this.services = { ...this.services, ...services };
+    const trimmed = Object.fromEntries(
+      Object.entries(services).map(([name, service]) => [name.trim(), service])
+    );
+    this.services = { ...this.services, ...trimmed };
   }
 }

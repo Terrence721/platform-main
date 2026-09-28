@@ -34,7 +34,7 @@ export class EntityActionGuard<T> {
       return this.throwError(action, `should be an array of entities`);
     }
     data.forEach((entity, i) => {
-      const id = this.selectId(entity);
+      const id = this.keyOf(entity);
       if (this.isNotKeyType(id)) {
         const msg = `, item ${i + 1}, does not have a valid entity key (id)`;
         this.throwError(action, msg);
@@ -47,10 +47,10 @@ export class EntityActionGuard<T> {
   mustBeKey(action: EntityAction<string | number>): string | number | never {
     const data = this.extractData(action);
     if (data === undefined) {
-      throw new Error(`should be a single entity key`);
+      return this.throwError(action, `should be a single entity key`);
     }
     if (this.isNotKeyType(data)) {
-      throw new Error(`is not a valid key (id)`);
+      this.throwError(action, `is not a valid key (id)`);
     }
     return data;
   }
@@ -63,9 +63,7 @@ export class EntityActionGuard<T> {
     }
     data.forEach((id, i) => {
       if (this.isNotKeyType(id)) {
-        const msg = `${this.entityName} ', item ${
-          i + 1
-        }, is not a valid entity key (id)`;
+        const msg = `, item ${i + 1}, is not a valid entity key (id)`;
         this.throwError(action, msg);
       }
     });
@@ -79,7 +77,7 @@ export class EntityActionGuard<T> {
       return this.throwError(action, `should be a single entity update`);
     }
     const { id, changes } = data;
-    const id2 = this.selectId(changes as T);
+    const id2 = this.keyOf(changes);
     if (this.isNotKeyType(id) || this.isNotKeyType(id2)) {
       this.throwError(action, `has a missing or invalid entity key (id)`);
     }
@@ -93,8 +91,8 @@ export class EntityActionGuard<T> {
       return this.throwError(action, `should be an array of entity updates`);
     }
     data.forEach((item, i) => {
-      const { id, changes } = item;
-      const id2 = this.selectId(changes as T);
+      const id = item?.id;
+      const id2 = this.keyOf(item?.changes);
       if (this.isNotKeyType(id) || this.isNotKeyType(id2)) {
         this.throwError(
           action,
@@ -114,7 +112,7 @@ export class EntityActionGuard<T> {
       return this.throwError(action, `should be a single entity update`);
     }
     const { id, changes } = data;
-    const id2 = this.selectId(changes as T);
+    const id2 = this.keyOf(changes);
     if (this.isNotKeyType(id) || this.isNotKeyType(id2)) {
       this.throwError(action, `has a missing or invalid entity key (id)`);
     }
@@ -130,8 +128,8 @@ export class EntityActionGuard<T> {
       return this.throwError(action, `should be an array of entity updates`);
     }
     data.forEach((item, i) => {
-      const { id, changes } = item;
-      const id2 = this.selectId(changes as T);
+      const id = item?.id;
+      const id2 = this.keyOf(item?.changes);
       if (this.isNotKeyType(id) || this.isNotKeyType(id2)) {
         this.throwError(
           action,
@@ -144,6 +142,11 @@ export class EntityActionGuard<T> {
 
   private extractData<T>(action: EntityAction<T>) {
     return action.payload && action.payload.data;
+  }
+
+  /** The key (id) of an entity, or undefined when there is no entity to read it from */
+  private keyOf(entity: Partial<T> | null | undefined) {
+    return entity == null ? undefined : this.selectId(entity as T);
   }
 
   /** Return true if this key (id) is invalid */

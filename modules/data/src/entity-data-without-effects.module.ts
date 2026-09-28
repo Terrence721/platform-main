@@ -6,10 +6,10 @@ import {
 } from './provide-entity-data';
 
 /**
- * Module without effects or dataservices which means no HTTP calls
- * This module helpful for internal testing.
- * Also helpful for apps that handle server access on their own and
- * therefore opt-out of @ngrx/effects for entities
+ * The entity data module without effects or data services, so it makes no
+ * HTTP calls. Helpful for testing, and for apps that handle server access on
+ * their own and therefore opt out of @ngrx/effects for entities.
+ * Configure with `forRoot`; `EntityDataModule` adds the effects to it.
  */
 @NgModule({
   providers: [BASE_ENTITY_DATA_PROVIDERS],

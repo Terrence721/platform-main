@@ -346,4 +346,53 @@ describe('EntityActionGuard', () => {
       expect(guard.mustBeUpdateResponses(action)).toBe(data);
     });
   });
+
+  describe('error messages', () => {
+    const prefix = 'Hero EntityAction guard for "TEST": payload';
+
+    it('mustBeKey should name the entity and the action', () => {
+      expect(() => guard.mustBeKey(createAction())).toThrowError(
+        `${prefix} should be a single entity key`
+      );
+      expect(() => guard.mustBeKey(createAction({ id: 1 }))).toThrowError(
+        `${prefix} is not a valid key (id)`
+      );
+    });
+
+    it('mustBeKeys should name the entity once', () => {
+      expect(() => guard.mustBeKeys(createAction([1, null]))).toThrowError(
+        `${prefix} , item 2, is not a valid entity key (id)`
+      );
+    });
+
+    it('should report a missing entity in an array, not fail reading its key', () => {
+      expect(() =>
+        guard.mustBeEntities(createAction([{ id: 1 }, null]))
+      ).toThrowError(
+        `${prefix} , item 2, does not have a valid entity key (id)`
+      );
+    });
+
+    it('should report an update without changes, not fail reading its key', () => {
+      const message = `${prefix} has a missing or invalid entity key (id)`;
+      expect(() => guard.mustBeUpdate(createAction({ id: 1 }))).toThrowError(
+        message
+      );
+      expect(() =>
+        guard.mustBeUpdateResponse(createAction({ id: 1 }))
+      ).toThrowError(message);
+    });
+
+    it('should report a missing or changes-less update in an array, not fail reading its key', () => {
+      const message = `${prefix} , item 1, has a missing or invalid entity key (id)`;
+      for (const item of [null, { id: 1 }]) {
+        expect(() => guard.mustBeUpdates(createAction([item]))).toThrowError(
+          message
+        );
+        expect(() =>
+          guard.mustBeUpdateResponses(createAction([item]))
+        ).toThrowError(message);
+      }
+    });
+  });
 });

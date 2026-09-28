@@ -105,6 +105,48 @@ describe('EntityEffects (normal testing)', () => {
       expectCompletion(completion, done, fail);
     }));
 
+  it('should return a QUERY_LOAD_SUCCESS from getAll when there is no query (load)', () =>
+    new Promise<void>((done, fail) => {
+      const heroes = [{ id: 1, name: 'A' } as Hero];
+      dataService.setResponse('getAll', heroes);
+
+      const action = entityActionFactory.create('Hero', EntityOp.QUERY_LOAD);
+      const completion = entityActionFactory.create(
+        'Hero',
+        EntityOp.QUERY_LOAD_SUCCESS,
+        heroes
+      );
+
+      actions$.next(action);
+      expectCompletion(completion, done, fail);
+      expect(dataService.getWithQuery).not.toHaveBeenCalled();
+    }));
+
+  it('should return a QUERY_LOAD_SUCCESS from getWithQuery when there is a query (loadWithQuery)', () =>
+    new Promise<void>((done, fail) => {
+      const heroes = [{ id: 2, name: 'B' } as Hero];
+      dataService.setResponse('getWithQuery', heroes);
+
+      const action = entityActionFactory.create(
+        'Hero',
+        EntityOp.QUERY_LOAD,
+        'name=B'
+      );
+      const completion = entityActionFactory.create(
+        'Hero',
+        EntityOp.QUERY_LOAD_SUCCESS,
+        heroes
+      );
+
+      actions$.next(action);
+      expectCompletion(completion, done, fail);
+      expect(dataService.getWithQuery).toHaveBeenCalledWith(
+        'name=B',
+        undefined
+      );
+      expect(dataService.getAll).not.toHaveBeenCalled();
+    }));
+
   it('should perform QUERY_ALL when dispatch custom tagged action', () =>
     new Promise<void>((done, fail) => {
       const hero1 = { id: 1, name: 'A' } as Hero;

@@ -19,11 +19,9 @@ import { EntityActionGuard } from '../actions/entity-action-guard';
 import { EntityCache } from '../reducers/entity-cache';
 import { EntityCacheSelector } from '../selectors/entity-cache-selector';
 import { EntityCollection } from '../reducers/entity-collection';
-import { EntityCommands } from './entity-commands';
 import { EntityDispatcher, PersistenceCanceled } from './entity-dispatcher';
 import { EntityDispatcherDefaultOptions } from './entity-dispatcher-default-options';
 import { EntityOp, OP_ERROR, OP_SUCCESS } from '../actions/entity-op';
-import { MergeStrategy } from '../actions/merge-strategy';
 import { QueryParams } from '../dataservices/interfaces';
 import { UpdateResponseData } from '../actions/update-response-data';
 
@@ -166,15 +164,19 @@ export class EntityDispatcherBase<T> implements EntityDispatcher<T> {
     reason?: string,
     options?: EntityActionOptions
   ): void {
-    if (!correlationId) {
+    // Only a missing id: 0 is valid, as for the query and save methods.
+    if (correlationId == null) {
       throw new Error('Missing correlationId');
     }
-    this.createAndDispatch(EntityOp.CANCEL_PERSIST, reason, { correlationId });
+    this.createAndDispatch(EntityOp.CANCEL_PERSIST, reason, {
+      ...options,
+      correlationId,
+    });
   }
 
   /**
    * Dispatch action to delete entity from remote storage by key.
-   * @param key The primary key of the entity to remove
+   * @param entity The entity to delete
    * @returns A terminating Observable of the deleted key
    * after server reports successful save or the save error.
    */
@@ -182,7 +184,7 @@ export class EntityDispatcherBase<T> implements EntityDispatcher<T> {
 
   /**
    * Dispatch action to delete entity from remote storage by key.
-   * @param key The entity to delete
+   * @param key The primary key of the entity to remove
    * @returns A terminating Observable of the deleted key
    * after server reports successful save or the save error.
    */
@@ -245,7 +247,7 @@ export class EntityDispatcherBase<T> implements EntityDispatcher<T> {
    * Dispatch action to query remote storage for the entity with this primary key.
    * If the server returns an entity,
    * merge it into the cached collection.
-   * @returns A terminating Observable of the collection
+   * @returns A terminating Observable of the queried entity as it is in the collection
    * after server reports successful query or the query error.
    */
   getByKey(key: any, options?: EntityActionOptions): Observable<T> {
@@ -319,7 +321,8 @@ export class EntityDispatcherBase<T> implements EntityDispatcher<T> {
   /**
    * Dispatch action to query remote storage for the entities that satisfy a query expressed
    * with either a query parameter map or an HTTP URL query string,
-   * and completely replace the cached collection with the queried entities.
+   * and completely replace the cached collection with the queried entities
+   * (like `load`; `getWithQuery` merges them instead).
    * @param queryParams the query in a form understood by the server
    * @param [options] options that influence load behavior
    * @returns A terminating Observable of the queried entities
@@ -330,8 +333,9 @@ export class EntityDispatcherBase<T> implements EntityDispatcher<T> {
     options?: EntityActionOptions
   ): Observable<T[]> {
     options = this.setQueryEntityActionOptions(options);
+    // QUERY_LOAD replaces the collection; QUERY_MANY (getWithQuery) merges.
     const action = this.createEntityAction(
-      EntityOp.QUERY_MANY,
+      EntityOp.QUERY_LOAD,
       queryParams,
       options
     );
@@ -473,7 +477,7 @@ export class EntityDispatcherBase<T> implements EntityDispatcher<T> {
   /**
    * Remove multiple entities directly from the cache.
    * Does not delete these entities from remote storage.
-   * @param entity The entities to remove
+   * @param entities The entities to remove
    */
   removeManyFromCache(entities: T[], options?: EntityActionOptions): void;
 
@@ -493,10 +497,10 @@ export class EntityDispatcherBase<T> implements EntityDispatcher<T> {
     if (!args || args.length === 0) {
       return;
     }
+    // if array[0] is an entity, assume they're all entities; otherwise all keys
     const keys =
       typeof args[0] === 'object'
-        ? // if array[0] is a key, assume they're all keys
-          (<T[]>args).map((arg) => this.getKey(arg))
+        ? (<T[]>args).map((arg) => this.getKey(arg))
         : args;
     this.createAndDispatch(EntityOp.REMOVE_MANY, keys, options);
   }
@@ -519,7 +523,7 @@ export class EntityDispatcherBase<T> implements EntityDispatcher<T> {
    * Update multiple cached entities directly.
    * Does not update these entities in remote storage.
    * Entities whose primary keys are not in cache are ignored.
-   * Update entities may be partial but must at least have their keys.
+   * Update entities may be partial but must at least have their keys;
    * such partial entities patch their cached counterparts.
    */
   updateManyInCache(
@@ -539,7 +543,6 @@ export class EntityDispatcherBase<T> implements EntityDispatcher<T> {
    * Add or update a new entity directly to the cache.
    * Does not save to remote storage.
    * Upsert entity might be a partial of T but must at least have its key.
-   * Pass the Update<T> structure as the payload
    */
   upsertOneInCache(entity: Partial<T>, options?: EntityActionOptions): void {
     this.createAndDispatch(EntityOp.UPSERT_ONE, entity, options);
@@ -563,18 +566,18 @@ export class EntityDispatcherBase<T> implements EntityDispatcher<T> {
    * Set the pattern that the collection's filter applies
    * when using the `filteredEntities` selector.
    */
-  setFilter(pattern: any): void {
-    this.createAndDispatch(EntityOp.SET_FILTER, pattern);
+  setFilter(pattern: any, options?: EntityActionOptions): void {
+    this.createAndDispatch(EntityOp.SET_FILTER, pattern, options);
   }
 
   /** Set the loaded flag */
-  setLoaded(isLoaded: boolean): void {
-    this.createAndDispatch(EntityOp.SET_LOADED, !!isLoaded);
+  setLoaded(isLoaded: boolean, options?: EntityActionOptions): void {
+    this.createAndDispatch(EntityOp.SET_LOADED, !!isLoaded, options);
   }
 
   /** Set the loading flag */
-  setLoading(isLoading: boolean): void {
-    this.createAndDispatch(EntityOp.SET_LOADING, !!isLoading);
+  setLoading(isLoading: boolean, options?: EntityActionOptions): void {
+    this.createAndDispatch(EntityOp.SET_LOADING, !!isLoading, options);
   }
   // #endregion Cache-only operations that do not update remote storage
 
@@ -615,10 +618,10 @@ export class EntityDispatcherBase<T> implements EntityDispatcher<T> {
       mergeMap((act) => {
         const { entityOp } = act.payload;
         return entityOp === EntityOp.CANCEL_PERSIST
-          ? throwError(new PersistenceCanceled(act.payload.data))
+          ? throwError(() => new PersistenceCanceled(act.payload.data))
           : entityOp.endsWith(OP_SUCCESS)
             ? of(act.payload.data as D)
-            : throwError(act.payload.data.error);
+            : throwError(() => act.payload.data.error);
       })
     );
   }

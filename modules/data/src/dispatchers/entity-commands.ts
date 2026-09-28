@@ -35,7 +35,7 @@ export interface EntityServerCommands<T> {
 
   /**
    * Dispatch action to delete entity from remote storage by key.
-   * @param key The entity to delete
+   * @param entity The entity to delete
    * @param [options] options that influence save and merge behavior
    * @returns A terminating Observable of the deleted key
    * after server reports successful save or the save error.
@@ -70,7 +70,7 @@ export interface EntityServerCommands<T> {
    * merge it into the cached collection.
    * @param key The primary key of the entity to get.
    * @param [options] options that influence merge behavior
-   * @returns A terminating Observable of the queried entities that are in the collection
+   * @returns A terminating Observable of the queried entity as it is in the collection
    * after server reports success or the query error.
    */
   getByKey(key: any, options?: EntityActionOptions): Observable<T>;
@@ -187,7 +187,7 @@ export interface EntityCacheCommands<T> {
   /**
    * Remove multiple entities directly from the cache.
    * Does not delete these entities from remote storage.
-   * @param entity The entities to remove
+   * @param entities The entities to remove
    * @param [options] options such as mergeStrategy
    */
   removeManyFromCache(entities: T[], options?: EntityActionOptions): void;
@@ -218,7 +218,7 @@ export interface EntityCacheCommands<T> {
    * Update multiple cached entities directly.
    * Does not update these entities in remote storage.
    * Entities whose primary keys are not in cache are ignored.
-   * Update entities may be partial but must at least have their keys.
+   * Update entities may be partial but must at least have their keys;
    * such partial entities patch their cached counterparts.
    * @param entities to update directly in cache.
    * @param [options] options such as mergeStrategy
@@ -232,7 +232,6 @@ export interface EntityCacheCommands<T> {
    * Insert or update a cached entity directly.
    * Does not save to remote storage.
    * Upsert entity might be a partial of T but must at least have its key.
-   * Pass the Update<T> structure as the payload.
    * @param entity to upsert directly in cache.
    * @param [options] options such as mergeStrategy
    */
@@ -242,7 +241,6 @@ export interface EntityCacheCommands<T> {
    * Insert or update multiple cached entities directly.
    * Does not save to remote storage.
    * Upsert entities might be partial but must at least have their keys.
-   * Pass an array of the Update<T> structure as the payload.
    * @param entities to upsert directly in cache.
    * @param [options] options such as mergeStrategy
    */

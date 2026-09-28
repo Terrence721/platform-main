@@ -1,20 +1,32 @@
-import { Action, ScannedActionsSubject, Store } from '@ngrx/store';
+import { TestBed } from '@angular/core/testing';
+import {
+  Action,
+  provideStore,
+  ScannedActionsSubject,
+  Store,
+} from '@ngrx/store';
 import { vi } from 'vitest';
 
 import {
   ChangeSet,
   ChangeSetItem,
   ChangeSetOperation,
+  ClearCollections,
   CorrelationIdGenerator,
   DataServiceError,
   EntityCache,
   EntityCacheDispatcher,
   EntityDispatcherDefaultOptions,
+  LoadCollections,
+  MergeQuerySet,
+  MergeStrategy,
   PersistenceCanceled,
+  provideEntityData,
   SaveEntities,
   SaveEntitiesCancel,
   SaveEntitiesError,
   SaveEntitiesSuccess,
+  SetEntityCache,
 } from '../../';
 
 describe('EntityCacheDispatcher', () => {
@@ -131,5 +143,47 @@ describe('EntityCacheDispatcher', () => {
       // no longer listening: nothing was replayed from after the destroy
       expect(seen).toBeUndefined();
     });
+  });
+
+  describe('cache-wide actions', () => {
+    it('#clearCollections dispatches ClearCollections', () => {
+      dispatcher.clearCollections(['Hero'], 'tag');
+      expect(dispatched[0]).toEqual(new ClearCollections(['Hero'], 'tag'));
+    });
+
+    it('#loadCollections dispatches LoadCollections', () => {
+      const collections = { Hero: [{ id: 1 }] };
+      dispatcher.loadCollections(collections, 'tag');
+      expect(dispatched[0]).toEqual(new LoadCollections(collections, 'tag'));
+    });
+
+    it('#mergeQuerySet dispatches MergeQuerySet', () => {
+      const querySet = { Hero: [{ id: 1 }] };
+      dispatcher.mergeQuerySet(querySet, MergeStrategy.IgnoreChanges, 'tag');
+      expect(dispatched[0]).toEqual(
+        new MergeQuerySet(querySet, MergeStrategy.IgnoreChanges, 'tag')
+      );
+    });
+
+    it('#setEntityCache dispatches SetEntityCache', () => {
+      const cache: EntityCache = {};
+      dispatcher.setEntityCache(cache, 'tag');
+      expect(dispatched[0]).toEqual(new SetEntityCache(cache, 'tag'));
+    });
+  });
+});
+
+describe('EntityCacheDispatcher (provided by provideEntityData)', () => {
+  it('should be injectable and dispatch to the real store', () => {
+    TestBed.configureTestingModule({
+      providers: [provideStore(), provideEntityData({})],
+    });
+    const dispatcher = TestBed.inject(EntityCacheDispatcher);
+    const store = TestBed.inject(Store);
+    const dispatch = vi.spyOn(store, 'dispatch');
+
+    dispatcher.clearCollections();
+
+    expect(dispatch).toHaveBeenCalledWith(new ClearCollections(undefined));
   });
 });

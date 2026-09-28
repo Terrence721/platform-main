@@ -20,18 +20,21 @@ export class DataServiceError extends Error {
 }
 
 // Many ways the error can be shaped. These are the ways we recognize.
+// The first one that holds a message wins, so an HttpErrorResponse whose
+// `error` is an object without one (a network failure's ProgressEvent, a
+// problem-details body) still gets its own `message`.
 function extractMessage(sourceError: any): string | null {
-  const { error, body, message } = sourceError;
-  let errMessage: string | null = null;
-  if (error) {
-    // prefer HttpErrorResponse.error to its message property
-    errMessage = typeof error === 'string' ? error : error.message;
-  } else if (message) {
-    errMessage = message;
-  } else if (body) {
-    // try the body if no error or message property
-    errMessage = typeof body === 'string' ? body : body.error;
+  if (sourceError == null) {
+    return null;
   }
+  const { error, body, message } = sourceError;
+  const errMessage = [
+    // prefer HttpErrorResponse.error to its message property
+    typeof error === 'string' ? error : error?.message,
+    message,
+    // try the body if no error or message property
+    typeof body === 'string' ? body : body?.error,
+  ].find((candidate) => !!candidate);
 
   return typeof errMessage === 'string'
     ? errMessage

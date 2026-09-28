@@ -2376,7 +2376,7 @@ Every documented default matches what the services apply (`root` `'api'`, `delet
 
 **Checked, not defects:** the `key == null` guards keep a key of `0`; `delete` maps the result to the key, including on the DELETE-404-is-OK path; `handleDelete404` only ever sees an `HttpErrorResponse` or a `TimeoutError`, never `null`; the method switch's `default:` branch is unreachable by type.
 
-**Open question, not changed:** keys are concatenated into the URL unencoded (`entityUrl + key`), so a string key containing `/`, `?`, `#` or a space changes the request's path or query. Encoding them is the REST-correct behaviour but would double-encode keys that apps already encode; left for the repo owner to decide.
+**Follow-up, fixed via [issue #505](https://github.com/Terrence721/platform-main/issues/505) (the repo owner's decision):** keys were concatenated into the URL unencoded (`entityUrl + key`), so a string key containing `/`, `?`, `#` or a space changed the request's path or query (`getById('a/b ?#c')` requested `api/hero/a/b ?#c`). `getById`, `delete` and `update` now pass the key through `encodeURIComponent`, so it stays in its own path segment (`api/hero/a%2Fb%20%3F%23c`); numeric keys (including `0`) and plain string keys are unchanged. This is a behaviour change: an app that already encoded its keys should stop, or they will be encoded twice. The class doc comment says keys are encoded. 4 new tests; the whole `data` suite passes (60 files, 1,240 results, no type errors).
 
 **Verification:** the `dataservices`, `effects` and `entity-services` specs pass (16 files, 332 results, no type errors); eslint clean on both files.
 

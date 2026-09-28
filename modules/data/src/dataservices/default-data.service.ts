@@ -43,7 +43,8 @@ function mergeParams(base: unknown, override: HttpParams | undefined) {
 /**
  * A basic, generic entity data service
  * suitable for persistence of most entities.
- * Assumes a common REST-y web API
+ * Assumes a common REST-y web API.
+ * Keys are URL-encoded into the entity URL, so pass them unencoded.
  */
 export class DefaultDataService<T> implements EntityCollectionDataService<T> {
   protected _name: string;
@@ -105,7 +106,7 @@ export class DefaultDataService<T> implements EntityCollectionDataService<T> {
 
     return this.execute(
       'DELETE',
-      this.entityUrl + key,
+      this.entityUrl + encodeURIComponent(key),
       err,
       null,
       options
@@ -124,7 +125,13 @@ export class DefaultDataService<T> implements EntityCollectionDataService<T> {
     if (key == null) {
       err = new Error(`No "${this.entityName}" key to get`);
     }
-    return this.execute('GET', this.entityUrl + key, err, null, options);
+    return this.execute(
+      'GET',
+      this.entityUrl + encodeURIComponent(key),
+      err,
+      null,
+      options
+    );
   }
 
   getWithQuery(
@@ -163,7 +170,7 @@ export class DefaultDataService<T> implements EntityCollectionDataService<T> {
         : update.changes;
     return this.execute(
       'PUT',
-      this.entityUrl + id,
+      this.entityUrl + encodeURIComponent(id),
       updateOrError,
       null,
       options

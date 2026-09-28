@@ -21,8 +21,11 @@ export abstract class DefaultDataServiceConfig {
   getDelay?: number;
   /** Simulate save method (PUT/POST/DELETE) latency in a demo (default: 0) */
   saveDelay?: number;
-  /** request timeout in MS (default: 0)*/
-  timeout?: number; //
-  /** to keep leading & trailing slashes or not; false by default */
+  /** Request timeout in ms; 0 means no timeout (default: 0) */
+  timeout?: number;
+  /**
+   * Keep the leading and trailing slashes of `root` as given, instead of
+   * trimming them, when building resource URLs (default: false)
+   */
   trailingSlashEndpoints?: boolean;
 }

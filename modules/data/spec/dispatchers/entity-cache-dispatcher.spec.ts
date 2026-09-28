@@ -114,4 +114,22 @@ describe('EntityCacheDispatcher', () => {
       );
     });
   });
+
+  describe('#reducedActions$', () => {
+    it('should replay the latest reduced action to a late subscriber, until destroyed', () => {
+      const action = { type: 'latest' };
+      scannedActions$.next(action);
+
+      let seen: Action | undefined;
+      dispatcher.reducedActions$.subscribe((a) => (seen = a)).unsubscribe();
+      expect(seen).toBe(action);
+
+      dispatcher.ngOnDestroy();
+      scannedActions$.next({ type: 'after destroy' });
+      seen = undefined;
+      dispatcher.reducedActions$.subscribe((a) => (seen = a)).unsubscribe();
+      // no longer listening: nothing was replayed from after the destroy
+      expect(seen).toBeUndefined();
+    });
+  });
 });

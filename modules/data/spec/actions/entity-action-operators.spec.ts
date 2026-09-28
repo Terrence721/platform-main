@@ -113,6 +113,18 @@ describe('EntityAction Operators', () => {
     expect(results).toEqual([]);
   });
 
+  it('#ofEntityType(undefined) selects any EntityAction, like #ofEntityType()', () => {
+    const theChosen: string[] | undefined = undefined;
+    actions.pipe(ofEntityType(theChosen)).subscribe((ea) => results.push(ea));
+
+    dispatchTestActions();
+    expect(results).toEqual([
+      testActions.HERO_QUERY_ALL,
+      testActions.VILLAIN_QUERY_MANY,
+      testActions.HERO_DELETE,
+    ]);
+  });
+
   ///////////////
 
   it('#ofEntityOp with string args', () => {
@@ -148,6 +160,28 @@ describe('EntityAction Operators', () => {
     ];
     dispatchTestActions();
     expect(results).toEqual(expectedActions);
+  });
+
+  it('#ofEntityOp with one op', () => {
+    actions
+      .pipe(ofEntityOp(EntityOp.SAVE_DELETE_ONE))
+      .subscribe((ea) => results.push(ea));
+
+    dispatchTestActions();
+    expect(results).toEqual([testActions.HERO_DELETE]);
+  });
+
+  it('#ofEntityOp(undefined) selects any EntityAction, like #ofEntityOp()', () => {
+    actions
+      .pipe(ofEntityOp(undefined as unknown as EntityOp[]))
+      .subscribe((ea) => results.push(ea));
+
+    dispatchTestActions();
+    expect(results).toEqual([
+      testActions.HERO_QUERY_ALL,
+      testActions.VILLAIN_QUERY_MANY,
+      testActions.HERO_DELETE,
+    ]);
   });
 
   function ofEntityOpTest() {

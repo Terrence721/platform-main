@@ -6,11 +6,13 @@ import { firstValueFrom } from 'rxjs';
 import {
   ENTITY_CACHE_META_REDUCERS,
   ENTITY_CACHE_NAME,
+  ENTITY_CACHE_NAME_TOKEN,
   ENTITY_COLLECTION_META_REDUCERS,
   EntityActionFactory,
   EntityCache,
   EntityDataModuleConfig,
   EntityOp,
+  EntityServices,
   provideEntityData,
 } from '../';
 
@@ -97,6 +99,34 @@ describe('EntityDataModuleConfig', () => {
         provideEntityData({ entityMetadata: { Hero: {} } }),
       ]);
       expect([...seen]).toEqual(['cache', 'collection']);
+    });
+  });
+
+  describe('cache name', () => {
+    for (const order of ['before', 'after']) {
+      it(`should use ENTITY_CACHE_NAME_TOKEN provided ${order} provideEntityData`, async () => {
+        const name = { provide: ENTITY_CACHE_NAME_TOKEN, useValue: 'myCache' };
+        const data = provideEntityData({ entityMetadata: { Hero: {} } });
+        TestBed.configureTestingModule({
+          providers: [
+            provideStore(),
+            ...(order === 'before' ? [name, data] : [data, name]),
+          ],
+        });
+        const heroes =
+          TestBed.inject(EntityServices).getEntityCollectionService('Hero');
+        heroes.addOneToCache({ id: 1 });
+
+        const state = await firstValueFrom(
+          TestBed.inject(Store).select((s) => s)
+        );
+        expect(Object.keys(state)).toEqual(['myCache']);
+        expect(await firstValueFrom(heroes.entities$)).toEqual([{ id: 1 }]);
+      });
+    }
+
+    it('should default to ENTITY_CACHE_NAME', async () => {
+      expect(await initialCache({})).toEqual({});
     });
   });
 });

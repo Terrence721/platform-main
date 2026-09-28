@@ -79,7 +79,8 @@ export const BASE_ENTITY_DATA_PROVIDERS: Array<
   EntitySelectorsFactory,
   EntitySelectors$Factory,
   EntityServicesElements,
-  { provide: ENTITY_CACHE_NAME_TOKEN, useValue: ENTITY_CACHE_NAME },
+  // ENTITY_CACHE_NAME_TOKEN is not provided here: its consumers fall back to
+  // ENTITY_CACHE_NAME, so an app's own name applies in any provider order.
   { provide: EntityServices, useClass: EntityServicesBase },
   { provide: Logger, useClass: DefaultLogger },
   provideEnvironmentInitializer(() => initializeBaseEntityData()),

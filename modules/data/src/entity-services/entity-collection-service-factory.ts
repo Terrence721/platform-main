@@ -1,5 +1,4 @@
 import { Injectable } from '@angular/core';
-import { EntityCollectionService } from './entity-collection-service';
 import { EntityCollectionServiceBase } from './entity-collection-service-base';
 import { EntityCollectionServiceElementsFactory } from './entity-collection-service-elements-factory';
 import { EntitySelectors$ } from '../selectors/entity-selectors$';
@@ -18,10 +17,13 @@ export class EntityCollectionServiceFactory {
   /**
    * Create an EntityCollectionService for an entity type
    * @param entityName - name of the entity type
+   * @returns the service; its `selectors$` are typed as `S$`, so selectors$
+   * for `additionalCollectionState` properties keep their types
+   * @throws if the entity type has no registered EntityDefinition
    */
   create<T, S$ extends EntitySelectors$<T> = EntitySelectors$<T>>(
     entityName: string
-  ): EntityCollectionService<T> {
+  ): EntityCollectionServiceBase<T, S$> {
     return new EntityCollectionServiceBase<T, S$>(
       entityName,
       this.entityCollectionServiceElementsFactory

@@ -1,18 +1,31 @@
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import angular from '@analogjs/vite-plugin-angular';
 import tsconfigPaths from 'vite-tsconfig-paths';
 import { defineConfig } from 'vitest/config';
 
+const workspaceRoot = fileURLToPath(new URL('.', import.meta.url));
+
 /**
- * Vitest prints "Testing types with tsc and vue-tsc is an experimental feature"
- * once per project whenever `typecheck` is enabled, and offers no option to turn
- * it off. The type tests (`expectTypeOf`, `@ts-expect-error`) need typecheck, so
- * it stays on; this drops only that advisory - both of its lines, which arrive
- * in one write - from stderr. Everything else written to stderr passes through
- * untouched. Remove this if the advisory is ever removed upstream or wanted.
+ * Advisories that repeat on every run, have no option to turn them off, and
+ * need no action. Each one is dropped from stderr (whole write, as it arrives);
+ * everything else written to stderr passes through untouched. Remove an entry
+ * if its advisory is ever removed upstream or wanted.
+ * - Vitest prints "Testing types with tsc and vue-tsc is an experimental
+ *   feature" once per project whenever `typecheck` is enabled. The type tests
+ *   (`expectTypeOf`, `@ts-expect-error`) need typecheck, so it stays on.
+ * - Vite 8 advises replacing vite-tsconfig-paths with its native
+ *   resolve.tsconfigPaths, once per project. The plugin stays; see below.
+ * - The Angular plugin looks for ./tsconfig.spec.json in the root config too,
+ *   whose root is the workspace root, which has none and runs no tests. Only
+ *   that path is dropped: a module whose own tsconfig.spec.json is missing is
+ *   still reported.
  */
-const typecheckAdvisory =
-  'Testing types with tsc and vue-tsc is an experimental feature';
+const advisories = [
+  'Testing types with tsc and vue-tsc is an experimental feature',
+  'The plugin "vite-tsconfig-paths" is detected',
+  `Unable to resolve tsconfig at ${join(workspaceRoot, 'tsconfig.spec.json')}.`,
+];
 const advisoryFilter = Symbol.for('ngrx.vitest.typecheckAdvisoryFilter');
 const stderr = process.stderr as NodeJS.WriteStream & {
   [advisoryFilter]?: true;
@@ -22,7 +35,9 @@ if (!stderr[advisoryFilter]) {
   stderr[advisoryFilter] = true;
   const write = stderr.write.bind(stderr) as (...args: unknown[]) => boolean;
   stderr.write = ((chunk: unknown, ...rest: unknown[]) => {
-    if (String(chunk).includes(typecheckAdvisory)) {
+    // Case-insensitive: the drive letter's case varies with how the run began.
+    const text = String(chunk).toLowerCase();
+    if (advisories.some((advisory) => text.includes(advisory.toLowerCase()))) {
       // Still honour a write callback, or a caller waiting on it would hang.
       const callback = rest.find((arg) => typeof arg === 'function') as
         (() => void) | undefined;
@@ -61,8 +76,6 @@ const modules: Record<string, { testTimeout?: number }> = {
  */
 const scriptsProject = 'scripts';
 
-const workspaceRoot = fileURLToPath(new URL('.', import.meta.url));
-
 /**
  * Which project to run, when the run is scoped to one:
  * - Nx sets NX_TASK_TARGET_PROJECT for every task, so `nx test <module>` runs
@@ -100,6 +113,20 @@ function scopedProject(): string | undefined {
  * there.
  */
 const inTestingPanel = process.env['VITEST_VSCODE'] === 'true';
+
+/*
+ * Vitest pipes every forks worker's stdout/stderr into its own and raises
+ * their listener limit by one per worker, lowering it again only once a
+ * stopped worker's output has flushed. Under load (seen in the panel, whose
+ * output goes to a socket to VS Code) flushing lags, so stopping workers pile
+ * up past the limit and Node logs "MaxListenersExceededWarning ... listeners
+ * added to [Socket]" (harmless: the limit is bookkeeping, not a leak). A higher
+ * base leaves room for that; Vitest adjusts relative to it. Not 0 (unlimited):
+ * Vitest would then raise it to 1.
+ */
+for (const stream of [process.stdout, process.stderr]) {
+  stream.setMaxListeners(stream.getMaxListeners() + 50);
+}
 
 /**
  * Single Vitest configuration for the whole workspace. All modules share the
@@ -151,10 +178,13 @@ export default defineConfig(({ mode }) => {
       // where a 30s limit was still being hit.
       testTimeout: 60000,
       // How long a finished forks worker may take to exit before Vitest logs
-      // "[vitest-pool]: Timeout terminating forks worker". Same reasoning: the
-      // default (10s) is too short for a loaded panel run, and the tests have
-      // already passed by then, so it only produced noise.
-      teardownTimeout: 30000,
+      // "[vitest-pool]: Timeout terminating forks worker". Stopping a worker
+      // waits for its output to flush into Vitest's own stdout, which lags
+      // when a full run loads the machine: 30s was exceeded in both the panel
+      // and the CLI, always after the tests had passed (each flagged file
+      // stops within 1s when run alone). This only sets when the message is
+      // logged; a worker that really hangs is still killed by Vitest.
+      teardownTimeout: 120000,
       // Default (300ms) flags nearly every compile-time type-assertion test
       // (spec/types/**, invokes tsc/vue-tsc) and every schematics/migrations
       // test (SchematicTestRunner does real Tree/filesystem I/O) as "slow" -

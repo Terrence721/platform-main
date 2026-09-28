@@ -698,6 +698,16 @@ describe('DefaultDataService', () => {
   });
 
   describe('#getWithQuery with httpOptions.httpParams', () => {
+    let warnSpy: MockInstance<typeof console.warn>;
+
+    // queryParams and httpParams are both provided, so the dev-mode merge
+    // warning fires; keep it out of the test output.
+    beforeEach(() => {
+      warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    });
+
+    afterEach(() => warnSpy.mockRestore());
+
     it('should keep queryParams that httpParams does not override', () => {
       const httpOptions: HttpOptions = {
         httpParams: { fromString: 'page=2' },
@@ -708,6 +718,7 @@ describe('DefaultDataService', () => {
       expect(req.request.params.get('name')).toBe('A');
       expect(req.request.params.get('page')).toBe('2');
       req.flush([]);
+      expect(warnSpy).toHaveBeenCalledTimes(1);
     });
   });
 

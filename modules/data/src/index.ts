@@ -86,6 +86,7 @@ export {
 // // effects
 export { EntityCacheEffects } from './effects/entity-cache-effects';
 export { persistOps, EntityEffects } from './effects/entity-effects';
+export { ENTITY_EFFECTS_SCHEDULER } from './effects/entity-effects-scheduler';
 
 // // entity-metadata
 export {

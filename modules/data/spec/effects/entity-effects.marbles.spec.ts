@@ -16,13 +16,13 @@ import {
   EntityActionFactory,
   EntityDataService,
   EntityEffects,
+  ENTITY_EFFECTS_SCHEDULER,
   EntityOp,
   HttpMethods,
   Logger,
   makeErrorOp,
   PersistenceResultHandler,
 } from '../..';
-import { ENTITY_EFFECTS_SCHEDULER } from '../../src/effects/entity-effects-scheduler';
 
 //////// Tests begin ////////
 describe('EntityEffects (marble testing)', () => {

@@ -112,8 +112,13 @@ export class EntityEffects {
     const service = this.dataService.getService(entityName);
     switch (entityOp) {
       case EntityOp.QUERY_ALL:
-      case EntityOp.QUERY_LOAD:
         return service.getAll(httpOptions);
+
+      // load() sends no data; loadWithQuery() sends its query
+      case EntityOp.QUERY_LOAD:
+        return data == null
+          ? service.getAll(httpOptions)
+          : service.getWithQuery(data, httpOptions);
 
       case EntityOp.QUERY_BY_KEY:
         return service.getById(data, httpOptions);

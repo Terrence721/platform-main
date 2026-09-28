@@ -26,8 +26,12 @@ class Hero {
 /** Store stub */
 class TestStore {
   // only interested in calls to store.dispatch()
-  dispatch() {}
-  select() {}
+  dispatch() {
+    // replaced by a spy in setup()
+  }
+  select() {
+    // not used by these tests
+  }
 }
 
 const defaultDispatcherOptions = new EntityDispatcherDefaultOptions();
@@ -90,6 +94,33 @@ export function commandDispatchTest(
     expect(entityOp).toBe(EntityOp.CANCEL_PERSIST);
     expect(correlationId).toBe('CRID007');
     expect(data).toBe('Test cancel');
+  });
+
+  it('#cancel() accepts a correlation id of 0 and keeps the options', () => {
+    dispatcher.cancel(0, 'Test cancel', { tag: 'Cancel tag' });
+    const { entityOp, correlationId, tag } = dispatchedAction().payload;
+    expect(entityOp).toBe(EntityOp.CANCEL_PERSIST);
+    expect(correlationId).toBe(0);
+    expect(tag).toBe('Cancel tag');
+  });
+
+  it('#cancel() throws without a correlation id', () => {
+    expect(() => dispatcher.cancel(undefined)).toThrow('Missing correlationId');
+  });
+
+  it('#setFilter() keeps the options', () => {
+    dispatcher.setFilter('B', { tag: 'Filter tag' });
+    expect(dispatchedAction().payload.tag).toBe('Filter tag');
+  });
+
+  it('#setLoaded() keeps the options', () => {
+    dispatcher.setLoaded(true, { tag: 'Loaded tag' });
+    expect(dispatchedAction().payload.tag).toBe('Loaded tag');
+  });
+
+  it('#setLoading() keeps the options', () => {
+    dispatcher.setLoading(true, { tag: 'Loading tag' });
+    expect(dispatchedAction().payload.tag).toBe('Loading tag');
   });
 
   describe('Save actions', () => {
@@ -293,15 +324,15 @@ export function commandDispatchTest(
       expect(mergeStrategy).toBeUndefined();
     });
 
-    it('#loadWithQuery() dispatches QUERY_MANY', () => {
+    it('#loadWithQuery() dispatches QUERY_LOAD with the query, so the collection is replaced', () => {
       dispatcher.loadWithQuery('name=B');
 
       const { entityOp, data, entityName, mergeStrategy } =
         dispatchedAction().payload;
-      expect(entityOp).toBe(EntityOp.QUERY_MANY);
+      expect(entityOp).toBe(EntityOp.QUERY_LOAD);
       expect(entityName).toBe('Hero');
       expect(data).toEqual('name=B');
-      expect(mergeStrategy).toBeUndefined(); //?
+      expect(mergeStrategy).toBeUndefined();
     });
   });
 
@@ -445,9 +476,10 @@ export function commandDispatchTest(
       dispatcher.updateOneInCache(hero, {
         mergeStrategy: MergeStrategy.IgnoreChanges,
       });
-      const { entityOp, mergeStrategy } = dispatchedAction().payload;
+      const { entityOp, mergeStrategy, data } = dispatchedAction().payload;
       expect(entityOp).toBe(EntityOp.UPDATE_ONE);
       expect(mergeStrategy).toBe(MergeStrategy.IgnoreChanges);
+      expect(data).toEqual(update);
     });
 
     it('#updateManyInCache dispatches UPDATE_MANY', () => {
@@ -477,9 +509,10 @@ export function commandDispatchTest(
       dispatcher.updateManyInCache(heroes, {
         mergeStrategy: MergeStrategy.IgnoreChanges,
       });
-      const { entityOp, mergeStrategy } = dispatchedAction().payload;
+      const { entityOp, mergeStrategy, data } = dispatchedAction().payload;
       expect(entityOp).toBe(EntityOp.UPDATE_MANY);
       expect(mergeStrategy).toBe(MergeStrategy.IgnoreChanges);
+      expect(data).toEqual(updates);
     });
 
     it('#upsertOneInCache dispatches UPSERT_ONE', () => {

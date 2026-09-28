@@ -70,7 +70,10 @@ export class EntityServicesBase implements EntityServices {
     return this.entityServicesElements.reducedActions$;
   }
 
-  /** The ngrx store, scoped to the EntityCache */
+  /**
+   * The ngrx store. Although typed `Store<EntityCache>`, it is the root store:
+   * read the cache with `entityCache$`, not by selecting from this store.
+   */
   protected get store(): Store<EntityCache> {
     return this.entityServicesElements.store;
   }

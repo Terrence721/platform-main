@@ -131,7 +131,7 @@ export class EntityChangeTrackerBase<T> implements EntityChangeTracker<T> {
   /**
    * Merge successful result of deleting entities on the server that have the given primary keys
    * Clears the entity changeState for those keys unless the MergeStrategy is ignoreChanges.
-   * @param entities keys primary keys of the entities to remove/delete.
+   * @param keys primary keys of the entities to remove/delete.
    * @param collection The entity collection
    * @param [mergeStrategy] How to adjust change tracking when the corresponding entity in the collection has an unsaved change.
    * Defaults to MergeStrategy.OverwriteChanges.
@@ -216,7 +216,9 @@ export class EntityChangeTrackerBase<T> implements EntityChangeTracker<T> {
               chgState = { ...chgState };
               didMutate = true;
             }
-            const newId = this.selectId(update.changes as T);
+            // The changes may omit the key: then the id did not change
+            const changedId = this.selectId(update.changes as T);
+            const newId = changedId == null ? oldId : changedId;
             const oldChangeState = change;
             // If the server changed the id, register the new "originalValue" under the new id
             // and remove the change tracked under the old id.
@@ -336,16 +338,12 @@ export class EntityChangeTrackerBase<T> implements EntityChangeTracker<T> {
           const id = this.selectId(entity);
           const change = chgState[id];
           if (change) {
+            // Keep the unsaved change; the server value becomes its original
             if (!didMutate) {
-              chgState = {
-                ...chgState,
-                [id]: {
-                  ...chgState[id]!,
-                  originalValue: entity,
-                },
-              };
+              chgState = { ...chgState };
               didMutate = true;
             }
+            chgState[id] = { ...change, originalValue: entity };
           } else {
             upsertEntities.push(entity);
           }
@@ -514,7 +512,7 @@ export class EntityChangeTrackerBase<T> implements EntityChangeTracker<T> {
     let didMutate = false;
     const entityMap = collection.entities;
     const changeState = updates.reduce((chgState, update) => {
-      const { id, changes: entity } = update;
+      const { id } = update;
       if (id == null || id === '') {
         throw new Error(
           `${collection.entityName} entity update requires a key to be tracked`

@@ -166,6 +166,106 @@ describe('EntityChangeTrackerBase', () => {
     });
   });
 
+  /** Heroes 1 and 2 updated locally and tracked; hero 7 untouched. */
+  function locallyUpdatedHeroes() {
+    const updates = [
+      toUpdate({ id: 1, name: 'Alice local', power: 'Strong' }),
+      toUpdate({ id: 2, name: 'Gail local', power: 'Loud' }),
+    ];
+    const collection = tracker.trackUpdateMany(updates, origCollection);
+    return adapter.updateMany(updates, collection);
+  }
+
+  describe('#mergeQueryResults with several tracked entities', () => {
+    it('should update the original value of every tracked entity with preserve changes', () => {
+      const alice = { id: 1, name: 'Alice server', power: 'Strong' };
+      const gail = { id: 2, name: 'Gail server', power: 'Loud' };
+      const collection = tracker.mergeQueryResults(
+        [alice, gail],
+        locallyUpdatedHeroes(),
+        MergeStrategy.PreserveChanges
+      );
+
+      expect(collection.changeState[1]!.originalValue).toEqual(alice);
+      expect(collection.changeState[2]!.originalValue).toEqual(gail);
+      expect(collection.entities[1]!.name).toBe('Alice local');
+      expect(collection.entities[2]!.name).toBe('Gail local');
+    });
+  });
+
+  describe('#mergeSaveUpdates', () => {
+    const saved = [
+      {
+        id: 1,
+        changes: { id: 1, name: 'Alice saved', power: 'Strong' },
+        changed: true,
+      },
+    ];
+
+    it('should apply the saved changes and clear tracking by default (overwrite)', () => {
+      const collection = tracker.mergeSaveUpdates(
+        saved,
+        locallyUpdatedHeroes()
+      );
+      expect(collection.entities[1]!.name).toBe('Alice saved');
+      expect(collection.changeState[1]).toBeUndefined();
+      expect(collection.changeState[2]).toBeDefined();
+    });
+
+    it('should keep the local value and update the original value with preserve changes', () => {
+      const collection = tracker.mergeSaveUpdates(
+        saved,
+        locallyUpdatedHeroes(),
+        MergeStrategy.PreserveChanges
+      );
+      expect(collection.entities[1]!.name).toBe('Alice local');
+      expect(collection.changeState[1]!.originalValue!.name).toBe(
+        'Alice saved'
+      );
+    });
+
+    it('should keep tracking under the id when the saved changes omit the key (preserve changes)', () => {
+      const collection = tracker.mergeSaveUpdates(
+        [{ id: 1, changes: { name: 'Alice saved' }, changed: true }],
+        locallyUpdatedHeroes(),
+        MergeStrategy.PreserveChanges
+      );
+      expect(Object.keys(collection.changeState).sort()).toEqual(['1', '2']);
+      expect(collection.changeState[1]!.originalValue!.name).toBe(
+        'Alice saved'
+      );
+    });
+
+    it('should apply the saved changes and keep tracking with ignore changes', () => {
+      const collection = tracker.mergeSaveUpdates(
+        saved,
+        locallyUpdatedHeroes(),
+        MergeStrategy.IgnoreChanges
+      );
+      expect(collection.entities[1]!.name).toBe('Alice saved');
+      expect(collection.changeState[1]).toBeDefined();
+    });
+  });
+
+  describe('#mergeSaveDeletes', () => {
+    it('should remove the entities and clear their tracking by default', () => {
+      const collection = tracker.mergeSaveDeletes([1], locallyUpdatedHeroes());
+      expect(collection.entities[1]).toBeUndefined();
+      expect(collection.changeState[1]).toBeUndefined();
+      expect(collection.changeState[2]).toBeDefined();
+    });
+
+    it('should keep their tracking with ignore changes', () => {
+      const collection = tracker.mergeSaveDeletes(
+        [1],
+        locallyUpdatedHeroes(),
+        MergeStrategy.IgnoreChanges
+      );
+      expect(collection.entities[1]).toBeUndefined();
+      expect(collection.changeState[1]).toBeDefined();
+    });
+  });
+
   describe('#mergeSaveAdds', () => {
     it('should use default overwrite changes strategy', () => {
       let {
@@ -406,7 +506,7 @@ describe('EntityChangeTrackerBase', () => {
       const trackKeys = Object.keys(collection.changeState);
       expect(trackKeys).toEqual(['42', '84']);
 
-      trackKeys.forEach((key, ix) => {
+      trackKeys.forEach((key) => {
         const change = collection.changeState[key];
         expect(change).toBeDefined();
         expectChangeType(
@@ -886,13 +986,8 @@ describe('EntityChangeTrackerBase', () => {
 
   describe('#undoMany', () => {
     it('should clear many tracked changes', () => {
-      let {
-        collection,
-        addedEntity,
-        deletedEntity,
-        preUpdatedEntity,
-        updatedEntity,
-      } = createTestTrackedEntities();
+      let { collection, addedEntity, deletedEntity, updatedEntity } =
+        createTestTrackedEntities();
 
       expect(Object.keys(collection.changeState).length).toBe(3);
 
@@ -1032,7 +1127,7 @@ describe('EntityChangeTrackerBase', () => {
     expectedChangeType: ChangeType,
     msg?: string
   ) {
-    expect(ChangeType[change!.changeType]).toEqual(
+    expect(ChangeType[change!.changeType], msg).toEqual(
       ChangeType[expectedChangeType]
     );
   }

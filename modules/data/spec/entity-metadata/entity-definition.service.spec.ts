@@ -54,6 +54,18 @@ describe('EntityDefinitionService', () => {
       const def = service.getDefinition('foo', /* shouldThrow */ false);
       expect(def).not.toBeDefined();
     });
+
+    it('treats names that Object.prototype also has as unknown until registered', () => {
+      expect(() => service.getDefinition('constructor')).toThrowError(
+        /no entity/i
+      );
+      expect(service.getDefinition('toString', false)).toBeUndefined();
+
+      service.registerMetadata({ entityName: 'constructor' });
+      expect(service.getDefinition('constructor').entityName).toBe(
+        'constructor'
+      );
+    });
   });
 
   describe('#registerMetadata(Map)', () => {
@@ -129,7 +141,7 @@ describe('EntityDefinitionService', () => {
     });
 
     it('can re-register an existing definition', () => {
-      const testSelectId = (entity: any) => 'test-id';
+      const testSelectId = () => 'test-id';
       const newDef = createEntityDefinition({
         entityName: 'Hero',
         selectId: testSelectId,
@@ -139,6 +151,19 @@ describe('EntityDefinitionService', () => {
       const def = service.getDefinition('Hero');
       expect(def).toBeDefined();
       expect(def.selectId).toBe(testSelectId);
+    });
+
+    it('trims the names it registers, like the name getDefinition looks up', () => {
+      const sidekick = createEntityDefinition({ entityName: 'Sidekick' });
+      service.registerDefinitions({ ' Sidekick ': sidekick });
+      expect(service.getDefinition('Sidekick')).toBe(sidekick);
+
+      const henchman = {
+        ...createEntityDefinition({ entityName: 'Henchman' }),
+      };
+      henchman.entityName = ' Henchman ';
+      service.registerDefinition(henchman);
+      expect(service.getDefinition('Henchman')).toBe(henchman);
     });
   });
 });

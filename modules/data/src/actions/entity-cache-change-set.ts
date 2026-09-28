@@ -31,7 +31,7 @@ export interface ChangeSetUpsert<T = any> {
 }
 
 /**
- * A entities of a single entity type, which are changed in the same way by a ChangeSetOperation
+ * The entities of a single entity type, which are changed in the same way by a ChangeSetOperation
  */
 export type ChangeSetItem =
   ChangeSetAdd | ChangeSetDelete | ChangeSetUpdate | ChangeSetUpsert;
@@ -68,16 +68,17 @@ export class ChangeSetItemFactory {
     entityName: string,
     keys: number | number[] | string | string[]
   ): ChangeSetDelete {
+    // Only a missing key means none: 0 is a valid key.
     const ids = Array.isArray(keys)
       ? keys
-      : keys
-        ? ([keys] as string[] | number[])
-        : [];
+      : keys == null
+        ? []
+        : ([keys] as string[] | number[]);
     return { entityName, op: ChangeSetOperation.Delete, entities: ids };
   }
 
   /** Create the ChangeSetUpdate for Updates of entities of the given entity type */
-  update<T extends { id: string | number }>(
+  update<T>(
     entityName: string,
     updates: Update<T> | Update<T>[]
   ): ChangeSetUpdate<T> {

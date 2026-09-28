@@ -69,6 +69,15 @@ export class EntityCollectionServiceBase<
     this.loaded$ = selectors$.loaded$;
     this.loading$ = selectors$.loading$;
     this.changeState$ = selectors$.changeState$;
+
+    // Custom selectors$ (for `additionalCollectionState` properties) go on
+    // the service too, where the EntityCollectionService type offers them;
+    // names the service already has are left alone.
+    for (const [name, selector$] of Object.entries(selectors$)) {
+      if (!(name in this)) {
+        (this as any)[name] = selector$;
+      }
+    }
   }
 
   /**

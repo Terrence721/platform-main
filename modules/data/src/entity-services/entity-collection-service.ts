@@ -8,6 +8,10 @@ import { EntitySelectors } from '../selectors/entity-selectors';
 /**
  * A facade for managing
  * a cached collection of T entities in the ngrx store.
+ *
+ * Its selectors$ are available both on the service and on `selectors$`,
+ * including those for `additionalCollectionState` properties
+ * (e.g. `foo$` for `foo`).
  */
 export interface EntityCollectionService<T>
   extends EntityCommands<T>, EntitySelectors$<T> {
@@ -18,11 +22,11 @@ export interface EntityCollectionService<T>
    * @param [options] additional options
    * @returns the EntityAction
    */
-  createEntityAction(
+  createEntityAction<P = any>(
     op: EntityOp,
-    payload?: any,
+    data?: P,
     options?: EntityActionOptions
-  ): EntityAction<T>;
+  ): EntityAction<P>;
 
   /**
    * Create an {EntityAction} for this entity type and

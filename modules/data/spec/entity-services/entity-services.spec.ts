@@ -173,6 +173,18 @@ describe('EntityServices', () => {
       expect(entityServices.getEntityCollectionService(' Hero ')).toBe(custom);
     });
 
+    it('registers a service under a given name through the EntityServices contract', () => {
+      const { entityServices } = entityServicesSetup();
+      const custom = new EntityCollectionServiceBase<Hero>(
+        'Hero',
+        TestBed.inject(EntityCollectionServiceElementsFactory)
+      );
+      entityServices.registerEntityCollectionService(custom, 'Champion');
+      expect(entityServices.getEntityCollectionService('Champion')).toBe(
+        custom
+      );
+    });
+
     it('creates a service for an entity named like an Object.prototype member', () => {
       const { entityServices } = entityServicesSetup();
       TestBed.inject(EntityDefinitionService).registerMetadata({

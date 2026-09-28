@@ -40,9 +40,12 @@ export abstract class EntityServices {
   /** Register an EntityCollectionService under its entity type name.
    * Will replace a pre-existing service for that type.
    * @param service {EntityCollectionService} The entity service
+   * @param [serviceName] name to register it under instead of the service's
+   * entityName
    */
   abstract registerEntityCollectionService<T>(
-    service: EntityCollectionService<T>
+    service: EntityCollectionService<T>,
+    serviceName?: string
   ): void;
 
   /** Register entity services for several entity types at once.
@@ -58,7 +61,6 @@ export abstract class EntityServices {
    * @param entityCollectionServiceMap Map of service-name to entity-collection-service
    */
   abstract registerEntityCollectionServices(
-    // eslint-disable-next-line @typescript-eslint/unified-signatures
     entityCollectionServiceMap: EntityCollectionServiceMap
   ): void;
   // #endregion EntityCollectionService creation and registration API

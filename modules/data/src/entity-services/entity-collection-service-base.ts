@@ -20,8 +20,9 @@ import { QueryParams } from '../dataservices/interfaces';
 /**
  * Base class for a concrete EntityCollectionService<T>.
  * Can be instantiated. Cannot be injected. Use EntityCollectionServiceFactory to create.
- * @param EntityCollectionServiceElements The ingredients for this service
- * as a source of supporting services for creating an EntityCollectionService<T> instance.
+ * @param entityName Name of the entity type of this collection service
+ * @param serviceElementsFactory Creates the dispatcher and selectors for this
+ * entity type.
  */
 export class EntityCollectionServiceBase<
   T,
@@ -141,7 +142,11 @@ export class EntityCollectionServiceBase<
    */
   add(
     entity: Partial<T>,
-    options: EntityActionOptions & { isOptimistic: false }
+    options?: EntityActionOptions & { isOptimistic?: false }
+  ): Observable<T>;
+  add(
+    entity: T,
+    options: EntityActionOptions & { isOptimistic: true }
   ): Observable<T>;
   add(entity: T, options?: EntityActionOptions): Observable<T>;
   add(entity: T, options?: EntityActionOptions): Observable<T> {
@@ -164,7 +169,7 @@ export class EntityCollectionServiceBase<
 
   /**
    * Dispatch action to delete entity from remote storage by key.
-   * @param key The entity to delete
+   * @param entity The entity to delete
    * @param [options] options that influence save and merge behavior
    * @returns Observable of the deleted key
    * after server reports successful save or the save error.
@@ -319,9 +324,13 @@ export class EntityCollectionServiceBase<
     this.dispatcher.addManyToCache(entities, options);
   }
 
-  /** Clear the cached entity collection */
-  clearCache(): void {
-    this.dispatcher.clearCache();
+  /**
+   * Clear the cached entity collection.
+   * Does not delete the entities from remote storage.
+   * @param [options] options such as the tag and correlationId
+   */
+  clearCache(options?: EntityActionOptions): void {
+    this.dispatcher.clearCache(options);
   }
 
   /**
@@ -349,7 +358,7 @@ export class EntityCollectionServiceBase<
   /**
    * Remove multiple entities directly from the cache.
    * Does not delete these entities from remote storage.
-   * @param entity The entities to remove
+   * @param entities The entities to remove
    * @param [options] options such as mergeStrategy
    */
   removeManyFromCache(entities: T[], options?: EntityActionOptions): void;
@@ -381,8 +390,6 @@ export class EntityCollectionServiceBase<
    * @param [options] options such as mergeStrategy
    */
   updateOneInCache(entity: Partial<T>, options?: EntityActionOptions): void {
-    // update entity might be a partial of T but must at least have its key.
-    // pass the Update<T> structure as the payload
     this.dispatcher.updateOneInCache(entity, options);
   }
 
@@ -406,7 +413,6 @@ export class EntityCollectionServiceBase<
    * Insert or update a cached entity directly.
    * Does not save to remote storage.
    * Upsert entity might be a partial of T but must at least have its key.
-   * Pass the Update<T> structure as the payload.
    * @param entity to upsert directly in cache.
    * @param [options] options such as mergeStrategy
    */
@@ -418,7 +424,6 @@ export class EntityCollectionServiceBase<
    * Insert or update multiple cached entities directly.
    * Does not save to remote storage.
    * Upsert entities might be partial but must at least have their keys.
-   * Pass an array of the Update<T> structure as the payload.
    * @param entities to upsert directly in cache.
    * @param [options] options such as mergeStrategy
    */
@@ -432,19 +437,26 @@ export class EntityCollectionServiceBase<
   /**
    * Set the pattern that the collection's filter applies
    * when using the `filteredEntities` selector.
+   * @param [options] options such as the tag and correlationId
    */
-  setFilter(pattern: any): void {
-    this.dispatcher.setFilter(pattern);
+  setFilter(pattern: any, options?: EntityActionOptions): void {
+    this.dispatcher.setFilter(pattern, options);
   }
 
-  /** Set the loaded flag */
-  setLoaded(isLoaded: boolean): void {
-    this.dispatcher.setLoaded(!!isLoaded);
+  /**
+   * Set the loaded flag
+   * @param [options] options such as the tag and correlationId
+   */
+  setLoaded(isLoaded: boolean, options?: EntityActionOptions): void {
+    this.dispatcher.setLoaded(isLoaded, options);
   }
 
-  /** Set the loading flag */
-  setLoading(isLoading: boolean): void {
-    this.dispatcher.setLoading(!!isLoading);
+  /**
+   * Set the loading flag
+   * @param [options] options such as the tag and correlationId
+   */
+  setLoading(isLoading: boolean, options?: EntityActionOptions): void {
+    this.dispatcher.setLoading(isLoading, options);
   }
 
   // endregion Dispatch commands

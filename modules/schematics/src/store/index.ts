@@ -37,11 +37,17 @@ import { Schema as StoreOptions } from './schema';
  */
 function findModuleToRegisterIn(host: Tree, options: StoreOptions) {
   if (options.module) {
-    return findModuleFromOptions(host, options);
+    return findModuleFromOptions(host, {
+      ...options,
+      name: options.name ?? '',
+    });
   }
 
   try {
-    return findModuleFromOptions(host, options);
+    return findModuleFromOptions(host, {
+      ...options,
+      name: options.name ?? '',
+    });
   } catch (error) {
     if (
       error instanceof Error &&
@@ -78,6 +84,8 @@ function addImportToNgModule(options: StoreOptions): Rule {
       true
     );
 
+    // Set by the default rule before this runs ('' only with --root).
+    const name = options.name ?? '';
     const statePath = `${options.path}/${options.statePath}`;
     const relativePath = buildRelativePath(modulePath, statePath);
 
@@ -90,13 +98,13 @@ function addImportToNgModule(options: StoreOptions): Rule {
       options.root
         ? `StoreModule.forRoot(${rootStoreReducers}${rootStoreConfig})`
         : `StoreModule.forFeature(from${stringUtils.classify(
-            options.name
+            name
           )}.${stringUtils.camelize(
-            options.name
+            name
           )}FeatureKey, from${stringUtils.classify(
-            options.name
+            name
           )}.reducers, { metaReducers: from${stringUtils.classify(
-            options.name
+            name
           )}.metaReducers })`,
       relativePath
     ).shift();
@@ -120,7 +128,7 @@ function addImportToNgModule(options: StoreOptions): Rule {
         insertImport(
           source,
           modulePath,
-          `* as from${stringUtils.classify(options.name)}`,
+          `* as from${stringUtils.classify(name)}`,
           relativePath,
           true
         ),

@@ -29,10 +29,9 @@ export interface RequestData {
 }
 
 /**
- * A key/value map of parameters to be turned into an HTTP query string
- * Same as HttpClient's HttpParamsOptions which at the time of writing was
- * NOT exported at package level
- * https://github.com/angular/angular/issues/22013
+ * A key/value map of parameters to be turned into an HTTP query string.
+ * The shape of the `fromObject` option of Angular's `HttpParamsOptions`, kept
+ * as its own serializable type (see also `HttpParams` below).
  */
 export interface QueryParams {
   [name: string]:
@@ -54,9 +53,9 @@ export interface HttpOptions {
 export type HttpHeaders = string | { [p: string]: string | string[] };
 
 /**
- * Options that partially adheres to angular's HttpParamsOptions. The non-serializable encoder property is omitted.
+ * Options that partially adhere to Angular's `HttpParamsOptions`. The non-serializable `encoder` property is omitted.
  */
-export declare interface HttpParams {
+export interface HttpParams {
   /**
    * String representation of the HTTP parameters in URL-query-string format.
    * Mutually exclusive with `fromObject`.

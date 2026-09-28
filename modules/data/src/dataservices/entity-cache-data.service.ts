@@ -46,6 +46,7 @@ export class EntityCacheDataService {
    * in particular the ChangeSet interface (except for Update<T>).
    * This implementation extracts the entity changes from a ChangeSet Update<T>[] and sends those.
    * It then reconstructs Update<T>[] in the returned observable result.
+   * Only each update's `changes` is sent, not its `id`, so `changes` must include the entity's key.
    * @param changeSet  An array of SaveEntityItems.
    * Each SaveEntityItem describe a change operation for one or more entities of a single collection,
    * known by its 'entityName'.
@@ -57,16 +58,21 @@ export class EntityCacheDataService {
     // Extract the entity changes from the Update<T>[] and restore on the return from server
     changeSet = this.flattenUpdates(changeSet);
 
-    let result$: Observable<ChangeSet> = this.http
-      .post<ChangeSet>(url, changeSet)
-      .pipe(
-        map((result) => this.restoreUpdates(result)),
-        catchError(this.handleError({ method: 'POST', url, data: changeSet }))
-      );
+    let result$: Observable<ChangeSet> = this.http.post<ChangeSet>(
+      url,
+      changeSet
+    );
 
+    // Before catchError, so a timeout is reported as a DataServiceError
+    // with the request data, like any other failure.
     if (this.timeout) {
       result$ = result$.pipe(timeout(this.timeout));
     }
+
+    result$ = result$.pipe(
+      map((result) => this.restoreUpdates(result)),
+      catchError(this.handleError({ method: 'POST', url, data: changeSet }))
+    );
 
     if (this.saveDelay) {
       result$ = result$.pipe(delay(this.saveDelay));

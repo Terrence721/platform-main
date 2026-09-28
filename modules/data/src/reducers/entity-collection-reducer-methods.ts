@@ -18,6 +18,30 @@ import { MergeStrategy } from '../actions/merge-strategy';
 import { UpdateResponseData } from '../actions/update-response-data';
 
 /**
+ * Save actions whose server call the reducer decided to skip (a delete of
+ * entities that were never saved), for EntityEffects to read. Marked on
+ * `action.payload.skip` when the payload can take it, as before; otherwise
+ * here, since NgRx's default runtime checks freeze the dispatched action and
+ * writing to it would throw inside the reducer.
+ */
+const skippedPersists = new WeakSet<object>();
+
+/** Mark that the server call for `action` should be skipped. Not public API. */
+export function markPersistSkipped(action: { payload?: any }): void {
+  const payload = action.payload;
+  if (payload && Object.isExtensible(payload)) {
+    payload.skip = true;
+  } else {
+    skippedPersists.add(action);
+  }
+}
+
+/** True when the server call for `action` should be skipped. Not public API. */
+export function isPersistSkipped(action: { payload?: any }): boolean {
+  return action.payload?.skip === true || skippedPersists.has(action);
+}
+
+/**
  * Map of {EntityOp} to reducer method for the operation.
  * If an operation is missing, caller should return the collection for that reducer.
  */
@@ -178,7 +202,7 @@ export class EntityCollectionReducerMethods<T> {
 
   protected queryAllError(
     collection: EntityCollection<T>,
-    action: EntityAction<EntityActionDataServiceError>
+    _action: EntityAction<EntityActionDataServiceError>
   ): EntityCollection<T> {
     return this.setLoadingFalse(collection);
   }
@@ -206,14 +230,14 @@ export class EntityCollectionReducerMethods<T> {
 
   protected queryByKey(
     collection: EntityCollection<T>,
-    action: EntityAction<number | string>
+    _action: EntityAction<number | string>
   ): EntityCollection<T> {
     return this.setLoadingTrue(collection);
   }
 
   protected queryByKeyError(
     collection: EntityCollection<T>,
-    action: EntityAction<EntityActionDataServiceError>
+    _action: EntityAction<EntityActionDataServiceError>
   ): EntityCollection<T> {
     return this.setLoadingFalse(collection);
   }
@@ -241,7 +265,7 @@ export class EntityCollectionReducerMethods<T> {
 
   protected queryLoadError(
     collection: EntityCollection<T>,
-    action: EntityAction<EntityActionDataServiceError>
+    _action: EntityAction<EntityActionDataServiceError>
   ): EntityCollection<T> {
     return this.setLoadingFalse(collection);
   }
@@ -266,14 +290,14 @@ export class EntityCollectionReducerMethods<T> {
 
   protected queryMany(
     collection: EntityCollection<T>,
-    action: EntityAction
+    _action: EntityAction
   ): EntityCollection<T> {
     return this.setLoadingTrue(collection);
   }
 
   protected queryManyError(
     collection: EntityCollection<T>,
-    action: EntityAction<EntityActionDataServiceError>
+    _action: EntityAction<EntityActionDataServiceError>
   ): EntityCollection<T> {
     return this.setLoadingFalse(collection);
   }
@@ -335,13 +359,11 @@ export class EntityCollectionReducerMethods<T> {
    */
   protected saveAddManyError(
     collection: EntityCollection<T>,
-    action: EntityAction<EntityActionDataServiceError>
+    _action: EntityAction<EntityActionDataServiceError>
   ): EntityCollection<T> {
     return this.setLoadingFalse(collection);
   }
-  // #endregion saveAddMany
 
-  // #region saveAddOne
   /**
    * Successfully saved new entities to the server.
    * If saved pessimistically, add the entities from the server to the collection.
@@ -417,7 +439,7 @@ export class EntityCollectionReducerMethods<T> {
    */
   protected saveAddOneError(
     collection: EntityCollection<T>,
-    action: EntityAction<EntityActionDataServiceError>
+    _action: EntityAction<EntityActionDataServiceError>
   ): EntityCollection<T> {
     return this.setLoadingFalse(collection);
   }
@@ -458,10 +480,6 @@ export class EntityCollectionReducerMethods<T> {
   }
   // #endregion saveAddOne
 
-  // #region saveAddMany
-  // TODO MANY
-  // #endregion saveAddMany
-
   // #region saveDeleteOne
   /**
    * Delete an entity from the server by key and remove it from the collection (if present).
@@ -491,7 +509,7 @@ export class EntityCollectionReducerMethods<T> {
         collection = this.adapter.removeOne(deleteId as string, collection);
         collection = this.entityChangeTracker.commitOne(deleteId, collection);
         // Should not waste effort trying to delete on the server because it can't be there.
-        action.payload.skip = true;
+        markPersistSkipped(action);
       } else {
         // Re-track it as a delete, even if tracking is turned off for this call.
         collection = this.entityChangeTracker.trackDeleteOne(
@@ -525,7 +543,7 @@ export class EntityCollectionReducerMethods<T> {
    */
   protected saveDeleteOneError(
     collection: EntityCollection<T>,
-    action: EntityAction<EntityActionDataServiceError>
+    _action: EntityAction<EntityActionDataServiceError>
   ): EntityCollection<T> {
     return this.setLoadingFalse(collection);
   }
@@ -576,16 +594,20 @@ export class EntityCollectionReducerMethods<T> {
     const deleteIds = this.extractData(action).map((d) =>
       typeof d === 'object' ? this.selectId(d) : (d as string | number)
     );
+    // Skip the server call only if every entity was never saved: the other
+    // keys must still be deleted on the server.
+    let allUnsavedAdds = deleteIds.length > 0;
     deleteIds.forEach((deleteId) => {
       const change = collection.changeState[deleteId];
+      if (change?.changeType !== ChangeType.Added) {
+        allUnsavedAdds = false;
+      }
       // If entity is already tracked ...
       if (change) {
         if (change.changeType === ChangeType.Added) {
           // Remove the added entity immediately and forget about its changes (via commit).
           collection = this.adapter.removeOne(deleteId as string, collection);
           collection = this.entityChangeTracker.commitOne(deleteId, collection);
-          // Should not waste effort trying to delete on the server because it can't be there.
-          action.payload.skip = true;
         } else {
           // Re-track it as a delete, even if tracking is turned off for this call.
           collection = this.entityChangeTracker.trackDeleteOne(
@@ -595,6 +617,10 @@ export class EntityCollectionReducerMethods<T> {
         }
       }
     });
+    if (allUnsavedAdds) {
+      // Should not waste effort trying to delete on the server because they can't be there.
+      markPersistSkipped(action);
+    }
     // If optimistic delete, track current state and remove immediately.
     if (this.isOptimistic(action)) {
       const mergeStrategy = this.extractMergeStrategy(action);
@@ -618,7 +644,7 @@ export class EntityCollectionReducerMethods<T> {
    */
   protected saveDeleteManyError(
     collection: EntityCollection<T>,
-    action: EntityAction<EntityActionDataServiceError>
+    _action: EntityAction<EntityActionDataServiceError>
   ): EntityCollection<T> {
     return this.setLoadingFalse(collection);
   }
@@ -685,7 +711,7 @@ export class EntityCollectionReducerMethods<T> {
    */
   protected saveUpdateOneError(
     collection: EntityCollection<T>,
-    action: EntityAction<EntityActionDataServiceError>
+    _action: EntityAction<EntityActionDataServiceError>
   ): EntityCollection<T> {
     return this.setLoadingFalse(collection);
   }
@@ -757,7 +783,7 @@ export class EntityCollectionReducerMethods<T> {
    */
   protected saveUpdateManyError(
     collection: EntityCollection<T>,
-    action: EntityAction<EntityActionDataServiceError>
+    _action: EntityAction<EntityActionDataServiceError>
   ): EntityCollection<T> {
     return this.setLoadingFalse(collection);
   }
@@ -781,8 +807,8 @@ export class EntityCollectionReducerMethods<T> {
     action: EntityAction<UpdateResponseData<T>[]>
   ): EntityCollection<T> {
     const updates = this.guard.mustBeUpdateResponses(action);
-    const isOptimistic = this.isOptimistic(action);
     const mergeStrategy = this.extractMergeStrategy(action);
+    // Unlike saveUpdateOneSuccess, apply every response even when optimistic
     collection = this.entityChangeTracker.mergeSaveUpdates(
       updates,
       collection,
@@ -830,7 +856,7 @@ export class EntityCollectionReducerMethods<T> {
    */
   protected saveUpsertOneError(
     collection: EntityCollection<T>,
-    action: EntityAction<EntityActionDataServiceError>
+    _action: EntityAction<EntityActionDataServiceError>
   ): EntityCollection<T> {
     return this.setLoadingFalse(collection);
   }
@@ -898,7 +924,7 @@ export class EntityCollectionReducerMethods<T> {
    */
   protected saveUpsertManyError(
     collection: EntityCollection<T>,
-    action: EntityAction<EntityActionDataServiceError>
+    _action: EntityAction<EntityActionDataServiceError>
   ): EntityCollection<T> {
     return this.setLoadingFalse(collection);
   }
@@ -934,9 +960,9 @@ export class EntityCollectionReducerMethods<T> {
   // #region cache-only operations
 
   /**
-   * Replaces all entities in the collection
-   * Sets loaded flag to true.
-   * Merges query results, preserving unsaved changes
+   * Replaces all entities in the collection.
+   * Sets the loaded flag to true and the loading flag to false,
+   * and clears changeState (unsaved changes are discarded).
    */
   protected addAll(
     collection: EntityCollection<T>,
@@ -1011,7 +1037,7 @@ export class EntityCollectionReducerMethods<T> {
 
   protected removeAll(
     collection: EntityCollection<T>,
-    action: EntityAction<T>
+    _action: EntityAction<T>
   ): EntityCollection<T> {
     return {
       ...this.adapter.removeAll(collection),

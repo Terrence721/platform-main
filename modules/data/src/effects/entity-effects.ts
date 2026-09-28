@@ -10,6 +10,7 @@ import { EntityAction } from '../actions/entity-action';
 import { EntityActionFactory } from '../actions/entity-action-factory';
 import { ENTITY_EFFECTS_SCHEDULER } from './entity-effects-scheduler';
 import { getReducerError } from '../reducers/entity-cache-reducer';
+import { isPersistSkipped } from '../reducers/entity-collection-reducer-methods';
 import { EntityOp, makeSuccessOp } from '../actions/entity-op';
 import { ofEntityOp } from '../actions/entity-action-operators';
 import { UpdateResponseData } from '../actions/update-response-data';
@@ -82,7 +83,8 @@ export class EntityEffects {
    * @param action A persistence operation EntityAction
    */
   persist(action: EntityAction): Observable<Action> {
-    if (action.payload.skip) {
+    // Set by the caller, or by the reducer (e.g. deleting unsaved entities)
+    if (isPersistSkipped(action)) {
       // Should not persist. Pretend it succeeded.
       return this.handleSkipSuccess$(action);
     }

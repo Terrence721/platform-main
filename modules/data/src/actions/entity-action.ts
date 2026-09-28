@@ -16,6 +16,10 @@ export interface EntityActionOptions {
   readonly correlationId?: any;
   /** True if should perform action optimistically (before server responds) */
   readonly isOptimistic?: boolean;
+  /**
+   * How to merge the result into entities with unsaved changes. The default
+   * depends on the operation (see `MergeStrategy`).
+   */
   readonly mergeStrategy?: MergeStrategy;
   /** The tag to use in the action's type. The entityName if no tag specified. */
   readonly tag?: string;

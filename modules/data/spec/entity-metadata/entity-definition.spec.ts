@@ -59,6 +59,25 @@ describe('EntityDefinition', () => {
       });
     });
 
+    it('throws when `additionalCollectionState` reuses a built-in name', () => {
+      const metadata = {
+        ...heroMetadata,
+        additionalCollectionState: { loaded: 'oops', ids: [], foo: 'foo' },
+      };
+      expect(() => createEntityDefinition(metadata)).toThrowError(
+        'additionalCollectionState for "Hero" uses reserved name(s): loaded, ids'
+      );
+    });
+
+    it('allows `additionalCollectionState` names that Object.prototype has', () => {
+      const metadata = {
+        ...heroMetadata,
+        additionalCollectionState: { toString: 'custom' },
+      };
+      const def = createEntityDefinition(metadata);
+      expect((def.initialState as any).toString).toBe('custom');
+    });
+
     it('creates default `selectId` on the definition when no metadata.selectId', () => {
       const def = createEntityDefinition(heroMetadata);
       expect(def.selectId({ id: 42 } as Hero)).toBe(42);

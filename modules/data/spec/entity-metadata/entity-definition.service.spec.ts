@@ -166,4 +166,39 @@ describe('EntityDefinitionService', () => {
       expect(service.getDefinition('Henchman')).toBe(henchman);
     });
   });
+
+  describe('ENTITY_METADATA_TOKEN providers', () => {
+    function injectWith(providers: any[]) {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [EntityDefinitionService, ...providers],
+      });
+      return TestBed.inject(EntityDefinitionService);
+    }
+
+    it('registers every map from several multi providers', () => {
+      const svc = injectWith([
+        { provide: ENTITY_METADATA_TOKEN, multi: true, useValue: { Hero: {} } },
+        {
+          provide: ENTITY_METADATA_TOKEN,
+          multi: true,
+          useValue: { Villain: {} },
+        },
+      ]);
+      expect(svc.getDefinition('Hero')).toBeDefined();
+      expect(svc.getDefinition('Villain')).toBeDefined();
+    });
+
+    it('accepts a single map provided without `multi`', () => {
+      const svc = injectWith([
+        { provide: ENTITY_METADATA_TOKEN, useValue: { Hero: {} } },
+      ]);
+      expect(svc.getDefinition('Hero')).toBeDefined();
+    });
+
+    it('starts empty when the token is not provided', () => {
+      const svc = injectWith([]);
+      expect(svc.getDefinition('Hero', false)).toBeUndefined();
+    });
+  });
 });

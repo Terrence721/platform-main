@@ -141,11 +141,16 @@ for (const stream of [process.stdout, process.stderr]) {
 const parseSpecificationsShim = {
   name: 'ngrx:vscode-parse-specifications',
   configureVitest({ vitest }: { vitest: Vitest }) {
+    // Typed locally: replacing the deprecated method is the point here, so
+    // the editor's "is deprecated" hint on it would only be noise.
+    const extensionApi = vitest as unknown as {
+      experimental_parseSpecifications?: Vitest['parseSpecifications'];
+    };
     if (
-      typeof vitest.experimental_parseSpecifications === 'function' &&
+      typeof extensionApi.experimental_parseSpecifications === 'function' &&
       typeof vitest.parseSpecifications === 'function'
     ) {
-      vitest.experimental_parseSpecifications =
+      extensionApi.experimental_parseSpecifications =
         vitest.parseSpecifications.bind(vitest);
     }
   },

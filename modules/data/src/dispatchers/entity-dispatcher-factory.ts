@@ -38,8 +38,13 @@ export class EntityDispatcherFactory implements OnDestroy {
     // Replay because sometimes in tests will fake data service with synchronous observable
     // which makes subscriber miss the dispatched actions.
     // Of course that's a testing mistake. But easy to forget, leading to painful debugging.
-    this.reducedActions$ = scannedActions$.asObservable().pipe(shareReplay(1));
+    // refCount: ngOnDestroy must release the scanned actions; without it,
+    // shareReplay stays subscribed to them forever.
+    this.reducedActions$ = scannedActions$
+      .asObservable()
+      .pipe(shareReplay({ bufferSize: 1, refCount: true }));
     // Start listening so late subscriber won't miss the most recent action.
+    // This subscription also keeps the replay alive until ngOnDestroy.
     this.raSubscription = this.reducedActions$.subscribe();
   }
 

@@ -711,6 +711,33 @@ describe('DefaultDataService', () => {
     });
   });
 
+  describe('key encoding', () => {
+    const key = 'a/b ?#c';
+    const encodedKeyUrl = heroUrl + 'a%2Fb%20%3F%23c';
+
+    it('#getById should keep a key with URL characters in its own path segment', () => {
+      service.getById(key).subscribe();
+      httpTestingController.expectOne(encodedKeyUrl).flush({});
+    });
+
+    it('#delete should keep a key with URL characters in its own path segment', () => {
+      service.delete(key).subscribe();
+      httpTestingController.expectOne(encodedKeyUrl).flush({});
+    });
+
+    it('#update should keep an id with URL characters in its own path segment', () => {
+      service.update({ id: key, changes: { name: 'A' } }).subscribe();
+      httpTestingController.expectOne(encodedKeyUrl).flush({});
+    });
+
+    it('should leave numeric and plain keys unchanged', () => {
+      service.getById(0).subscribe();
+      service.getById('abc-1').subscribe();
+      httpTestingController.expectOne(heroUrl + '0').flush({});
+      httpTestingController.expectOne(heroUrl + 'abc-1').flush({});
+    });
+  });
+
   describe('timeout', () => {
     afterEach(() => {
       vi.useRealTimers();

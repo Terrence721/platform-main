@@ -23,6 +23,24 @@ import {
 import { HttpUrlGenerator } from './http-url-generator';
 
 /**
+ * Merge the params from `execute`'s `options` (e.g. getWithQuery's
+ * queryParams) with those from `httpOptions.httpParams`; for a key in both,
+ * the `httpOptions` values replace the others.
+ */
+function mergeParams(base: unknown, override: HttpParams | undefined) {
+  if (!(base instanceof HttpParams) || !override) {
+    return override ?? base;
+  }
+  return override.keys().reduce((merged, key) => {
+    merged = merged.delete(key);
+    for (const value of override.getAll(key) ?? []) {
+      merged = merged.append(key, value);
+    }
+    return merged;
+  }, base);
+}
+
+/**
  * A basic, generic entity data service
  * suitable for persistence of most entities.
  * Assumes a common REST-y web API
@@ -93,7 +111,7 @@ export class DefaultDataService<T> implements EntityCollectionDataService<T> {
       options
     ).pipe(
       // forward the id of deleted entity as the result of the HTTP DELETE
-      map((result) => key as number | string)
+      map(() => key as number | string)
     );
   }
 
@@ -193,7 +211,10 @@ export class DefaultDataService<T> implements EntityCollectionDataService<T> {
       mergedOptions = {
         ...options,
         headers: entityActionHttpClientOptions?.headers ?? options?.headers,
-        params: entityActionHttpClientOptions?.params ?? options?.params,
+        params: mergeParams(
+          options?.params,
+          entityActionHttpClientOptions?.params
+        ),
       };
     }
 
@@ -246,7 +267,9 @@ export class DefaultDataService<T> implements EntityCollectionDataService<T> {
       }
     }
     if (this.timeout) {
-      result$ = result$.pipe(timeout(this.timeout + this.saveDelay));
+      // Allow for the simulated latency this request was given.
+      const simulatedDelay = method === 'GET' ? this.getDelay : this.saveDelay;
+      result$ = result$.pipe(timeout(this.timeout + simulatedDelay));
     }
     return result$.pipe(catchError(this.handleError(req)));
   }

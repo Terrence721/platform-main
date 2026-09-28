@@ -22,7 +22,6 @@ import {
   HttpUrlGenerator,
   DefaultDataServiceConfig,
   DataServiceError,
-  HttpMethods,
   QueryParams,
 } from '../../';
 import { HttpOptions } from '../../src/dataservices/interfaces';
@@ -115,7 +114,6 @@ describe('DefaultDataService', () => {
       };
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-shadow
     let service: TestService<Hero>;
 
     beforeEach(() => {
@@ -265,8 +263,7 @@ describe('DefaultDataService', () => {
     it('should turn 404 when id not found', () =>
       new Promise<void>((done, fail) => {
         service.getById(1).subscribe(
-          (heroes) =>
-            fail('getById succeeded when expected it to fail with a 404'),
+          () => fail('getById succeeded when expected it to fail with a 404'),
           (err) => {
             expect(err instanceof DataServiceError).toBe(true);
             done();
@@ -583,8 +580,7 @@ describe('DefaultDataService', () => {
           delete404OK: false,
         });
         service.delete(1).subscribe(
-          (heroes) =>
-            fail('delete succeeded when expected it to fail with a 404'),
+          () => fail('delete succeeded when expected it to fail with a 404'),
           (err) => {
             expect(err instanceof DataServiceError).toBe(true);
             done();
@@ -599,7 +595,7 @@ describe('DefaultDataService', () => {
     it('should throw when no id given', () =>
       new Promise<void>((done, fail) => {
         service.delete(undefined as any).subscribe(
-          (heroes) => fail('delete succeeded when expected it to fail'),
+          () => fail('delete succeeded when expected it to fail'),
           (err) => {
             expect(err.error.message).toMatch(/No "Hero" key/);
             done();
@@ -641,8 +637,7 @@ describe('DefaultDataService', () => {
     it('should return 404 when id not found', () =>
       new Promise<void>((done, fail) => {
         service.update({ id: 1, changes: { id: 1, name: 'B' } }).subscribe(
-          (update) =>
-            fail('update succeeded when expected it to fail with a 404'),
+          () => fail('update succeeded when expected it to fail with a 404'),
           (err) => {
             expect(err instanceof DataServiceError).toBe(true);
             done();
@@ -657,7 +652,7 @@ describe('DefaultDataService', () => {
     it('should throw when no update given', () =>
       new Promise<void>((done, fail) => {
         service.update(undefined as any).subscribe(
-          (heroes) => fail('update succeeded when expected it to fail'),
+          () => fail('update succeeded when expected it to fail'),
           (err) => {
             expect(err.error.message).toMatch(/No "Hero" update data/);
             done();
@@ -693,13 +688,70 @@ describe('DefaultDataService', () => {
     it('should throw when no entity given', () =>
       new Promise<void>((done, fail) => {
         service.upsert(undefined as any).subscribe(
-          (heroes) => fail('add succeeded when expected it to fail'),
+          () => fail('add succeeded when expected it to fail'),
           (err) => {
             expect(err.error.message).toMatch(/No "Hero" entity/);
             done();
           }
         );
       }));
+  });
+
+  describe('#getWithQuery with httpOptions.httpParams', () => {
+    it('should keep queryParams that httpParams does not override', () => {
+      const httpOptions: HttpOptions = {
+        httpParams: { fromString: 'page=2' },
+      };
+
+      service.getWithQuery('name=A', httpOptions).subscribe();
+      const req = httpTestingController.expectOne((r) => r.url === heroesUrl);
+      expect(req.request.params.get('name')).toBe('A');
+      expect(req.request.params.get('page')).toBe('2');
+      req.flush([]);
+    });
+  });
+
+  describe('timeout', () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    function serviceWith(config: DefaultDataServiceConfig) {
+      return new DefaultDataService<Hero>(
+        'Hero',
+        httpClient,
+        httpUrlGenerator,
+        config
+      );
+    }
+
+    it('should allow for getDelay, not saveDelay, on a GET', () => {
+      vi.useFakeTimers();
+      const results: unknown[] = [];
+      serviceWith({ timeout: 30, getDelay: 50 })
+        .getAll()
+        .subscribe({
+          next: (heroes) => results.push(heroes),
+          error: (err) => results.push(err),
+        });
+      httpTestingController.expectOne(heroesUrl).flush([]);
+
+      vi.advanceTimersByTime(50);
+      expect(results).toEqual([[]]);
+    });
+
+    it('should still time out a GET that exceeds timeout plus getDelay', () => {
+      vi.useFakeTimers();
+      let error: DataServiceError | undefined;
+      serviceWith({ timeout: 30, getDelay: 50 })
+        .getAll()
+        .subscribe({ error: (err) => (error = err) });
+      const req = httpTestingController.expectOne(heroesUrl);
+
+      vi.advanceTimersByTime(81);
+      expect(error).toBeInstanceOf(DataServiceError);
+      expect(req.cancelled).toBe(true);
+    });
   });
 });
 

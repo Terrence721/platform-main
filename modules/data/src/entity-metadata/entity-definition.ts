@@ -18,15 +18,21 @@ export interface EntityDefinition<T = any> {
 }
 
 export function createEntityDefinition<T, S extends object>(
-  metadata: EntityMetadata<T, S>
+  entityMetadata: EntityMetadata<T, S>
 ): EntityDefinition<T> {
-  let entityName = metadata.entityName;
-  if (!entityName) {
+  if (!entityMetadata.entityName) {
     throw new Error('Missing required entityName');
   }
-  metadata.entityName = entityName = entityName.trim();
+  const entityName = entityMetadata.entityName.trim();
+  const sortComparer = entityMetadata.sortComparer || false;
+  // A normalized copy: the caller's metadata object is not modified, so it
+  // can be shared or frozen.
+  const metadata: EntityMetadata<T, S> = {
+    ...entityMetadata,
+    entityName,
+    sortComparer,
+  };
   const selectId = metadata.selectId || (defaultSelectId as IdSelector<T>);
-  const sortComparer = (metadata.sortComparer = metadata.sortComparer || false);
 
   const entityAdapter = createEntityAdapter<T>({
     selectId,

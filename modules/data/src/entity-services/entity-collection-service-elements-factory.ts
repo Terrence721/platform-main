@@ -16,9 +16,13 @@ export interface EntityCollectionServiceElements<
   T,
   S$ extends EntitySelectors$<T> = EntitySelectors$<T>,
 > {
+  /** Dispatches the entity type's commands, with its own dispatcher options */
   readonly dispatcher: EntityDispatcher<T>;
+  /** Name of the entity type (trimmed) */
   readonly entityName: string;
+  /** Store-rooted selectors of the entity collection */
   readonly selectors: EntitySelectors<T>;
+  /** Observables of the entity collection's properties */
   readonly selectors$: S$;
 }
 
@@ -35,6 +39,7 @@ export class EntityCollectionServiceElementsFactory {
   /**
    * Get the ingredients for making an EntityCollectionService for this entity type
    * @param entityName - name of the entity type
+   * @throws if the entity type has no registered EntityDefinition
    */
   create<T, S$ extends EntitySelectors$<T> = EntitySelectors$<T>>(
     entityName: string

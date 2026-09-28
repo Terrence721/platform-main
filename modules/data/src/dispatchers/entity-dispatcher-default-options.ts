@@ -4,8 +4,9 @@ import { Injectable } from '@angular/core';
  * such as whether `add()` is optimistic or pessimistic by default.
  * An optimistic save modifies the collection immediately and before saving to the server.
  * A pessimistic save modifies the collection after the server confirms the save was successful.
- * This class initializes the defaults to the safest values.
- * Provide an alternative to change the defaults for all entity collections.
+ * By default every save is pessimistic except delete, which is optimistic.
+ * Provide an alternative to change the defaults for all entity collections,
+ * or set `entityDispatcherOptions` in an entity's metadata to change them for one.
  */
 @Injectable()
 export class EntityDispatcherDefaultOptions {

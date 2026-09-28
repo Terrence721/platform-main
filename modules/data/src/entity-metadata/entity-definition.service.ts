@@ -24,11 +24,16 @@ export class EntityDefinitionService {
   constructor(
     @Optional()
     @Inject(ENTITY_METADATA_TOKEN)
-    entityMetadataMaps: EntityMetadataMap[]
+    entityMetadataMaps: EntityMetadataMap[] | EntityMetadataMap | null
   ) {
-    if (entityMetadataMaps) {
-      entityMetadataMaps.forEach((map) => this.registerMetadataMap(map));
-    }
+    // A multi provider gives an array; one provided without `multi` gives a
+    // single map, which is accepted too.
+    const maps = Array.isArray(entityMetadataMaps)
+      ? entityMetadataMaps
+      : entityMetadataMaps
+        ? [entityMetadataMaps]
+        : [];
+    maps.forEach((map) => this.registerMetadataMap(map));
   }
 
   /**

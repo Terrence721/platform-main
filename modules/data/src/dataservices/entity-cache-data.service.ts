@@ -160,7 +160,11 @@ export class EntityCacheDataService {
    * @param entityName name of the entity type
    */
   protected getIdSelector(entityName: string) {
-    let idSelector = this.idSelectors[entityName];
+    // Own entries only: an entity named e.g. "toString" must not get
+    // Object.prototype.toString as its id selector.
+    let idSelector = Object.hasOwn(this.idSelectors, entityName)
+      ? this.idSelectors[entityName]
+      : undefined;
     if (!idSelector) {
       idSelector =
         this.entityDefinitionService.getDefinition(entityName).selectId;

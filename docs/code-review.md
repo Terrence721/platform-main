@@ -2394,6 +2394,8 @@ Every documented default matches what the services apply (`root` `'api'`, `delet
 
 **Verification:** the new spec and `entity-cache-effects.spec.ts` pass (18 results, no type errors); eslint clean.
 
+**Follow-up, fixed via [issue #511](https://github.com/Terrence721/platform-main/issues/511) (the lookup pattern found in #509):** `getIdSelector` read the plain-object `idSelectors` cache without an own-property check, so for an entity named `toString` the cached "selector" was `Object.prototype.toString`, and `restoreUpdates` silently rebuilt every returned update with id `"[object Undefined]"` instead of the entity's key (checked); for `constructor` it was `Object`, which returns the entity itself. The lookup now uses `Object.hasOwn`, with a test for an entity named `toString`.
+
 ### [`dataservices/entity-data.service.ts`](https://github.com/Terrence721/platform-main/blob/fdf4a0b3b29c33e8cd862f3bec0a3958bf93a59d/modules/data/src/dataservices/entity-data.service.ts)
 
 **low · Correctness** — Fixed via [issue #509](https://github.com/Terrence721/platform-main/issues/509)

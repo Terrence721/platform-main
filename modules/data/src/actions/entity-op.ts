@@ -1,5 +1,6 @@
-// Ensure that these suffix values and the EntityOp suffixes match
-// Cannot do that programmatically.
+// Every op with a success result has an error result too, and the other way
+// round: OP_SUCCESS and OP_ERROR must match the suffixes below. Checked by
+// spec/actions/entity-op.spec.ts.
 
 /** General purpose entity action operations, good for any entity type */
 export enum EntityOp {

@@ -150,18 +150,25 @@ export function provideEntityDataConfig(
   config: EntityDataModuleConfig
 ): Provider[] {
   return [
-    {
-      provide: ENTITY_CACHE_META_REDUCERS,
-      useValue: config.entityCacheMetaReducers
-        ? config.entityCacheMetaReducers
-        : [],
-    },
-    {
-      provide: ENTITY_COLLECTION_META_REDUCERS,
-      useValue: config.entityCollectionMetaReducers
-        ? config.entityCollectionMetaReducers
-        : [],
-    },
+    // The meta-reducers and initial state are provided only when set, so the
+    // same tokens provided directly still apply otherwise (their consumers
+    // treat a missing token as none).
+    ...(config.entityCacheMetaReducers
+      ? [
+          {
+            provide: ENTITY_CACHE_META_REDUCERS,
+            useValue: config.entityCacheMetaReducers,
+          },
+        ]
+      : []),
+    ...(config.entityCollectionMetaReducers
+      ? [
+          {
+            provide: ENTITY_COLLECTION_META_REDUCERS,
+            useValue: config.entityCollectionMetaReducers,
+          },
+        ]
+      : []),
     {
       provide: PLURAL_NAMES_TOKEN,
       multi: true,
@@ -172,8 +179,6 @@ export function provideEntityDataConfig(
       multi: true,
       useValue: config.entityMetadata ? config.entityMetadata : [],
     },
-    // Only when set, so an INITIAL_ENTITY_CACHE_STATE provided directly
-    // still applies otherwise.
     ...(config.initialEntityCacheState
       ? [
           {
@@ -187,7 +192,7 @@ export function provideEntityDataConfig(
 
 /**
  * Sets up base entity data providers with entity config.
- * This function should to be used at the root level.
+ * This function should be used at the root level.
  *
  * @usageNotes
  *

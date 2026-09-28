@@ -87,6 +87,26 @@ describe('EntityCacheDataService', () => {
     ]);
   });
 
+  it('should restore updates with the id selector of an entity named like an Object.prototype member', () => {
+    let result: ChangeSet | undefined;
+    createService()
+      .saveEntities({ changes: [] }, url)
+      .subscribe((r) => (result = r));
+
+    httpTestingController.expectOne(url).flush({
+      changes: [
+        {
+          op: ChangeSetOperation.Update,
+          entityName: 'toString',
+          entities: [{ heroId: 7, name: 'A' }],
+        },
+      ],
+    });
+    expect(result?.changes[0].entities).toEqual([
+      { id: 7, changes: { heroId: 7, name: 'A' } },
+    ]);
+  });
+
   it('should pass on an empty (204) response', () => {
     let result: ChangeSet | null | undefined;
     createService()

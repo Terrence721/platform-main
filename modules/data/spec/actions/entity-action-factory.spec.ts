@@ -208,12 +208,20 @@ describe('EntityActionFactory', () => {
   });
 
   it('should throw if do not specify entityName', () => {
-    expect(() => factory.create(null as any)).toThrow();
+    expect(() => factory.create('', EntityOp.QUERY_ALL)).toThrow(
+      'Missing entity name for new action'
+    );
+    expect(() =>
+      factory.create({ entityOp: EntityOp.QUERY_ALL } as any)
+    ).toThrow('Missing entity name for new action');
   });
 
   it('should throw if do not specify EntityOp', () => {
+    expect(() => factory.create('Hero', undefined as any)).toThrow(
+      'Missing EntityOp for new action'
+    );
     expect(() =>
       factory.create({ entityName: 'Hero', entityOp: null as any })
-    ).toThrow();
+    ).toThrow('Missing EntityOp for new action');
   });
 });

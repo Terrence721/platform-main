@@ -424,3 +424,11 @@ Chosen next after `signals` closed: the smallest remaining module (25 files) amo
 | `src/store/index.ts`                | [`6293894`](https://github.com/Terrence721/platform-main/commit/6293894e5c2b00c12933fedbebe7268baf7453f8) | [#472](https://github.com/Terrence721/platform-main/issues/472) | —   | Done — 2 bugs fixed, 3 tests tightened                  |
 | `src/store/schema.ts`               | [`c10a528`](https://github.com/Terrence721/platform-main/commit/c10a528a951521dc75d1d4a208fc7e71f3b2ba53) | [#476](https://github.com/Terrence721/platform-main/issues/476) | —   | Done — 1 type fixed, docs fixed                         |
 | `src/index.ts`                      | [`c10a528`](https://github.com/Terrence721/platform-main/commit/c10a528a951521dc75d1d4a208fc7e71f3b2ba53) | [#479](https://github.com/Terrence721/platform-main/issues/479) | —   | Done — entry point documented, types gap → #478         |
+
+#### `data` (module tracking issue [#40](https://github.com/Terrence721/platform-main/issues/40)) — started 2026-09-28
+
+Chosen next after `schematics` closed, by the repo owner's pick rather than by size: `data` has 61 files, `eslint-plugin` (the other module left under #32) has 55. The scope is the 61 `.ts` files under `modules/data/src/`, reviewed in path order. `PersistanceCanceled` → `PersistenceCanceled` was already fixed before this review (#325), so it is not a finding here; the 4 `describe.skip` blocks in `modules/data/spec/` are looked at in the review of the file each one covers.
+
+| File                                   | Last commit SHA                                                                                           | Sub-issue                                                       | PR  | Status                   |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | --- | ------------------------ |
+| `src/actions/entity-action-factory.ts` | [`fdf4a0b`](https://github.com/Terrence721/platform-main/commit/fdf4a0b3b29c33e8cd862f3bec0a3958bf93a59d) | [#481](https://github.com/Terrence721/platform-main/issues/481) | —   | Done — 1 weak test fixed |

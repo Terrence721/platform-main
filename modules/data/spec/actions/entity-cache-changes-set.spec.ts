@@ -64,6 +64,17 @@ describe('changeSetItemFactory', () => {
     expect(heroItem.op).toBe(ChangeSetOperation.Upsert);
     expect(heroItem.entities).toEqual([hero]);
   });
+
+  it('should keep an array of updates or upserts as given', () => {
+    const updates = villains.map((v) => ({ id: v.id, changes: v }));
+    expect(cif.update('Villain', updates).entities).toBe(updates);
+    expect(cif.upsert('Villain', villains).entities).toBe(villains);
+  });
+
+  it('should create Update and Upsert items with empty arrays when given nothing', () => {
+    expect(cif.update('Hero', null as any).entities).toEqual([]);
+    expect(cif.upsert('Hero', null).entities).toEqual([]);
+  });
 });
 
 describe('excludeEmptyChangeSetItems', () => {

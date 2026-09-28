@@ -21,6 +21,7 @@ import {
   EntityActionDataServiceError,
   Logger,
 } from '../..';
+import { markPersistSkipped } from '../../src/reducers/entity-collection-reducer-methods';
 import { Mock, vi } from 'vitest';
 
 describe('EntityEffects (normal testing)', () => {
@@ -83,6 +84,29 @@ describe('EntityEffects (normal testing)', () => {
         expect(crid).toBe(42);
         done();
       });
+      actions$.next(action);
+    }));
+
+  it('should skip the server call for a frozen action the reducer marked as skipped', () =>
+    new Promise<void>((done, fail) => {
+      // Frozen, as NgRx's default runtime checks do; the reducer marks it
+      // (e.g. deleting an entity that was never saved).
+      const action = entityActionFactory.create(
+        'Hero',
+        EntityOp.SAVE_DELETE_ONE,
+        42
+      );
+      Object.freeze(action.payload);
+      Object.freeze(action);
+      markPersistSkipped(action);
+
+      effects.persist$.subscribe((result: Action) => {
+        expect((result as EntityAction).payload.entityOp).toBe(
+          EntityOp.SAVE_DELETE_ONE_SUCCESS
+        );
+        expect(dataService.getService().delete).not.toHaveBeenCalled();
+        done();
+      }, fail);
       actions$.next(action);
     }));
 

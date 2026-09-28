@@ -9,6 +9,7 @@ import { catchError, delay, filter, map, mergeMap } from 'rxjs/operators';
 import { EntityAction } from '../actions/entity-action';
 import { EntityActionFactory } from '../actions/entity-action-factory';
 import { ENTITY_EFFECTS_SCHEDULER } from './entity-effects-scheduler';
+import { getReducerError } from '../reducers/entity-cache-reducer';
 import { EntityOp, makeSuccessOp } from '../actions/entity-op';
 import { ofEntityOp } from '../actions/entity-action-operators';
 import { UpdateResponseData } from '../actions/update-response-data';
@@ -85,8 +86,10 @@ export class EntityEffects {
       // Should not persist. Pretend it succeeded.
       return this.handleSkipSuccess$(action);
     }
-    if (action.payload.error) {
-      return this.handleError$(action)(action.payload.error);
+    // Set when the cache reducer failed to apply this action
+    const reducerError = getReducerError(action);
+    if (reducerError) {
+      return this.handleError$(action)(reducerError);
     }
     try {
       // Cancellation: returns Observable of CANCELED_PERSIST for a persistence EntityAction

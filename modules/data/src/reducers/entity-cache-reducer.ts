@@ -28,6 +28,33 @@ import { Logger } from '../utils/interfaces';
 import { MergeStrategy } from '../actions/merge-strategy';
 
 /**
+ * Errors the cache reducer hit while reducing an action, for the entity
+ * effects to read (they skip the server call when the cache update failed).
+ * Recorded on `action.payload.error` when the payload can take it, as before;
+ * otherwise here. With NgRx's default runtime checks the dispatched action is
+ * frozen, and writing to it would throw inside the reducer and stop the store.
+ */
+const reducerErrors = new WeakMap<object, unknown>();
+
+/** Record that reducing `action` failed with `error`. Not public API. */
+export function setReducerError(
+  action: { payload?: any },
+  error: unknown
+): void {
+  const payload = action.payload;
+  if (payload && Object.isExtensible(payload)) {
+    payload.error = error;
+  } else {
+    reducerErrors.set(action, error);
+  }
+}
+
+/** The error recorded for `action` while reducing it, if any. Not public API. */
+export function getReducerError(action: { payload?: any }): any {
+  return action.payload?.error ?? reducerErrors.get(action);
+}
+
+/**
  * Creates the EntityCacheReducer via its create() method
  */
 @Injectable()
@@ -136,7 +163,7 @@ export class EntityCacheReducerFactory {
     }
 
     entityCache = collections.reduce((newCache, entityName) => {
-      const payload = { entityName, entityOp };
+      const payload = { entityName, entityOp, tag };
       const act: EntityAction = {
         type: `[${entityName}] ${action.type}`,
         payload,
@@ -164,6 +191,7 @@ export class EntityCacheReducerFactory {
         entityName,
         entityOp,
         data: collections[entityName],
+        tag,
       };
       const act: EntityAction = {
         type: `[${entityName}] ${action.type}`,
@@ -197,6 +225,7 @@ export class EntityCacheReducerFactory {
         entityOp,
         data: querySet[entityName],
         mergeStrategy,
+        tag,
       };
       const act: EntityAction = {
         type: `[${entityName}] ${action.type}`,
@@ -239,7 +268,7 @@ export class EntityCacheReducerFactory {
         }
       });
     } catch (error: any) {
-      action.payload.error = error;
+      setReducerError(action, error);
     }
 
     return entityCache;
@@ -344,20 +373,23 @@ export class EntityCacheReducerFactory {
         : reducer(this.entityCollectionCreator.create(entityName), action);
     } catch (error: any) {
       this.logger.error(error);
-      action.payload.error = error;
+      setReducerError(action, error);
     }
 
-    return action.payload.error || collection === newCollection!
+    return getReducerError(action) || collection === newCollection!
       ? cache
       : { ...cache, [entityName]: newCollection! };
   }
 
-  /** Ensure loading is false for every collection in entityNames */
+  /**
+   * Ensure loading is false for every collection in entityNames
+   * (a name with no collection in the cache yet is skipped)
+   */
   private clearLoadingFlags(entityCache: EntityCache, entityNames: string[]) {
     let isMutated = false;
     entityNames.forEach((entityName) => {
       const collection = entityCache[entityName];
-      if (collection.loading) {
+      if (collection?.loading) {
         if (!isMutated) {
           entityCache = { ...entityCache };
           isMutated = true;

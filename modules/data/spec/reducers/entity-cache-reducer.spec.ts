@@ -31,6 +31,7 @@ import {
   MergeStrategy,
   ChangeType,
 } from '../..';
+import { getReducerError } from '../../src/reducers/entity-cache-reducer';
 import { vi } from 'vitest';
 
 class Hero {
@@ -662,6 +663,78 @@ describe('EntityCacheReducer', () => {
     });
   });
 
+  describe('reducer errors', () => {
+    // An ADD_ONE whose entity has no key: the collection reducer throws.
+    function failingAddOne() {
+      return entityActionFactory.create<Hero>('Hero', EntityOp.ADD_ONE, {
+        name: 'No key',
+      } as Hero);
+    }
+
+    /** Freeze an action as NgRx's default runtime checks do. */
+    function deepFreeze<T extends object>(action: T): T {
+      Object.values(action).forEach(
+        (value) => value && typeof value === 'object' && deepFreeze(value)
+      );
+      return Object.freeze(action);
+    }
+
+    it('records the error on a writable action and leaves the cache unchanged', () => {
+      const cache: EntityCache = {};
+      const action = failingAddOne();
+      expect(entityCacheReducer(cache, action)).toBe(cache);
+      expect(action.payload.error).toBeInstanceOf(Error);
+      expect(getReducerError(action)).toBe(action.payload.error);
+    });
+
+    it('records the error for a frozen action without throwing', () => {
+      const cache: EntityCache = {};
+      const action = deepFreeze(failingAddOne());
+      expect(entityCacheReducer(cache, action)).toBe(cache);
+      expect(getReducerError(action)).toBeInstanceOf(Error);
+    });
+
+    it('records the error for a frozen SaveEntities without throwing', () => {
+      const action = deepFreeze(
+        new SaveEntities(
+          {
+            changes: [
+              {
+                op: ChangeSetOperation.Add,
+                entityName: 'Hero',
+                entities: [{ name: 'No key' } as Hero],
+              },
+            ],
+          },
+          'api/save',
+          // Optimistic, so the reducer adds the (keyless) entity and fails
+          { isOptimistic: true }
+        )
+      );
+      expect(() => entityCacheReducer({}, action)).not.toThrow();
+      expect(getReducerError(action)).toBeInstanceOf(Error);
+    });
+
+    it('skips collections not in the cache when clearing loading flags', () => {
+      const cache: EntityCache = {};
+      const cancel = new SaveEntitiesCancel('CRID', 'test', ['Hero']);
+      expect(entityCacheReducer(cache, cancel)).toBe(cache);
+
+      const error = new SaveEntitiesError(
+        new DataServiceError(new Error('Bad'), null),
+        new SaveEntities(
+          {
+            changes: [
+              { op: ChangeSetOperation.Add, entityName: 'Hero', entities: [] },
+            ],
+          },
+          'api/save'
+        )
+      );
+      expect(entityCacheReducer(cache, error)).toBe(cache);
+    });
+  });
+
   // #region helpers
   function createCollection<T = any>(
     entityName: string,
@@ -680,7 +753,6 @@ describe('EntityCacheReducer', () => {
 
   function createInitialCache(entityMap: { [entityName: string]: any[] }) {
     const cache: EntityCache = {};
-    // eslint-disable-next-line guard-for-in
     for (const entityName in entityMap) {
       const selectId =
         metadata[entityName].selectId || ((entity: any) => entity.id);
@@ -825,7 +897,7 @@ describe('EntityCacheReducer', () => {
     flag: boolean,
     entityNames?: string[]
   ) {
-    entityNames = entityNames ? [] : Object.keys(entityCache);
+    entityNames = entityNames ?? Object.keys(entityCache);
     entityNames.forEach((name) => {
       expect(entityCache[name].loading).toBe(flag);
     });

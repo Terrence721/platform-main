@@ -30,6 +30,7 @@ import {
 import { EntityCacheDataService } from '../dataservices/entity-cache-data.service';
 import { ENTITY_EFFECTS_SCHEDULER } from './entity-effects-scheduler';
 import { Logger } from '../utils/interfaces';
+import { getReducerError } from '../reducers/entity-cache-reducer';
 
 @Injectable()
 export class EntityCacheEffects {
@@ -79,7 +80,8 @@ export class EntityCacheEffects {
    * @param action The SaveEntities action
    */
   saveEntities(action: SaveEntities): Observable<Action> {
-    const error = action.payload.error;
+    // Set when the cache reducer failed to apply the change set
+    const error = getReducerError(action);
     if (error) {
       return this.handleSaveEntitiesError$(action)(error);
     }

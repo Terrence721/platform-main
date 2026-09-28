@@ -14,8 +14,12 @@ export interface EntityDefinitions {
 /** Registry of EntityDefinitions for all cached entity types */
 @Injectable()
 export class EntityDefinitionService {
-  /** {EntityDefinition} for all cached entity types */
-  private readonly definitions: EntityDefinitions = {};
+  /**
+   * {EntityDefinition} for all cached entity types. No prototype, so an entity
+   * named like an Object.prototype member (e.g. "constructor") is not found
+   * unless registered, and "__proto__" is an ordinary key.
+   */
+  private readonly definitions: EntityDefinitions = Object.create(null);
 
   constructor(
     @Optional()
@@ -28,8 +32,9 @@ export class EntityDefinitionService {
   }
 
   /**
-   * Get (or create) a data service for entity type
+   * Get the registered EntityDefinition for an entity type
    * @param entityName - the name of the type
+   * @param shouldThrow - throw if there is none (default); else return undefined
    *
    * Examples:
    *   getDefinition('Hero'); // definition for Heroes, untyped
@@ -51,11 +56,10 @@ export class EntityDefinitionService {
 
   /**
    * Create and register the {EntityDefinition} for the {EntityMetadata} of an entity type
-   * @param name - the name of the entity type
-   * @param definition - {EntityMetadata} for a collection for that entity type
+   * @param metadata - {EntityMetadata} for a collection of that entity type
    *
    * Examples:
-   *   registerMetadata(myHeroEntityDefinition);
+   *   registerMetadata(myHeroEntityMetadata);
    */
   registerMetadata(metadata: EntityMetadata) {
     if (metadata) {
@@ -86,10 +90,11 @@ export class EntityDefinitionService {
    * @param definition - EntityDefinition of a collection for that entity type
    *
    * Examples:
-   *   registerDefinition('Hero', myHeroEntityDefinition);
+   *   registerDefinition(myHeroEntityDefinition);
    */
   registerDefinition<T>(definition: EntityDefinition<T>) {
-    this.definitions[definition.entityName] = definition;
+    // trimmed, like the name getDefinition looks up
+    this.definitions[definition.entityName.trim()] = definition;
   }
 
   /**
@@ -103,6 +108,8 @@ export class EntityDefinitionService {
    *   });
    */
   registerDefinitions(definitions: EntityDefinitions) {
-    Object.assign(this.definitions, definitions);
+    Object.keys(definitions).forEach((entityName) => {
+      this.definitions[entityName.trim()] = definitions[entityName];
+    });
   }
 }

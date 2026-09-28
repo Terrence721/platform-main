@@ -1,6 +1,12 @@
 import { beforeEach, expect } from 'vitest';
-import { Observable } from 'rxjs';
-import { TestScheduler, type TestMessage } from 'rxjs/testing';
+import { Observable, type ObservableNotification } from 'rxjs';
+import { TestScheduler } from 'rxjs/testing';
+
+// rxjs/testing's TestMessage is not part of RxJS 7's public API.
+interface TestMessage {
+  frame: number;
+  notification: ObservableNotification<unknown>;
+}
 
 type MarbleObservable<T> = Observable<T> & { messages: TestMessage[] };
 
@@ -85,10 +91,11 @@ expect.extend({
   },
 });
 
+// The type parameters must match Vitest's own declaration of Assertion.
 declare module 'vitest' {
-  interface Assertion<T = unknown> {
+  interface Assertion<R, T> {
     toBeObservable(
       expected: MarbleObservable<T extends Observable<infer V> ? V : T>
-    ): void;
+    ): R;
   }
 }

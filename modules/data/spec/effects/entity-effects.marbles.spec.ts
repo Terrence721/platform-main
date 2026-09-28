@@ -44,9 +44,8 @@ describe('EntityEffects (marble testing)', () => {
         EntityEffects,
         provideMockActions(() => actions),
         EntityActionFactory,
-        // See https://github.com/ReactiveX/rxjs/blob/master/doc/marble-testing.md
+        // See https://rxjs.dev/guide/testing/marble-testing
         { provide: ENTITY_EFFECTS_SCHEDULER, useFactory: getTestScheduler },
-        /* eslint-disable-next-line @typescript-eslint/no-use-before-define */
         { provide: EntityDataService, useClass: TestDataService },
         { provide: Logger, useValue: logger },
         {
@@ -73,7 +72,6 @@ describe('EntityEffects (marble testing)', () => {
       heroes
     );
 
-    const x = hot('-a---', { a: action });
     actions = hot('-a---', { a: action });
     // delay the response 3 frames
     const response = cold('---a|', { a: heroes });

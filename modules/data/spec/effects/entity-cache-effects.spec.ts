@@ -2,8 +2,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Action } from '@ngrx/store';
 import { Actions } from '@ngrx/effects';
-import { observeOn } from 'rxjs/operators';
-import { asapScheduler, ReplaySubject, Subject } from 'rxjs';
+import { ReplaySubject, Subject } from 'rxjs';
 
 import {
   EntityCacheEffects,
@@ -64,7 +63,6 @@ describe('EntityCacheEffects (normal testing)', () => {
         EntityCacheEffects,
         { provide: EntityActionFactory, useValue: eaFactory },
         { provide: Actions, useValue: actions$ },
-        /* eslint-disable-next-line @typescript-eslint/no-use-before-define */
         {
           provide: EntityCacheDataService,
           useClass: TestEntityCacheDataService,
@@ -148,6 +146,32 @@ describe('EntityCacheEffects (normal testing)', () => {
       });
       actions$.next(action);
     }));
+
+  for (const isOptimistic of [false, true]) {
+    it(`should return a SAVE_ENTITIES_SUCCESS with the request's ChangeSet when the server sends no content (${isOptimistic ? 'optimistic' : 'pessimistic'})`, () =>
+      new Promise<void>((done, fail) => {
+        const cs = createChangeSet();
+        const saveOptions = { ...options, isOptimistic };
+        const action = new SaveEntities(cs, 'test/save', saveOptions);
+
+        effects.saveEntities$.subscribe({
+          next: (result) => {
+            // the dispatcher's saveEntities() waits for this action, and the
+            // success reducers commit an optimistic save's changes
+            expect(result).toBeInstanceOf(SaveEntitiesSuccess);
+            expect((result as SaveEntitiesSuccess).payload).toMatchObject({
+              changeSet: action.payload.changeSet,
+              correlationId,
+            });
+            done();
+          },
+          error: fail,
+        });
+
+        actions$.next(action);
+        dataService.setResponse(null as any);
+      }));
+  }
 
   it('should return a SAVE_ENTITIES_ERROR when data service fails', () =>
     new Promise<void>((done, fail) => {

@@ -2,14 +2,7 @@ import { Inject, Injectable, Optional } from '@angular/core';
 import { Action } from '@ngrx/store';
 import { Actions, ofType, createEffect } from '@ngrx/effects';
 
-import {
-  asyncScheduler,
-  Observable,
-  of,
-  merge,
-  race,
-  SchedulerLike,
-} from 'rxjs';
+import { asyncScheduler, Observable, of, race, SchedulerLike } from 'rxjs';
 import {
   concatMap,
   catchError,
@@ -25,7 +18,6 @@ import {
   excludeEmptyChangeSetItems,
 } from '../actions/entity-cache-change-set';
 import { EntityActionFactory } from '../actions/entity-action-factory';
-import { EntityOp } from '../actions/entity-op';
 
 import {
   EntityCacheAction,
@@ -117,12 +109,7 @@ export class EntityCacheEffects {
 
       // Data: SaveEntities result as a SaveEntitiesSuccess action
       const d = this.dataService.saveEntities(changeSet, url).pipe(
-        concatMap((result) =>
-          this.handleSaveEntitiesSuccess$(
-            action,
-            this.entityActionFactory
-          )(result)
-        ),
+        concatMap((result) => this.handleSaveEntitiesSuccess$(action)(result)),
         catchError(this.handleSaveEntitiesError$(action))
       );
 
@@ -151,8 +138,7 @@ export class EntityCacheEffects {
 
   /** return handler of the ChangeSet result of successful saveEntities() */
   private handleSaveEntitiesSuccess$(
-    action: SaveEntities,
-    entityActionFactory: EntityActionFactory
+    action: SaveEntities
   ): (changeSet: ChangeSet) => Observable<Action> {
     const { url, correlationId, mergeStrategy, tag } = action.payload;
     const options = { correlationId, mergeStrategy, tag };
@@ -165,27 +151,11 @@ export class EntityCacheEffects {
 
       // No ChangeSet = Server probably responded '204 - No Content' because
       // it made no changes to the inserted/updated entities.
-      // Respond with success action best on the ChangeSet in the request.
-      changeSet = action.payload.changeSet;
-
-      // If pessimistic save, return success action with the original ChangeSet
-      if (!action.payload.isOptimistic) {
-        return of(new SaveEntitiesSuccess(changeSet, url, options));
-      }
-
-      // If optimistic save, avoid cache grinding by just turning off the loading flags
-      // for all collections in the original ChangeSet
-      const entityNames = changeSet.changes.reduce(
-        (acc, item) =>
-          acc.indexOf(item.entityName) === -1
-            ? acc.concat(item.entityName)
-            : acc,
-        [] as string[]
-      );
-      return merge(
-        entityNames.map((name) =>
-          entityActionFactory.create(name, EntityOp.SET_LOADING, false)
-        )
+      // Respond with a success action based on the ChangeSet in the request,
+      // optimistic or not: EntityCacheDispatcher.saveEntities() waits for it,
+      // and the success reducers commit an optimistic save's tracked changes.
+      return of(
+        new SaveEntitiesSuccess(action.payload.changeSet, url, options)
       );
     };
   }

@@ -62,16 +62,18 @@ export interface EntityDispatcher<T> extends EntityCommands<T> {
 
   /**
    * Convert an entity (or partial entity) into the `Update<T>` object
-   * `update...` and `upsert...` methods take `Update<T>` args
+   * that the `update...` methods dispatch
    */
   toUpdate(entity: Partial<T>): Update<T>;
 }
 
 /**
- * Persistence operation canceled
+ * Persistence operation canceled.
+ * The error a query or save Observable fails with when it is canceled.
  */
-export class PersistenceCanceled {
-  constructor(public readonly message?: string) {
-    this.message = message || 'Canceled by user';
+export class PersistenceCanceled extends Error {
+  constructor(message?: string) {
+    super(message || 'Canceled by user');
+    this.name = 'PersistenceCanceled';
   }
 }

@@ -37,7 +37,7 @@ export class EntityDispatcherBase<T> implements EntityDispatcher<T> {
 
   /**
    * Convert an entity (or partial entity) into the `Update<T>` object
-   * `update...` and `upsert...` methods take `Update<T>` args
+   * that the `update...` methods dispatch
    */
   toUpdate: (entity: Partial<T>) => Update<T>;
 

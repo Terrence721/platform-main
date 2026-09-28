@@ -6,7 +6,7 @@ import { UpdateResponseData } from '../actions/update-response-data';
 /**
  * Methods for tracking, committing, and reverting/undoing unsaved entity changes.
  * Used by EntityCollectionReducerMethods which should call tracker methods BEFORE modifying the collection.
- * See EntityChangeTracker docs.
+ * The default implementation is EntityChangeTrackerBase.
  */
 export interface EntityChangeTracker<T> {
   // #region commit
@@ -29,7 +29,7 @@ export interface EntityChangeTracker<T> {
   ): EntityCollection<T>;
 
   /**
-   * Commit changes for the given entity as when it have been refreshed from the server.
+   * Commit changes for the given entity as when it has been refreshed from the server.
    * Harmless when no entity changes to commit.
    * @param entityOrId The entity to clear tracking or its id.
    * @param collection The entity collection
@@ -74,7 +74,7 @@ export interface EntityChangeTracker<T> {
   /**
    * Merge successful result of deleting entities on the server that have the given primary keys
    * Clears the entity changeState for those keys unless the MergeStrategy is ignoreChanges.
-   * @param entities keys primary keys of the entities to remove/delete.
+   * @param keys primary keys of the entities to remove/delete.
    * @param collection The entity collection
    * @param [mergeStrategy] How to adjust change tracking when the corresponding entity in the collection has an unsaved change.
    * If not specified, implementation supplies a default strategy.
@@ -105,12 +105,12 @@ export interface EntityChangeTracker<T> {
    * Merge result of saving updated entities into the collection, adjusting the ChangeState per the mergeStrategy.
    * The default is MergeStrategy.OverwriteChanges.
    * @param updates Entity response data returned from saving updated entities to the server.
+   * @param collection The entity collection
    * @param [mergeStrategy] How to merge a saved entity when the corresponding entity in the collection has an unsaved change.
    * If not specified, implementation supplies a default strategy.
    * @param [skipUnchanged] True means skip update if server didn't change it. False by default.
    * If the update was optimistic and the server didn't make more changes of its own
    * then the updates are already in the collection and shouldn't make them again.
-   * @param collection The entity collection
    * @returns The merged EntityCollection.
    */
   mergeSaveUpdates(
@@ -218,7 +218,7 @@ export interface EntityChangeTracker<T> {
   /**
    * Track an entity before upsert (adding and updating) it to the collection.
    * Does NOT update the collection (the reducer's job).
-   * @param entities The entity to add or update. It must be a complete entity with its id.
+   * @param entity The entity to add or update. It must be a complete entity with its id.
    * @param collection The entity collection
    * @param [mergeStrategy] Track by default. Don't track if is MergeStrategy.IgnoreChanges.
    */
@@ -231,7 +231,7 @@ export interface EntityChangeTracker<T> {
 
   // #region undo
   /**
-   * Revert the unsaved changes for all collection.
+   * Revert all unsaved changes in the collection.
    * Harmless when there are no entity changes to undo.
    * @param collection The entity collection
    */

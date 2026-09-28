@@ -66,7 +66,7 @@ export class EntityChangeTrackerBase<T> implements EntityChangeTracker<T> {
   }
 
   /**
-   * Commit changes for the given entity as when it have been refreshed from the server.
+   * Commit changes for the given entity as when it has been refreshed from the server.
    * Harmless when no entity changes to commit.
    * @param entityOrId The entity to clear tracking or its id.
    * @param collection The entity collection
@@ -604,7 +604,7 @@ export class EntityChangeTrackerBase<T> implements EntityChangeTracker<T> {
   /**
    * Track an entity before upsert (adding and updating) it to the collection.
    * Does NOT update the collection (the reducer's job).
-   * @param entities The entity to add or update. It must be a complete entity with its id.
+   * @param entity The entity to add or update. It must be a complete entity with its id.
    * @param collection The entity collection
    * @param [mergeStrategy] Track by default. Don't track if is MergeStrategy.IgnoreChanges.
    */
@@ -621,7 +621,7 @@ export class EntityChangeTrackerBase<T> implements EntityChangeTracker<T> {
 
   // #region undo methods
   /**
-   * Revert the unsaved changes for all collection.
+   * Revert all unsaved changes in the collection.
    * Harmless when there are no entity changes to undo.
    * @param collection The entity collection
    */

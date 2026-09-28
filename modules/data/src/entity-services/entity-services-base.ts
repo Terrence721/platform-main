@@ -6,6 +6,7 @@ import { Observable } from 'rxjs';
 import { EntityAction } from '../actions/entity-action';
 import { EntityCache } from '../reducers/entity-cache';
 import { EntityCollectionService } from './entity-collection-service';
+import { EntityCollectionServiceBase } from './entity-collection-service-base';
 import { EntityCollectionServiceFactory } from './entity-collection-service-factory';
 import { EntityCollectionServiceMap, EntityServices } from './entity-services';
 import { EntitySelectors$ } from '../selectors/entity-selectors$';
@@ -81,29 +82,41 @@ export class EntityServicesBase implements EntityServices {
     this.store.dispatch(action);
   }
 
-  /** Registry of EntityCollectionService instances */
-  private readonly EntityCollectionServices: EntityCollectionServiceMap = {};
+  /**
+   * Registry of EntityCollectionService instances, keyed by trimmed name.
+   * No prototype, so an entity named like an Object.prototype member
+   * (e.g. "constructor") gets its own service.
+   */
+  private readonly EntityCollectionServices: EntityCollectionServiceMap =
+    Object.create(null);
 
   /**
    * Create a new default instance of an EntityCollectionService.
    * Prefer getEntityCollectionService() unless you really want a new default instance.
    * This one will NOT be registered with EntityServices!
    * @param entityName {string} Name of the entity type of the service
+   * @returns the service; its `selectors$` are typed as `S$`
    */
   protected createEntityCollectionService<
     T,
     S$ extends EntitySelectors$<T> = EntitySelectors$<T>,
-  >(entityName: string): EntityCollectionService<T> {
+  >(entityName: string): EntityCollectionServiceBase<T, S$> {
     return this.entityCollectionServiceFactory.create<T, S$>(entityName);
   }
 
   /** Get (or create) the singleton instance of an EntityCollectionService
    * @param entityName {string} Name of the entity type of the service
+   *
+   * The result is typed as the EntityCollectionService interface because it
+   * may be a registered service of any class. `S$` only types the default
+   * service created here; to reach typed custom selectors$, cast to the
+   * service's class, as in the usage notes above.
    */
   getEntityCollectionService<
     T,
     S$ extends EntitySelectors$<T> = EntitySelectors$<T>,
   >(entityName: string): EntityCollectionService<T> {
+    entityName = entityName.trim();
     let service = this.EntityCollectionServices[entityName];
     if (!service) {
       service = this.createEntityCollectionService<T, S$>(entityName);
@@ -121,7 +134,8 @@ export class EntityServicesBase implements EntityServices {
     service: EntityCollectionService<T>,
     serviceName?: string
   ) {
-    this.EntityCollectionServices[serviceName || service.entityName] = service;
+    const name = (serviceName || service.entityName).trim();
+    this.EntityCollectionServices[name] = service;
   }
 
   /**

@@ -14,7 +14,9 @@ import {
   EntityCacheEffects,
   EntityDataService,
   EntityActionFactory,
-  EntityDispatcherFactory,
+  EntityCollectionServiceBase,
+  EntityCollectionServiceElementsFactory,
+  EntityDefinitionService,
   EntityServices,
   EntityCache,
   HttpMethods,
@@ -151,6 +153,36 @@ describe('EntityServices', () => {
         entityServices.dispatch(action);
       }));
   });
+
+  describe('service registry', () => {
+    it('returns the same default service for a name with surrounding spaces', () => {
+      const { entityServices } = entityServicesSetup();
+      const hero = entityServices.getEntityCollectionService('Hero');
+      expect(entityServices.getEntityCollectionService(' Hero ')).toBe(hero);
+      expect(hero.entityName).toBe('Hero');
+    });
+
+    it('finds a registered service by a name with surrounding spaces', () => {
+      const { entityServices } = entityServicesSetup();
+      const custom = new EntityCollectionServiceBase<Hero>(
+        'Hero',
+        TestBed.inject(EntityCollectionServiceElementsFactory)
+      );
+      entityServices.registerEntityCollectionServices({ ' Hero ': custom });
+      expect(entityServices.getEntityCollectionService('Hero')).toBe(custom);
+      expect(entityServices.getEntityCollectionService(' Hero ')).toBe(custom);
+    });
+
+    it('creates a service for an entity named like an Object.prototype member', () => {
+      const { entityServices } = entityServicesSetup();
+      TestBed.inject(EntityDefinitionService).registerMetadata({
+        entityName: 'constructor',
+      });
+      const service = entityServices.getEntityCollectionService('constructor');
+      expect(service).toBeInstanceOf(EntityCollectionServiceBase);
+      expect(service.entityName).toBe('constructor');
+    });
+  });
 });
 
 // #region test helpers
@@ -184,7 +216,6 @@ function entityServicesSetup() {
         entityMetadata: entityMetadata,
       }),
     ],
-    /* eslint-disable-next-line @typescript-eslint/no-use-before-define */
     providers: [
       { provide: EntityCacheEffects, useValue: {} },
       { provide: EntityDataService, useValue: null },
@@ -195,9 +226,6 @@ function entityServicesSetup() {
   const actions$: Observable<Action> = TestBed.inject(Actions);
   const entityActionFactory: EntityActionFactory =
     TestBed.inject(EntityActionFactory);
-  const entityDispatcherFactory: EntityDispatcherFactory = TestBed.inject(
-    EntityDispatcherFactory
-  );
   const entityServices: EntityServices = TestBed.inject(EntityServices);
   const store: Store<EntityCache> = TestBed.inject(Store);
 

@@ -7,9 +7,13 @@ import {
 } from './provide-entity-data';
 
 /**
- * entity-data main module includes effects and HTTP data services
- * Configure with `forRoot`.
- * No `forFeature` yet.
+ * The main entity data module, with effects and HTTP data services.
+ * Configure with `forRoot`; there is no `forFeature`.
+ *
+ * The app must also set up @ngrx/effects (`EffectsModule.forRoot()` or
+ * `provideEffects()`). This module only registers its effects; without that
+ * setup they never run, so queries and saves silently reach no server.
+ * Use `EntityDataModuleWithoutEffects` to opt out of effects on purpose.
  */
 @NgModule({
   imports: [EntityDataModuleWithoutEffects],

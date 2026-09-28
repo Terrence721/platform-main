@@ -90,6 +90,18 @@ function scopedProject(): string | undefined {
 }
 
 /**
+ * True when the VS Code Vitest extension runs the tests: it starts its worker
+ * with VITEST_VSCODE=true. The Testing panel runs every module at once in
+ * watch mode, and on top of the test workers the typecheck pass starts one
+ * `tsc` per module, which starved the compiler-API type specs past their
+ * timeout and piped enough output streams into the worker to trigger Node's
+ * MaxListenersExceededWarning. The panel therefore gets fewer workers and no
+ * separate tsc pass; the CLI and CI keep both, so type errors are still caught
+ * there.
+ */
+const inTestingPanel = process.env['VITEST_VSCODE'] === 'true';
+
+/**
  * Single Vitest configuration for the whole workspace. All modules share the
  * settings below; each one becomes a project rooted at its own folder, so
  * per-module files (setup file, tsconfig.spec.json) resolve as before.
@@ -128,6 +140,7 @@ export default defineConfig(({ mode }) => {
       globals: true,
       environment: 'jsdom',
       pool: 'forks',
+      ...(inTestingPanel ? { maxWorkers: 3 } : {}),
       include: ['**/*.{spec,test}.ts'],
       passWithNoTests: true,
       setupFiles: ['test-setup.ts'],
@@ -149,7 +162,7 @@ export default defineConfig(({ mode }) => {
       // keeps the signal meaningful for genuine runtime perf issues instead.
       slowTestThreshold: 2000,
       typecheck: {
-        enabled: true,
+        enabled: !inTestingPanel,
         ignoreSourceErrors: true,
         include: ['**/*.{spec,test}.ts', '**/*.test-d.ts'],
         tsconfig: './tsconfig.spec.json',

@@ -71,9 +71,6 @@ export const createReducer = `CallExpression[callee.name='createReducer']`;
 export const onFunctionWithoutType =
   `${createReducer} CallExpression[callee.name='on'] > ArrowFunctionExpression:not([returnType.typeAnnotation])` as const;
 
-export const storeActionReducerMap =
-  `${ngModuleImports} CallExpression[callee.object.name='StoreModule'][callee.property.name=/^for(Root|Feature)$/] > ObjectExpression:first-child` as const;
-
 export const actionReducerMap = `VariableDeclarator[id.typeAnnotation.typeAnnotation.typeName.name='ActionReducerMap'] > ObjectExpression`;
 
 const mapLikeOperators = '/^(concat|exhaust|flat|merge|switch)Map$/';

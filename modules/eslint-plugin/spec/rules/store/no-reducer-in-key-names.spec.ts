@@ -50,6 +50,16 @@ export const reducers: ActionReducerMap<AppState> = {
   persons: personsReducer,
   'people': peopleReducer,
 };`,
+  // A feature slice's \`reducer\` key is required, and \`metaReducers\` is config.
+  `
+@NgModule({
+  imports: [
+    StoreModule.forFeature({ name: 'books', reducer: booksReducer }),
+    StoreModule.forRoot({ books: booksReducer }, { metaReducers }),
+  ],
+})
+export class AppModule {}`,
+  `export const providers = [provideState({ name: 'books', reducer: booksReducer })];`,
 ];
 
 const invalid: () => InvalidTestCase<MessageIds, Options>[] = () => [
@@ -227,6 +237,77 @@ export const reducers: ActionReducerMap<AppState> = {
   },
 ];
 
+// The map is forFeature's and provideState's second argument; provideStore's
+// first. A key that is only "reducer" has no suggestion (no name would be left).
+const invalidFeatureAndStandalone: () => InvalidTestCase<
+  MessageIds,
+  Options
+>[] = () => [
+  {
+    code: `StoreModule.forFeature('books', { booksReducer: books })`,
+    errors: [
+      {
+        column: 35,
+        endColumn: 47,
+        line: 1,
+        messageId: noReducerInKeyNames,
+        suggestions: [
+          {
+            messageId: noReducerInKeyNamesSuggest,
+            output: `StoreModule.forFeature('books', { books: books })`,
+          },
+        ],
+      },
+    ],
+  },
+  {
+    code: `provideStore({ booksReducer: books })`,
+    errors: [
+      {
+        column: 16,
+        endColumn: 28,
+        line: 1,
+        messageId: noReducerInKeyNames,
+        suggestions: [
+          {
+            messageId: noReducerInKeyNamesSuggest,
+            output: `provideStore({ books: books })`,
+          },
+        ],
+      },
+    ],
+  },
+  {
+    code: `provideState('books', { booksReducer: books })`,
+    errors: [
+      {
+        column: 25,
+        endColumn: 37,
+        line: 1,
+        messageId: noReducerInKeyNames,
+        suggestions: [
+          {
+            messageId: noReducerInKeyNamesSuggest,
+            output: `provideState('books', { books: books })`,
+          },
+        ],
+      },
+    ],
+  },
+  {
+    code: `export const reducers: ActionReducerMap<AppState> = { reducer: books };`,
+    errors: [
+      {
+        column: 55,
+        endColumn: 62,
+        line: 1,
+        messageId: noReducerInKeyNames,
+        suggestions: [],
+      },
+    ],
+  },
+];
+
 // Static describe so Vitest's typecheck mode finds a suite (see spec/utils/rule-tester.ts).
 describe('rule', () => {
   ruleTester(rule.meta.docs?.requiresTypeChecking).run(
@@ -234,7 +315,7 @@ describe('rule', () => {
     rule,
     {
       valid: valid(),
-      invalid: invalid(),
+      invalid: [...invalid(), ...invalidFeatureAndStandalone()],
     }
   );
 });

@@ -27,6 +27,11 @@ describe('DefaultLogger', () => {
         expect(consoleSpy).toHaveBeenCalledWith('message', extra);
       });
 
+      it('writes every further value, as the Logger contract allows', () => {
+        logger[method]('message', 'second', 3);
+        expect(consoleSpy).toHaveBeenCalledWith('message', 'second', 3);
+      });
+
       it('writes falsy messages and extra values', () => {
         logger[method]('count', 0);
         logger[method](0);

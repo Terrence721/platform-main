@@ -119,4 +119,14 @@ describe('DefaultPluralizer', () => {
       expect(pluralizer.pluralize('Foot')).toBe('Feet');
     });
   });
+
+  it('accepts a single plural names map provided without multi', () => {
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: Pluralizer, useClass: DefaultPluralizer },
+        { provide: PLURAL_NAMES_TOKEN, useValue: { Hero: 'Heroes' } },
+      ],
+    });
+    expect(TestBed.inject(Pluralizer).pluralize('Hero')).toBe('Heroes');
+  });
 });

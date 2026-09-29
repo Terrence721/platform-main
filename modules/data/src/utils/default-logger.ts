@@ -3,31 +3,31 @@ import { Logger } from './interfaces';
 
 /**
  * The default Logger: writes to the console. Nothing is written when there
- * is no message (null or undefined); any other message and extra value are
- * written as given, including falsy ones such as 0, '' and false.
+ * is no message (null or undefined); any other message and every further
+ * value are written as given, including falsy ones such as 0, '' and false.
  */
 @Injectable()
 export class DefaultLogger implements Logger {
-  error(message?: any, extra?: any) {
-    write('error', message, extra);
+  error(message?: any, ...optionalParams: any[]) {
+    write('error', message, optionalParams);
   }
 
-  log(message?: any, extra?: any) {
-    write('log', message, extra);
+  log(message?: any, ...optionalParams: any[]) {
+    write('log', message, optionalParams);
   }
 
-  warn(message?: any, extra?: any) {
-    write('warn', message, extra);
+  warn(message?: any, ...optionalParams: any[]) {
+    write('warn', message, optionalParams);
   }
 }
 
-function write(method: 'error' | 'log' | 'warn', message: any, extra: any) {
+function write(
+  method: 'error' | 'log' | 'warn',
+  message: any,
+  optionalParams: any[]
+) {
   if (message == null) {
     return;
   }
-  if (extra === undefined) {
-    console[method](message);
-  } else {
-    console[method](message, extra);
-  }
+  console[method](message, ...optionalParams);
 }

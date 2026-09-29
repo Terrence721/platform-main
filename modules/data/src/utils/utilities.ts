@@ -36,6 +36,8 @@ export function flattenArgs<T>(args?: any[]): T[] {
  * Return a function that converts an entity (or partial entity) into the `Update<T>`
  * whose `id` is the primary key and
  * `changes` is the entity (or partial entity of changes).
+ * @param [selectId] function that returns the entity's primary key;
+ * defaults to defaultSelectId
  */
 export function toUpdateFactory<T>(selectId?: IdSelector<T>) {
   selectId = selectId || (defaultSelectId as IdSelector<T>);
@@ -43,7 +45,8 @@ export function toUpdateFactory<T>(selectId?: IdSelector<T>) {
    * Convert an entity (or partial entity) into the `Update<T>`
    * whose `id` is the primary key and
    * `changes` is the entity (or partial entity of changes).
-   * @param selectId function that returns the entity's primary key (id)
+   * @param entity the entity (or partial entity); must have its primary key
+   * @throws if the entity has no primary key (null or undefined)
    */
   return function toUpdate(entity: Partial<T>): Update<T> {
     const id: any = selectId!(entity as T);

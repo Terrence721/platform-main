@@ -1,4 +1,4 @@
-import { type TSESTree } from '@typescript-eslint/utils';
+import { AST_NODE_TYPES, type TSESTree } from '@typescript-eslint/utils';
 import * as path from 'path';
 import { createRule } from '../../rule-creator';
 import { isCallExpression, isIdentifier } from '../../utils';
@@ -26,6 +26,22 @@ export default createRule<Options, MessageIds>({
   create: (context) => {
     // It's possible that we have multiple type import aliases, so we need to track them all.
     const typeNames = new Set<string>();
+    // `import * as signals from '@ngrx/signals'` makes `signals.type` the function.
+    const namespaceNames = new Set<string>();
+
+    function isTypeFunction(expression: TSESTree.Expression): boolean {
+      if (isIdentifier(expression)) {
+        return typeNames.has(expression.name);
+      }
+      return (
+        expression.type === AST_NODE_TYPES.MemberExpression &&
+        !expression.computed &&
+        isIdentifier(expression.object) &&
+        namespaceNames.has(expression.object.name) &&
+        isIdentifier(expression.property) &&
+        expression.property.name === 'type'
+      );
+    }
 
     return {
       [`ImportDeclaration[source.value='@ngrx/signals'] ImportSpecifier[imported.name='type']`](
@@ -33,18 +49,23 @@ export default createRule<Options, MessageIds>({
       ) {
         typeNames.add(node.local.name);
       },
+      [`ImportDeclaration[source.value='@ngrx/signals'] ImportNamespaceSpecifier`](
+        node: TSESTree.ImportNamespaceSpecifier
+      ) {
+        namespaceNames.add(node.local.name);
+      },
 
       TSInstantiationExpression(node: TSESTree.TSInstantiationExpression) {
         const expression = node.expression;
-        if (
-          isIdentifier(expression) &&
-          typeNames.has(expression.name) &&
-          !isCallExpression(node.parent)
-        ) {
+        // Called only when it is the callee: as an argument (`feature(type<T>)`)
+        // its parent is a call too, but it is not called.
+        const isCalled =
+          isCallExpression(node.parent) && node.parent.callee === node;
+        if (isTypeFunction(expression) && !isCalled) {
           context.report({
             node: expression,
             messageId: enforceTypeCall,
-            data: { name: expression.name },
+            data: { name: context.sourceCode.getText(expression) },
             fix: (fixer) => fixer.insertTextAfter(node, '()'),
           });
         }

@@ -66,6 +66,39 @@ const invalid: () => InvalidTestCase<MessageIds, Options>[] = () => [
       },
     ],
   },
+  // Passed as an argument, it is not called.
+  {
+    code: `
+      import { signalStoreFeature, type } from '@ngrx/signals';
+      const feature = signalStoreFeature(type<{ state: State }>, withX());
+    `,
+    output: `
+      import { signalStoreFeature, type } from '@ngrx/signals';
+      const feature = signalStoreFeature(type<{ state: State }>(), withX());
+    `,
+    errors: [
+      {
+        messageId: enforceTypeCall,
+        data: { name: 'type' },
+      },
+    ],
+  },
+  {
+    code: `
+      import * as signals from '@ngrx/signals';
+      const config = { entity: signals.type<Book> };
+    `,
+    output: `
+      import * as signals from '@ngrx/signals';
+      const config = { entity: signals.type<Book>() };
+    `,
+    errors: [
+      {
+        messageId: enforceTypeCall,
+        data: { name: 'signals.type' },
+      },
+    ],
+  },
 ];
 
 // Static describe so Vitest's typecheck mode finds a suite (see spec/utils/rule-tester.ts).

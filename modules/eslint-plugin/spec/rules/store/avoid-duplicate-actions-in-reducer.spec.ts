@@ -181,6 +181,67 @@ export const reducer = createReducer(
   },
 ];
 
+// Action group members, an action that is not duplicated first, and a
+// duplicate among several actions of one `on` (only that action is removed).
+const invalidGroupsAndMultiple: () => InvalidTestCase<
+  MessageIds,
+  Options
+>[] = () => [
+  {
+    code: `
+export const reducer = createReducer(
+  {},
+  on(BooksActions.reset, state => state),
+  on(BooksActions.load, BooksActions.reload, state => state),
+  on(BooksActions.load, state => state),
+)`,
+    errors: [
+      {
+        column: 6,
+        endColumn: 23,
+        line: 5,
+        messageId: avoidDuplicateActionsInReducer,
+        suggestions: [
+          {
+            messageId: avoidDuplicateActionsInReducerSuggest,
+            data: {
+              actionName: 'BooksActions.load',
+            },
+            output: `
+export const reducer = createReducer(
+  {},
+  on(BooksActions.reset, state => state),
+  on( BooksActions.reload, state => state),
+  on(BooksActions.load, state => state),
+)`,
+          },
+        ],
+      },
+      {
+        column: 6,
+        endColumn: 23,
+        line: 6,
+        messageId: avoidDuplicateActionsInReducer,
+        suggestions: [
+          {
+            messageId: avoidDuplicateActionsInReducerSuggest,
+            data: {
+              actionName: 'BooksActions.load',
+            },
+            output: `
+export const reducer = createReducer(
+  {},
+  on(BooksActions.reset, state => state),
+  on(BooksActions.load, BooksActions.reload, state => state),
+${'  '}
+)`,
+          },
+        ],
+      },
+    ],
+  },
+];
+
 // Static describe so Vitest's typecheck mode finds a suite (see spec/utils/rule-tester.ts).
 describe('rule', () => {
   ruleTester(rule.meta.docs?.requiresTypeChecking).run(
@@ -188,7 +249,7 @@ describe('rule', () => {
     rule,
     {
       valid: valid(),
-      invalid: invalid(),
+      invalid: [...invalid(), ...invalidGroupsAndMultiple()],
     }
   );
 });

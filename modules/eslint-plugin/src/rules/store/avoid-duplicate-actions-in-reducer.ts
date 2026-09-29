@@ -1,4 +1,4 @@
-import type { TSESTree } from '@typescript-eslint/utils';
+import { AST_NODE_TYPES, type TSESTree } from '@typescript-eslint/utils';
 import * as path from 'path';
 import { createRule } from '../../rule-creator';
 import { createReducer, getNodeToCommaRemoveFix } from '../../utils';
@@ -11,7 +11,9 @@ type MessageIds =
   | typeof avoidDuplicateActionsInReducer
   | typeof avoidDuplicateActionsInReducerSuggest;
 type Options = readonly [];
-type Action = TSESTree.Identifier & { parent: TSESTree.CallExpression };
+type Action = (TSESTree.Identifier | TSESTree.MemberExpression) & {
+  parent: TSESTree.CallExpression;
+};
 
 export default createRule<Options, MessageIds>({
   name: path.parse(__filename).name,
@@ -33,22 +35,43 @@ export default createRule<Options, MessageIds>({
   create: (context) => {
     const collectedActions = new Map<string, Action[]>();
 
+    // An action creator by name: `load` or `BooksActions.load`.
+    function isActionReference(node: TSESTree.Node): boolean {
+      return (
+        node.type === AST_NODE_TYPES.Identifier ||
+        (node.type === AST_NODE_TYPES.MemberExpression &&
+          !node.computed &&
+          isActionReference(node.object))
+      );
+    }
+
     return {
-      [`${createReducer} > CallExpression[callee.name='on'][arguments.0.type='Identifier']`]({
-        arguments: [action],
-      }: TSESTree.CallExpression & {
-        arguments: Action[];
-      }) {
-        const actions = collectedActions.get(action.name) ?? [];
-        collectedActions.set(action.name, [...actions, action]);
+      // `on(a, b, reducer)`: every argument but the last (the reducer) is an
+      // action it handles.
+      [`${createReducer} > CallExpression[callee.name='on']`](
+        node: TSESTree.CallExpression
+      ) {
+        for (const action of node.arguments.slice(0, -1)) {
+          if (!isActionReference(action)) {
+            continue;
+          }
+          const actionName = context.sourceCode
+            .getText(action)
+            .replace(/\s/g, '');
+          const actions = collectedActions.get(actionName) ?? [];
+          collectedActions.set(actionName, [...actions, action as Action]);
+        }
       },
       [`${createReducer}:exit`]() {
-        for (const [actionName, identifiers] of collectedActions) {
-          if (identifiers.length <= 1) {
-            break;
+        for (const [actionName, actions] of collectedActions) {
+          if (actions.length <= 1) {
+            continue;
           }
 
-          for (const node of identifiers) {
+          for (const node of actions) {
+            // Remove just this action when the `on` handles others too,
+            // otherwise the whole `on(...)`.
+            const handlesOtherActions = node.parent.arguments.length > 2;
             context.report({
               node,
               messageId: avoidDuplicateActionsInReducer,
@@ -62,7 +85,7 @@ export default createRule<Options, MessageIds>({
                     getNodeToCommaRemoveFix(
                       context.sourceCode,
                       fixer,
-                      node.parent
+                      handlesOtherActions ? node : node.parent
                     ),
                 },
               ],

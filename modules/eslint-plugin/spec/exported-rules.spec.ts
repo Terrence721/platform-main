@@ -52,6 +52,25 @@ describe('ESLint flat config', () => {
       '@ngrx/good-action-hygiene',
     ]);
   });
+  test.each([
+    { config: 'componentStore', ngrxModule: 'component-store' },
+  ] as const)(
+    'exports every $ngrxModule rule without type checking in the $config config',
+    ({ config, ngrxModule }) => {
+      const expected = Object.entries(exportedRules)
+        .filter(
+          ([, rule]) =>
+            rule.meta.docs?.ngrxModule === ngrxModule &&
+            rule.meta.docs?.requiresTypeChecking !== true
+        )
+        .map(([ruleName]) => `@ngrx/${ruleName}`)
+        .sort();
+      expect(expected.length).toBeGreaterThan(0);
+      expect(Object.keys((configs[config][1] as any).rules).sort()).toEqual(
+        expected
+      );
+    }
+  );
   test('there is a difference between type-checked rules', () => {
     expect(
       Object.keys((configs.allTypeChecked[1] as any).rules).length

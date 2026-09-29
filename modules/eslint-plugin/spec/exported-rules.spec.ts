@@ -1,3 +1,4 @@
+import { Linter } from 'eslint';
 import * as path from 'path';
 import { traverseFolder } from '../src/utils';
 import { configs, rules as exportedRules } from '../src';
@@ -29,6 +30,27 @@ describe('ESLint flat config', () => {
     expect(Object.keys((configs.allTypeChecked[1] as any).rules).length).toBe(
       rules.length
     );
+  });
+  test('exports every rule without type checking in the all config', () => {
+    const expected = Object.entries(exportedRules)
+      .filter(([, rule]) => rule.meta.docs?.requiresTypeChecking !== true)
+      .map(([ruleName]) => `@ngrx/${ruleName}`)
+      .sort();
+    expect(Object.keys((configs.all[1] as any).rules).sort()).toEqual(expected);
+  });
+  test('the all config runs without type information', () => {
+    const linter = new Linter({ configType: 'flat' });
+    const messages = linter.verify(
+      `import { createAction } from '@ngrx/store';
+      const x = createAction('x');`,
+      // typescript-eslint's config types differ from ESLint's own.
+      [...configs.all, { files: ['**/*.ts'] }] as Linter.Config[],
+      'file.ts'
+    );
+    expect(messages.filter((message) => message.fatal)).toEqual([]);
+    expect(messages.map((message) => message.ruleId)).toEqual([
+      '@ngrx/good-action-hygiene',
+    ]);
   });
   test('there is a difference between type-checked rules', () => {
     expect(

@@ -25,7 +25,7 @@ export default createRule<Options, MessageIds>({
     schema: [],
     messages: {
       [onFunctionExplicitReturnType]:
-        '`On` functions should have an explicit return type when using arrow functions: `on(action, (state): State => {}`.',
+        '`On` functions should have an explicit return type when using arrow functions: `on(action, (state): State => {})`.',
       [onFunctionExplicitReturnTypeSuggest]:
         'Add the explicit return type `State` (if the interface/type is named differently you need to manually correct the return type).',
     },
@@ -68,8 +68,12 @@ function getFixes(
     previousToken && ASTUtils.isOpeningParenToken(previousToken);
 
   if (isParenthesized) {
-    const nextToken = sourceCode.getTokenAfter(lastParam);
-    return fixer.insertTextAfter(nextToken ?? lastParam, ': State');
+    // The closing parenthesis, past a trailing comma: `(state, action,)`.
+    let closingParen = sourceCode.getTokenAfter(lastParam);
+    if (closingParen && ASTUtils.isCommaToken(closingParen)) {
+      closingParen = sourceCode.getTokenAfter(closingParen);
+    }
+    return fixer.insertTextAfter(closingParen ?? lastParam, ': State');
   }
 
   return [

@@ -455,14 +455,95 @@ class Effect {
 }`),
 ];
 
+const moreSetup = `
+${setup}
+import { Observable, switchMap, take } from 'rxjs'
+const baz = createAction('BAZ')
+`;
+
+const validNested: () => (string | ValidTestCase<Options>)[] = () => [
+  // Only the effect's outermost Actions pipe is its output, whether or not
+  // another pipe comes before the nested one.
+  `
+${moreSetup}
+class Effect {
+  private actions$ = inject(Actions);
+  foo$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(bar),
+      switchMap(() => timer(1).pipe(map(() => 1))),
+      switchMap(() => this.actions$.pipe(ofType(foo), take(1))),
+      map(() => baz()),
+    ),
+  )
+}`,
+  // An Actions class that is not NgRx's is not the actions stream.
+  `
+${moreSetup}
+class Actions extends Observable<unknown> {}
+class Effect {
+  private actions$ = new Actions();
+  foo$ = createEffect(() => this.actions$.pipe(ofType(foo), map(() => foo())))
+}`,
+  `
+${moreSetup}
+export const foo$ = createEffect(
+  (actions$ = inject(Actions)) => actions$.pipe(ofType(foo), map(() => foo())),
+  { functional: true, dispatch: false }
+);`,
+];
+
+const invalidFunctional: () => InvalidTestCase<MessageIds, Options>[] = () => [
+  fromFixture(`
+${moreSetup}
+export const foo$ = createEffect(
+  (actions$ = inject(Actions)) => actions$.pipe(ofType(foo), map(() => foo())),
+                                  ~~~~~~~~~~~~~ [${messageId}]
+  { functional: true }
+);`),
+  fromFixture(`
+${moreSetup}
+export const foo$ = createEffect(
+  () => {
+    const actions$ = inject(Actions);
+    return actions$.pipe(ofType(foo), map(() => foo()));
+           ~~~~~~~~~~~~~ [${messageId}]
+  },
+  { functional: true }
+);`),
+  // A dispatch: false object inside the body is not the effect's config.
+  fromFixture(`
+${moreSetup}
+declare function log(options: object): void;
+class Effect {
+  private actions$ = inject(Actions);
+  foo$ = createEffect(
+    () =>
+      this.actions$.pipe(
+      ~~~~~~~~~~~~~~~~~~ [${messageId}]
+        ofType(foo),
+        map(() => {
+          log({ dispatch: false });
+          return foo();
+        }),
+      ),
+    { useEffectsErrorHandler: true },
+  )
+}`),
+];
+
 // Static describe so Vitest's typecheck mode finds a suite (see spec/utils/rule-tester.ts).
 describe('rule', () => {
   ruleTester(rule.meta.docs?.requiresTypeChecking).run(
     path.parse(__filename).name,
     rule,
     {
-      valid: [...validConstructor(), ...validInject()],
-      invalid: [...invalidConstructor(), ...invalidInject()],
+      valid: [...validConstructor(), ...validInject(), ...validNested()],
+      invalid: [
+        ...invalidConstructor(),
+        ...invalidInject(),
+        ...invalidFunctional(),
+      ],
     }
   );
 });

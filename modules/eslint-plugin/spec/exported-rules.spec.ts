@@ -20,6 +20,14 @@ describe('ESLint flat config', () => {
     const rules = getAllRules();
     expect(Object.keys(exportedRules).length).toBe(rules.length);
   });
+  test('every rule links its documentation page', () => {
+    for (const [ruleName, rule] of Object.entries(exportedRules)) {
+      expect(rule.meta.docs?.url).toBe(
+        `https://ngrx.io/guide/eslint-plugin/rules/${ruleName}`
+      );
+      expect(rule.meta.docs?.description).toBeTruthy();
+    }
+  });
   test('exports all configurations', () => {
     const configFiles = getAllConfigs();
     expect(configFiles.length).toBe(9);

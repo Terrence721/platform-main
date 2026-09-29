@@ -252,6 +252,48 @@ class NotOk3 {
 `),
 ];
 
+const invalidThisAndFunctions: () => InvalidTestCase<
+  MessageIds,
+  Options
+>[] = () => [
+  // Only the map's own use of `this` exempts it, not another operator's.
+  fromFixture(`
+import { Store } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+class NotOkTakeUntil {
+  readonly store = inject(Store)
+  readonly name$ = this.store.select(selectUser).pipe(
+    takeUntil(this.destroy$),
+    map((user) => user.name),
+    ~~~~~~~~~~~~~~~~~~~~~~~~ [${messageId}]
+  )
+}`),
+  fromFixture(`
+import { Store, select } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+class NotOkPipeableTakeUntil {
+  readonly store = inject(Store)
+  readonly name$ = this.store.pipe(
+    select(selectUser),
+    takeUntil(this.destroy$),
+    map((user) => user.name),
+    ~~~~~~~~~~~~~~~~~~~~~~~~ [${messageId}]
+  )
+}`),
+  // A store held in a variable, as in a functional guard.
+  fromFixture(`
+import { Store } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+export const loggedInGuard = () => {
+  const store = inject(Store)
+  return store.select(selectUser).pipe(map((user) => !!user))
+                                       ~~~~~~~~~~~~~~~~~~~~~ [${messageId}]
+}`),
+];
+
 // Static describe so Vitest's typecheck mode finds a suite (see spec/utils/rule-tester.ts).
 describe('rule', () => {
   ruleTester(rule.meta.docs?.requiresTypeChecking).run(
@@ -259,7 +301,7 @@ describe('rule', () => {
     rule,
     {
       valid: valid(),
-      invalid: invalid(),
+      invalid: [...invalid(), ...invalidThisAndFunctions()],
     }
   );
 });

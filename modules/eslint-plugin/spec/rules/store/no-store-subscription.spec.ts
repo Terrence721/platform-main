@@ -216,6 +216,35 @@ class NotOk10 {
 }`),
 ];
 
+const invalidChainsAndFunctions: () => InvalidTestCase<
+  MessageIds,
+  Options
+>[] = () => [
+  // A subscription at the end of a longer chain on the store.
+  fromFixture(`
+import { Store } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+class NotOkChain {
+  readonly store = inject(Store)
+
+  ngOnInit() {
+    this.store.select(selectItems).pipe(takeUntil(this.destroy$)).subscribe((items) => this.items = items)
+                                                                  ~~~~~~~~~ [${messageId}]
+  }
+}`),
+  // A store held in a variable, as in a functional initializer.
+  fromFixture(`
+import { Store } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+export const initItems = () => {
+  const store = inject(Store)
+  store.select(selectItems).subscribe((items) => console.log(items))
+                            ~~~~~~~~~ [${messageId}]
+}`),
+];
+
 // Static describe so Vitest's typecheck mode finds a suite (see spec/utils/rule-tester.ts).
 describe('rule', () => {
   ruleTester(rule.meta.docs?.requiresTypeChecking).run(
@@ -223,7 +252,7 @@ describe('rule', () => {
     rule,
     {
       valid: valid(),
-      invalid: invalid(),
+      invalid: [...invalid(), ...invalidChainsAndFunctions()],
     }
   );
 });

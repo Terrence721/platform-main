@@ -1,6 +1,5 @@
 import { TestBed } from '@angular/core/testing';
 import { Action, ActionReducer, MetaReducer } from '@ngrx/store';
-import { IdSelector } from '@ngrx/entity';
 
 import {
   EntityMetadataMap,
@@ -34,10 +33,6 @@ class Hero {
   id!: number;
   name!: string;
   power?: string;
-}
-class Villain {
-  key!: string;
-  name!: string;
 }
 
 const metadata: EntityMetadataMap = {
@@ -116,6 +111,40 @@ describe('EntityCollectionReducerRegistry', () => {
       const state = entityCacheReducer({}, action);
       const collection = state['Hero'];
       expect(collection.ids.length).toBe(0);
+    });
+  });
+
+  describe('#getOrCreateReducer', () => {
+    beforeEach(setup);
+
+    it('finds a registered reducer by a name with surrounding spaces, without replacing it', () => {
+      const custom = createNoopReducer();
+      entityCollectionReducerRegistry.registerReducer('Hero', custom);
+
+      expect(entityCollectionReducerRegistry.getOrCreateReducer(' Hero ')).toBe(
+        custom
+      );
+      expect(entityCollectionReducerRegistry.getOrCreateReducer('Hero')).toBe(
+        custom
+      );
+    });
+
+    it('creates a working reducer for an entity named like an Object.prototype member', () => {
+      TestBed.inject(EntityDefinitionService).registerMetadata({
+        entityName: 'constructor',
+      });
+      const reducer =
+        entityCollectionReducerRegistry.getOrCreateReducer<Hero>('constructor');
+      expect(reducer).not.toBe(Object);
+
+      const added = reducer(
+        collectionCreator.create<Hero>('constructor'),
+        entityActionFactory.create<Hero>('constructor', EntityOp.ADD_ONE, {
+          id: 1,
+          name: 'A',
+        })
+      );
+      expect(added.ids).toEqual([1]);
     });
   });
 
@@ -260,7 +289,7 @@ describe('EntityCollectionReducerRegistry', () => {
         { metaReducer: 'A', inOut: 'out', action: addOneAction },
       ];
 
-      const state = entityCacheReducer({}, addOneAction);
+      entityCacheReducer({}, addOneAction);
       expect(metaReducerA).toHaveBeenCalled();
       expect(metaReducerB).toHaveBeenCalled();
       expect(metaReducerOutput).toEqual(expected);
@@ -274,7 +303,7 @@ describe('EntityCollectionReducerRegistry', () => {
         foo: 'fooz',
       });
 
-      const state = entityCacheReducer({}, action);
+      entityCacheReducer({}, action);
       expect(metaReducerA).toHaveBeenCalled();
       expect(metaReducerB).toHaveBeenCalled();
     });
@@ -310,41 +339,10 @@ describe('EntityCollectionReducerRegistry', () => {
   });
 
   // #region helpers
-  function createCollection<T = any>(
-    entityName: string,
-    data: T[],
-    selectId: IdSelector<any>
-  ) {
-    return {
-      ...collectionCreator.create<T>(entityName),
-      ids: data.map((e) => selectId(e)) as string[] | number[],
-      entities: data.reduce((acc, e) => {
-        acc[selectId(e)] = e;
-        return acc;
-      }, {} as any),
-    } as EntityCollection<T>;
-  }
-
-  function createInitialCache(entityMap: { [entityName: string]: any[] }) {
-    const cache: EntityCache = {};
-    // eslint-disable-next-line guard-for-in
-    for (const entityName in entityMap) {
-      const selectId =
-        metadata[entityName].selectId || ((entity: any) => entity.id);
-      cache[entityName] = createCollection(
-        entityName,
-        entityMap[entityName],
-        selectId
-      );
-    }
-
-    return cache;
-  }
-
   function createNoopReducer<T>() {
     return function NoopReducer(
       collection: EntityCollection<T>,
-      action: EntityAction
+      _action: EntityAction
     ): EntityCollection<T> {
       return collection;
     };

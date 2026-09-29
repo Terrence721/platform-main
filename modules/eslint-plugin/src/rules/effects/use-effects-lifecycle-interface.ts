@@ -38,11 +38,14 @@ export default createRule<Options, MessageIds>({
     } as const;
     const lifecyclesPattern = Object.keys(lifecycleMapper).join('|');
 
+    // The whole name must match (a method named `ngrxOnInitEffectsLegacy` is
+    // not a hook); a static member is not one either; an arrow-function
+    // property is.
     return {
-      [`ClassDeclaration > ClassBody > MethodDefinition > Identifier[name=/${lifecyclesPattern}/]`](
+      [`ClassDeclaration > ClassBody > :matches(MethodDefinition, PropertyDefinition)[static=false][computed=false] > Identifier.key[name=/^(${lifecyclesPattern})$/]`](
         node: TSESTree.Identifier & {
           name: keyof typeof lifecycleMapper;
-          parent: TSESTree.MethodDefinition & {
+          parent: (TSESTree.MethodDefinition | TSESTree.PropertyDefinition) & {
             parent: TSESTree.ClassBody & { parent: TSESTree.ClassDeclaration };
           };
         }

@@ -58,6 +58,12 @@ class UserEffects implements ngrx.OnInitEffects, OnIdentifyEffects {
     return ''
   }
 }`,
+  // Only the exact hook names, on instances, are lifecycle hooks.
+  `
+class UserEffects {
+  ngrxOnInitEffectsLegacy() {}
+  static ngrxOnRunEffects() {}
+}`,
 ];
 
 const invalid: () => InvalidTestCase<MessageIds, Options>[] = () => [
@@ -188,6 +194,20 @@ export class Effects implements OnRunEffects {
       )
     );
   }
+}`,
+    }
+  ),
+  // An arrow-function property is the hook too.
+  fromFixture(
+    `
+class UserEffects {
+  ngrxOnInitEffects = () => ({ type: '[UserEffects]: Init' });
+  ~~~~~~~~~~~~~~~~~ [${messageId} { "interfaceName": "OnInitEffects", "methodName": "ngrxOnInitEffects" }]
+}`,
+    {
+      output: `import { OnInitEffects } from '@ngrx/effects';
+class UserEffects implements OnInitEffects {
+  ngrxOnInitEffects = () => ({ type: '[UserEffects]: Init' });
 }`,
     }
   ),

@@ -17,7 +17,10 @@ import signalsTypeChecked from './configs/signals-type-checked';
 
 const meta = { name: packageName, version: packageVersion };
 
-const tsPlugin: TSESLint.FlatConfig.Plugin = {
+const tsPlugin: TSESLint.FlatConfig.Plugin & {
+  meta: typeof meta;
+  rules: typeof rules;
+} = {
   meta,
   rules,
 };
@@ -34,9 +37,8 @@ const configs = {
   signalsTypeChecked: signalsTypeChecked(tsPlugin, parser),
 };
 
-export default {
-  meta,
-  configs,
-  rules,
-};
+// The default export is the same object the configs register under '@ngrx':
+// ESLint rejects two different objects under one plugin name, so a config
+// that also registers the default export (to change a rule) must get this one.
+export default Object.assign(tsPlugin, { configs });
 export { configs, meta, rules };

@@ -32,11 +32,6 @@ describe('EntitySelectors$', () => {
   /** As entityAdapter.initialState would create it */
   const emptyHeroCollection = createHeroState({ foo: 'foo', bar: 3.14 });
 
-  const villainMetadata: EntityMetadata<Villain> = {
-    entityName: 'Villain',
-    selectId: (villain) => villain.key,
-  };
-
   // Hero has a super-set of EntitySelectors$
   describe('EntitySelectors$Factory.create (Hero)', () => {
     // Some immutable cache states
@@ -269,6 +264,25 @@ describe('EntitySelectors$', () => {
       expect(actionsReceived.length).toBe(1);
       expect(actionsReceived[0]).toBe(heroErrorAction);
     });
+
+    it('`errors$` does not replay an earlier error to a late subscriber', () => {
+      const selectors$ = factory.create<Hero, HeroSelectors$>(
+        'Hero',
+        heroCollectionSelectors
+      );
+      const eaFactory = new EntityActionFactory();
+      // an early subscriber keeps the error stream running
+      selectors$.errors$.subscribe();
+      actions$.next(eaFactory.create('Hero', EntityOp.QUERY_ALL_ERROR));
+
+      const lateReceived: Action[] = [];
+      selectors$.errors$.subscribe((action) => lateReceived.push(action));
+      expect(lateReceived).toEqual([]);
+
+      const laterError = eaFactory.create('Hero', EntityOp.SAVE_ADD_ONE_ERROR);
+      actions$.next(laterError);
+      expect(lateReceived).toEqual([laterError]);
+    });
   });
 });
 
@@ -307,10 +321,4 @@ interface HeroSelectors extends EntitySelectors<Hero> {
 interface HeroSelectors$ extends EntitySelectors$<Hero> {
   foo$: Observable<string>;
   bar$: Observable<number>;
-}
-
-/// Villain
-interface Villain {
-  key: string;
-  name: string;
 }

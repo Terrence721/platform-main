@@ -4,7 +4,7 @@ import { Actions } from '@ngrx/effects';
 import { Dictionary } from '@ngrx/entity';
 
 import { Observable } from 'rxjs';
-import { filter, shareReplay } from 'rxjs/operators';
+import { filter, share } from 'rxjs/operators';
 
 import { EntityAction } from '../actions/entity-action';
 import { OP_ERROR } from '../actions/entity-op';
@@ -27,7 +27,13 @@ export interface EntitySelectors$<T> {
   /** Name of the entity collection for these selectors$ */
   readonly entityName: string;
 
-  /** Names from custom selectors from additionalCollectionState fits here, 'any' to avoid conflict with entityName */
+  /**
+   * Custom selectors$ (for `additionalCollectionState` properties) fit here;
+   * `any` to avoid conflict with entityName. The trade-off: any property
+   * name type-checks, so a typo such as `entitties$` compiles as `any`.
+   * For typed custom selectors$, extend this interface with them
+   * (e.g. `foo$: Observable<string>`) and pass it as `S$`.
+   */
   readonly [name: string]: Observable<any> | any;
 
   /** Observable of the collection as a whole */
@@ -73,7 +79,11 @@ export class EntitySelectors$Factory {
   /** Observable of the EntityCache */
   entityCache$: Observable<EntityCache>;
 
-  /** Observable of error EntityActions (e.g. QUERY_ALL_ERROR) for all entity types */
+  /**
+   * Observable of error EntityActions (e.g. QUERY_ALL_ERROR) for all entity
+   * types. Emits only errors that happen while subscribed; a new subscriber
+   * does not get earlier ones.
+   */
   entityActionErrors$: Observable<EntityAction>;
 
   constructor(
@@ -91,7 +101,9 @@ export class EntitySelectors$Factory {
           ea.payload.entityOp &&
           ea.payload.entityOp.endsWith(OP_ERROR)
       ),
-      shareReplay(1)
+      // No replay: a late subscriber must not get a stale error as if new.
+      // Unsubscribes from the actions when nothing is listening.
+      share()
     );
   }
 

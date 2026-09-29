@@ -6,8 +6,6 @@ export const propertyDefinitionWithEffectDecorator =
   `ClassDeclaration > ClassBody > PropertyDefinition > ${effectDecorator}` as const;
 
 export const actionCreator = `CallExpression[callee.name='createAction']`;
-export const actionCreatorWithLiteral =
-  `${actionCreator}[arguments.0.type='Literal'][arguments.0.raw=/^'/]` as const;
 export const actionCreatorProps =
   `${actionCreator} > CallExpression[callee.name='props']` as const;
 export const actionCreatorPropsComputed =

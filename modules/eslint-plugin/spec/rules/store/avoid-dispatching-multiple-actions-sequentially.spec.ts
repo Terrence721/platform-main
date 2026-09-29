@@ -298,6 +298,42 @@ pingPong() {
 }`),
 ];
 
+const invalidBlocksAndFunctions: () => InvalidTestCase<
+  MessageIds,
+  Options
+>[] = () => [
+  // A nested block between the dispatches does not hide them.
+  fromFixture(`
+import { Store } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+class NotOkNested {
+private readonly store = inject(Store)
+
+pingPong() {
+  this.store.dispatch(GameActions.ping())
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ [${messageId}]
+  if (this.verbose) {
+    console.log('ping')
+  }
+  this.store.dispatch(GameActions.pong())
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ [${messageId}]
+}
+}`),
+  // A store held in a variable, as in a functional initializer.
+  fromFixture(`
+import { Store } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+export const initGame = () => {
+  const store = inject(Store)
+  store.dispatch(GameActions.ping())
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ [${messageId}]
+  store.dispatch(GameActions.pong())
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ [${messageId}]
+}`),
+];
+
 // Static describe so Vitest's typecheck mode finds a suite (see spec/utils/rule-tester.ts).
 describe('rule', () => {
   ruleTester(rule.meta.docs?.requiresTypeChecking).run(
@@ -305,7 +341,11 @@ describe('rule', () => {
     rule,
     {
       valid: [...validConstructor(), ...validInject()],
-      invalid: [...invalidConstructor(), ...invalidInject()],
+      invalid: [
+        ...invalidConstructor(),
+        ...invalidInject(),
+        ...invalidBlocksAndFunctions(),
+      ],
     }
   );
 });

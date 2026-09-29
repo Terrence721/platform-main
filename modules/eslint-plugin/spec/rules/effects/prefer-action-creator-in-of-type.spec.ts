@@ -41,6 +41,13 @@ class Test {
 
   constructor(private readonly actions$: Actions) {}
 }`,
+  // A literal used as an index or a key is not an action type.
+  `
+export const effect = createEffect(
+  (actions$ = inject(Actions)) =>
+    actions$.pipe(ofType(creators[0], fromBooks['load'], factory('x'))),
+  { functional: true },
+)`,
 ];
 
 const invalid: () => InvalidTestCase<MessageIds, Options>[] = () => [
@@ -75,6 +82,16 @@ class Test {
 
   constructor(private readonly actions$: Actions) {}
 }`
+  ),
+  fromFixture(
+    `
+export const effect = createEffect(
+  (actions$ = inject(Actions)) =>
+    actions$.pipe(ofType(\`[Books] Load\`, legacyType ?? 'PONG')),
+                         ~~~~~~~~~~~~~~ [${messageId}]
+                                                       ~~~~~~ [${messageId}]
+  { functional: true },
+)`
   ),
 ];
 

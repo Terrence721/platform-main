@@ -28,7 +28,7 @@ export default createRule<Options, MessageIds>({
   defaultOptions: [],
   create: (context) => {
     return {
-      [`CallExpression[callee.name=signalStore][arguments.length>0] > ObjectExpression[properties.length>0] > Property[key.name=protectedState][value.value=false]`](
+      [`CallExpression[callee.name=signalStore][arguments.length>0] > ObjectExpression[properties.length>0] > Property:matches([key.name=protectedState], [key.value=protectedState])[value.value=false]`](
         node: TSESTree.Property
       ) {
         context.report({
@@ -47,8 +47,20 @@ export default createRule<Options, MessageIds>({
 
                   if (parentObjectHasOnlyOneProperty) {
                     /**
-                     * Remove the entire object if it contains only one property - the relevant one
+                     * Remove the entire object if it contains only one property - the relevant one,
+                     * with the comma after it when features follow, or the call is left as
+                     * `signalStore(, withState(...))`
                      */
+                    const commaAfter =
+                      context.sourceCode.getTokenAfter(parentObject);
+                    if (commaAfter?.value === ',') {
+                      const nextToken =
+                        context.sourceCode.getTokenAfter(commaAfter);
+                      return [
+                        parentObject.range[0],
+                        nextToken ? nextToken.range[0] : commaAfter.range[1],
+                      ];
+                    }
                     return parentObject.range;
                   }
 

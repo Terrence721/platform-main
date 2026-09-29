@@ -19,7 +19,7 @@ export default createRule<Options, MessageIds>({
     schema: [],
     messages: {
       [messageId]:
-        '`Updater` should have an explicit return type when using arrow functions: `this.store.updater((state, value): State => {}`.',
+        '`Updater` should have an explicit return type when using arrow functions: `this.store.updater((state, value): State => {})`.',
     },
   },
   defaultOptions: [],

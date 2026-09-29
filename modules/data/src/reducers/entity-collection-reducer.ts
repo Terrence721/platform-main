@@ -23,7 +23,12 @@ export class EntityCollectionReducerFactory {
       collection: EntityCollection<T>,
       action: EntityAction
     ): EntityCollection<T> {
-      const reducerMethod = methods[action.payload.entityOp];
+      const op = action.payload.entityOp;
+      // Only the map's own methods: an op named like an Object.prototype
+      // member (e.g. "toString") would otherwise call that inherited function.
+      const reducerMethod = Object.prototype.hasOwnProperty.call(methods, op)
+        ? methods[op]
+        : undefined;
       return reducerMethod ? reducerMethod(collection, action) : collection;
     };
   }

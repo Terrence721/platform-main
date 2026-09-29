@@ -1,4 +1,4 @@
-import type { TSESTree } from '@typescript-eslint/utils';
+import { AST_NODE_TYPES, type TSESTree } from '@typescript-eslint/utils';
 import * as path from 'path';
 import { createRule } from '../../rule-creator';
 
@@ -23,12 +23,39 @@ export default createRule<Options, MessageIds>({
   },
   defaultOptions: [],
   create: (context) => {
+    // The strings an argument can evaluate to: the argument itself, or a
+    // branch of a conditional or of `||`/`??`. A literal used as an index, a
+    // key or a call argument is not an action type.
+    function findStrings(
+      node: TSESTree.Node
+    ): (TSESTree.Literal | TSESTree.TemplateLiteral)[] {
+      switch (node.type) {
+        case AST_NODE_TYPES.Literal:
+          return typeof node.value === 'string' ? [node] : [];
+        case AST_NODE_TYPES.TemplateLiteral:
+          return [node];
+        case AST_NODE_TYPES.ConditionalExpression:
+          return [
+            ...findStrings(node.consequent),
+            ...findStrings(node.alternate),
+          ];
+        case AST_NODE_TYPES.LogicalExpression:
+          return [...findStrings(node.left), ...findStrings(node.right)];
+        default:
+          return [];
+      }
+    }
+
     return {
-      [`CallExpression[callee.name='ofType'] Literal`](node: TSESTree.Literal) {
-        context.report({
-          node,
-          messageId,
-        });
+      [`CallExpression[callee.name='ofType']`](node: TSESTree.CallExpression) {
+        for (const argument of node.arguments) {
+          for (const literal of findStrings(argument)) {
+            context.report({
+              node: literal,
+              messageId,
+            });
+          }
+        }
       },
     };
   },

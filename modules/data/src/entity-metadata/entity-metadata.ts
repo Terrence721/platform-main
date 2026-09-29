@@ -36,9 +36,11 @@ export interface EntityMetadata<T = any, S extends object = object> {
   sortComparer?: false | Comparer<T>;
   /**
    * Extra properties for the collection's state, with their initial values.
-   * Each gets a selector named after it (`foo` -> `selectFoo`). A name that
-   * the collection already uses (`ids`, `entities`, `entityName`, `filter`,
-   * `loaded`, `loading`, `changeState`) is rejected.
+   * Each gets a selector named after it (`foo` -> `selectFoo`, `foo$`). A
+   * name that the collection already uses is rejected: its state (`ids`,
+   * `entities`, `entityName`, `filter`, `loaded`, `loading`, `changeState`)
+   * or its selectors (`collection`, `count`, `entityActions`, `entityCache`,
+   * `entityMap`, `errors`, `filteredEntities`, `keys`).
    */
   additionalCollectionState?: S;
 }

@@ -17,6 +17,18 @@ export interface EntityDefinition<T = any> {
   sortComparer: false | Comparer<T>;
 }
 
+/** Names whose selector or selector$ the collection already has. */
+const reservedSelectorNames = [
+  'collection',
+  'count',
+  'entityActions',
+  'entityCache',
+  'entityMap',
+  'errors',
+  'filteredEntities',
+  'keys',
+];
+
 export function createEntityDefinition<T, S extends object>(
   entityMetadata: EntityMetadata<T, S>
 ): EntityDefinition<T> {
@@ -51,9 +63,13 @@ export function createEntityDefinition<T, S extends object>(
   });
   const additionalCollectionState = metadata.additionalCollectionState || {};
   // An extra property named like a built-in one would replace its value and
-  // its selector, corrupting the collection.
-  const reserved = Object.keys(additionalCollectionState).filter((key) =>
-    Object.prototype.hasOwnProperty.call(collectionState, key)
+  // its selector, corrupting the collection. The other names below are not
+  // state, but an extra property's selector(s$) would clash with the built-in
+  // select<Name> / <name>$ (e.g. `count` would replace `selectCount`).
+  const reserved = Object.keys(additionalCollectionState).filter(
+    (key) =>
+      Object.prototype.hasOwnProperty.call(collectionState, key) ||
+      reservedSelectorNames.includes(key)
   );
   if (reserved.length) {
     throw new Error(

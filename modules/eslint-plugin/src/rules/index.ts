@@ -47,7 +47,7 @@ export const rules = {
     avoidMappingComponentStoreSelectors,
   'updater-explicit-return-type': updaterExplicitReturnType,
   'require-super-ondestroy': requireSuperOnDestroy,
-  //effects
+  // effects
   'avoid-cyclic-effects': avoidCyclicEffects,
   'no-dispatch-in-effects': noDispatchInEffects,
   'no-effects-in-providers': noEffectsInProviders,

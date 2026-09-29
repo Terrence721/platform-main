@@ -73,6 +73,31 @@ class BooksStore extends ComponentStore implements OnDestroy
     this.cleanUp();
   }
 }`,
+  `
+import { ComponentStore } from '@ngrx/component-store';
+
+class BooksStore extends ComponentStore<BooksState> implements OnDestroy {
+  override ngOnDestroy = (): void => {
+    super.ngOnDestroy();
+  };
+}`,
+  // Only the store class's own instance ngOnDestroy is its lifecycle hook.
+  `
+import { ComponentStore } from '@ngrx/component-store';
+
+class BooksStore extends ComponentStore<BooksState> implements OnDestroy {
+  static ngOnDestroy(): void {}
+
+  createHelper() {
+    return class {
+      ngOnDestroy(): void {}
+    };
+  }
+
+  override ngOnDestroy(): void {
+    super.ngOnDestroy();
+  }
+}`,
 ];
 
 const invalid: () => InvalidTestCase<MessageIds, Options>[] = () => [
@@ -112,6 +137,25 @@ class BooksStore extends ComponentStore<BooksState> implements OnDestroy {
            ~~~~~~~~~~~ [${messageId}]
     super.get();
   }
+}`),
+  fromFixture(`
+import { ComponentStore as Store } from '@ngrx/component-store';
+
+class BooksStore extends Store<BooksState> implements OnDestroy {
+  override ngOnDestroy(): void {
+           ~~~~~~~~~~~ [${messageId}]
+    this.cleanUp();
+  }
+}`),
+  // An arrow-function property replaces the store's ngOnDestroy too.
+  fromFixture(`
+import { ComponentStore } from '@ngrx/component-store';
+
+class BooksStore extends ComponentStore<BooksState> implements OnDestroy {
+  override ngOnDestroy = (): void => {
+           ~~~~~~~~~~~ [${messageId}]
+    this.cleanUp();
+  };
 }`),
 ];
 

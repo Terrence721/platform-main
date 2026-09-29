@@ -1,13 +1,18 @@
-import type { TSESTree } from '@typescript-eslint/utils';
+import {
+  AST_NODE_TYPES,
+  ASTUtils,
+  type TSESTree,
+} from '@typescript-eslint/utils';
 import * as path from 'path';
 import { createRule } from '../../rule-creator';
 import {
   asPattern,
+  getImportDeclarations,
+  getImportDeclarationSpecifier,
   getNgRxStores,
   isCallExpression,
   isIdentifier,
-  namedCallableExpression,
-  pipeExpression,
+  NGRX_MODULE_PATHS,
 } from '../../utils';
 
 export const messageId = 'avoidMappingSelectors';
@@ -32,17 +37,121 @@ export default createRule<Options, MessageIds>({
   create: (context) => {
     const { identifiers = [] } = getNgRxStores(context);
     const storeNames = identifiers.length > 0 ? asPattern(identifiers) : null;
+    // The local name Store is imported as, for stores held in variables.
+    const { importSpecifier } =
+      getImportDeclarationSpecifier(
+        getImportDeclarations(
+          context.sourceCode.ast,
+          NGRX_MODULE_PATHS.store
+        ) ?? [],
+        'Store'
+      ) ?? {};
+    const storeImportName = importSpecifier?.local.name;
 
-    if (!storeNames) {
-      return {};
+    // A variable is a store when it is typed `Store` or set to
+    // `inject(Store)` (a parameter default or a variable).
+    function isStoreVariable(identifier: TSESTree.Identifier): boolean {
+      const variable = ASTUtils.findVariable(
+        context.sourceCode.getScope(identifier),
+        identifier
+      );
+      const name = variable?.defs[0]?.name;
+      if (!name || name.type !== AST_NODE_TYPES.Identifier) {
+        return false;
+      }
+      const annotation = name.typeAnnotation?.typeAnnotation;
+      if (
+        annotation?.type === AST_NODE_TYPES.TSTypeReference &&
+        annotation.typeName.type === AST_NODE_TYPES.Identifier &&
+        annotation.typeName.name === storeImportName
+      ) {
+        return true;
+      }
+      const { parent } = name;
+      const initializer =
+        parent?.type === AST_NODE_TYPES.AssignmentPattern &&
+        parent.left === name
+          ? parent.right
+          : parent?.type === AST_NODE_TYPES.VariableDeclarator &&
+              parent.id === name
+            ? parent.init
+            : null;
+      return (
+        initializer?.type === AST_NODE_TYPES.CallExpression &&
+        initializer.callee.type === AST_NODE_TYPES.Identifier &&
+        initializer.callee.name === 'inject' &&
+        initializer.arguments[0]?.type === AST_NODE_TYPES.Identifier &&
+        initializer.arguments[0].name === storeImportName
+      );
     }
 
-    const pipeWithSelectAndMapSelector = `${pipeExpression(
-      storeNames
-    )}:has(CallExpression[callee.name='select'] ~ CallExpression[callee.name='map'])` as const;
-    const selectSelector = `${namedCallableExpression(
-      storeNames
-    )}[callee.object.callee.property.name='select']` as const;
+    function isInConstructor(node: TSESTree.Node): boolean {
+      for (let parent = node.parent; parent; parent = parent.parent) {
+        if (
+          parent.type === AST_NODE_TYPES.MethodDefinition &&
+          parent.kind === 'constructor'
+        ) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    // `this.<injected store>`, a variable holding a store, or (inside a
+    // constructor, as before) an injected store's name.
+    function isStore(node: TSESTree.Node): boolean {
+      if (node.type === AST_NODE_TYPES.Identifier) {
+        return (
+          (!!storeImportName && isStoreVariable(node)) ||
+          (!!storeNames && storeNames.test(node.name) && isInConstructor(node))
+        );
+      }
+      return (
+        !!storeNames &&
+        node.type === AST_NODE_TYPES.MemberExpression &&
+        node.object.type === AST_NODE_TYPES.ThisExpression &&
+        node.property.type === AST_NODE_TYPES.Identifier &&
+        storeNames.test(node.property.name)
+      );
+    }
+
+    function isCallTo(node: TSESTree.Node, name: string): boolean {
+      return (
+        isCallExpression(node) &&
+        isIdentifier(node.callee) &&
+        node.callee.name === name
+      );
+    }
+
+    // Whether the node uses `this`: arrow functions share it, other
+    // functions have their own.
+    function usesThis(node: TSESTree.Node): boolean {
+      if (node.type === AST_NODE_TYPES.ThisExpression) {
+        return true;
+      }
+      if (
+        node.type === AST_NODE_TYPES.FunctionExpression ||
+        node.type === AST_NODE_TYPES.FunctionDeclaration
+      ) {
+        return false;
+      }
+      for (const [key, value] of Object.entries(node)) {
+        if (key === 'parent') {
+          continue;
+        }
+        for (const child of Array.isArray(value) ? value : [value]) {
+          if (
+            child &&
+            typeof child === 'object' &&
+            typeof (child as TSESTree.Node).type === 'string' &&
+            usesThis(child as TSESTree.Node)
+          ) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
 
     function isInCreateEffect(node: TSESTree.CallExpression) {
       let parent: TSESTree.Node | undefined = node.parent;
@@ -59,20 +168,34 @@ export default createRule<Options, MessageIds>({
       return false;
     }
 
-    let pipeHasThisExpression = false;
-
-    const selectorQuery = `:matches(${selectSelector}, ${pipeWithSelectAndMapSelector})`;
     return {
-      [`${selectorQuery} > CallExpression:has(ThisExpression)`](
-        _node: TSESTree.CallExpression
-      ) {
-        pipeHasThisExpression = true;
-      },
-      [`${selectorQuery}[callee.property.name=pipe]:exit`](
+      // `store.select(x).pipe(..., map(...))`, or
+      // `store.pipe(..., select(x), ..., map(...))`. A `map` whose callback
+      // uses `this` (component state) is not reported; other operators using
+      // `this` (e.g. `takeUntil(this.destroy$)`) do not matter.
+      [`CallExpression[callee.property.name='pipe']`](
         node: TSESTree.CallExpression
       ) {
-        if (pipeHasThisExpression) {
-          pipeHasThisExpression = false;
+        const { object } = node.callee as TSESTree.MemberExpression;
+        const operators = node.arguments;
+        let firstCandidate: number;
+        if (
+          isCallExpression(object) &&
+          object.callee.type === AST_NODE_TYPES.MemberExpression &&
+          object.callee.property.type === AST_NODE_TYPES.Identifier &&
+          object.callee.property.name === 'select' &&
+          isStore(object.callee.object)
+        ) {
+          firstCandidate = 0;
+        } else if (isStore(object)) {
+          const selectIndex = operators.findIndex((operator) =>
+            isCallTo(operator, 'select')
+          );
+          if (selectIndex < 0) {
+            return;
+          }
+          firstCandidate = selectIndex + 1;
+        } else {
           return;
         }
 
@@ -80,14 +203,10 @@ export default createRule<Options, MessageIds>({
           return;
         }
 
-        const operators = node.arguments;
-        const mapOperator = operators.find(
-          (operator) =>
-            isCallExpression(operator) &&
-            isIdentifier(operator.callee) &&
-            operator.callee.name === 'map'
-        );
-        if (mapOperator) {
+        const mapOperator = operators
+          .slice(firstCandidate)
+          .find((operator) => isCallTo(operator, 'map'));
+        if (mapOperator && !usesThis(mapOperator)) {
           context.report({
             node: mapOperator,
             messageId,

@@ -2,7 +2,11 @@ import { EntityState, Dictionary } from '@ngrx/entity';
 
 /** Types of change in a ChangeState instance */
 export enum ChangeType {
-  /** The entity has not changed from its last known server state. */
+  /**
+   * The entity has not changed from its last known server state.
+   * Not stored by the change tracker: an entity without changes has no
+   * changeState entry.
+   */
   Unchanged = 0,
   /** The entity was added to the collection */
   Added,
@@ -36,10 +40,22 @@ export interface EntityCollection<T = any> extends EntityState<T> {
   entityName: string;
   /** A map of ChangeStates, keyed by id, for entities with unsaved changes */
   changeState: ChangeStateMap<T>;
-  /** The user's current collection filter pattern */
+  /**
+   * The user's current collection filter pattern, used by the collection's
+   * filterFn. Typed as a string, although setFilter accepts any pattern
+   * the filterFn understands (the default one also takes a RegExp).
+   */
   filter?: string;
-  /** true if collection was ever filled by QueryAll; forced false if cleared */
+  /**
+   * true once the collection has been filled: set by a successful
+   * query-all, query-many or load, and by ADD_ALL; false again after
+   * REMOVE_ALL (SET_LOADED sets it directly).
+   */
   loaded: boolean;
-  /** true when a query or save operation is in progress */
+  /**
+   * true while a query or save operation is in progress. A single flag, not
+   * a count: the first operation to succeed, fail or be canceled turns it off,
+   * even if another is still pending.
+   */
   loading: boolean;
 }

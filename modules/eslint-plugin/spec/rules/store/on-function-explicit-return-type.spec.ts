@@ -230,6 +230,30 @@ const reducer = createReducer(
       },
     ],
   },
+  // The return type goes after the closing parenthesis, past a trailing comma.
+  {
+    code: `
+const reducer = createReducer(
+  initialState,
+  on(increment, (s, action,) => s),
+)`,
+    errors: [
+      {
+        line: 4,
+        messageId: onFunctionExplicitReturnType,
+        suggestions: [
+          {
+            messageId: onFunctionExplicitReturnTypeSuggest,
+            output: `
+const reducer = createReducer(
+  initialState,
+  on(increment, (s, action,): State => s),
+)`,
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 // Static describe so Vitest's typecheck mode finds a suite (see spec/utils/rule-tester.ts).

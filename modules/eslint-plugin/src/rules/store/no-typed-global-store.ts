@@ -1,13 +1,14 @@
 import * as path from 'path';
 import { createRule } from '../../rule-creator';
 import {
-  getNgRxStores,
-  isPropertyDefinition,
-  isTSTypeReference,
+  getImportDeclarations,
+  getImportDeclarationSpecifier,
   isCallExpression,
   isTSInstantiationExpression,
+  isTSTypeReference,
+  NGRX_MODULE_PATHS,
 } from '../../utils';
-import type { TSESTree } from '@typescript-eslint/utils';
+import { AST_NODE_TYPES, type TSESTree } from '@typescript-eslint/utils';
 
 export const noTypedStore = 'noTypedStore';
 export const noTypedStoreSuggest = 'noTypedStoreSuggest';
@@ -34,36 +35,49 @@ export default createRule<Options, MessageIds>({
   defaultOptions: [],
   create: (context) => {
     return {
-      Program() {
-        const { identifiers = [] } = getNgRxStores(context);
+      // Every use of the `Store` imported from @ngrx/store with a generic: as
+      // a type (`store: Store<S>`, `store: Store<S> = inject(Store)`,
+      // `inject<Store<S>>(Store)`) or as a value (`inject(Store<S>)`), in a
+      // class or a function.
+      Program(program: TSESTree.Program) {
+        const { importSpecifier } =
+          getImportDeclarationSpecifier(
+            getImportDeclarations(program, NGRX_MODULE_PATHS.store) ?? [],
+            'Store'
+          ) ?? {};
+        if (!importSpecifier) {
+          return;
+        }
+        const [variable] =
+          context.sourceCode.getDeclaredVariables(importSpecifier);
 
-        for (const identifier of identifiers) {
-          // using inject()
-          if (!identifier.typeAnnotation) {
-            const { parent } = identifier;
-            if (
-              isPropertyDefinition(parent) &&
-              parent.value &&
-              isCallExpression(parent.value) &&
-              parent.value.arguments.length
-            ) {
-              const [storeArgument] = parent.value.arguments;
-              if (isTSInstantiationExpression(storeArgument)) {
-                report(storeArgument.typeArguments);
-              }
-            }
+        // Only where the store is declared or injected: another function
+        // given `Store<S>` (e.g. `somethingElse(Store<{}>)`) is not.
+        const isInjectCall = (node: TSESTree.Node | undefined) =>
+          !!node &&
+          isCallExpression(node) &&
+          node.callee.type === AST_NODE_TYPES.Identifier &&
+          node.callee.name === 'inject';
 
-            continue;
-          }
-
+        for (const { identifier } of variable?.references ?? []) {
+          const { parent } = identifier;
           if (
-            !isTSTypeReference(identifier.typeAnnotation.typeAnnotation) ||
-            !identifier.typeAnnotation.typeAnnotation.typeArguments
+            isTSTypeReference(parent) &&
+            parent.typeName === identifier &&
+            parent.typeArguments &&
+            (parent.parent?.type === AST_NODE_TYPES.TSTypeAnnotation ||
+              (parent.parent?.type ===
+                AST_NODE_TYPES.TSTypeParameterInstantiation &&
+                isInjectCall(parent.parent.parent)))
           ) {
-            continue;
+            report(parent.typeArguments);
+          } else if (
+            isTSInstantiationExpression(parent) &&
+            parent.expression === identifier &&
+            isInjectCall(parent.parent)
+          ) {
+            report(parent.typeArguments);
           }
-
-          report(identifier.typeAnnotation.typeAnnotation.typeArguments);
         }
       },
     };

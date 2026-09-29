@@ -168,6 +168,79 @@ export class NotOk4 {
       ],
     }
   ),
+  // The generic on inject, a typed property, and a store in a function.
+  fromFixture(
+    `
+import { inject } from '@angular/core';
+import { Store } from '@ngrx/store';
+
+export class NotOk5 {
+  store = inject<Store<{}>>(Store);
+                      ~~~~ [${noTypedStore} suggest]
+}`,
+    {
+      suggestions: [
+        {
+          messageId: noTypedStoreSuggest,
+          output: `
+import { inject } from '@angular/core';
+import { Store } from '@ngrx/store';
+
+export class NotOk5 {
+  store = inject<Store>(Store);
+}`,
+        },
+      ],
+    }
+  ),
+  fromFixture(
+    `
+import { inject } from '@angular/core';
+import { Store } from '@ngrx/store';
+
+export class NotOk6 {
+  store: Store<{}> = inject(Store);
+              ~~~~ [${noTypedStore} suggest]
+}`,
+    {
+      suggestions: [
+        {
+          messageId: noTypedStoreSuggest,
+          output: `
+import { inject } from '@angular/core';
+import { Store } from '@ngrx/store';
+
+export class NotOk6 {
+  store: Store = inject(Store);
+}`,
+        },
+      ],
+    }
+  ),
+  fromFixture(
+    `
+import { inject } from '@angular/core';
+import { Store } from '@ngrx/store';
+
+export const initState = () => {
+  const store = inject(Store<{}>);
+                            ~~~~ [${noTypedStore} suggest]
+};`,
+    {
+      suggestions: [
+        {
+          messageId: noTypedStoreSuggest,
+          output: `
+import { inject } from '@angular/core';
+import { Store } from '@ngrx/store';
+
+export const initState = () => {
+  const store = inject(Store);
+};`,
+        },
+      ],
+    }
+  ),
 ];
 
 // Static describe so Vitest's typecheck mode finds a suite (see spec/utils/rule-tester.ts).

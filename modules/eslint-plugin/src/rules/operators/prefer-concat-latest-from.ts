@@ -1,5 +1,6 @@
 import {
   AST_NODE_TYPES,
+  ASTUtils,
   type TSESLint,
   type TSESTree,
 } from '@typescript-eslint/utils';
@@ -9,6 +10,8 @@ import {
   asPattern,
   createEffectExpression,
   getImportAddFix,
+  getImportDeclarations,
+  getImportDeclarationSpecifier,
   getNgRxEffectActions,
   namedExpression,
   NGRX_MODULE_PATHS,
@@ -53,64 +56,109 @@ export default createRule<Options, MessageIds>({
   },
   defaultOptions: [defaultOptions],
   create: (context, [options]) => {
+    // Only a single-source call is fixed. With more arguments it is either
+    // several sources (`withLatestFrom(a$, b$)`) or the deprecated projector,
+    // whose `(action, latest)` parameters `map` would not receive; both are
+    // reported without a fix.
+    // A constructor's `actions$: Actions` parameter matches both the class
+    // path and the variable path: report each call once.
+    const reported = new WeakSet<WithLatestFromIdentifier>();
+    function report(node: WithLatestFromIdentifier) {
+      if (reported.has(node)) {
+        return;
+      }
+      reported.add(node);
+      context.report({
+        node,
+        messageId,
+        ...(node.parent.arguments.length === 1 && {
+          fix: (fixer: TSESLint.RuleFixer) => getFixes(fixer, node),
+        }),
+      });
+    }
+
+    const withLatestFromCall = `CallExpression > Identifier.callee[name='${withLatestFromKeyword}']`;
+
     if (options.strict) {
       return {
-        [`${createEffectExpression} CallExpression > Identifier[name='withLatestFrom']`](
-          node: WithLatestFromIdentifier
-        ) {
-          context.report({
-            node,
-            messageId,
-            fix: (fixer) => getFixes(context.sourceCode, fixer, node),
-          });
-        },
+        [`${createEffectExpression} ${withLatestFromCall}`]: report,
       };
     }
 
-    const { identifiers = [], sourceCode } = getNgRxEffectActions(context);
+    const { identifiers = [] } = getNgRxEffectActions(context);
     const actionsNames = identifiers.length > 0 ? asPattern(identifiers) : null;
+    // The local name Actions is imported as, for functional effects.
+    const { importSpecifier } =
+      getImportDeclarationSpecifier(
+        getImportDeclarations(
+          context.sourceCode.ast,
+          NGRX_MODULE_PATHS.effects
+        ) ?? [],
+        'Actions'
+      ) ?? {};
+    const actionsImportName = importSpecifier?.local.name;
 
-    if (!actionsNames) {
-      return {};
+    // A variable is the actions stream when it is typed `Actions` or set to
+    // `inject(Actions)`: a functional effect's parameter default
+    // (`actions$ = inject(Actions)`) or a `const` in its body.
+    function isActionsVariable(identifier: TSESTree.Identifier): boolean {
+      const variable = ASTUtils.findVariable(
+        context.sourceCode.getScope(identifier),
+        identifier
+      );
+      const name = variable?.defs[0]?.name;
+      if (!name || name.type !== AST_NODE_TYPES.Identifier) {
+        return false;
+      }
+      const annotation = name.typeAnnotation?.typeAnnotation;
+      if (
+        annotation?.type === AST_NODE_TYPES.TSTypeReference &&
+        annotation.typeName.type === AST_NODE_TYPES.Identifier &&
+        annotation.typeName.name === actionsImportName
+      ) {
+        return true;
+      }
+      const { parent } = name;
+      const initializer =
+        parent?.type === AST_NODE_TYPES.AssignmentPattern &&
+        parent.left === name
+          ? parent.right
+          : parent?.type === AST_NODE_TYPES.VariableDeclarator &&
+              parent.id === name
+            ? parent.init
+            : null;
+      return (
+        initializer?.type === AST_NODE_TYPES.CallExpression &&
+        initializer.callee.type === AST_NODE_TYPES.Identifier &&
+        initializer.callee.name === 'inject' &&
+        initializer.arguments[0]?.type === AST_NODE_TYPES.Identifier &&
+        initializer.arguments[0].name === actionsImportName
+      );
     }
 
     return {
-      [`${createEffectExpression} ${namedExpression(
-        actionsNames
-      )} > CallExpression[arguments.length=1] > Identifier[name='${withLatestFromKeyword}']`](
-        node: WithLatestFromIdentifier
-      ) {
-        context.report({
-          node,
-          messageId,
-          fix: (fixer) => getFixes(sourceCode, fixer, node),
-        });
-      },
-      [`${createEffectExpression} ${namedExpression(
-        actionsNames
-      )} > CallExpression[arguments.length>1] > Identifier[name='${withLatestFromKeyword}']`](
-        node: WithLatestFromIdentifier
-      ) {
-        context.report({
-          node,
-          messageId,
-        });
-      },
+      ...(actionsNames && {
+        [`${createEffectExpression} ${namedExpression(
+          actionsNames
+        )} > ${withLatestFromCall}`]: report,
+      }),
+      ...(actionsImportName && {
+        [`${createEffectExpression} CallExpression[callee.property.name='pipe'][callee.object.type='Identifier'] > ${withLatestFromCall}`](
+          node: WithLatestFromIdentifier
+        ) {
+          const pipe = node.parent.parent as TSESTree.CallExpression;
+          const { object } = pipe.callee as TSESTree.MemberExpression;
+          if (isActionsVariable(object as TSESTree.Identifier)) {
+            report(node);
+          }
+        },
+      }),
     };
   },
 });
 
-function getFixes(
-  sourceCode: Readonly<TSESLint.SourceCode>,
-  fixer: TSESLint.RuleFixer,
-  node: WithLatestFromIdentifier
-) {
-  const { parent } = node;
-  const isUsingDeprecatedProjectorArgument = parent.arguments.length > 1;
-  const [firstArgument] = parent.arguments;
-  const nextToken =
-    isUsingDeprecatedProjectorArgument &&
-    sourceCode.getTokenAfter(firstArgument);
+function getFixes(fixer: TSESLint.RuleFixer, node: WithLatestFromIdentifier) {
+  const [firstArgument] = node.parent.arguments;
   return [
     fixer.replaceText(node, concatLatestFromKeyword),
     ...(firstArgument.type == AST_NODE_TYPES.ArrowFunctionExpression
@@ -122,17 +170,6 @@ function getFixes(
       importName: concatLatestFromKeyword,
       moduleName: NGRX_MODULE_PATHS.operators,
       node,
-    }),
-    ...(isUsingDeprecatedProjectorArgument && nextToken
-      ? [
-          getImportAddFix({
-            fixer,
-            importName: 'map',
-            moduleName: 'rxjs/operators',
-            node,
-          }),
-          fixer.insertTextAfterRange(nextToken.range, '), map('),
-        ]
-      : [])
+    })
   );
 }

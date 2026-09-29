@@ -288,25 +288,23 @@ class NotOk3 {
 }`,
     {
       options: [{ strict: true }],
-      output: `import { map } from 'rxjs/operators';
-import { concatLatestFrom } from '@ngrx/operators'
-import { of, withLatestFrom } from 'rxjs'
-
-class NotOk3 {
-  effect = createEffect(() => {
-    return condition
-      ? this.actions$.pipe(
-          ofType(ProductDetailPage.loaded),
-          concatMap((action) =>
-            of(action).pipe(
-              concatLatestFrom(() => this.store.select$(something),), map( (one, other) => somethingElse()),
-            ),
-          ),
-          mergeMap(([action, products]) => of(products)),
-        )
-      : this.actions$.pipe()
-  })
+      // Not fixed: `map` would get `[one, other]` as one argument, so the
+      // projector's `other` would be undefined.
+      output: null,
+    }
+  ),
+  // Several sources are reported but not fixed either.
+  fromFixture(
+    `
+class NotOk3b {
+  effect = createEffect(() =>
+    this.actions$.pipe(withLatestFrom(a$, b$), map(([action, a, b]) => done())),
+                       ~~~~~~~~~~~~~~ [${messageId}]
+  )
 }`,
+    {
+      options: [{ strict: true }],
+      output: null,
     }
   ),
   fromFixture(
@@ -405,6 +403,32 @@ class NotOk5 {
     )
   }
 }`,
+    }
+  ),
+  // A functional effect's actions$ parameter is the actions stream too.
+  fromFixture(
+    `
+import { Actions } from '@ngrx/effects'
+import { withLatestFrom } from 'rxjs'
+import { inject } from '@angular/core'
+
+export const effect = createEffect(
+  (actions$ = inject(Actions), store = inject(Store)) =>
+    actions$.pipe(withLatestFrom(store.select(selectIds)), map(() => done())),
+                  ~~~~~~~~~~~~~~ [${messageId}]
+  { functional: true },
+)`,
+    {
+      output: `import { concatLatestFrom } from '@ngrx/operators';
+import { Actions } from '@ngrx/effects'
+import { withLatestFrom } from 'rxjs'
+import { inject } from '@angular/core'
+
+export const effect = createEffect(
+  (actions$ = inject(Actions), store = inject(Store)) =>
+    actions$.pipe(concatLatestFrom(() => store.select(selectIds)), map(() => done())),
+  { functional: true },
+)`,
     }
   ),
 ];

@@ -1,11 +1,13 @@
-import { ESLintUtils, type TSESTree } from '@typescript-eslint/utils';
+import {
+  AST_NODE_TYPES,
+  ESLintUtils,
+  type TSESTree,
+} from '@typescript-eslint/utils';
 import * as path from 'path';
 import ts from 'typescript';
 import { createRule } from '../../rule-creator';
 import {
-  asPattern,
   createEffectExpression,
-  getNgRxEffectActions,
   isCallExpression,
   isIdentifier,
   isTypeReference,
@@ -36,13 +38,6 @@ export default createRule<Options, MessageIds>({
   },
   defaultOptions: [],
   create: (context) => {
-    const { identifiers = [] } = getNgRxEffectActions(context);
-    const actionsNames = identifiers.length > 0 ? asPattern(identifiers) : null;
-
-    if (!actionsNames) {
-      return {};
-    }
-
     const services = ESLintUtils.getParserServices(context);
     const typeChecker = services.program.getTypeChecker();
 
@@ -148,20 +143,72 @@ export default createRule<Options, MessageIds>({
       return [typeChecker.typeToString(actionType)];
     }
 
-    let firstPipe = true;
+    // The Actions stream is recognised by its type, so `this.actions$`, a
+    // functional effect's `actions$ = inject(Actions)` parameter and any other
+    // name all count. The class must come from @ngrx/effects (an `effects`
+    // folder: node_modules/@ngrx/effects, or modules/effects in this repo).
+    function isActionsStream(node: TSESTree.Node): boolean {
+      const symbol = services.getTypeAtLocation(node).getSymbol();
+      return (
+        symbol?.getName() === 'Actions' &&
+        (symbol.declarations ?? []).some((declaration) =>
+          /[\\/]effects[\\/]/.test(declaration.getSourceFile().fileName)
+        )
+      );
+    }
+
+    // `createEffect(..., { dispatch: false })`: the effect emits nothing.
+    function dispatchesNothing(effect: TSESTree.CallExpression): boolean {
+      const config = effect.arguments[1];
+      return (
+        config?.type === AST_NODE_TYPES.ObjectExpression &&
+        config.properties.some(
+          (property) =>
+            property.type === AST_NODE_TYPES.Property &&
+            !property.computed &&
+            isIdentifier(property.key) &&
+            property.key.name === 'dispatch' &&
+            property.value.type === AST_NODE_TYPES.Literal &&
+            property.value.value === false
+        )
+      );
+    }
+
+    // Only an effect's outermost Actions pipe is its output; an Actions pipe
+    // nested inside it (e.g. in switchMap) is not checked.
+    const checkedPipes = new WeakSet<TSESTree.Node>();
+
     return {
-      [`${createEffectExpression}:not([arguments.1]:has(Property[key.name='dispatch'][value.value=false])) CallExpression[callee.property.name='pipe'][callee.object.property.name=${actionsNames}]`](
-        node
+      [`${createEffectExpression} CallExpression[callee.property.name='pipe']`](
+        node: TSESTree.CallExpression
       ) {
-        if (firstPipe) {
-          checkNode(node);
-          firstPipe = false;
+        if (
+          node.callee.type !== AST_NODE_TYPES.MemberExpression ||
+          !isActionsStream(node.callee.object)
+        ) {
           return;
         }
-      },
 
-      [`${createEffectExpression}:not([arguments.1]:has(Property[key.name='dispatch'][value.value=false])) CallExpression[callee.property.name='pipe']:exit`]() {
-        firstPipe = true;
+        let effect: TSESTree.Node | undefined = node.parent;
+        while (
+          effect &&
+          !(
+            isCallExpression(effect) &&
+            isIdentifier(effect.callee) &&
+            effect.callee.name === 'createEffect'
+          )
+        ) {
+          if (checkedPipes.has(effect)) {
+            return;
+          }
+          effect = effect.parent;
+        }
+        if (!effect || !isCallExpression(effect) || dispatchesNothing(effect)) {
+          return;
+        }
+
+        checkedPipes.add(node);
+        checkNode(node);
       },
     };
   },

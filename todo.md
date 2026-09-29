@@ -2,7 +2,7 @@
 
 <!-- cspell:ignore Persistance -->
 
-**Last Updated:** September 29, 2026 — `eslint-plugin` module review in progress (7/55 files); see [Recent changes](#recent-changes) for what changed and when.
+**Last Updated:** September 29, 2026 — `eslint-plugin` module review in progress (8/55 files); see [Recent changes](#recent-changes) for what changed and when.
 
 A phase-by-phase log of what's been done on this repo and what's still open. This is the source of truth for progress — the [GitHub Project board](https://github.com/users/Terrence721/projects/2) is a lighter-weight view of the same work, kept in sync with this file, not a separate source of truth.
 
@@ -59,6 +59,7 @@ Newest first, one line per item. Code-review rows link the file's issue; the ful
 
 | Date       | Area                 | Item                                                            | Issue                                                                                                                                                                                             | Outcome                                                                                                    |
 | ---------- | -------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| 2026-09-29 | eslint-plugin review | `configs/signals.ts`                                            | [#632](https://github.com/Terrence721/platform-main/issues/632)                                                                                                                                   | No defects; exact-rules test added                                                                         |
 | 2026-09-29 | eslint-plugin review | `configs/signals-type-checked.ts`                               | [#630](https://github.com/Terrence721/platform-main/issues/630)                                                                                                                                   | No defects; exact-rules test added                                                                         |
 | 2026-09-29 | eslint-plugin review | `configs/operators.ts`                                          | [#628](https://github.com/Terrence721/platform-main/issues/628)                                                                                                                                   | No defects; exact-rules test added                                                                         |
 | 2026-09-29 | eslint-plugin review | `configs/effects.ts`                                            | [#626](https://github.com/Terrence721/platform-main/issues/626)                                                                                                                                   | No defects; exact-rules test added                                                                         |
@@ -641,3 +642,4 @@ The last module under #32. The scope is the 55 `.ts` files under `modules/eslint
 | `src/configs/effects.ts`              | [`0030609`](https://github.com/Terrence721/platform-main/commit/0030609da0cf9886036977907311161171d122f9) | [#626](https://github.com/Terrence721/platform-main/issues/626) | —   | Done — no defects, tests added |
 | `src/configs/operators.ts`            | [`0030609`](https://github.com/Terrence721/platform-main/commit/0030609da0cf9886036977907311161171d122f9) | [#628](https://github.com/Terrence721/platform-main/issues/628) | —   | Done — no defects, tests added |
 | `src/configs/signals-type-checked.ts` | [`9c645c8`](https://github.com/Terrence721/platform-main/commit/9c645c85d6294d06911d3b7b892bfb149818ffd1) | [#630](https://github.com/Terrence721/platform-main/issues/630) | —   | Done — no defects, tests added |
+| `src/configs/signals.ts`              | [`0030609`](https://github.com/Terrence721/platform-main/commit/0030609da0cf9886036977907311161171d122f9) | [#632](https://github.com/Terrence721/platform-main/issues/632) | —   | Done — no defects, tests added |

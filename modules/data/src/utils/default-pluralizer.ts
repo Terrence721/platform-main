@@ -21,12 +21,16 @@ export class DefaultPluralizer {
   constructor(
     @Optional()
     @Inject(PLURAL_NAMES_TOKEN)
-    pluralNames: EntityPluralNames[]
+    pluralNames: EntityPluralNames[] | EntityPluralNames | null
   ) {
-    // merge each plural names object
-    if (pluralNames) {
-      pluralNames.forEach((pn) => this.registerPluralNames(pn));
-    }
+    // merge each plural names object; a multi provider gives an array, one
+    // provided without `multi` gives a single map, which is accepted too
+    const maps = Array.isArray(pluralNames)
+      ? pluralNames
+      : pluralNames
+        ? [pluralNames]
+        : [];
+    maps.forEach((pn) => this.registerPluralNames(pn));
   }
 
   /**

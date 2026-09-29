@@ -63,6 +63,7 @@ describe('ESLint flat config', () => {
     { config: 'operators', ngrxModule: 'operators', typeChecked: false },
     { config: 'signalsTypeChecked', ngrxModule: 'signals', typeChecked: true },
     { config: 'signals', ngrxModule: 'signals', typeChecked: false },
+    { config: 'store', ngrxModule: 'store', typeChecked: false },
   ] as const)(
     'exports the $ngrxModule rules in the $config config',
     ({ config, ngrxModule, typeChecked }) => {

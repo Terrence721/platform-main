@@ -359,6 +359,42 @@ class NotOk11 {
   ),
 ];
 
+const invalidObjectAndFunctions: () => InvalidTestCase<
+  MessageIds,
+  Options
+>[] = () => [
+  // The object form: the selects are property values, not siblings.
+  fromFixture(`
+import { Store } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+class NotOkObject {
+  readonly store = inject(Store)
+  readonly vm$ = combineLatest({
+    items: this.store.select(selectItems),
+    other: this.store.select(selectOtherItems),
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ [${messageId}]
+  })
+}`),
+  // A store held in a variable, as in a functional resolver or guard.
+  fromFixture(`
+import { Store } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+export const resolver = () => {
+  const store = inject(Store)
+  return combineLatest([store.select(selectItems), store.select(selectOtherItems)])
+                                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ [${messageId}]
+}`),
+  fromFixture(`
+import { Store } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+export const resolver = (store = inject(Store)) =>
+  combineLatest([store.select(selectItems), store.select(selectOtherItems)])
+                                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ [${messageId}]`),
+];
+
 // Static describe so Vitest's typecheck mode finds a suite (see spec/utils/rule-tester.ts).
 describe('rule', () => {
   ruleTester(rule.meta.docs?.requiresTypeChecking).run(
@@ -366,7 +402,11 @@ describe('rule', () => {
     rule,
     {
       valid: [...validConstructor(), ...validInject()],
-      invalid: [...invalidConstructor(), ...invalidInject()],
+      invalid: [
+        ...invalidConstructor(),
+        ...invalidInject(),
+        ...invalidObjectAndFunctions(),
+      ],
     }
   );
 });

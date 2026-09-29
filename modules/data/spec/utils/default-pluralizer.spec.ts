@@ -26,7 +26,7 @@ describe('DefaultPluralizer', () => {
       expect(pluralizer.pluralize('Company')).toBe('Companies');
     });
 
-    it('should pluralize "vowel + y" with "-es"', () => {
+    it('should pluralize "vowel + y" with "-s"', () => {
       expect(pluralizer.pluralize('Cowboy')).toBe('Cowboys');
     });
 
@@ -38,6 +38,30 @@ describe('DefaultPluralizer', () => {
     it('should pluralize "SkyBox" which is not in plural names', () => {
       // default pluralization of word ending in 'x'
       expect(pluralizer.pluralize('SkyBox')).toBe('SkyBoxes');
+    });
+
+    it('should add "-es" only after s, sh, ch, x and z', () => {
+      const plurals = ['Bus', 'Wish', 'Batch', 'Box', 'Quiz'].map((name) =>
+        pluralizer.pluralize(name)
+      );
+      expect(plurals).toEqual([
+        'Buses',
+        'Wishes',
+        'Batches',
+        'Boxes',
+        'Quizes',
+      ]);
+    });
+
+    it('should add "-s" after other endings in "h" or "c"', () => {
+      const plurals = ['Month', 'Path', 'Graph', 'Topic'].map((name) =>
+        pluralizer.pluralize(name)
+      );
+      expect(plurals).toEqual(['Months', 'Paths', 'Graphs', 'Topics']);
+    });
+
+    it('should pluralize a name that Object.prototype has', () => {
+      expect(pluralizer.pluralize('constructor')).toBe('constructors');
     });
   });
 

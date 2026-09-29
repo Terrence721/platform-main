@@ -32,9 +32,15 @@ export class DefaultPluralizer {
   /**
    * Pluralize a singular name using common English language pluralization rules
    * Examples: "company" -> "companies", "employee" -> "employees", "tax" -> "taxes"
+   * Irregular plurals (e.g. "hero" -> "heroes", "quiz" -> "quizzes") are not
+   * derived: register them as plural names.
    */
   pluralize(name: string) {
-    const plural = this.pluralNames[name];
+    // Own properties only: a name like "constructor" would otherwise find
+    // the inherited Object.prototype member.
+    const plural = Object.prototype.hasOwnProperty.call(this.pluralNames, name)
+      ? this.pluralNames[name]
+      : undefined;
     if (plural) {
       return plural;
     }
@@ -48,7 +54,7 @@ export class DefaultPluralizer {
     } else if (name.endsWith('y')) {
       return name.substring(0, name.length - 1) + 'ies';
       // endings typically pluralized with 'es'
-    } else if (/[s|ss|sh|ch|x|z]$/.test(name)) {
+    } else if (/(?:s|sh|ch|x|z)$/.test(name)) {
       return name + 'es';
     } else {
       return name + 's';

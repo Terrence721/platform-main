@@ -56,6 +56,18 @@ export class UserStore extends ComponentStore<UserState> {
   name$ = this.select(this.loggedInUser$, (user) => user.name);
 }
 `,
+  // The piped stream is not a select: a select inside an operator's callback does not count.
+  `
+import { ComponentStore } from '@ngrx/component-store'
+
+class Ok extends ComponentStore<MoviesState> {
+  movie$ = this.selectedId$.pipe(
+    switchMap((id) => this.select((state) => state.movies[id])),
+    map((movie) => movie.title)
+  );
+  movies$ = this.reload$.pipe(map(() => this.select((state) => state.movies)));
+}
+`,
 ];
 
 const validInject: () => (string | ValidTestCase<Options>)[] = () => [
@@ -67,6 +79,15 @@ class Ok {
   readonly store = inject(ComponentStore<MoviesState>)
   readonly movies$ = this.store.select((state) => state.movies)
   readonly firstMovie$ = this.store.select(this.movies$, (movies) => movies[0]);
+}`,
+  // Only select calls are selectors: other store methods do not count.
+  `
+import { inject } from '@angular/core'
+import { ComponentStore } from '@ngrx/component-store'
+
+class Ok {
+  readonly store = inject(ComponentStore<MoviesState>)
+  readonly titles$ = this.store.loadAll().pipe(map((movies) => movies.map((movie) => movie.title)));
 }`,
 ];
 

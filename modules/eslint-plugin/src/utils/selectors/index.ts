@@ -38,8 +38,10 @@ export const ngModuleProviders =
 export const effectsInNgModuleImports =
   `${ngModuleImports} CallExpression[callee.object.name='EffectsModule'][callee.property.name=/^for(Root|Feature)$/] ArrayExpression > Identifier` as const;
 
+// Only direct entries: an identifier inside `{ provide, useClass }` or a
+// factory call is not the class listed as a provider.
 export const effectsInNgModuleProviders =
-  `${ngModuleProviders} Identifier` as const;
+  `${ngModuleProviders} > Identifier` as const;
 
 export const namedExpression = (name: RegExp | string) =>
   `:matches(${constructorDefinition} CallExpression[callee.object.name=${name}], CallExpression[callee.object.object.type='ThisExpression'][callee.object.property.name=${name}])` as const;

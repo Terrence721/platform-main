@@ -191,14 +191,79 @@ export class AppModule {}`,
   ),
 ];
 
+const validProviderObjects: () => (string | ValidTestCase<Options>)[] = () => [
+  // Only a class listed directly is a provider of that class.
+  `
+@NgModule({
+  imports: [EffectsModule.forFeature([RegisteredEffect])],
+  providers: [
+    { provide: EFFECT_TOKEN, useClass: RegisteredEffect },
+    { provide: RegisteredEffect, useClass: MockEffect },
+    provideSomething(RegisteredEffect),
+  ],
+})
+export class AppModule {}`,
+  `
+export const routes = [
+  { path: 'a', providers: [provideEffects(RegisteredEffect), OtherEffect] },
+];`,
+];
+
+const invalidStandalone: () => InvalidTestCase<MessageIds, Options>[] = () => [
+  fromFixture(
+    `
+bootstrapApplication(App, {
+  providers: [provideEffects(RegisteredEffect, OtherEffect), RegisteredEffect],
+                                                             ~~~~~~~~~~~~~~~~ [${messageId}]
+});`,
+    {
+      output: `
+bootstrapApplication(App, {
+  providers: [provideEffects(RegisteredEffect, OtherEffect), ],
+});`,
+    }
+  ),
+  fromFixture(
+    `
+export const appConfig = {
+  providers: [RegisteredEffect, provideEffects([RegisteredEffect])],
+              ~~~~~~~~~~~~~~~~ [${messageId}]
+};`,
+    {
+      output: `
+export const appConfig = {
+  providers: [ provideEffects([RegisteredEffect])],
+};`,
+    }
+  ),
+  // Registered both ways in one module: reported once.
+  fromFixture(
+    `
+@NgModule({
+  imports: [EffectsModule.forFeature([RegisteredEffect])],
+  providers: [provideEffects(RegisteredEffect), RegisteredEffect],
+                                                ~~~~~~~~~~~~~~~~ [${messageId}]
+})
+export class AppModule {}`,
+    {
+      output: `
+@NgModule({
+  imports: [EffectsModule.forFeature([RegisteredEffect])],
+  providers: [provideEffects(RegisteredEffect), ],
+})
+export class AppModule {}`,
+    }
+  ),
+];
+
 // Static describe so Vitest's typecheck mode finds a suite (see spec/utils/rule-tester.ts).
 describe('rule', () => {
   ruleTester(rule.meta.docs?.requiresTypeChecking).run(
     path.parse(__filename).name,
     rule,
     {
-      valid: valid(),
-      invalid: invalid(),
+      valid: [...valid(), ...validProviderObjects()],
+      invalid: [...invalid(), ...invalidStandalone()],
     }
   );
 });

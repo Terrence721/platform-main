@@ -24,9 +24,25 @@ export default createRule<Options, MessageIds>({
     const storeNames = getNgrxComponentStoreNames(context);
 
     const thisSelects = `CallExpression[callee.object.type='ThisExpression'][callee.property.name='select']`;
-    const storeSelects = storeNames ? namedExpression(storeNames) : null;
+    // Only `select` calls on the store: its other methods are not selectors.
+    const storeSelects = storeNames
+      ? `${namedExpression(storeNames)}[callee.property.name='select']`
+      : null;
 
     const selectsInArray: TSESTree.CallExpression[] = [];
+    // `combineLatest({ a: select(...), b: select(...) })`: the selects are
+    // property values, not siblings, so every one after the first in its
+    // object is reported.
+    const objectsWithSelect = new WeakSet<TSESTree.Node>();
+    const selectInObject = (node: TSESTree.CallExpression) => {
+      const object = node.parent?.parent;
+      if (!object) return;
+      if (objectsWithSelect.has(object)) {
+        selectsInArray.push(node);
+      } else {
+        objectsWithSelect.add(object);
+      }
+    };
     return {
       [`ClassDeclaration[superClass.name=/Store/] CallExpression[callee.name='combineLatest'] ${thisSelects} ~ ${thisSelects}`](
         node: TSESTree.CallExpression
@@ -38,6 +54,10 @@ export default createRule<Options, MessageIds>({
       ) {
         selectsInArray.push(node);
       },
+      [`ClassDeclaration[superClass.name=/Store/] CallExpression[callee.name='combineLatest'] ObjectExpression > Property > ${thisSelects}.value`]:
+        selectInObject,
+      [`CallExpression[callee.name='combineLatest'] ObjectExpression > Property > ${storeSelects}.value`]:
+        selectInObject,
       [`CallExpression[callee.name='combineLatest']:exit`]() {
         for (const node of selectsInArray) {
           context.report({

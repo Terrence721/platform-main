@@ -92,6 +92,22 @@ class Ok {
   readonly store = inject(ComponentStore<MoviesState>)
   readonly vm$ = combineLatest(this.store.select(selectItems), somethingElse())
 }`,
+  // Only select calls count: other store methods are not selectors.
+  `
+import { inject } from '@angular/core'
+import { ComponentStore } from '@ngrx/component-store'
+class Ok {
+  readonly store = inject(ComponentStore<MoviesState>)
+  readonly vm$ = combineLatest([this.store.select(selectItems), this.store.loadAll()])
+  readonly other$ = combineLatest({ a: this.store.getA(), b: this.store.getB() })
+}`,
+  `
+import { inject } from '@angular/core'
+import { ComponentStore } from '@ngrx/component-store'
+class Ok {
+  readonly store = inject(ComponentStore<MoviesState>)
+  readonly vm$ = combineLatest({ items: this.store.select(selectItems), other: other$ })
+}`,
 ];
 
 const invalidConstructor: () => InvalidTestCase<MessageIds, Options>[] = () => [
@@ -206,6 +222,43 @@ class NotOk {
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ [${messageId}]
   );
 }`),
+  fromFixture(`
+import { inject } from '@angular/core'
+import { ComponentStore } from '@ngrx/component-store'
+class NotOk {
+  readonly store = inject(ComponentStore<MoviesState>)
+  readonly movie$ = combineLatest({
+    movies: this.store.select((state) => state.movies),
+    selectedId: this.store.select((state) => state.selectedId),
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ [${messageId}]
+  });
+}`),
+];
+
+const invalidObject: () => InvalidTestCase<MessageIds, Options>[] = () => [
+  fromFixture(`
+import { ComponentStore } from '@ngrx/component-store'
+
+class NotOk extends ComponentStore<MoviesState> {
+  movie$ = combineLatest({
+    movies: this.select((state) => state.movies),
+    selectedId: this.select((state) => state.selectedId),
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ [${messageId}]
+    other: other$,
+  });
+}`),
+  // A nested combineLatest between them does not reset the outer object.
+  fromFixture(`
+import { ComponentStore } from '@ngrx/component-store'
+
+class NotOk extends ComponentStore<MoviesState> {
+  movie$ = combineLatest({
+    movies: this.select((state) => state.movies),
+    nested: combineLatest([other$]),
+    selectedId: this.select((state) => state.selectedId),
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ [${messageId}]
+  });
+}`),
 ];
 
 // Static describe so Vitest's typecheck mode finds a suite (see spec/utils/rule-tester.ts).
@@ -215,7 +268,11 @@ describe('rule', () => {
     rule,
     {
       valid: [...validConstructor(), ...validInject()],
-      invalid: [...invalidConstructor(), ...invalidInject()],
+      invalid: [
+        ...invalidConstructor(),
+        ...invalidInject(),
+        ...invalidObject(),
+      ],
     }
   );
 });

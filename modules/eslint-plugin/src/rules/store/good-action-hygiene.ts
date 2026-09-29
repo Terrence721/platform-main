@@ -1,7 +1,7 @@
-import type { TSESTree } from '@typescript-eslint/utils';
+import { AST_NODE_TYPES, type TSESTree } from '@typescript-eslint/utils';
 import * as path from 'path';
 import { createRule } from '../../rule-creator';
-import { actionCreatorWithLiteral } from '../../utils';
+import { actionCreator } from '../../utils';
 
 export const messageId = 'goodActionHygiene';
 
@@ -24,17 +24,24 @@ export default createRule<Options, MessageIds>({
   },
   defaultOptions: [],
   create: (context) => {
-    const sourceEventPattern = /[[].*[\]]\s.*/;
+    // "[Source] Event": a non-empty source in brackets at the start, then the
+    // event.
+    const sourceEventPattern = /^\[[^\]]+\]\s+\S/;
 
     return {
-      [actionCreatorWithLiteral]({
-        arguments: [node],
-      }: Omit<TSESTree.CallExpression, 'arguments'> & {
-        arguments: TSESTree.StringLiteral[];
-      }) {
-        const { value: actionType } = node;
+      [actionCreator]({ arguments: [node] }: TSESTree.CallExpression) {
+        // A string in any quotes, or a template literal without expressions
+        // (one with expressions is only known at runtime).
+        const actionType =
+          node?.type === AST_NODE_TYPES.Literal &&
+          typeof node.value === 'string'
+            ? node.value
+            : node?.type === AST_NODE_TYPES.TemplateLiteral &&
+                node.expressions.length === 0
+              ? node.quasis[0].value.cooked
+              : null;
 
-        if (sourceEventPattern.test(actionType)) {
+        if (actionType === null || sourceEventPattern.test(actionType)) {
           return;
         }
 

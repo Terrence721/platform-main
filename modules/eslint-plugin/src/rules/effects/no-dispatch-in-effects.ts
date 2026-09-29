@@ -1,12 +1,23 @@
-import type { TSESTree } from '@typescript-eslint/utils';
+import {
+  AST_NODE_TYPES,
+  ASTUtils,
+  type TSESTree,
+} from '@typescript-eslint/utils';
 import * as path from 'path';
 import { createRule } from '../../rule-creator';
 import {
   asPattern,
+  createEffectExpression,
   dispatchInEffects,
+  getImportDeclarations,
+  getImportDeclarationSpecifier,
   getNgRxStores,
   isArrowFunctionExpression,
+  isCallExpression,
+  isIdentifier,
   isReturnStatement,
+  isTSTypeReference,
+  NGRX_MODULE_PATHS,
 } from '../../utils';
 
 export const noDispatchInEffects = 'noDispatchInEffects';
@@ -39,27 +50,88 @@ export default createRule<Options, MessageIds>({
   create: (context) => {
     const { identifiers = [] } = getNgRxStores(context);
     const storeNames = identifiers.length > 0 ? asPattern(identifiers) : null;
+    // The local name Store is imported as, for functional effects.
+    const { importSpecifier } =
+      getImportDeclarationSpecifier(
+        getImportDeclarations(
+          context.sourceCode.ast,
+          NGRX_MODULE_PATHS.store
+        ) ?? [],
+        'Store'
+      ) ?? {};
+    const storeImportName = importSpecifier?.local.name;
 
-    if (!storeNames) {
-      return {};
+    const reported = new WeakSet<TSESTree.Node>();
+    function report(node: MemberExpressionWithinCallExpression) {
+      if (reported.has(node)) {
+        return;
+      }
+      reported.add(node);
+      const nodeToReport = getNodeToReport(node);
+      context.report({
+        node: nodeToReport,
+        messageId: noDispatchInEffects,
+        suggest: [
+          {
+            messageId: noDispatchInEffectsSuggest,
+            fix: (fixer) => fixer.remove(nodeToReport),
+          },
+        ],
+      });
+    }
+
+    // A variable is a store when it is typed `Store` or set to
+    // `inject(Store)`: a functional effect's parameter default
+    // (`store = inject(Store)`) or a `const` in its body.
+    function isStoreVariable(identifier: TSESTree.Identifier): boolean {
+      const variable = ASTUtils.findVariable(
+        context.sourceCode.getScope(identifier),
+        identifier
+      );
+      const name = variable?.defs[0]?.name;
+      if (!name || !isIdentifier(name)) {
+        return false;
+      }
+      const annotation = name.typeAnnotation?.typeAnnotation;
+      if (
+        annotation &&
+        isTSTypeReference(annotation) &&
+        isIdentifier(annotation.typeName) &&
+        annotation.typeName.name === storeImportName
+      ) {
+        return true;
+      }
+      const { parent } = name;
+      const initializer =
+        parent?.type === AST_NODE_TYPES.AssignmentPattern &&
+        parent.left === name
+          ? parent.right
+          : parent?.type === AST_NODE_TYPES.VariableDeclarator &&
+              parent.id === name
+            ? parent.init
+            : null;
+      return (
+        !!initializer &&
+        isCallExpression(initializer) &&
+        isIdentifier(initializer.callee) &&
+        initializer.callee.name === 'inject' &&
+        !!initializer.arguments[0] &&
+        isIdentifier(initializer.arguments[0]) &&
+        initializer.arguments[0].name === storeImportName
+      );
     }
 
     return {
-      [dispatchInEffects(storeNames)](
-        node: MemberExpressionWithinCallExpression
-      ) {
-        const nodeToReport = getNodeToReport(node);
-        context.report({
-          node: nodeToReport,
-          messageId: noDispatchInEffects,
-          suggest: [
-            {
-              messageId: noDispatchInEffectsSuggest,
-              fix: (fixer) => fixer.remove(nodeToReport),
-            },
-          ],
-        });
-      },
+      ...(storeNames && { [dispatchInEffects(storeNames)]: report }),
+      ...(storeImportName && {
+        [`${createEffectExpression} CallExpression[callee.property.name='dispatch'] > MemberExpression.callee[object.type='Identifier']`](
+          node: MemberExpressionWithinCallExpression
+        ) {
+          if (isStoreVariable(node.object as TSESTree.Identifier)) {
+            report(node);
+          }
+        },
+      }),
     };
   },
 });

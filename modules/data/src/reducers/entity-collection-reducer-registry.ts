@@ -20,7 +20,12 @@ export interface EntityCollectionReducers {
  */
 @Injectable()
 export class EntityCollectionReducerRegistry {
-  protected entityCollectionReducers: EntityCollectionReducers = {};
+  /**
+   * Reducers keyed by trimmed entity name. No prototype, so an entity named
+   * like an Object.prototype member (e.g. "constructor") gets its own reducer.
+   */
+  protected entityCollectionReducers: EntityCollectionReducers =
+    Object.create(null);
   private entityCollectionMetaReducer: MetaReducer<
     EntityCollection,
     EntityAction
@@ -44,13 +49,14 @@ export class EntityCollectionReducerRegistry {
    * @param entityName Name of the entity type for this reducer
    */
   getOrCreateReducer<T>(entityName: string): EntityCollectionReducer<T> {
+    // Trimmed like registerReducer, so a padded name finds the same reducer
+    entityName = entityName.trim();
     let reducer: EntityCollectionReducer<T> =
       this.entityCollectionReducers[entityName];
 
     if (!reducer) {
       reducer = this.entityCollectionReducerFactory.create<T>(entityName);
       reducer = this.registerReducer<T>(entityName, reducer);
-      this.entityCollectionReducers[entityName] = reducer;
     }
     return reducer;
   }

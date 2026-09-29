@@ -5,8 +5,10 @@
   They are included as candidates for generating persistable correlation ids if that becomes desirable.
   They are also safe for generating unique entity ids on the client.
 
-  Note they produce 32-character hexadecimal UUID strings,
-  not the 128-bit representation found in server-side languages and databases.
+  Note they produce hexadecimal strings (28 characters from getGuid, 29 from
+  getGuidComb), not standard UUIDs or the 128-bit representation found in
+  server-side languages and databases. They use Math.random, not a
+  cryptographic random source.
 
   These utilities are experimental and may be withdrawn or replaced in future.
 */
@@ -18,9 +20,7 @@ function getUuid() {
   // The original implementation is based on this SO answer:
   // http://stackoverflow.com/a/2117523/200253
   return 'xxxxxxxxxx4xxyxxxxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-    // eslint-disable-next-line no-bitwise
     const r = (Math.random() * 16) | 0,
-      // eslint-disable-next-line no-bitwise
       v = c === 'x' ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
@@ -50,12 +50,14 @@ export function getGuidComb(seed?: number) {
   // Replace LAST 6 bytes (12 hex digits) of regular Guid (that's where they sort in a Db)
   //
   // Play with this in jsFiddle: http://jsfiddle.net/wardbell/qS8aN/
-  const timePart = ('00' + (seed || new Date().getTime()).toString(16)).slice(
-    -12
-  );
+  // Always 12 hex digits, so the time part (and the sort) is reliable for
+  // any seed, including 0 and small values.
+  const timePart = (seed ?? new Date().getTime())
+    .toString(16)
+    .padStart(12, '0')
+    .slice(-12);
   return (
     'xxxxxxxxxx4xxyxxx'.replace(/[xy]/g, function (c) {
-      /* eslint-disable no-bitwise */
       const r = (Math.random() * 16) | 0,
         v = c === 'x' ? r : (r & 0x3) | 0x8;
       return v.toString(16);
@@ -63,7 +65,10 @@ export function getGuidComb(seed?: number) {
   );
 }
 
-// Sort comparison value that's good enough
+/**
+ * Sort comparison for getGuidComb values: by their trailing time part,
+ * then by the whole string.
+ */
 export function guidComparer(l: string, r: string) {
   const lLow = l.slice(-12);
   const rLow = r.slice(-12);

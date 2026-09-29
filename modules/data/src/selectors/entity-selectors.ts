@@ -1,6 +1,5 @@
 import { Inject, Injectable, Optional } from '@angular/core';
 
-// Prod build requires `MemoizedSelector even though not used.
 import { MemoizedSelector } from '@ngrx/store';
 import { createSelector, Selector } from '@ngrx/store';
 import { Dictionary } from '@ngrx/entity';
@@ -45,10 +44,10 @@ export interface CollectionSelectors<T> {
   /** Keys of the cached collection, in the collection's native sort order */
   readonly selectKeys: Selector<EntityCollection<T>, string[] | number[]>;
 
-  /** True when the collection has been fully loaded. */
+  /** True once the collection has been filled (see EntityCollection.loaded). */
   readonly selectLoaded: Selector<EntityCollection<T>, boolean>;
 
-  /** True when a multi-entity query command is in progress. */
+  /** True while a query or save is in progress (see EntityCollection.loading). */
   readonly selectLoading: Selector<EntityCollection<T>, boolean>;
 
   /** ChangeState (including original values) of entities with unsaved changes */
@@ -90,10 +89,10 @@ export interface EntitySelectors<T> {
   /** Keys of the cached collection, in the collection's native sort order */
   readonly selectKeys: MemoizedSelector<Object, string[] | number[]>;
 
-  /** True when the collection has been fully loaded. */
+  /** True once the collection has been filled (see EntityCollection.loaded). */
   readonly selectLoaded: MemoizedSelector<Object, boolean>;
 
-  /** True when a multi-entity query command is in progress. */
+  /** True while a query or save is in progress (see EntityCollection.loading). */
   readonly selectLoading: MemoizedSelector<Object, boolean>;
 
   /** ChangeState (including original values) of entities with unsaved changes */
@@ -127,9 +126,13 @@ export class EntitySelectorsFactory {
     T = any,
     C extends EntityCollection<T> = EntityCollection<T>,
   >(entityName: string) {
+    // Own properties only: before an entity named like an Object.prototype
+    // member (e.g. "constructor") has a collection, the lookup would find
+    // the inherited member instead.
     const getCollection = (cache: EntityCache = {}) =>
       <C>(
-        (cache[entityName] ||
+        ((Object.prototype.hasOwnProperty.call(cache, entityName) &&
+          cache[entityName]) ||
           this.entityCollectionCreator.create<T>(entityName))
       );
     return createSelector(this.selectEntityCache, getCollection);
@@ -139,19 +142,17 @@ export class EntitySelectorsFactory {
 
   // Based on @ngrx/entity/state_selectors.ts
 
-  /* eslint-disable @typescript-eslint/unified-signatures */
   // createCollectionSelectors(metadata) overload
   /**
    * Creates entity collection selectors from metadata.
    * @param metadata - EntityMetadata for the collection.
-   * May be partial but much have `entityName`.
+   * May be partial but must have `entityName`.
    */
   createCollectionSelectors<
     T,
     S extends CollectionSelectors<T> = CollectionSelectors<T>,
   >(metadata: EntityMetadata<T>): S;
 
-  /* eslint-disable @typescript-eslint/unified-signatures */
   // createCollectionSelectors(entityName) overload
   /**
    * Creates default entity collection selectors for an entity type.
@@ -237,7 +238,7 @@ export class EntitySelectorsFactory {
    * {EntitySelectors$Factory} turns them into selectors$.
    *
    * @param metadata - EntityMetadata for the collection.
-   * May be partial but much have `entityName`.
+   * May be partial but must have `entityName`.
    *
    * Based on ngrx/entity/state_selectors.ts
    * Differs in that these selectors select from the NgRx store root,
@@ -260,7 +261,6 @@ export class EntitySelectorsFactory {
    * through the collection, to the collection members.
    */
   create<T, S extends EntitySelectors<T> = EntitySelectors<T>>(
-    // eslint-disable-next-line @typescript-eslint/unified-signatures
     entityName: string
   ): S;
 

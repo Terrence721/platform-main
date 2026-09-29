@@ -82,6 +82,11 @@ describe('EntitySelectors', () => {
       expect(collection.foo).toBe('towel');
       expect(collectionCreator.create).not.toHaveBeenCalled();
     });
+
+    it('defaults to an empty collection for an entity named like an Object.prototype member', () => {
+      const selectors = new EntitySelectorsFactory().create('constructor');
+      expect(selectors.selectEntities({ entityCache: {} })).toEqual([]);
+    });
   });
 
   describe('#createEntitySelectors', () => {

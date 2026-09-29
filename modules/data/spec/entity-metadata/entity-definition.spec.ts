@@ -69,6 +69,16 @@ describe('EntityDefinition', () => {
       );
     });
 
+    it('throws when `additionalCollectionState` would replace a built-in selector', () => {
+      const metadata = {
+        ...heroMetadata,
+        additionalCollectionState: { count: 'no', errors: [], foo: 'foo' },
+      };
+      expect(() => createEntityDefinition(metadata)).toThrowError(
+        'additionalCollectionState for "Hero" uses reserved name(s): count, errors'
+      );
+    });
+
     it('allows `additionalCollectionState` names that Object.prototype has', () => {
       const metadata = {
         ...heroMetadata,

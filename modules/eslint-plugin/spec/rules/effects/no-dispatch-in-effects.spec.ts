@@ -591,14 +591,102 @@ class NotOk7 {
   ),
 ];
 
+const validFunctional: () => (string | ValidTestCase<Options>)[] = () => [
+  // Only a variable typed Store or set to inject(Store) is a store.
+  `
+import { Store } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+export const effect = createEffect(
+  (actions$ = inject(Actions), bus = inject(EventBus)) =>
+    actions$.pipe(tap(() => bus.dispatch(awesomeAction()))),
+  { functional: true, dispatch: false },
+)`,
+];
+
+const invalidFunctional: () => InvalidTestCase<MessageIds, Options>[] = () => [
+  fromFixture(
+    `
+import { Store } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+export const effect = createEffect(
+  (actions$ = inject(Actions), store = inject(Store)) =>
+    actions$.pipe(tap(() => store.dispatch(awesomeAction()))),
+                            ~~~~~~~~~~~~~~ [${noDispatchInEffects} suggest]
+  { functional: true, dispatch: false },
+)`,
+    {
+      suggestions: [
+        {
+          messageId: noDispatchInEffectsSuggest,
+          output: `
+import { Store } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+export const effect = createEffect(
+  (actions$ = inject(Actions), store = inject(Store)) =>
+    actions$.pipe(tap(() => (awesomeAction()))),
+  { functional: true, dispatch: false },
+)`,
+        },
+      ],
+    }
+  ),
+  fromFixture(
+    `
+import { Store as NgRxStore } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+export const effect = createEffect(
+  () => {
+    const store = inject<NgRxStore<State>>(NgRxStore);
+    return inject(Actions).pipe(
+      tap(() => {
+        store.dispatch(awesomeAction());
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ [${noDispatchInEffects} suggest]
+      }),
+    );
+  },
+  { functional: true, dispatch: false },
+)`,
+    {
+      suggestions: [
+        {
+          messageId: noDispatchInEffectsSuggest,
+          output: `
+import { Store as NgRxStore } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+export const effect = createEffect(
+  () => {
+    const store = inject<NgRxStore<State>>(NgRxStore);
+    return inject(Actions).pipe(
+      tap(() => {
+        ;
+      }),
+    );
+  },
+  { functional: true, dispatch: false },
+)`,
+        },
+      ],
+    }
+  ),
+];
+
 // Static describe so Vitest's typecheck mode finds a suite (see spec/utils/rule-tester.ts).
 describe('rule', () => {
   ruleTester(rule.meta.docs?.requiresTypeChecking).run(
     path.parse(__filename).name,
     rule,
     {
-      valid: [...validConstructor(), ...validInject()],
-      invalid: [...invalidConstructor(), ...invalidInject()],
+      valid: [...validConstructor(), ...validInject(), ...validFunctional()],
+      invalid: [
+        ...invalidConstructor(),
+        ...invalidInject(),
+        ...invalidFunctional(),
+      ],
     }
   );
 });

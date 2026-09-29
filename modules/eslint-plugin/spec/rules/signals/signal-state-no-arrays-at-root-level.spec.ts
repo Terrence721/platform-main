@@ -91,6 +91,19 @@ const state = signalState(function() {});
   fromFixture(`
 const state = signalState(() => {});
                           ~~~~~~~~ [${messageId} { "property": "Function" }]`),
+  fromFixture(`
+import { signalState as state } from '@ngrx/signals';
+const books = state([1, 2, 3]);
+                    ~~~~~~~~~ [${messageId} { "property": "Array" }]`),
+  fromFixture(`
+import * as signals from '@ngrx/signals';
+const books = signals.signalState([1, 2, 3]);
+                                  ~~~~~~~~~ [${messageId} { "property": "Array" }]`),
+  // A union counts when a member other than null or undefined is not a record.
+  fromFixture(`
+declare const initialState: string[] | null;
+const state = signalState(initialState);
+                          ~~~~~~~~~~~~ [${messageId} { "property": "Array" }]`),
 ];
 
 // Static describe so Vitest's typecheck mode finds a suite (see spec/utils/rule-tester.ts).

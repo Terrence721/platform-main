@@ -23,21 +23,34 @@ export default createRule<Options, MessageIds>({
   },
   defaultOptions: [],
   create: (context) => {
-    const ngOnDestroyMethodSelector = `MethodDefinition[key.name='ngOnDestroy']`;
+    // A method or an arrow-function property: either replaces the store's own
+    // ngOnDestroy. Only the class's own non-static members with a body count.
+    const ngOnDestroyMemberSelector = `ClassBody > :matches(MethodDefinition[value.type!='TSEmptyBodyFunctionExpression'], PropertyDefinition)[static=false][computed=false][key.name='ngOnDestroy']`;
     const componentStoreClassName = 'ComponentStore';
 
-    let hasNgrxComponentStoreImport = false;
+    // The local names ComponentStore is imported as (it may be aliased).
+    const componentStoreNames = new Set<string>();
 
     return {
       [`ImportDeclaration[source.value='@ngrx/component-store'] ImportSpecifier[imported.name='${componentStoreClassName}']`](
-        _: TSESTree.ImportSpecifier
+        node: TSESTree.ImportSpecifier
       ) {
-        hasNgrxComponentStoreImport = true;
+        componentStoreNames.add(node.local.name);
       },
-      [`ClassDeclaration[superClass.name=${componentStoreClassName}] ${ngOnDestroyMethodSelector}:not(:has(CallExpression[callee.object.type='Super'][callee.property.name='ngOnDestroy'])) > .key`](
+      [`${ngOnDestroyMemberSelector}:not(:has(CallExpression[callee.object.type='Super'][callee.property.name='ngOnDestroy'])) > .key`](
         node: TSESTree.Identifier
       ) {
-        if (!hasNgrxComponentStoreImport) {
+        const classNode = node.parent.parent?.parent;
+        const superClass =
+          classNode &&
+          (classNode.type === 'ClassDeclaration' ||
+            classNode.type === 'ClassExpression')
+            ? classNode.superClass
+            : null;
+        if (
+          superClass?.type !== 'Identifier' ||
+          !componentStoreNames.has(superClass.name)
+        ) {
           return;
         }
 

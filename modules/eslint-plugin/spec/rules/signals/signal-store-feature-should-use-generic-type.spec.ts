@@ -23,6 +23,11 @@ const valid: () => (string | ValidTestCase<Options>)[] = () => [
     const feature = signalStoreFeature(type<{ state: { y: number } }>(), withState({}));
     return feature;
   }`,
+  // The nearest function creates the feature; an outer one is not checked.
+  `function outer() {
+    const withY = <Y>() => signalStoreFeature({ state: type<{ y: Y }>() }, withState({}));
+    return withY;
+  }`,
 ];
 
 const invalid: () => InvalidTestCase<MessageIds, Options>[] = () => [
@@ -93,6 +98,49 @@ function withY<_>() {
   const feature = signalStoreFeature({ state: type<{ y: number }>() }, withState({}));
   return feature;
 }`,
+    }
+  ),
+  // Reported once, on the nearest function only.
+  fromFixture(
+    `
+function outer() {
+  const withY = () => signalStoreFeature({ state: type<{ y: number }>() });
+                      ~~~~~~~~~~~~~~~~~~ [${messageId}]
+  return withY;
+}`,
+    {
+      output: `
+function outer() {
+  const withY = <_>() => signalStoreFeature({ state: type<{ y: number }>() });
+  return withY;
+}`,
+    }
+  ),
+  fromFixture(
+    `
+const withY = async () => signalStoreFeature({ state: type<{ y: number }>() });
+                          ~~~~~~~~~~~~~~~~~~ [${messageId}]`,
+    {
+      output: `
+const withY = async <_>() => signalStoreFeature({ state: type<{ y: number }>() });`,
+    }
+  ),
+  fromFixture(
+    `
+const withY = function (y) { return signalStoreFeature({ state: type<{ y: number }>() }); };
+                                    ~~~~~~~~~~~~~~~~~~ [${messageId}]`,
+    {
+      output: `
+const withY = function <_>(y) { return signalStoreFeature({ state: type<{ y: number }>() }); };`,
+    }
+  ),
+  fromFixture(
+    `
+const withY = y => signalStoreFeature({ state: type<{ y: number }>() });
+                   ~~~~~~~~~~~~~~~~~~ [${messageId}]`,
+    {
+      output: `
+const withY = <_>(y) => signalStoreFeature({ state: type<{ y: number }>() });`,
     }
   ),
 ];

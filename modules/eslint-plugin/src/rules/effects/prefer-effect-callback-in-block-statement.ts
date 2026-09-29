@@ -56,21 +56,28 @@ export default createRule<Options, MessageIds>({
   },
 });
 
+// The outermost parentheses around the body, so `{ return ... }` wraps all of
+// them: `() => ((x))` becomes `() => { return ((x)) }`. After `=>` an opening
+// parenthesis can only wrap the body, never createEffect's own call.
 function getSafeNodesToApplyFix(
   sourceCode: Readonly<TSESLint.SourceCode>,
   node: TSESTree.Node
 ) {
-  const previousToken = sourceCode.getTokenBefore(node);
-  const nextToken = sourceCode.getTokenAfter(node);
-
-  if (
-    previousToken &&
-    ASTUtils.isOpeningParenToken(previousToken) &&
-    nextToken &&
-    ASTUtils.isClosingParenToken(nextToken)
-  ) {
-    return [previousToken, nextToken] as const;
+  let first: TSESTree.Node | TSESTree.Token = node;
+  let last: TSESTree.Node | TSESTree.Token = node;
+  for (;;) {
+    const previousToken: TSESTree.Token | null =
+      sourceCode.getTokenBefore(first);
+    const nextToken: TSESTree.Token | null = sourceCode.getTokenAfter(last);
+    if (
+      !previousToken ||
+      !ASTUtils.isOpeningParenToken(previousToken) ||
+      !nextToken ||
+      !ASTUtils.isClosingParenToken(nextToken)
+    ) {
+      return [first, last] as const;
+    }
+    first = previousToken;
+    last = nextToken;
   }
-
-  return [node, node] as const;
 }

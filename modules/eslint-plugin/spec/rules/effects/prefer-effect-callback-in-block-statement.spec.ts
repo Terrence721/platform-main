@@ -161,6 +161,37 @@ class Effect {
 }`,
     }
   ),
+  fromFixture(
+    `
+export const effect = createEffect(
+  (actions$ = inject(Actions)) => actions$.pipe(map(() => pong())),
+                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ [${messageId}]
+  { functional: true },
+)`,
+    {
+      output: `
+export const effect = createEffect(
+  (actions$ = inject(Actions)) => { return actions$.pipe(map(() => pong())) },
+  { functional: true },
+)`,
+    }
+  ),
+  // Every pair of parentheses around the body goes inside the block.
+  fromFixture(
+    `
+@Injectable()
+class Effect {
+  effectNOK5 = createEffect(() => ((this.actions.pipe())))
+                                    ~~~~~~~~~~~~~~~~~~~ [${messageId}]
+}`,
+    {
+      output: `
+@Injectable()
+class Effect {
+  effectNOK5 = createEffect(() => { return ((this.actions.pipe())) })
+}`,
+    }
+  ),
 ];
 
 // Static describe so Vitest's typecheck mode finds a suite (see spec/utils/rule-tester.ts).

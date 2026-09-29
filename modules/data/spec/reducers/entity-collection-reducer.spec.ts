@@ -22,15 +22,10 @@ import {
   EntityActionDataServiceError,
   DataServiceError,
   ChangeType,
-  ChangeState,
   Logger,
 } from '../../';
 import { vi } from 'vitest';
 
-class Foo {
-  id!: string;
-  foo!: string;
-}
 class Hero {
   id!: number;
   name!: string;
@@ -108,6 +103,16 @@ describe('EntityCollectionReducer', () => {
     };
     const newCache = entityReducer(initialCache, action);
     expect(newCache).toBe(initialCache);
+  });
+
+  it('should ignore an EntityOp named like an Object.prototype member', () => {
+    for (const entityOp of ['toString', 'valueOf', 'constructor']) {
+      const action = {
+        type: 'does-not-matter',
+        payload: { entityName: 'Hero', entityOp: entityOp as EntityOp },
+      };
+      expect(entityReducer(initialCache, action)).toBe(initialCache);
+    }
   });
 
   // #region queries
@@ -472,8 +477,7 @@ describe('EntityCollectionReducer', () => {
     });
 
     it('QUERY_LOAD_SUCCESS clears changeState', () => {
-      const { entityCache, preUpdatedEntity, updatedEntity } =
-        createTestTrackedEntities();
+      const { entityCache, updatedEntity } = createTestTrackedEntities();
 
       // Completely replaces existing Hero entities
       const heroes: Hero[] = [
@@ -1005,14 +1009,6 @@ describe('EntityCollectionReducer', () => {
   describe('SAVE_DELETE_ONE_SUCCESS (Optimistic)', () => {
     it('should turn loading flag off and clear change tracking for existing entity', () => {
       const { entityCache, removedEntity } = createTestTrackedEntities();
-
-      // the action that would have saved the delete
-      const saveAction = createAction(
-        'Hero',
-        EntityOp.SAVE_DELETE_ONE,
-        removedEntity.id,
-        { isOptimistic: true }
-      );
 
       const { entities: initialEntities, changeState: initialChangeState } =
         entityCache['Hero'];
@@ -2538,7 +2534,6 @@ describe('EntityCollectionReducer', () => {
 
   function createInitialCache(entityMap: { [entityName: string]: any[] }) {
     const cache: EntityCache = {};
-    // eslint-disable-next-line guard-for-in
     for (const entityName in entityMap) {
       const selectId =
         metadata[entityName].selectId || ((entity: any) => entity.id);
@@ -2589,17 +2584,6 @@ describe('EntityCollectionReducer', () => {
       startingHeroes,
       updatedEntity,
     };
-  }
-
-  /** Test for ChangeState with expected ChangeType */
-  function expectChangeType(
-    change: ChangeState<any>,
-    expectedChangeType: ChangeType,
-    msg?: string
-  ) {
-    expect(ChangeType[change.changeType]).toEqual(
-      ChangeType[expectedChangeType]
-    );
   }
 
   /** Test that loading flag changed in expected way and the rest of the collection stayed the same. */

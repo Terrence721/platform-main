@@ -68,10 +68,27 @@ import { NgRxRule } from '../src/rule-creator';
       {}
     );
 
+    // Type-checked configs include rules that need type information; say so
+    // where users read the config, since ESLint fails without it.
+    const typeInfoNote = configName.endsWith('-type-checked')
+      ? `
+     *
+     * Includes rules that need type information: add parserOptions for it,
+     * or ESLint fails with "You have used a rule which requires type
+     * information". For example:
+     *   {
+     *     languageOptions: {
+     *       parserOptions: {
+     *         projectService: true,
+     *         tsconfigRootDir: import.meta.dirname,
+     *       },
+     *     },
+     *   }`
+      : '';
     const tsCode = `
       /**
      * DO NOT EDIT
-     * This file is generated
+     * This file is generated${typeInfoNote}
      */
 
       import type { TSESLint } from '@typescript-eslint/utils';

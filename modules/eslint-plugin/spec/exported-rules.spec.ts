@@ -1,7 +1,7 @@
 import { Linter } from 'eslint';
 import * as path from 'path';
 import { traverseFolder } from '../src/utils';
-import { configs, rules as exportedRules } from '../src';
+import plugin, { configs, rules as exportedRules } from '../src';
 
 const rulesDirectory = path.join(__dirname, '../src/rules');
 const configsDirectory = path.join(__dirname, '../src/configs');
@@ -81,6 +81,26 @@ describe('ESLint flat config', () => {
       );
     }
   );
+  test('a config can register the default export next to a preset', () => {
+    const linter = new Linter({ configType: 'flat' });
+    const messages = linter.verify(
+      `import { createAction } from '@ngrx/store';
+      const x = createAction('x');`,
+      // typescript-eslint's config types differ from ESLint's own.
+      [
+        ...configs.store,
+        {
+          files: ['**/*.ts'],
+          plugins: { '@ngrx': plugin },
+          rules: { '@ngrx/good-action-hygiene': 'warn' },
+        },
+      ] as Linter.Config[],
+      'file.ts'
+    );
+    expect(
+      messages.map(({ ruleId, severity }) => ({ ruleId, severity }))
+    ).toEqual([{ ruleId: '@ngrx/good-action-hygiene', severity: 1 }]);
+  });
   test('there is a difference between type-checked rules', () => {
     expect(
       Object.keys((configs.allTypeChecked[1] as any).rules).length

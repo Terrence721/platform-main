@@ -1,4 +1,8 @@
-import type { TSESLint, TSESTree } from '@typescript-eslint/utils';
+import {
+  AST_NODE_TYPES,
+  type TSESLint,
+  type TSESTree,
+} from '@typescript-eslint/utils';
 import * as path from 'path';
 import { createRule } from '../../rule-creator';
 import {
@@ -60,8 +64,15 @@ export default createRule<Options, MessageIds>({
   },
 });
 
+// A constructor parameter property (`private store: Store`) or an injected
+// property (`store = inject(Store)`) is reported, and removed, as a whole.
 function getNodeToReport(node: TSESTree.Node) {
-  return node.parent && isTSParameterProperty(node.parent) ? node.parent : node;
+  const { parent } = node;
+  return parent &&
+    (isTSParameterProperty(parent) ||
+      parent.type === AST_NODE_TYPES.PropertyDefinition)
+    ? parent
+    : node;
 }
 
 function getFixes(
@@ -69,19 +80,32 @@ function getFixes(
   fixer: TSESLint.RuleFixer,
   node: TSESTree.Node
 ) {
-  const { parent } = node;
-  const nodeToRemove = parent && isTSParameterProperty(parent) ? parent : node;
-  return getNodeToCommaRemoveFix(sourceCode, fixer, nodeToRemove);
+  return getNodeToCommaRemoveFix(sourceCode, fixer, node);
 }
 
 type Identifiers = NonNullable<ReturnType<typeof getNgRxStores>['identifiers']>;
 
+// Stores in a class are grouped by the class, so injected properties and
+// constructor parameters count together; others by their parent as before.
+function getGroup(identifier: Identifiers[number]): TSESTree.Node {
+  for (
+    let node: TSESTree.Node | undefined = identifier.parent;
+    node;
+    node = node.parent
+  ) {
+    if (node.type === AST_NODE_TYPES.ClassBody) {
+      return node;
+    }
+  }
+  return isTSParameterProperty(identifier.parent)
+    ? identifier.parent.parent
+    : identifier.parent;
+}
+
 function groupBy(identifiers: Identifiers): Map<TSESTree.Node, Identifiers> {
   return identifiers.reduce<Map<TSESTree.Node, Identifiers>>(
     (accumulator, identifier) => {
-      const parent = isTSParameterProperty(identifier.parent)
-        ? identifier.parent.parent
-        : identifier.parent;
+      const parent = getGroup(identifier);
       const collectedIdentifiers = accumulator.get(parent);
       return accumulator.set(parent, [
         ...(collectedIdentifiers ?? []),

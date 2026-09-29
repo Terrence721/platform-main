@@ -28,9 +28,11 @@ export default createRule<Options, MessageIds>({
   create: (context) => {
     const storeNames = getNgrxComponentStoreNames(context);
 
-    const mapOperatorSelector = `[callee.property.name=pipe] > CallExpression[callee.name=map]`;
+    // The piped stream itself must be the select call: a select inside an
+    // operator's callback, or another store method, is not a selector.
+    const mapOperatorSelector = `[callee.property.name=pipe][callee.object.callee.property.name='select'] > CallExpression[callee.name=map]`;
     const selectors = [
-      `ClassDeclaration[superClass.name=/Store/] CallExpression:has(CallExpression[callee.object.type='ThisExpression'][callee.property.name='select'])${mapOperatorSelector}`,
+      `ClassDeclaration[superClass.name=/Store/] CallExpression[callee.object.callee.object.type='ThisExpression']${mapOperatorSelector}`,
       storeNames &&
         `${namedCallableExpression(storeNames)}${mapOperatorSelector}`,
     ]
@@ -38,7 +40,7 @@ export default createRule<Options, MessageIds>({
       .join(',');
 
     return {
-      [selectors](node: TSESTree.ArrowFunctionExpression) {
+      [selectors](node: TSESTree.CallExpression) {
         context.report({
           node,
           messageId,

@@ -225,14 +225,73 @@ export class Effects {
   ),
 ];
 
+const functionalSetup = `
+import { Actions, createEffect, ofType } from '@ngrx/effects'
+import { createAction, props } from '@ngrx/store'
+import { map, mergeMap, of, switchMap, toArray } from 'rxjs'
+import { inject } from '@angular/core'
+const foo = createAction('foo')
+const bar = createAction('bar')
+const loaded = createAction('loaded', props<{ ids: string[] }>())
+declare const condition: boolean
+`;
+
+const validItems: () => (string | ValidTestCase<Options>)[] = () => [
+  // An array of ids is not multiple actions: flattened, then collected back.
+  `
+${functionalSetup}
+export const effect = createEffect(
+  (actions$ = inject(Actions)) =>
+    actions$.pipe(
+      ofType(foo),
+      mergeMap(() => ['1', '2']),
+      toArray(),
+      map((ids) => loaded({ ids })),
+    ),
+  { functional: true },
+)`,
+];
+
+const invalidFunctional: () => InvalidTestCase<MessageIds, Options>[] = () => [
+  fromFixture(
+    `
+${functionalSetup}
+export const effect = createEffect(
+  (actions$ = inject(Actions)) =>
+    actions$.pipe(ofType(foo), switchMap(() => [foo(), bar()] as const)),
+                                               ~~~~~~~~~~~~~~~~~~~~~~~ [${messageId}]
+  { functional: true },
+)`
+  ),
+  // Every return counts, not just the first top-level one.
+  fromFixture(
+    `
+${functionalSetup}
+export const effect = createEffect(
+  (actions$ = inject(Actions)) =>
+    actions$.pipe(
+      ofType(foo),
+      switchMap(() => {
+        if (condition) {
+          return [foo(), bar()];
+                 ~~~~~~~~~~~~~~ [${messageId}]
+        }
+        return of(foo());
+      }),
+    ),
+  { functional: true },
+)`
+  ),
+];
+
 // Static describe so Vitest's typecheck mode finds a suite (see spec/utils/rule-tester.ts).
 describe('rule', () => {
   ruleTester(rule.meta.docs?.requiresTypeChecking).run(
     path.parse(__filename).name,
     rule,
     {
-      valid: valid(),
-      invalid: invalid(),
+      valid: [...valid(), ...validItems()],
+      invalid: [...invalid(), ...invalidFunctional()],
     }
   );
 });

@@ -215,6 +215,86 @@ class NotOk2 {
   ),
 ];
 
+// Stores injected with inject() count per class, with constructor parameters.
+const invalidInject: () => InvalidTestCase<MessageIds, Options>[] = () => [
+  fromFixture(
+    `
+import { Store } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+class NotOk {
+  readonly store = inject(Store)
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ [${noMultipleGlobalStores} suggest 0]
+  readonly store2 = inject(Store)
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ [${noMultipleGlobalStores} suggest 1]
+}`,
+    {
+      suggestions: [
+        {
+          messageId: noMultipleGlobalStoresSuggest,
+          output: `
+import { Store } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+class NotOk {
+${'  '}
+  readonly store2 = inject(Store)
+}`,
+        },
+        {
+          messageId: noMultipleGlobalStoresSuggest,
+          output: `
+import { Store } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+class NotOk {
+  readonly store = inject(Store)
+${'  '}
+}`,
+        },
+      ],
+    }
+  ),
+  fromFixture(
+    `
+import { Store } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+class NotOk {
+  readonly store = inject(Store)
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ [${noMultipleGlobalStores} suggest 0]
+  constructor(private readonly store2: Store) {}
+              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ [${noMultipleGlobalStores} suggest 1]
+}`,
+    {
+      suggestions: [
+        {
+          messageId: noMultipleGlobalStoresSuggest,
+          output: `
+import { Store } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+class NotOk {
+${'  '}
+  constructor(private readonly store2: Store) {}
+}`,
+        },
+        {
+          messageId: noMultipleGlobalStoresSuggest,
+          output: `
+import { Store } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+class NotOk {
+  readonly store = inject(Store)
+  constructor() {}
+}`,
+        },
+      ],
+    }
+  ),
+];
+
 // Static describe so Vitest's typecheck mode finds a suite (see spec/utils/rule-tester.ts).
 describe('rule', () => {
   ruleTester(rule.meta.docs?.requiresTypeChecking).run(
@@ -222,7 +302,7 @@ describe('rule', () => {
     rule,
     {
       valid: valid(),
-      invalid: invalid(),
+      invalid: [...invalid(), ...invalidInject()],
     }
   );
 });

@@ -53,15 +53,20 @@ describe('ESLint flat config', () => {
     ]);
   });
   test.each([
-    { config: 'componentStore', ngrxModule: 'component-store' },
+    {
+      config: 'componentStore',
+      ngrxModule: 'component-store',
+      typeChecked: false,
+    },
+    { config: 'effectsTypeChecked', ngrxModule: 'effects', typeChecked: true },
   ] as const)(
-    'exports every $ngrxModule rule without type checking in the $config config',
-    ({ config, ngrxModule }) => {
+    'exports the $ngrxModule rules in the $config config',
+    ({ config, ngrxModule, typeChecked }) => {
       const expected = Object.entries(exportedRules)
         .filter(
           ([, rule]) =>
             rule.meta.docs?.ngrxModule === ngrxModule &&
-            rule.meta.docs?.requiresTypeChecking !== true
+            (typeChecked || rule.meta.docs?.requiresTypeChecking !== true)
         )
         .map(([ruleName]) => `@ngrx/${ruleName}`)
         .sort();

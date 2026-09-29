@@ -4,6 +4,7 @@ import {
   type TSESTree,
 } from '@typescript-eslint/utils';
 import * as path from 'path';
+import ts from 'typescript';
 import { createRule } from '../../rule-creator';
 import {
   createEffectExpression,
@@ -38,55 +39,95 @@ export default createRule<Options, MessageIds>({
   },
   defaultOptions: [],
   create: (context) => {
+    const services = ESLintUtils.getParserServices(context);
+    const typeChecker = services.program.getTypeChecker();
+
+    // An array or tuple whose items can be actions: one with items known not
+    // to be actions (no `type` property, e.g. ids to flatten) is not.
+    function isActionArray(type: ts.Type): boolean {
+      if (!typeChecker.isArrayType(type) && !typeChecker.isTupleType(type)) {
+        return false;
+      }
+      const itemType = typeChecker.getIndexTypeOfType(
+        type,
+        ts.IndexKind.Number
+      );
+      if (!itemType) {
+        return true;
+      }
+      const itemTypes = itemType.isUnion() ? itemType.types : [itemType];
+      return itemTypes.some(
+        (item) =>
+          (item.flags & (ts.TypeFlags.Any | ts.TypeFlags.Unknown)) !== 0 ||
+          !!typeChecker.getPropertyOfType(item, 'type')
+      );
+    }
+
     return {
       [`${createEffectExpression} ${mapLikeOperatorCallExpressions}`](
         node: EffectsMapLikeOperatorsReturn
       ) {
-        const nodeToReport = getNodeToReport(node);
-        if (!nodeToReport) {
-          return;
-        }
-
-        const services = ESLintUtils.getParserServices(context);
-        const typeChecker = services.program.getTypeChecker();
-        const type = services.getTypeAtLocation(nodeToReport);
-
-        if (typeChecker.isArrayType(type)) {
-          context.report({
-            node: nodeToReport,
-            messageId,
-          });
-        } else if (
-          type.isUnion() &&
-          type.types.some((ut) => typeChecker.isArrayType(ut))
-        ) {
-          context.report({
-            node: nodeToReport,
-            messageId,
-          });
+        for (const nodeToReport of getNodesToReport(node)) {
+          const type = services.getTypeAtLocation(nodeToReport);
+          const types = type.isUnion() ? type.types : [type];
+          if (types.some(isActionArray)) {
+            context.report({
+              node: nodeToReport,
+              messageId,
+            });
+          }
         }
       },
     };
   },
 });
 
-function getNodeToReport(node: EffectsMapLikeOperatorsReturn) {
+function getNodesToReport(
+  node: EffectsMapLikeOperatorsReturn
+): TSESTree.Node[] {
   switch (node.type) {
     case AST_NODE_TYPES.ArrowFunctionExpression:
     case AST_NODE_TYPES.FunctionExpression:
       return isBlockStatement(node.body)
-        ? findReturnStatement(node.body.body)
-        : node.body;
+        ? findReturnedValues(node.body)
+        : [node.body];
     case AST_NODE_TYPES.CallExpression:
-      return findReturnStatement(node.arguments) ?? node.arguments[0];
+      return node.arguments.slice(0, 1);
     default:
-      return node.argument;
+      return node.argument ? [node.argument] : [];
   }
 }
 
-function findReturnStatement(nodes: TSESTree.Node[]) {
-  const returnNode = nodes.find((n): n is TSESTree.ReturnStatement =>
-    isReturnStatement(n)
+// Every value the function returns, in any branch, but not the returns of
+// functions nested inside it.
+function findReturnedValues(node: TSESTree.Node): TSESTree.Node[] {
+  if (isReturnStatement(node)) {
+    return node.argument ? [node.argument] : [];
+  }
+  const values: TSESTree.Node[] = [];
+  for (const [key, value] of Object.entries(node)) {
+    if (key === 'parent') {
+      continue;
+    }
+    const children = Array.isArray(value) ? value : [value];
+    for (const child of children) {
+      if (
+        child &&
+        typeof child === 'object' &&
+        typeof (child as TSESTree.Node).type === 'string' &&
+        !isFunctionNode(child as TSESTree.Node)
+      ) {
+        values.push(...findReturnedValues(child as TSESTree.Node));
+      }
+    }
+  }
+  return values;
+}
+
+function isFunctionNode(node: TSESTree.Node): boolean {
+  return (
+    node.type === AST_NODE_TYPES.ArrowFunctionExpression ||
+    node.type === AST_NODE_TYPES.FunctionExpression ||
+    node.type === AST_NODE_TYPES.FunctionDeclaration
   );
-  return returnNode?.argument;
 }

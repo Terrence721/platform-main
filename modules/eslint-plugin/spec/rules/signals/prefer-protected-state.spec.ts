@@ -77,6 +77,35 @@ const mySignalStore = signalStore({  providedIn: 'root' });`,
       ],
     }
   ),
+  // The config object goes with the comma after it when features follow.
+  fromFixture(
+    `
+const mySignalStore = signalStore({ protectedState: false }, withState({ count: 0 }));
+                                    ~~~~~~~~~~~~~~~~~~~~~ [${preferProtectedState} suggest]`,
+    {
+      suggestions: [
+        {
+          messageId: preferProtectedStateSuggest,
+          output: `
+const mySignalStore = signalStore(withState({ count: 0 }));`,
+        },
+      ],
+    }
+  ),
+  fromFixture(
+    `
+const mySignalStore = signalStore({ 'protectedState': false }, withState({ count: 0 }));
+                                    ~~~~~~~~~~~~~~~~~~~~~~~ [${preferProtectedState} suggest]`,
+    {
+      suggestions: [
+        {
+          messageId: preferProtectedStateSuggest,
+          output: `
+const mySignalStore = signalStore(withState({ count: 0 }));`,
+        },
+      ],
+    }
+  ),
 ];
 
 // Static describe so Vitest's typecheck mode finds a suite (see spec/utils/rule-tester.ts).

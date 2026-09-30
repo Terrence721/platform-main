@@ -1,5 +1,6 @@
 // component (templates)
 import noAsyncPipeInNgrxLet from './component/no-async-pipe-in-ngrx-let';
+import noAsyncWithNgrxPush from './component/no-async-with-ngrx-push';
 // component-store
 import avoidCombiningComponentStoreSelectors from './component-store/avoid-combining-component-store-selectors';
 import avoidMappingComponentStoreSelectors from './component-store/avoid-mapping-component-store-selectors';
@@ -44,6 +45,7 @@ import enforceTypeCall from './signals/enforce-type-call';
 export const rules = {
   // component (templates)
   'no-async-pipe-in-ngrx-let': noAsyncPipeInNgrxLet,
+  'no-async-with-ngrx-push': noAsyncWithNgrxPush,
   // component-store
   'avoid-combining-component-store-selectors':
     avoidCombiningComponentStoreSelectors,

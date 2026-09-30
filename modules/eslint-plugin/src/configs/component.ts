@@ -27,6 +27,7 @@ export default (
     },
     rules: {
       '@ngrx/no-async-pipe-in-ngrx-let': 'error',
+      '@ngrx/no-async-with-ngrx-push': 'error',
     },
   },
 ];

@@ -22,5 +22,6 @@ export default [
 | Rule                        | What it reports                                                            | Fix           |
 | --------------------------- | -------------------------------------------------------------------------- | ------------- |
 | `no-async-pipe-in-ngrx-let` | `*ngrxLet="items$ \| async as items"`: `ngrxLet` already subscribes itself | drops `async` |
+| `no-async-with-ngrx-push`   | `items$ \| async \| ngrxPush` (either order): both pipes subscribe         | drops `async` |
 
 License: MIT

@@ -30,7 +30,7 @@
   },
   "packageManager": "yarn@4.18.1",
   "resolutions": {
-    "nx/brace-expansion": "^5.0.9",
+    "nx/brace-expansion": "^5.0.12",
     "compare-func/dot-prop": "^4.2.1",
     "xmlbuilder2/js-yaml": "^4.3.2",
     "qs": "^6.16.0",

@@ -108,6 +108,14 @@ class NotOk extends ComponentStore<MoviesState> {
     super({ movies: [] })
   }
 }`),
+  // ComponentStore imported under another name.
+  fromFixture(`
+import { ComponentStore as Base } from '@ngrx/component-store'
+
+class NotOkAliased extends Base<MoviesState> {
+  readonly addMovie = this.updater((state, movie) => ({ movies: [...state.movies, movie] }))
+                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ [${messageId}]
+}`),
   fromFixture(`
 import { ComponentStore } from '@ngrx/component-store'
 

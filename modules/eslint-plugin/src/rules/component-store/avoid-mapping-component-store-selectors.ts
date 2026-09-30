@@ -2,6 +2,7 @@ import type { TSESTree } from '@typescript-eslint/utils';
 import * as path from 'path';
 import { createRule } from '../../rule-creator';
 import {
+  componentStoreClass,
   getNgrxComponentStoreNames,
   namedCallableExpression,
 } from '../../utils';
@@ -32,7 +33,7 @@ export default createRule<Options, MessageIds>({
     // operator's callback, or another store method, is not a selector.
     const mapOperatorSelector = `[callee.property.name=pipe][callee.object.callee.property.name='select'] > CallExpression[callee.name=map]`;
     const selectors = [
-      `ClassDeclaration[superClass.name=/Store/] CallExpression[callee.object.callee.object.type='ThisExpression']${mapOperatorSelector}`,
+      `${componentStoreClass(context)} CallExpression[callee.object.callee.object.type='ThisExpression']${mapOperatorSelector}`,
       storeNames &&
         `${namedCallableExpression(storeNames)}${mapOperatorSelector}`,
     ]

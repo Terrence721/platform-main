@@ -1,7 +1,11 @@
 import type { TSESTree } from '@typescript-eslint/utils';
 import * as path from 'path';
 import { createRule } from '../../rule-creator';
-import { getNgrxComponentStoreNames, namedExpression } from '../../utils';
+import {
+  componentStoreClass,
+  getNgrxComponentStoreNames,
+  namedExpression,
+} from '../../utils';
 export const messageId = 'avoidCombiningComponentStoreSelectors';
 type MessageIds = typeof messageId;
 type Options = readonly [];
@@ -22,6 +26,7 @@ export default createRule<Options, MessageIds>({
   defaultOptions: [],
   create: (context) => {
     const storeNames = getNgrxComponentStoreNames(context);
+    const storeClass = componentStoreClass(context);
 
     const thisSelects = `CallExpression[callee.object.type='ThisExpression'][callee.property.name='select']`;
     // Only `select` calls on the store: its other methods are not selectors.
@@ -44,7 +49,7 @@ export default createRule<Options, MessageIds>({
       }
     };
     return {
-      [`ClassDeclaration[superClass.name=/Store/] CallExpression[callee.name='combineLatest'] ${thisSelects} ~ ${thisSelects}`](
+      [`${storeClass} CallExpression[callee.name='combineLatest'] ${thisSelects} ~ ${thisSelects}`](
         node: TSESTree.CallExpression
       ) {
         selectsInArray.push(node);
@@ -54,7 +59,7 @@ export default createRule<Options, MessageIds>({
       ) {
         selectsInArray.push(node);
       },
-      [`ClassDeclaration[superClass.name=/Store/] CallExpression[callee.name='combineLatest'] ObjectExpression > Property > ${thisSelects}.value`]:
+      [`${storeClass} CallExpression[callee.name='combineLatest'] ObjectExpression > Property > ${thisSelects}.value`]:
         selectInObject,
       [`CallExpression[callee.name='combineLatest'] ObjectExpression > Property > ${storeSelects}.value`]:
         selectInObject,

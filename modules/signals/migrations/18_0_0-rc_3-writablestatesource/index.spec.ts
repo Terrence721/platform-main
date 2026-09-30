@@ -91,8 +91,38 @@ function updateCount(state: StateSignal<{ count: number }>, count: number): void
       level: 'info',
     });
     expect(logEntries[1]).toMatchObject({
-      message: `[@ngrx/signals] No 'StateSignal' references found to, skipping the migration`,
+      message: `[@ngrx/signals] No 'StateSignal' references found, skipping the migration`,
       level: 'info',
+    });
+  });
+
+  describe('import forms', () => {
+    it('should migrate an aliased import', async () => {
+      await verifySchematic(
+        `import { StateSignal as SS } from '@ngrx/signals';\nlet s: SS<{}>;\n`,
+        `import { WritableStateSource as SS } from '@ngrx/signals';\nlet s: SS<{}>;\n`
+      );
+    });
+
+    it('should keep a type modifier', async () => {
+      await verifySchematic(
+        `import { type StateSignal, signalStore } from '@ngrx/signals';\nlet s: StateSignal<{}>;\n`,
+        `import { type WritableStateSource, signalStore } from '@ngrx/signals';\nlet s: WritableStateSource<{}>;\n`
+      );
+    });
+
+    it('should migrate uses through a namespace import', async () => {
+      await verifySchematic(
+        `import * as ngrx from '@ngrx/signals';\nlet s: ngrx.StateSignal<{}>;\n`,
+        `import * as ngrx from '@ngrx/signals';\nlet s: ngrx.WritableStateSource<{}>;\n`
+      );
+    });
+
+    it('should leave object keys and other properties alone', async () => {
+      await verifySchematic(
+        `import { StateSignal } from '@ngrx/signals';\nlet s: StateSignal<{}>;\nconst o = { StateSignal: 1 };\nfoo.StateSignal;\n`,
+        `import { WritableStateSource } from '@ngrx/signals';\nlet s: WritableStateSource<{}>;\nconst o = { StateSignal: 1 };\nfoo.StateSignal;\n`
+      );
     });
   });
 });

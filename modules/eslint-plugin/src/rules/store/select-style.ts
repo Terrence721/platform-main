@@ -1,18 +1,18 @@
-import type { TSESLint, TSESTree } from '@typescript-eslint/utils';
+import {
+  AST_NODE_TYPES,
+  ASTUtils,
+  type TSESLint,
+  type TSESTree,
+} from '@typescript-eslint/utils';
 import * as path from 'path';
 import { createRule } from '../../rule-creator';
 import {
-  asPattern,
   getImportAddFix,
+  getImportDeclarations,
+  getImportDeclarationSpecifier,
   getImportRemoveFix,
-  getNearestUpperNodeFrom,
   getNgRxStores,
-  isCallExpression,
-  isClassDeclaration,
-  isMemberExpression,
   NGRX_MODULE_PATHS,
-  pipeableSelect,
-  selectExpression,
 } from '../../utils';
 
 export const selectMethod = 'selectMethod';
@@ -31,13 +31,8 @@ type MemberExpressionWithProperty = Omit<
 > & {
   property: TSESTree.Identifier;
 };
-type CallExpression = Omit<TSESTree.CallExpression, 'parent'> & {
+type CallExpression = TSESTree.CallExpression & {
   callee: MemberExpressionWithProperty;
-  parent: TSESTree.CallExpression & {
-    callee: Omit<TSESTree.MemberExpression, 'object'> & {
-      object: MemberExpressionWithProperty;
-    };
-  };
 };
 
 export default createRule<Options, MessageIds>({
@@ -66,49 +61,175 @@ export default createRule<Options, MessageIds>({
   defaultOptions: [SelectStyle.Method],
   create: (context, [mode]) => {
     const { identifiers = [], sourceCode } = getNgRxStores(context);
-    const storeNames = identifiers.length > 0 ? asPattern(identifiers) : null;
+    const storeNames = new Set(identifiers.map(({ name }) => name));
+    const storeImports =
+      getImportDeclarations(sourceCode.ast, NGRX_MODULE_PATHS.store) ?? [];
+    const storeImportName = getImportDeclarationSpecifier(storeImports, 'Store')
+      ?.importSpecifier.local.name;
 
-    if (!storeNames) {
+    if (!storeImportName) {
       return {};
     }
 
+    // A variable is a store when it is typed `Store` (a constructor or
+    // function parameter too) or set to `inject(Store)`.
+    function isStoreVariable(identifier: TSESTree.Identifier): boolean {
+      const variable = ASTUtils.findVariable(
+        sourceCode.getScope(identifier),
+        identifier
+      );
+      const name = variable?.defs[0]?.name;
+      if (!name || name.type !== AST_NODE_TYPES.Identifier) {
+        return false;
+      }
+      const annotation = name.typeAnnotation?.typeAnnotation;
+      if (
+        annotation?.type === AST_NODE_TYPES.TSTypeReference &&
+        annotation.typeName.type === AST_NODE_TYPES.Identifier &&
+        annotation.typeName.name === storeImportName
+      ) {
+        return true;
+      }
+      const { parent } = name;
+      const initializer =
+        parent?.type === AST_NODE_TYPES.AssignmentPattern &&
+        parent.left === name
+          ? parent.right
+          : parent?.type === AST_NODE_TYPES.VariableDeclarator &&
+              parent.id === name
+            ? parent.init
+            : null;
+      return (
+        initializer?.type === AST_NODE_TYPES.CallExpression &&
+        initializer.callee.type === AST_NODE_TYPES.Identifier &&
+        initializer.callee.name === 'inject' &&
+        initializer.arguments[0]?.type === AST_NODE_TYPES.Identifier &&
+        initializer.arguments[0].name === storeImportName
+      );
+    }
+
+    // `this.store` (a class's injected store) or a store held in a variable.
+    function isStore(node: TSESTree.Node): boolean {
+      if (node.type === AST_NODE_TYPES.Identifier) {
+        return isStoreVariable(node);
+      }
+      return (
+        node.type === AST_NODE_TYPES.MemberExpression &&
+        node.object.type === AST_NODE_TYPES.ThisExpression &&
+        !node.computed &&
+        node.property.type === AST_NODE_TYPES.Identifier &&
+        storeNames.has(node.property.name)
+      );
+    }
+
+    const selectImport = getImportDeclarationSpecifier(storeImports, 'select');
+
     if (mode === SelectStyle.Operator) {
+      // The operator's local name: the existing import (an alias too), or
+      // `select`, added to the imports, when nothing else takes that name.
+      const operatorName = selectImport?.importSpecifier.local.name ?? 'select';
       return {
-        [selectExpression(storeNames)](node: CallExpression) {
+        [`CallExpression[callee.type='MemberExpression'][callee.computed=false][callee.property.name='select']`](
+          node: CallExpression
+        ) {
+          if (!isStore(node.callee.object)) {
+            return;
+          }
+          const nameTaken =
+            !selectImport &&
+            !!ASTUtils.findVariable(sourceCode.getScope(node), 'select');
           context.report({
             node: node.callee.property,
             messageId: SelectStyle.Operator,
-            fix: (fixer) => getMethodToOperatorFixes(node, fixer),
+            // The method's type parameter isn't the operator's.
+            ...(!node.typeArguments &&
+              !nameTaken && {
+                fix: (fixer) => [
+                  fixer.replaceText(
+                    node.callee.property,
+                    `pipe(${operatorName}`
+                  ),
+                  fixer.insertTextAfter(node, ')'),
+                  ...[
+                    getImportAddFix({
+                      fixer,
+                      importName: 'select',
+                      moduleName: NGRX_MODULE_PATHS.store,
+                      node,
+                    }),
+                  ].flat(),
+                ],
+              }),
           });
         },
       };
     }
 
+    if (!selectImport) {
+      return {};
+    }
+
     return {
-      [`Program:has(${pipeableSelect(
-        storeNames
-      )}) ImportDeclaration[source.value='${
-        NGRX_MODULE_PATHS.store
-      }'] > ImportSpecifier[imported.name='select']`](
-        node: TSESTree.ImportSpecifier & {
-          parent: TSESTree.ImportDeclaration;
-        }
-      ) {
-        context.report({
-          node,
-          messageId: SelectStyle.Method,
-          fix: (fixer) =>
-            getImportRemoveFix(sourceCode, [node.parent], 'select', fixer),
+      Program() {
+        const { importDeclaration, importSpecifier } = selectImport;
+        const [{ references }] =
+          sourceCode.getDeclaredVariables(importSpecifier);
+        // Only a store's first operator is the same as the method:
+        // `store.pipe(filter(f), select(s))` filters before it selects.
+        const firstOperators = references.map(({ identifier }) => {
+          const call = identifier.parent;
+          const pipe = call?.parent;
+          return call?.type === AST_NODE_TYPES.CallExpression &&
+            call.callee === identifier &&
+            pipe?.type === AST_NODE_TYPES.CallExpression &&
+            pipe.arguments[0] === call &&
+            pipe.callee.type === AST_NODE_TYPES.MemberExpression &&
+            !pipe.callee.computed &&
+            pipe.callee.property.type === AST_NODE_TYPES.Identifier &&
+            pipe.callee.property.name === 'pipe' &&
+            isStore(pipe.callee.object)
+            ? { identifier, call, pipe: pipe as CallExpression }
+            : null;
         });
 
-        const [{ references }] = sourceCode.getDeclaredVariables(node);
-
-        for (const { identifier } of references) {
+        for (const operator of firstOperators) {
+          if (!operator) {
+            continue;
+          }
+          const { identifier, call, pipe } = operator;
           context.report({
             node: identifier,
             messageId: SelectStyle.Method,
+            ...(!call.typeArguments && {
+              fix: (fixer) =>
+                getOperatorToMethodFixes(
+                  identifier,
+                  call,
+                  pipe,
+                  sourceCode,
+                  fixer
+                ),
+            }),
+          });
+        }
+
+        // The import goes once every use of it is a store's select.
+        if (
+          firstOperators.length > 0 &&
+          firstOperators.every(
+            (operator) => operator && !operator.call.typeArguments
+          )
+        ) {
+          context.report({
+            node: importSpecifier,
+            messageId: SelectStyle.Method,
             fix: (fixer) =>
-              getOperatorToMethodFixes(identifier, sourceCode, fixer),
+              getImportRemoveFix(
+                sourceCode,
+                [importDeclaration],
+                'select',
+                fixer
+              ),
           });
         }
       },
@@ -116,68 +237,34 @@ export default createRule<Options, MessageIds>({
   },
 });
 
-function getMethodToOperatorFixes(
-  node: CallExpression,
-  fixer: TSESLint.RuleFixer
-): readonly TSESLint.RuleFix[] {
-  const classDeclaration = getNearestUpperNodeFrom(node, isClassDeclaration);
-
-  if (!classDeclaration) {
-    return [];
-  }
-
-  return [
-    fixer.insertTextBefore(node.callee.property, 'pipe('),
-    fixer.insertTextAfter(node, ')'),
-  ].concat(
-    getImportAddFix({
-      fixer,
-      importName: 'select',
-      moduleName: NGRX_MODULE_PATHS.store,
-      node: classDeclaration,
-    })
-  );
-}
-
+// `store.pipe(select(s))` to `store.select(s)`, and
+// `store.pipe(select(s), map(m))` to `store.select(s).pipe(map(m))`.
 function getOperatorToMethodFixes(
-  identifier: TSESTree.Node,
+  identifier: TSESTree.Identifier,
+  call: TSESTree.CallExpression,
+  pipe: TSESTree.CallExpression & { callee: TSESTree.MemberExpression },
   sourceCode: Readonly<TSESLint.SourceCode>,
   fixer: TSESLint.RuleFixer
 ): readonly TSESLint.RuleFix[] {
-  const select = identifier.parent;
-  const storePipe = select?.parent;
+  // The method in place of the operator (which may be an alias), with the
+  // arguments as written.
+  const method = `select${sourceCode.text.slice(
+    identifier.range[1],
+    call.range[1]
+  )}`;
+  const [, nextOperator] = pipe.arguments;
 
-  if (
-    !storePipe ||
-    !isCallExpression(storePipe) ||
-    !isMemberExpression(storePipe.callee)
-  ) {
-    return [];
-  }
-
-  const pipeContainsOnlySelect = storePipe.arguments.length === 1;
-
-  if (!pipeContainsOnlySelect) {
-    const selectContent = sourceCode.getText(select);
-    const nextTokenAfterSelect = sourceCode.getTokenAfter(select);
-    const store = storePipe.callee.object;
+  if (!nextOperator) {
+    // The whole `pipe(...)`, a trailing comma included.
     return [
-      fixer.remove(select),
-      ...(nextTokenAfterSelect ? [fixer.remove(nextTokenAfterSelect)] : []),
-      fixer.insertTextAfter(store, `.${selectContent}`),
+      fixer.replaceTextRange(
+        [pipe.callee.property.range[0], pipe.range[1]],
+        method
+      ),
     ];
   }
-
-  const { property } = storePipe.callee;
-  const nextTokenAfterPipe = sourceCode.getTokenAfter(property);
-  const [pipeInitialRange, pipeEndRange] = property.range;
-  const pipeRange: TSESTree.Range = [
-    pipeInitialRange,
-    nextTokenAfterPipe?.range[1] ?? pipeEndRange,
-  ];
-  const [, selectEndRange] = identifier.range;
   return [
-    fixer.removeRange(pipeRange),
-    fixer.insertTextAfterRange([selectEndRange, selectEndRange + 1], '('),
+    fixer.insertTextAfter(pipe.callee.object, `.${method}`),
+    fixer.removeRange([call.range[0], nextOperator.range[0]]),
   ];
 }

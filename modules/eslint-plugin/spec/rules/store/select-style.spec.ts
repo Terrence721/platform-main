@@ -182,7 +182,7 @@ class NotOk {
 import {  Store } from '@ngrx/store'
 
 class NotOk {
-  foo$ = this.store. select((selector), )
+  foo$ = this.store.select(selector)
 
   constructor(private store: Store) {}
 }`,
@@ -207,7 +207,7 @@ import { Store } from '@ngrx/store'
 
 class NotOk1 {
   foo$ = this.store.select
-    (selector, selector2).pipe  ( filter(Boolean))
+    (selector, selector2).pipe  (filter(Boolean))
 
   constructor(private store: Store) {}
 }`,
@@ -293,18 +293,18 @@ import {
 } from '@ngrx/store'
 
 class NotOk3 {
-  foo$ = this.store.select(selector).pipe( map(toItem)).pipe()
+  foo$ = this.store.select(selector).pipe(map(toItem)).pipe()
   bar$ = this.store.
     select(selector).pipe()
   baz$ = this.store.select(({ customers }) => customers).pipe(
-     map(toItem),
+    map(toItem),
   ).pipe()
 
   constructor(private store: Store) {}
 }
 
 class NotOk4 {
-  foo$ = this.store.select(selector).pipe( map(toItem)).pipe()
+  foo$ = this.store.select(selector).pipe(map(toItem)).pipe()
 
   constructor(private readonly store: Store) {}
 }`,
@@ -355,7 +355,7 @@ import { inject } from '@angular/core'
 
 class NotOk6 {
   private store = inject(Store)
-  foo$ = this.store. select((selector), )
+  foo$ = this.store.select(selector)
 }`,
     }
   ),
@@ -380,7 +380,7 @@ import { inject } from '@angular/core'
 class NotOk7 {
   private store = inject(Store)
   foo$ = this.store.select
-    (selector, selector2).pipe  ( filter(Boolean))
+    (selector, selector2).pipe  (filter(Boolean))
 }`,
     }
   ),
@@ -463,17 +463,17 @@ import { inject } from '@angular/core'
 
 class NotOk9 {
   private store = inject(Store)
-  foo$ = this.store.select(selector).pipe( map(toItem)).pipe()
+  foo$ = this.store.select(selector).pipe(map(toItem)).pipe()
   bar$ = this.store.
     select(selector).pipe()
   baz$ = this.store.select(({ customers }) => customers).pipe(
-     map(toItem),
+    map(toItem),
   ).pipe()
 }
 
 class NotOk10 {
   private readonly store = inject(Store)
-  foo$ = this.store.select(selector).pipe( map(toItem)).pipe()
+  foo$ = this.store.select(selector).pipe(map(toItem)).pipe()
 }`,
     }
   ),
@@ -503,14 +503,199 @@ class NotOk11 {
   ),
 ];
 
+const validOperatorPosition: () => (string | ValidTestCase<Options>)[] = () => [
+  // Only a store's first operator is the same as the method: this filters
+  // before it selects.
+  `
+import { Store, select } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+class Ok18 {
+  private store = inject(Store)
+  foo$ = this.store.pipe(filter(Boolean), select(selector))
+}`,
+  // Not a store.
+  `
+import { Store, select } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+class Ok19 {
+  private store = inject(Store)
+  foo$ = this.other$.pipe(select(selector))
+}`,
+];
+
+const invalidModern: () => InvalidTestCase<MessageIds, Options>[] = () => [
+  // The import stays while something other than a store uses it.
+  fromFixture(
+    `
+import { Store, select } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+class NotOk12 {
+  private store = inject(Store)
+  foo$ = this.store.pipe(select(selector))
+                         ~~~~~~ [${SelectStyle.Method}]
+  bar$ = this.other$.pipe(select(selector))
+}`,
+    {
+      output: `
+import { Store, select } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+class NotOk12 {
+  private store = inject(Store)
+  foo$ = this.store.select(selector)
+  bar$ = this.other$.pipe(select(selector))
+}`,
+    }
+  ),
+  // An aliased import.
+  fromFixture(
+    `
+import { Store, select as fromStore } from '@ngrx/store'
+                ~~~~~~~~~~~~~~~~~~~ [${SelectStyle.Method}]
+import { inject } from '@angular/core'
+
+class NotOk13 {
+  private store = inject(Store)
+  foo$ = this.store.pipe(fromStore(selector))
+                         ~~~~~~~~~ [${SelectStyle.Method}]
+}`,
+    {
+      output: `
+import { Store } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+class NotOk13 {
+  private store = inject(Store)
+  foo$ = this.store.select(selector)
+}`,
+    }
+  ),
+  // A store held in a variable, as in a functional resolver.
+  fromFixture(
+    `
+import { Store, select } from '@ngrx/store'
+                ~~~~~~ [${SelectStyle.Method}]
+import { inject } from '@angular/core'
+
+export const booksResolver = () => {
+  const store = inject(Store)
+  return store.pipe(select(selectBooks))
+                    ~~~~~~ [${SelectStyle.Method}]
+}`,
+    {
+      output: `
+import { Store } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+export const booksResolver = () => {
+  const store = inject(Store)
+  return store.select(selectBooks)
+}`,
+    }
+  ),
+  // The operator's type parameters aren't the method's: no fix.
+  fromFixture(
+    `
+import { Store, select } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+class NotOk14 {
+  private store = inject(Store)
+  foo$ = this.store.pipe(select<State, Book[]>(selectBooks))
+                         ~~~~~~ [${SelectStyle.Method}]
+}`
+  ),
+  fromFixture(
+    `
+import { Store } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+export const booksResolver = () => {
+  const store = inject(Store)
+  return store.select(selectBooks)
+               ~~~~~~ [${SelectStyle.Operator}]
+}`,
+    {
+      options: [SelectStyle.Operator],
+      output: `
+import { Store, select } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+export const booksResolver = () => {
+  const store = inject(Store)
+  return store.pipe(select(selectBooks))
+}`,
+    }
+  ),
+  fromFixture(
+    `
+import { Store, select as fromStore } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+class NotOk15 {
+  private store = inject(Store)
+  foo$ = this.store.select(selector)
+                    ~~~~~~ [${SelectStyle.Operator}]
+}`,
+    {
+      options: [SelectStyle.Operator],
+      output: `
+import { Store, select as fromStore } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+class NotOk15 {
+  private store = inject(Store)
+  foo$ = this.store.pipe(fromStore(selector))
+}`,
+    }
+  ),
+  // No fix: a type argument, and \`select\` already taken by another import.
+  fromFixture(
+    `
+import { Store } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+class NotOk16 {
+  private store = inject(Store)
+  foo$ = this.store.select<Book[]>(selectBooks)
+                    ~~~~~~ [${SelectStyle.Operator}]
+}`,
+    { options: [SelectStyle.Operator] }
+  ),
+  fromFixture(
+    `
+import { select } from '@my-org/framework'
+import { Store } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+class NotOk17 {
+  private store = inject(Store)
+  foo$ = this.store.select(selector)
+                    ~~~~~~ [${SelectStyle.Operator}]
+}`,
+    { options: [SelectStyle.Operator] }
+  ),
+];
+
 // Static describe so Vitest's typecheck mode finds a suite (see spec/utils/rule-tester.ts).
 describe('rule', () => {
   ruleTester(rule.meta.docs?.requiresTypeChecking).run(
     path.parse(__filename).name,
     rule,
     {
-      valid: [...validConstructor(), ...validInject()],
-      invalid: [...invalidConstructor(), ...invalidInject()],
+      valid: [
+        ...validConstructor(),
+        ...validInject(),
+        ...validOperatorPosition(),
+      ],
+      invalid: [
+        ...invalidConstructor(),
+        ...invalidInject(),
+        ...invalidModern(),
+      ],
     }
   );
 });

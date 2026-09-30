@@ -24,6 +24,7 @@ const valid: () => (string | ValidTestCase<Options>)[] = () => [
       message,
       user,
     }));`,
+  `const BooksActions = createActionGroup({ source: 'Books', events: { 'Load': props<{ person: Person }>() } })`,
 ];
 
 const invalid: () => InvalidTestCase<MessageIds, Options>[] = () => [
@@ -92,6 +93,21 @@ const invalid: () => InvalidTestCase<MessageIds, Options>[] = () => [
           {
             messageId: preferInlineActionPropsSuggest,
             output: `const notOk4 = createAction('notOk4', props<{name: Test[]}>())`,
+          },
+        ],
+      },
+    ],
+  },
+  // The events of createActionGroup are checked too.
+  {
+    code: `const BooksActions = createActionGroup({ source: 'Books', events: { 'Load': props<Person>(), 'Clear': emptyProps() } })`,
+    errors: [
+      {
+        messageId: preferInlineActionProps,
+        suggestions: [
+          {
+            messageId: preferInlineActionPropsSuggest,
+            output: `const BooksActions = createActionGroup({ source: 'Books', events: { 'Load': props<{name: Person}>(), 'Clear': emptyProps() } })`,
           },
         ],
       },

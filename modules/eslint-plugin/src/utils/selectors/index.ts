@@ -8,8 +8,12 @@ export const propertyDefinitionWithEffectDecorator =
 export const actionCreator = `CallExpression[callee.name='createAction']`;
 export const actionCreatorProps =
   `${actionCreator} > CallExpression[callee.name='props']` as const;
+const computedPropsType = `TSTypeParameterInstantiation > :matches(TSTypeReference[typeName.name!='Readonly'], [type=/^TS(.*)(Keyword|Type)$/])`;
 export const actionCreatorPropsComputed =
-  `${actionCreatorProps} > TSTypeParameterInstantiation > :matches(TSTypeReference[typeName.name!='Readonly'], [type=/^TS(.*)(Keyword|Type)$/])` as const;
+  `${actionCreatorProps} > ${computedPropsType}` as const;
+// `createActionGroup({ source, events: { 'Load': props<Customer>() } })`.
+export const actionGroupPropsComputed =
+  `CallExpression[callee.name='createActionGroup'] > ObjectExpression > Property[key.name='events'] > ObjectExpression > Property > CallExpression[callee.name='props'] > ${computedPropsType}` as const;
 
 export const constructorDefinition = `MethodDefinition[kind='constructor']`;
 

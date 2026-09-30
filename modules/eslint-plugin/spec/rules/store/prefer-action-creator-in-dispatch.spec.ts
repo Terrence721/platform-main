@@ -199,6 +199,40 @@ class NotOk7 {
 }`),
 ];
 
+const invalidPayloadAndFunctions: () => InvalidTestCase<
+  MessageIds,
+  Options
+>[] = () => [
+  // Only the dispatched action is reported, not an object nested in it.
+  fromFixture(`
+import { Store } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+class NotOkPayload {
+  readonly store = inject(Store)
+
+  load() {
+    this.store.dispatch({ type: '[Books] Load', payload: { page: 1 } })
+                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ [${messageId}]
+  }
+}`),
+  // A store held in a variable, as in a functional initializer, including
+  // one named like a class store in the same file.
+  fromFixture(`
+import { Store } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+class Ok {
+  readonly store = inject(Store)
+}
+
+export const initBooks = () => {
+  const store = inject(Store)
+  store.dispatch({ type: '[Books] Load' })
+                 ~~~~~~~~~~~~~~~~~~~~~~~~ [${messageId}]
+}`),
+];
+
 // Static describe so Vitest's typecheck mode finds a suite (see spec/utils/rule-tester.ts).
 describe('rule', () => {
   ruleTester(rule.meta.docs?.requiresTypeChecking).run(
@@ -206,7 +240,11 @@ describe('rule', () => {
     rule,
     {
       valid: [...validConstructor(), ...validInject()],
-      invalid: [...invalidConstructor(), ...invalidInject()],
+      invalid: [
+        ...invalidConstructor(),
+        ...invalidInject(),
+        ...invalidPayloadAndFunctions(),
+      ],
     }
   );
 });

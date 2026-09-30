@@ -1,7 +1,11 @@
 import type { TSESTree } from '@typescript-eslint/utils';
 import * as path from 'path';
 import { createRule } from '../../rule-creator';
-import { getNgrxComponentStoreNames, namedExpression } from '../../utils';
+import {
+  componentStoreClass,
+  getNgrxComponentStoreNames,
+  namedExpression,
+} from '../../utils';
 
 export const messageId = 'updaterExplicitReturnType';
 
@@ -27,7 +31,7 @@ export default createRule<Options, MessageIds>({
     const storeNames = getNgrxComponentStoreNames(context);
     const withoutTypeAnnotation = `ArrowFunctionExpression:not([returnType.typeAnnotation])`;
     const selectors = [
-      `ClassDeclaration[superClass.name=/Store/] CallExpression[callee.object.type='ThisExpression'][callee.property.name='updater'] > ${withoutTypeAnnotation}`,
+      `${componentStoreClass(context)} CallExpression[callee.object.type='ThisExpression'][callee.property.name='updater'] > ${withoutTypeAnnotation}`,
       storeNames &&
         `${namedExpression(
           storeNames

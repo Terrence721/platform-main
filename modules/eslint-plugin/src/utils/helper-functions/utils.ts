@@ -438,6 +438,32 @@ export function asPattern(identifiers: readonly InjectedParameter[]): RegExp {
   return new RegExp(`^(${escapedNames.join('|')})$`);
 }
 
+// A class that extends ComponentStore: under any name it is imported as
+// (`ComponentStore as Base`), or, without type information, a superclass
+// named like a store (a store subclassing another store, e.g. from another
+// file).
+export function componentStoreClass(
+  context: TSESLint.RuleContext<string, readonly unknown[]>
+): string {
+  const importDeclarations =
+    getImportDeclarations(
+      context.sourceCode.ast,
+      NGRX_MODULE_PATHS['component-store']
+    ) ?? [];
+  const localNames = importDeclarations
+    .flatMap(({ specifiers }) => specifiers)
+    .filter(
+      (specifier): specifier is TSESTree.ImportSpecifier =>
+        isImportSpecifier(specifier) &&
+        isIdentifier(specifier.imported) &&
+        specifier.imported.name === 'ComponentStore'
+    )
+    .map(({ local }) => escapeText(local.name));
+  const superClassName =
+    localNames.length > 0 ? `/Store|^(${localNames.join('|')})$/` : '/Store/';
+  return `ClassDeclaration[superClass.name=${superClassName}]`;
+}
+
 export function getNgrxComponentStoreNames(
   context: TSESLint.RuleContext<string, readonly unknown[]>
 ): RegExp | null {

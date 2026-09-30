@@ -103,6 +103,14 @@ class NotOk extends ComponentStore<MoviesState> {
     super({ movies: [] })
   }
 }`),
+  // ComponentStore imported under another name.
+  fromFixture(`
+import { ComponentStore as Base } from '@ngrx/component-store'
+
+class NotOkAliased extends Base<MoviesState> {
+  movies$ = this.select((state) => state.movies).pipe(map((movies) => movies))
+                                                      ~~~~~~~~~~~~~~~~~~~~~~~ [${messageId}]
+}`),
   fromFixture(`
 import { ComponentStore } from '@ngrx/component-store'
 

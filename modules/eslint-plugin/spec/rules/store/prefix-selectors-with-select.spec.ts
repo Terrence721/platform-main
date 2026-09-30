@@ -297,7 +297,7 @@ const { allItems } = getSelectors(adapter);
           messageId: prefixSelectorsWithSelectSuggest,
           data: { name: 'selectAllItems' },
           output: `
-const { selectAllItems } = getSelectors(adapter);`,
+const { allItems: selectAllItems } = getSelectors(adapter);`,
         },
       ],
     }
@@ -312,7 +312,30 @@ const { entitiesMap } = getSelectors(adapter);
           messageId: prefixSelectorsWithSelectSuggest,
           data: { name: 'selectEntitiesMap' },
           output: `
-const { selectEntitiesMap } = getSelectors(adapter);`,
+const { entitiesMap: selectEntitiesMap } = getSelectors(adapter);`,
+        },
+      ],
+    }
+  ),
+  // Every use in the file is renamed; a shorthand keeps its key and an
+  // export keeps its public name.
+  fromFixture(
+    `
+const getFeature = createFeatureSelector<BooksState>('books');
+      ~~~~~~~~~~ [${prefixSelectorsWithSelect} suggest]
+export const selectBooks = createSelector(getFeature, (state) => state.books);
+export const selectors = { getFeature };
+export { getFeature };`,
+    {
+      suggestions: [
+        {
+          messageId: prefixSelectorsWithSelectSuggest,
+          data: { name: 'selectFeature' },
+          output: `
+const selectFeature = createFeatureSelector<BooksState>('books');
+export const selectBooks = createSelector(selectFeature, (state) => state.books);
+export const selectors = { getFeature: selectFeature };
+export { selectFeature as getFeature };`,
         },
       ],
     }

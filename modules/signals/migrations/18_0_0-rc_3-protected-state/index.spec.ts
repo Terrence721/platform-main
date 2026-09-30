@@ -220,4 +220,37 @@ const store = createStoreClass({ protectedState: false }, withState({id: 1, name
 
     await verifySchematic(input, output);
   });
+
+  describe('config objects', () => {
+    const imp = `import { signalStore, withState } from '@ngrx/signals';\n`;
+
+    it('should fill an empty config', async () => {
+      await verifySchematic(
+        imp + `const S = signalStore({}, withState({ n: 0 }));\n`,
+        imp +
+          `const S = signalStore({ protectedState: false }, withState({ n: 0 }));\n`
+      );
+    });
+
+    it('should keep an explicit protectedState after providedIn', async () => {
+      const input =
+        imp +
+        `const S = signalStore({ providedIn: 'root', protectedState: true }, withState({}));\n`;
+      await verifySchematic(input, input);
+    });
+
+    it('should add protectedState after a trailing comma', async () => {
+      await verifySchematic(
+        imp +
+          `const S = signalStore({ providedIn: 'root', }, withState({}));\n`,
+        imp +
+          `const S = signalStore({ providedIn: 'root', protectedState: false, }, withState({}));\n`
+      );
+    });
+
+    it('should leave signalStore from another module alone', async () => {
+      const input = `import { withEntities } from '@ngrx/signals/entities';\nimport { signalStore } from './my-store';\nconst S = signalStore(withEntities());\n`;
+      await verifySchematic(input, input);
+    });
+  });
 });

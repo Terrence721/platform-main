@@ -3,12 +3,13 @@ import {
   createReplaceChange,
   visitTSSourceFiles,
   commitChanges,
+  InsertChange,
 } from '../../../schematics-core';
 import { Rule, SchematicContext, Tree } from '@angular-devkit/schematics';
 import ts from 'typescript';
 import { visitImportDeclaration } from '../../../schematics-core/utility/visitors';
 
-export default function migrateWritableStateSource(): Rule {
+export default function migrateProtectedState(): Rule {
   return (tree: Tree, ctx: SchematicContext) => {
     visitTSSourceFiles(tree, (sourceFile) => {
       const signalStoreImportedName = findImportedName(sourceFile);
@@ -19,22 +20,35 @@ export default function migrateWritableStateSource(): Rule {
       const changes: Change[] = [];
       visitCallExpression(sourceFile, signalStoreImportedName, (node) => {
         if (node.arguments.length > 0) {
-          if (ts.isObjectLiteralExpression(node.arguments[0])) {
-            // signalStore({ providedIn: 'root' })
-            const providedInProperty = node.arguments[0].properties[0];
+          const config = node.arguments[0];
+          if (ts.isObjectLiteralExpression(config)) {
+            // signalStore({ providedIn: 'root' }) or signalStore({})
+            const { properties } = config;
+            // An explicit protectedState is kept: adding one would be a
+            // duplicate property.
+            const hasProtectedState = properties.some(
+              (property) =>
+                property.name &&
+                (ts.isIdentifier(property.name) ||
+                  ts.isStringLiteral(property.name)) &&
+                property.name.text === 'protectedState'
+            );
 
-            if (
-              ts.isPropertyAssignment(providedInProperty) &&
-              ts.isIdentifier(providedInProperty.name) &&
-              providedInProperty.name.text === 'providedIn'
-            ) {
+            if (!hasProtectedState) {
+              const last = properties[properties.length - 1];
               changes.push(
-                createReplaceChange(
-                  sourceFile,
-                  providedInProperty,
-                  providedInProperty.getText(),
-                  `${providedInProperty.getText()}, protectedState: false`
-                )
+                last
+                  ? new InsertChange(
+                      sourceFile.fileName,
+                      last.getEnd(),
+                      ', protectedState: false'
+                    )
+                  : createReplaceChange(
+                      sourceFile,
+                      config,
+                      config.getText(),
+                      '{ protectedState: false }'
+                    )
               );
             }
           } else {
@@ -93,7 +107,11 @@ function visitCallExpression(
 function findImportedName(source: ts.SourceFile) {
   let importedName = '';
   visitImportDeclaration(source, (importDeclaration) => {
-    if (importDeclaration.moduleSpecifier.getText().includes('@ngrx/signals')) {
+    // signalStore comes from '@ngrx/signals' itself, not its entry points.
+    if (
+      ts.isStringLiteral(importDeclaration.moduleSpecifier) &&
+      importDeclaration.moduleSpecifier.text === '@ngrx/signals'
+    ) {
       if (importedName) {
         return;
       }

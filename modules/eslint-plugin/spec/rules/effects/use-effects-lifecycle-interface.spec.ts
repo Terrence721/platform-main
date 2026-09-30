@@ -75,6 +75,7 @@ class UserEffects {
 }`,
     {
       output: `import { OnInitEffects } from '@ngrx/effects';
+
 class UserEffects implements OnInitEffects {
   ngrxOnInitEffects() {}
 }`,
@@ -104,6 +105,7 @@ class UserEffects {
 }`,
     {
       output: `import { OnRunEffects } from '@ngrx/effects';
+
 import { Injectable } from '@angular/core'
 class UserEffects implements OnRunEffects {
   ngrxOnRunEffects() {}
@@ -119,6 +121,7 @@ class UserEffects {
 }`,
     {
       output: `import { OnInitEffects } from '@ngrx/effects';
+
 import * as ngrx from '@ngrx/effects'
 class UserEffects implements OnInitEffects {
   ngrxOnInitEffects() {}
@@ -206,6 +209,7 @@ class UserEffects {
 }`,
     {
       output: `import { OnInitEffects } from '@ngrx/effects';
+
 class UserEffects implements OnInitEffects {
   ngrxOnInitEffects = () => ({ type: '[UserEffects]: Init' });
 }`,

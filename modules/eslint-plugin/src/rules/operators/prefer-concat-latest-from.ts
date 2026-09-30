@@ -1,6 +1,5 @@
 import {
   AST_NODE_TYPES,
-  ASTUtils,
   type TSESLint,
   type TSESTree,
 } from '@typescript-eslint/utils';
@@ -13,6 +12,7 @@ import {
   getImportDeclarations,
   getImportDeclarationSpecifier,
   getNgRxEffectActions,
+  isVariableOfClass,
   namedExpression,
   NGRX_MODULE_PATHS,
 } from '../../utils';
@@ -102,37 +102,10 @@ export default createRule<Options, MessageIds>({
     // `inject(Actions)`: a functional effect's parameter default
     // (`actions$ = inject(Actions)`) or a `const` in its body.
     function isActionsVariable(identifier: TSESTree.Identifier): boolean {
-      const variable = ASTUtils.findVariable(
-        context.sourceCode.getScope(identifier),
-        identifier
-      );
-      const name = variable?.defs[0]?.name;
-      if (!name || name.type !== AST_NODE_TYPES.Identifier) {
-        return false;
-      }
-      const annotation = name.typeAnnotation?.typeAnnotation;
-      if (
-        annotation?.type === AST_NODE_TYPES.TSTypeReference &&
-        annotation.typeName.type === AST_NODE_TYPES.Identifier &&
-        annotation.typeName.name === actionsImportName
-      ) {
-        return true;
-      }
-      const { parent } = name;
-      const initializer =
-        parent?.type === AST_NODE_TYPES.AssignmentPattern &&
-        parent.left === name
-          ? parent.right
-          : parent?.type === AST_NODE_TYPES.VariableDeclarator &&
-              parent.id === name
-            ? parent.init
-            : null;
-      return (
-        initializer?.type === AST_NODE_TYPES.CallExpression &&
-        initializer.callee.type === AST_NODE_TYPES.Identifier &&
-        initializer.callee.name === 'inject' &&
-        initializer.arguments[0]?.type === AST_NODE_TYPES.Identifier &&
-        initializer.arguments[0].name === actionsImportName
+      return isVariableOfClass(
+        context.sourceCode,
+        identifier,
+        actionsImportName
       );
     }
 

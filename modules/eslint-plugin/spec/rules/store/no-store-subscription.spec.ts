@@ -243,6 +243,16 @@ export const initItems = () => {
   store.select(selectItems).subscribe((items) => console.log(items))
                             ~~~~~~~~~ [${messageId}]
 }`),
+  // Store imported under another name.
+  fromFixture(`
+import { Store as AppStore } from '@ngrx/store'
+
+class NotOkAliased {
+  constructor(private readonly store: AppStore) {
+    this.store.subscribe()
+               ~~~~~~~~~ [${messageId}]
+  }
+}`),
 ];
 
 // Static describe so Vitest's typecheck mode finds a suite (see spec/utils/rule-tester.ts).

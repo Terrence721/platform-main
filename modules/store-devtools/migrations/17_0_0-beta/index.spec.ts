@@ -4,6 +4,7 @@ import {
   UnitTestTree,
 } from '@angular-devkit/schematics/testing';
 import * as path from 'path';
+import { logging } from '@angular-devkit/core';
 import { createPackageJson } from '@ngrx/schematics-core/testing/create-package';
 import { waitForAsync } from '@angular/core/testing';
 
@@ -51,7 +52,8 @@ describe('DevTools Migration 17_0_0-beta', () => {
         imports: [
           StoreDevtoolsModule.instrument({
             name: 'DevTools Name',
-          connectInZone: true}),
+            connectInZone: true,
+          }),
         ],
         bootstrap: [AppComponent],
       })
@@ -87,8 +89,9 @@ describe('DevTools Migration 17_0_0-beta', () => {
       @NgModule({
         imports: [
           StoreDevtoolsModule.instrument({
-            name: 'DevTools Name'
-          , connectInZone: true}),
+            name: 'DevTools Name',
+            connectInZone: true
+          }),
         ],
         bootstrap: [AppComponent],
       })
@@ -232,7 +235,8 @@ describe('DevTools Migration 17_0_0-beta', () => {
           provideStoreDevtools({
             maxAge: 25,
             logOnly: !isDevMode(),
-          connectInZone: true}),
+            connectInZone: true,
+          }),
         ],
       });
     `;
@@ -266,8 +270,9 @@ describe('DevTools Migration 17_0_0-beta', () => {
         providers: [
           provideStoreDevtools({
             maxAge: 25,
-            logOnly: !isDevMode()
-          , connectInZone: true}),
+            logOnly: !isDevMode(),
+            connectInZone: true
+          }),
         ],
       });
     `;
@@ -367,5 +372,84 @@ describe('DevTools Migration 17_0_0-beta', () => {
 
       expect(file).toBe(expected);
     }));
+  });
+
+  describe('config values and imports', () => {
+    const imp = `import { provideStoreDevtools } from '@ngrx/store-devtools';\n`;
+
+    const runMigration = async (input: string) => {
+      appTree.create('./main.ts', input);
+      const runner = new SchematicTestRunner('schematics', collectionPath);
+      const logs: logging.LogEntry[] = [];
+      runner.logger.subscribe((entry) => logs.push(entry));
+      const newTree = await runner.runSchematic(migrationname, {}, appTree);
+      return { file: newTree.readContent('main.ts'), logs };
+    };
+
+    it('should negate a compound value as a whole', async () => {
+      const { file } = await runMigration(
+        imp + `provideStoreDevtools({ connectOutsideZone: isDev || isTest });\n`
+      );
+      expect(file).toBe(
+        imp + `provideStoreDevtools({ connectInZone: !(isDev || isTest) });\n`
+      );
+    });
+
+    it('should add the property after a trailing comma and comment', async () => {
+      const { file } = await runMigration(
+        imp + `provideStoreDevtools({\n  maxAge: 25, // keep 25 states\n});\n`
+      );
+      expect(file).toBe(
+        imp +
+          `provideStoreDevtools({\n  maxAge: 25, // keep 25 states\n  connectInZone: true,\n});\n`
+      );
+    });
+
+    it('should keep Windows line endings', async () => {
+      const input = `import { provideStoreDevtools } from '@ngrx/store-devtools';\r\nprovideStoreDevtools({\r\n  maxAge: 25\r\n});\r\n`;
+      const { file } = await runMigration(input);
+      expect(file).toBe(
+        `import { provideStoreDevtools } from '@ngrx/store-devtools';\r\nprovideStoreDevtools({\r\n  maxAge: 25,\r\n  connectInZone: true\r\n});\r\n`
+      );
+    });
+
+    it('should leave a config that already sets connectInZone alone', async () => {
+      const input =
+        imp + `provideStoreDevtools({ maxAge: 25, connectInZone: false });\n`;
+      const { file } = await runMigration(input);
+      expect(file).toBe(input);
+    });
+
+    it('should migrate aliased and namespace imports', async () => {
+      const { file } = await runMigration(
+        `import { provideStoreDevtools as devtools } from '@ngrx/store-devtools';\nimport * as sd from '@ngrx/store-devtools';\ndevtools({ maxAge: 25 });\nsd.StoreDevtoolsModule.instrument({ connectOutsideZone: true });\n`
+      );
+      expect(file).toBe(
+        `import { provideStoreDevtools as devtools } from '@ngrx/store-devtools';\nimport * as sd from '@ngrx/store-devtools';\ndevtools({ maxAge: 25, connectInZone: true });\nsd.StoreDevtoolsModule.instrument({ connectInZone: false });\n`
+      );
+    });
+
+    it('should migrate a shorthand connectOutsideZone', async () => {
+      const { file } = await runMigration(
+        imp + `provideStoreDevtools({ connectOutsideZone });\n`
+      );
+      expect(file).toBe(
+        imp + `provideStoreDevtools({ connectInZone: !connectOutsideZone });\n`
+      );
+    });
+
+    it('should warn about a config passed as a variable', async () => {
+      const input = imp + `provideStoreDevtools(config);\n`;
+      const { file, logs } = await runMigration(input);
+      expect(file).toBe(input);
+      expect(logs).toContainEqual(
+        expect.objectContaining({
+          level: 'warn',
+          message: expect.stringContaining(
+            "set connectInZone: true in the devtools config passed as 'config'"
+          ),
+        })
+      );
+    });
   });
 });

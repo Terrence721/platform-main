@@ -7,6 +7,7 @@ import {
 } from '../package.json';
 import all from './configs/all';
 import allTypeChecked from './configs/all-type-checked';
+import component from './configs/component';
 import store from './configs/store';
 import effects from './configs/effects';
 import effectsTypeChecked from './configs/effects-type-checked';
@@ -25,9 +26,33 @@ const tsPlugin: TSESLint.FlatConfig.Plugin & {
   rules,
 };
 
+// The template parser is an optional peer dependency, needed only by the
+// `component` config: it is loaded the first time that config is read, so
+// the other configs work without it installed.
+let componentConfig: TSESLint.FlatConfig.ConfigArray | undefined;
+function getComponentConfig(): TSESLint.FlatConfig.ConfigArray {
+  if (!componentConfig) {
+    let templateParser: TSESLint.FlatConfig.Parser;
+    try {
+      templateParser = require('@angular-eslint/template-parser');
+    } catch {
+      throw new Error(
+        "@ngrx/eslint-plugin: the 'component' config lints Angular templates " +
+          'and needs @angular-eslint/template-parser: install it as a dev ' +
+          'dependency.'
+      );
+    }
+    componentConfig = component(tsPlugin, templateParser);
+  }
+  return componentConfig;
+}
+
 const configs = {
   all: all(tsPlugin, parser),
   allTypeChecked: allTypeChecked(tsPlugin, parser),
+  get component() {
+    return getComponentConfig();
+  },
   store: store(tsPlugin, parser),
   effects: effects(tsPlugin, parser),
   effectsTypeChecked: effectsTypeChecked(tsPlugin, parser),

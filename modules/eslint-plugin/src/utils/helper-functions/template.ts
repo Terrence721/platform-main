@@ -40,6 +40,23 @@ export function isBoundAttribute(
   );
 }
 
+export function isBindingPipe(
+  node: TemplateNode | undefined,
+  name: string
+): node is BindingPipe {
+  return node?.type === 'BindingPipe' && (node as BindingPipe).name === name;
+}
+
+// `(x$ | async)` is a `ParenthesizedExpression` around the pipe.
+export function unwrapParentheses(node: TemplateNode): TemplateNode {
+  let current = node;
+  while (current.type === 'ParenthesizedExpression') {
+    current = (current as TemplateNode & { expression: TemplateNode })
+      .expression;
+  }
+  return current;
+}
+
 export function isLiteralMap(
   node: TemplateNode | undefined
 ): node is LiteralMap {

@@ -466,13 +466,16 @@
   <div class="wrap">
     <div class="manifest-row">
       <div class="manifest-cell">
-        <span class="v">939</span><span class="k">commits</span>
+        <span class="v">941</span><span class="k">commits</span>
       </div>
       <div class="manifest-cell">
         <span class="v">6,466</span><span class="k">Vitest tests</span>
       </div>
       <div class="manifest-cell">
         <span class="v">13/13</span><span class="k">modules ported</span>
+      </div>
+      <div class="manifest-cell">
+        <span class="v">270/270</span><span class="k">files code-reviewed</span>
       </div>
       <div class="manifest-cell">
         <span class="v">0</span><span class="k">lint errors</span>
@@ -704,6 +707,43 @@
           >
           on every push to <code>main</code> — checkable against the live
           repository, not a static screenshot.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Code review, file by file</h2>
+    <p class="h2-sub">
+      Every source file of all 13 modules, each with its own issue and PR
+    </p>
+    <p class="lede">
+      Once the port was complete, every one of its 270 source files was reviewed
+      on its own: probed with throwaway tests, fixed where it was wrong, and
+      landed through a separate issue and reviewed PR, all tracked from
+      <a href="https://github.com/Terrence721/platform-main/issues/32"
+        >one parent issue</a
+      >. Most defects were inherited from the ported source rather than
+      introduced here.
+    </p>
+    <div class="twocol">
+      <div class="card">
+        <h3>Bugs a test suite had missed</h3>
+        <p>
+          A state property named <code>set</code> or
+          <code>update</code> silently and permanently broke
+          <code>patchState</code>; a reducer error stopped the whole store under
+          NgRx's default runtime checks; schematics failed in standalone apps,
+          and some generated code did not compile.
+        </p>
+      </div>
+      <div class="card">
+        <h3>Tooling that quietly did nothing</h3>
+        <p>
+          In the ESLint plugin, importing <code>Store</code> under another name
+          turned off 14 rules without a word, and several auto-fixes broke the
+          code they fixed. The rules now also cover functional effects and
+          standalone providers.
         </p>
       </div>
     </div>

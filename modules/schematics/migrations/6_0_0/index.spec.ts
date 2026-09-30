@@ -39,4 +39,40 @@ describe('Schematics Migration 6_0_0', () => {
       );
     });
   });
+
+  // @ngrx/schematics is usually a devDependency.
+  it('should update a devDependency', async () => {
+    appTree = new UnitTestTree(Tree.empty());
+    appTree.create(
+      packagePath,
+      '{\n  "devDependencies": {\n    "@ngrx/schematics": "^5.2.0"\n  }\n}\n'
+    );
+    const runner = new SchematicTestRunner('schematics', collectionPath);
+
+    const newTree = await runner.runSchematic(
+      `ngrx-${pkgName}-migration-01`,
+      {},
+      appTree
+    );
+
+    expect(newTree.readContent(packagePath)).toBe(
+      '{\n  "devDependencies": {\n    "@ngrx/schematics": "^6.0.0"\n  }\n}\n'
+    );
+  });
+
+  it('should leave package.json untouched when the package is not listed', async () => {
+    const content =
+      '{\n    "devDependencies": {\n        "rxjs": "^6.0.0"\n    }\n}\n';
+    appTree = new UnitTestTree(Tree.empty());
+    appTree.create(packagePath, content);
+    const runner = new SchematicTestRunner('schematics', collectionPath);
+
+    const newTree = await runner.runSchematic(
+      `ngrx-${pkgName}-migration-01`,
+      {},
+      appTree
+    );
+
+    expect(newTree.readContent(packagePath)).toBe(content);
+  });
 });

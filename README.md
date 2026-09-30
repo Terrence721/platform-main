@@ -70,7 +70,8 @@ modules/
                            shared schematics package
   component/              ← added (real source); LetDirective/PushPipe, no
                            @ngrx/store dependency, audited clean
-  eslint-plugin/           ← added (real source); 35 lint rules + configs,
+  eslint-plugin/           ← added (real source); 36 lint rules + configs,
+                           including template rules for @ngrx/component;
                            13th and last module — all module additions
                            complete
 ```

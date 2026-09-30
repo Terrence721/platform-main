@@ -1,5 +1,6 @@
 import { RuleTester, type RunTests } from '@typescript-eslint/rule-tester';
 import type { RuleModule } from '@typescript-eslint/utils/ts-eslint';
+import * as templateParser from '@angular-eslint/template-parser';
 import { resolve } from 'path';
 
 /**
@@ -72,5 +73,12 @@ export function ruleTester(requiresTypeChecking?: boolean) {
       : undefined;
   return new NamedRuleTester({
     languageOptions,
+  });
+}
+
+/** Creates the RuleTester for a template rule's spec: Angular templates. */
+export function templateRuleTester() {
+  return new NamedRuleTester({
+    languageOptions: { parser: templateParser },
   });
 }

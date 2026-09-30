@@ -1,4 +1,5 @@
 export const NGRX_MODULE_PATHS = {
+  component: '@ngrx/component',
   ['component-store']: '@ngrx/component-store',
   effects: '@ngrx/effects',
   store: '@ngrx/store',

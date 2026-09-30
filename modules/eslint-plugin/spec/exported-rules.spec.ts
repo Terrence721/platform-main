@@ -47,21 +47,43 @@ describe('ESLint flat config', () => {
   });
   test('exports all configurations', () => {
     const configFiles = getAllConfigs();
-    expect(configFiles.length).toBe(9);
-    expect(Object.keys(configs).length).toBe(9);
+    expect(configFiles.length).toBe(10);
+    expect(Object.keys(configs).length).toBe(10);
   });
-  test('exports all rules in the all type-checked config', () => {
-    const rules = getAllRules();
-    expect(Object.keys((configs.allTypeChecked[1] as any).rules).length).toBe(
-      rules.length
-    );
+  // Template rules need the optional template parser, so they are only in
+  // the `component` config; `all` and `allTypeChecked` hold the rest.
+  test('exports every rule except template rules in the all type-checked config', () => {
+    const expected = Object.entries(exportedRules)
+      .filter(([, rule]) => rule.meta.docs?.template !== true)
+      .map(([ruleName]) => `@ngrx/${ruleName}`)
+      .sort();
+    expect(
+      Object.keys((configs.allTypeChecked[1] as any).rules).sort()
+    ).toEqual(expected);
   });
   test('exports every rule without type checking in the all config', () => {
     const expected = Object.entries(exportedRules)
-      .filter(([, rule]) => rule.meta.docs?.requiresTypeChecking !== true)
+      .filter(
+        ([, rule]) =>
+          rule.meta.docs?.requiresTypeChecking !== true &&
+          rule.meta.docs?.template !== true
+      )
       .map(([ruleName]) => `@ngrx/${ruleName}`)
       .sort();
     expect(Object.keys((configs.all[1] as any).rules).sort()).toEqual(expected);
+  });
+  test('the component config lints Angular templates', () => {
+    const linter = new Linter({ configType: 'flat' });
+    const messages = linter.verify(
+      `<ng-container *ngrxLet="items$ | async as items">{{ items }}</ng-container>`,
+      // typescript-eslint's config types differ from ESLint's own.
+      configs.component as Linter.Config[],
+      'file.html'
+    );
+    expect(messages.filter((message) => message.fatal)).toEqual([]);
+    expect(messages.map((message) => message.ruleId)).toEqual([
+      '@ngrx/no-async-pipe-in-ngrx-let',
+    ]);
   });
   test('the all config runs without type information', () => {
     const linter = new Linter({ configType: 'flat' });
@@ -78,6 +100,7 @@ describe('ESLint flat config', () => {
     ]);
   });
   test.each([
+    { config: 'component', ngrxModule: 'component', typeChecked: false },
     {
       config: 'componentStore',
       ngrxModule: 'component-store',

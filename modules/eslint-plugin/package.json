@@ -42,7 +42,13 @@
     "typescript": "*",
     "typescript-eslint": "^8.0.0",
     "@typescript-eslint/utils": "^8.0.0",
+    "@angular-eslint/template-parser": "^22.0.0",
     "@ngrx/schematics": "0.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@angular-eslint/template-parser": {
+      "optional": true
+    }
   },
   "schematics": "./collection.json",
   "ng-add": {

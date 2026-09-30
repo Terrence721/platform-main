@@ -13,9 +13,18 @@ import { NgRxRule } from '../src/rule-creator';
     rule.meta.docs?.ngrxModule === moduleName;
   const isTypeChecked = (rule: NgRxRule) =>
     rule.meta.docs?.requiresTypeChecking === true;
+  // Template rules need @angular-eslint/template-parser, an optional peer:
+  // they live in the `component` config only, so `all` works without it.
+  const isTemplate = (rule: NgRxRule) => rule.meta.docs?.template === true;
 
-  writeConfig('all', (rule) => !isTypeChecked(rule));
-  writeConfig('all-type-checked', (_rule) => true);
+  writeConfig('all', (rule) => !isTypeChecked(rule) && !isTemplate(rule));
+  writeConfig('all-type-checked', (rule) => !isTemplate(rule));
+
+  writeConfig(
+    'component',
+    (rule) => isModule(rule, 'component') && !isTypeChecked(rule),
+    { template: true }
+  );
 
   writeConfig(
     'store',
@@ -48,6 +57,7 @@ import { NgRxRule } from '../src/rule-creator';
     configName:
       | 'all'
       | 'all-type-checked'
+      | 'component'
       | 'store'
       | 'effects'
       | 'effects-type-checked'
@@ -55,7 +65,8 @@ import { NgRxRule } from '../src/rule-creator';
       | 'operators'
       | 'signals'
       | 'signals-type-checked',
-    predicate: (rule: NgRxRule) => boolean
+    predicate: (rule: NgRxRule) => boolean,
+    { template = false }: { template?: boolean } = {}
   ) {
     const rulesForConfig = Object.entries(rulesForGenerate).filter(
       ([_, rule]) => predicate(rule)
@@ -85,10 +96,36 @@ import { NgRxRule } from '../src/rule-creator';
      *     },
      *   }`
       : '';
+    // A template config parses only HTML templates, with the template parser;
+    // it must not set a parser for every file the way the others do.
+    const templateNote = template
+      ? `
+     *
+     * Lints Angular templates (the .html files) and needs
+     * \`@angular-eslint/template-parser\` installed. For inline templates, also
+     * run angular-eslint's \`processInlineTemplates\` processor on .ts files.`
+      : '';
+    const base = template
+      ? `{
+          name: 'ngrx/base',
+          plugins: {
+            '@ngrx': plugin,
+          },
+        }`
+      : `{
+          name: 'ngrx/base',
+          languageOptions: {
+            parser,
+          },
+          plugins: {
+            '@ngrx': plugin,
+          },
+        }`;
+    const files = template ? `files: ['**/*.html'], ` : '';
     const tsCode = `
       /**
      * DO NOT EDIT
-     * This file is generated${typeInfoNote}
+     * This file is generated${typeInfoNote}${templateNote}
      */
 
       import type { TSESLint } from '@typescript-eslint/utils';
@@ -97,18 +134,10 @@ import { NgRxRule } from '../src/rule-creator';
         plugin: TSESLint.FlatConfig.Plugin,
         parser: TSESLint.FlatConfig.Parser,
       ): TSESLint.FlatConfig.ConfigArray => [
-        {
-          name: 'ngrx/base',
-          languageOptions: {
-            parser,
-          },
-          plugins: {
-            '@ngrx': plugin,
-          },
-        },
+        ${base},
         {
           name: 'ngrx/${configName}',
-          languageOptions: {
+          ${files}languageOptions: {
             parser,
           },
           rules: ${JSON.stringify(configRules, null, 2)}

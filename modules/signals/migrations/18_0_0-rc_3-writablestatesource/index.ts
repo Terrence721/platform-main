@@ -29,11 +29,14 @@ export function migrateWritableStateSource(): Rule {
         'WritableStateSource'
       );
 
-      if (changes.length) {
+      const { importedUnderOwnName, namespaces } =
+        findSignalsImports(sourceFile);
+
+      if (importedUnderOwnName || namespaces.length) {
         visitIdentifiers(sourceFile, (node) => {
           if (
-            node.getText() === 'StateSignal' &&
-            !ts.isImportSpecifier(node.parent)
+            node.text === 'StateSignal' &&
+            isStateSignalReference(node, importedUnderOwnName, namespaces)
           ) {
             changes.push(
               createReplaceChange(
@@ -57,10 +60,66 @@ export function migrateWritableStateSource(): Rule {
       );
     } else {
       ctx.logger.info(
-        `[@ngrx/signals] No 'StateSignal' references found to, skipping the migration`
+        `[@ngrx/signals] No 'StateSignal' references found, skipping the migration`
       );
     }
   };
+}
+
+function findSignalsImports(sourceFile: ts.SourceFile) {
+  let importedUnderOwnName = false;
+  const namespaces: string[] = [];
+  for (const statement of sourceFile.statements) {
+    if (
+      !ts.isImportDeclaration(statement) ||
+      !ts.isStringLiteral(statement.moduleSpecifier) ||
+      statement.moduleSpecifier.text !== '@ngrx/signals'
+    ) {
+      continue;
+    }
+    const bindings = statement.importClause?.namedBindings;
+    if (bindings && ts.isNamespaceImport(bindings)) {
+      namespaces.push(bindings.name.text);
+    } else if (bindings && ts.isNamedImports(bindings)) {
+      importedUnderOwnName ||= bindings.elements.some(
+        (element) =>
+          !element.propertyName && element.name.text === 'StateSignal'
+      );
+    }
+  }
+  return { importedUnderOwnName, namespaces };
+}
+
+// A use of the imported StateSignal: a bare reference when it is imported
+// under its own name (an aliased import is renamed in the import only), or
+// `ns.StateSignal` through a namespace import. Object keys and properties of
+// other objects are left alone.
+function isStateSignalReference(
+  node: ts.Identifier,
+  importedUnderOwnName: boolean,
+  namespaces: string[]
+): boolean {
+  const parent = node.parent;
+  if (ts.isImportSpecifier(parent)) {
+    return false;
+  }
+  if (
+    (ts.isQualifiedName(parent) && parent.right === node) ||
+    (ts.isPropertyAccessExpression(parent) && parent.name === node)
+  ) {
+    const left = ts.isQualifiedName(parent) ? parent.left : parent.expression;
+    return ts.isIdentifier(left) && namespaces.includes(left.text);
+  }
+  if (
+    (ts.isPropertyAssignment(parent) ||
+      ts.isPropertySignature(parent) ||
+      ts.isPropertyDeclaration(parent) ||
+      ts.isMethodDeclaration(parent)) &&
+    parent.name === node
+  ) {
+    return false;
+  }
+  return importedUnderOwnName;
 }
 
 function visitIdentifiers(

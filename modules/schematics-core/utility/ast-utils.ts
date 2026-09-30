@@ -841,22 +841,14 @@ export function replaceImport(
     return [];
   }
 
-  const importText = (specifier: ts.ImportSpecifier) => {
-    if (specifier.name.text) {
-      return specifier.name.text;
-    }
-
-    // if import is renamed
-    if (specifier.propertyName && specifier.propertyName.text) {
-      return specifier.propertyName.text;
-    }
-
-    return '';
-  };
+  // The imported name, so `X as Y` is found as `X`.
+  const importText = (specifier: ts.ImportSpecifier) =>
+    (specifier.propertyName ?? specifier.name).text;
 
   const changes = imports.map((p) => {
-    const namedImports = p?.importClause?.namedBindings as ts.NamedImports;
-    if (!namedImports) {
+    const namedImports = p?.importClause?.namedBindings;
+    // `import * as ns` has no specifiers to replace.
+    if (!namedImports || !ts.isNamedImports(namedImports)) {
       return [];
     }
 
@@ -873,11 +865,14 @@ export function replaceImport(
         return undefined;
       }
 
-      // identifier has not been imported, simply replace the old text with the new text
-      if (!isAlreadyImported) {
+      // identifier has not been imported, simply replace the old name with
+      // the new one; only the name, so `type X` and `X as Y` keep their
+      // modifier and alias. An aliased import is also renamed when the new
+      // name is already imported, as removing it would break its alias.
+      if (!isAlreadyImported || specifier.propertyName) {
         return createReplaceChange(
           sourceFile,
-          specifier,
+          specifier.propertyName ?? specifier.name,
           importAsIs,
           importToBe
         );

@@ -143,7 +143,7 @@ export default createRule<Options, MessageIds>({
       return [typeChecker.typeToString(actionType)];
     }
 
-    // The Actions stream is recognised by its type, so `this.actions$`, a
+    // The Actions stream is recognized by its type, so `this.actions$`, a
     // functional effect's `actions$ = inject(Actions)` parameter and any other
     // name all count. The class must come from @ngrx/effects (an `effects`
     // folder: node_modules/@ngrx/effects, or modules/effects in this repo).

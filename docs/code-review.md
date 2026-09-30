@@ -1556,7 +1556,7 @@ export const FooActions = createActionGroup({
 - Spec hygiene: two tests generate the same output (`should create api actions` and `should create api actions (load, success, error) when the api flag is set`, the second one misnamed since the events are `Success` and `Failure`), and the `group` test sits inside `describe('api')`.
 - `schema.ts` documents `name` as "The name of the component." (copy-paste; `schema.json` says action). That file is the next row, `action/schema.ts`, and is left to its own review.
 
-**Regression tests** (`index.spec.ts`, 8 new, `it.each` counted per case): the three that pin the fixes fail against the unchanged build: `should only import what it uses when the api flag is not set`, `should not leave lines with only whitespace (api: false)` and `should fail with a validation error if the name is missing`; the other five (the `api: true` variants and the three location specs) pass on both sides, as they document behavior that was already right. The line-ending of the generated file is normalised first: on a Windows checkout the template is CRLF, and `/^[ \t]+$/m` would not match `····\r` and pass vacuously.
+**Regression tests** (`index.spec.ts`, 8 new, `it.each` counted per case): the three that pin the fixes fail against the unchanged build: `should only import what it uses when the api flag is not set`, `should not leave lines with only whitespace (api: false)` and `should fail with a validation error if the name is missing`; the other five (the `api: true` variants and the three location specs) pass on both sides, as they document behavior that was already right. The line-ending of the generated file is normalized first: on a Windows checkout the template is CRLF, and `/^[ \t]+$/m` would not match `····\r` and pass vacuously.
 
 **Verification** (in a scratch git worktree, the checkout was given only the finished files): against the unchanged build the three tests above fail; with the change `yarn nx test schematics` passes (50 files, 413 tests, 0 type errors), `yarn nx lint schematics` has 0 errors (16 warnings, none in the changed files), `yarn nx build schematics` is clean. Two snapshots change (the default-output and the custom-prefix one, each losing the `props` import and the two blank lines); the `feature` and `entity` snapshots are unchanged.
 
@@ -1601,7 +1601,7 @@ The component-store schematic (`ng generate @ngrx/schematics:component-store`), 
 **Sound, verified:**
 
 - The generated spec's `new FooStore()` works outside an injection context: `ComponentStore`'s constructor is `@Optional() @Inject(INITIAL_STATE_TOKEN)` with no `inject()` call.
-- `createProvidingContext` builds `/${options.path}/…`, which gives a leading `//`, but `buildRelativePath` normalises it; the import written is `./foo/foo.store` (probe).
+- `createProvidingContext` builds `/${options.path}/…`, which gives a leading `//`, but `buildRelativePath` normalizes it; the import written is `./foo/foo.store` (probe).
 - An absolute `--module`/`--component` path is joined onto `path` (`/projects/bar/src/app/projects/bar/src/app/app-module.ts`), so only paths relative to the working directory work. That is `schematics-core`'s `find-module.ts` (already reviewed), and the same convention as Angular's own `findModuleFromOptions`, so it is recorded, not changed.
 
 **Observed, not changed:** a missing module or component throws a plain `Error` in one place and `SchematicsException` in the next (the `host.read` null branch, unreachable after `host.exists`); interactive `ng generate` prompts for both `component` and `module`, and answering both provides the store in both, which is consistent with the options.
@@ -3188,7 +3188,7 @@ A type-aware rule: reports an effect whose output includes an action its own `of
 
 **Bug, fixed (missed case):** a `{ dispatch: false }` object anywhere in the effect's body switched the check off (`:has` searched the body, not just the config).
 
-The actions stream is now recognised by its type (an `Actions` class from `@ngrx/effects`), each effect's outermost `Actions` pipe is checked, and `dispatch: false` is read from `createEffect`'s second argument only.
+The actions stream is now recognized by its type (an `Actions` class from `@ngrx/effects`), each effect's outermost `Actions` pipe is checked, and `dispatch: false` is read from `createEffect`'s second argument only.
 
 **Verification:** the whole `eslint-plugin` suite passes (78 files, 579 results, no type errors); 6 new cases in the rule's spec; build type check, eslint and Prettier clean.
 
@@ -3484,7 +3484,7 @@ Reports a plain object or a `new` class instance passed to `store.dispatch(...)`
 
 Reports a class that implements NgRx's `Action` and has a `type` property, since action creators are preferred.
 
-**Bug, fixed (wrong class reported):** the whole class was searched for `implements Action` and a `type` property, so a service containing an action class was reported itself, and the nested action class (a class expression) never was. Each class is now checked on its own `implements` and members. An aliased `Action` import is recognised too.
+**Bug, fixed (wrong class reported):** the whole class was searched for `implements Action` and a `type` property, so a service containing an action class was reported itself, and the nested action class (a class expression) never was. Each class is now checked on its own `implements` and members. An aliased `Action` import is recognized too.
 
 **Verification:** the whole `eslint-plugin` suite passes (78 files, 647 results, no type errors); 2 new cases in the rule's spec; build type check, eslint and Prettier clean.
 

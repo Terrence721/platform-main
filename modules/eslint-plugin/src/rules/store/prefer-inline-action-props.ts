@@ -1,7 +1,10 @@
 import type { TSESTree } from '@typescript-eslint/utils';
 import * as path from 'path';
 import { createRule } from '../../rule-creator';
-import { actionCreatorPropsComputed } from '../../utils';
+import {
+  actionCreatorPropsComputed,
+  actionGroupPropsComputed,
+} from '../../utils';
 
 export const preferInlineActionProps = 'preferInlineActionProps';
 export const preferInlineActionPropsSuggest = 'preferInlineActionPropsSuggest';
@@ -29,8 +32,11 @@ export default createRule<Options, MessageIds>({
   },
   defaultOptions: [],
   create: (context) => {
+    // createAction's props, and the events of createActionGroup.
     return {
-      [actionCreatorPropsComputed](node: TSESTree.TSTypeReference) {
+      [`${actionCreatorPropsComputed}, ${actionGroupPropsComputed}`](
+        node: TSESTree.TSTypeReference
+      ) {
         context.report({
           node,
           messageId: preferInlineActionProps,

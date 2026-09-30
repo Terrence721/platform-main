@@ -46,6 +46,19 @@ class Test implements Action { type = '[Customer Page] Load Customer' }
 class Test implements ngrx.Action { type = ActionTypes.success; constructor(readonly payload: Payload) {} }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ [${messageId}]`
   ),
+  // Action imported under another name.
+  fromFixture(
+    `
+import { Action as NgRxAction } from '@ngrx/store'
+class Test implements NgRxAction { type = '[Customer Page] Load Customer' }
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ [${messageId}]`
+  ),
+  // The action class itself is reported, not a class around it.
+  fromFixture(
+    `
+class Service { create() { return class implements Action { type = 'x' } } }
+                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ [${messageId}]`
+  ),
 ];
 
 // Static describe so Vitest's typecheck mode finds a suite (see spec/utils/rule-tester.ts).

@@ -1,13 +1,17 @@
-import type { TSESTree } from '@typescript-eslint/utils';
+import {
+  AST_NODE_TYPES,
+  ASTUtils,
+  type TSESTree,
+} from '@typescript-eslint/utils';
 import * as path from 'path';
 import { createRule } from '../../rule-creator';
 import {
   asPattern,
   dispatchExpression,
-  getNearestUpperNodeFrom,
+  getImportDeclarations,
+  getImportDeclarationSpecifier,
   getNgRxStores,
-  isCallExpression,
-  isCallExpressionWith,
+  NGRX_MODULE_PATHS,
 } from '../../utils';
 
 export const messageId = 'preferActionCreatorInDispatch';
@@ -34,38 +38,116 @@ export default createRule<Options, MessageIds>({
   create: (context) => {
     const { identifiers = [] } = getNgRxStores(context);
     const storeNames = identifiers.length > 0 ? asPattern(identifiers) : null;
+    // The local name Store is imported as, for stores held in variables.
+    const { importSpecifier } =
+      getImportDeclarationSpecifier(
+        getImportDeclarations(
+          context.sourceCode.ast,
+          NGRX_MODULE_PATHS.store
+        ) ?? [],
+        'Store'
+      ) ?? {};
+    const storeImportName = importSpecifier?.local.name;
 
-    if (!storeNames) {
-      return {};
+    // A variable is a store when it is typed `Store` or set to
+    // `inject(Store)` (a parameter default or a variable).
+    function isStoreVariable(identifier: TSESTree.Identifier): boolean {
+      const variable = ASTUtils.findVariable(
+        context.sourceCode.getScope(identifier),
+        identifier
+      );
+      const name = variable?.defs[0]?.name;
+      if (!name || name.type !== AST_NODE_TYPES.Identifier) {
+        return false;
+      }
+      const annotation = name.typeAnnotation?.typeAnnotation;
+      if (
+        annotation?.type === AST_NODE_TYPES.TSTypeReference &&
+        annotation.typeName.type === AST_NODE_TYPES.Identifier &&
+        annotation.typeName.name === storeImportName
+      ) {
+        return true;
+      }
+      const { parent } = name;
+      const initializer =
+        parent?.type === AST_NODE_TYPES.AssignmentPattern &&
+        parent.left === name
+          ? parent.right
+          : parent?.type === AST_NODE_TYPES.VariableDeclarator &&
+              parent.id === name
+            ? parent.init
+            : null;
+      return (
+        initializer?.type === AST_NODE_TYPES.CallExpression &&
+        initializer.callee.type === AST_NODE_TYPES.Identifier &&
+        initializer.callee.name === 'inject' &&
+        initializer.arguments[0]?.type === AST_NODE_TYPES.Identifier &&
+        initializer.arguments[0].name === storeImportName
+      );
+    }
+
+    // The values the dispatched argument can be: itself, or the branches of a
+    // conditional or of `||`/`??`, through a type assertion. An object nested
+    // inside the action (a payload) is not the action.
+    function findDispatchedValues(node: TSESTree.Node): TSESTree.Node[] {
+      switch (node.type) {
+        case AST_NODE_TYPES.ConditionalExpression:
+          return [
+            ...findDispatchedValues(node.consequent),
+            ...findDispatchedValues(node.alternate),
+          ];
+        case AST_NODE_TYPES.LogicalExpression:
+          return [
+            ...findDispatchedValues(node.left),
+            ...findDispatchedValues(node.right),
+          ];
+        case AST_NODE_TYPES.TSAsExpression:
+        case AST_NODE_TYPES.TSSatisfiesExpression:
+        case AST_NODE_TYPES.TSNonNullExpression:
+          return findDispatchedValues(node.expression);
+        default:
+          return [node];
+      }
+    }
+
+    // A constructor's store parameter matches both paths: check a call once.
+    const checked = new WeakSet<TSESTree.CallExpression>();
+    function checkDispatch(node: TSESTree.CallExpression) {
+      if (checked.has(node)) {
+        return;
+      }
+      checked.add(node);
+      const [action] = node.arguments;
+      if (!action) {
+        return;
+      }
+      for (const value of findDispatchedValues(action)) {
+        if (
+          value.type === AST_NODE_TYPES.ObjectExpression ||
+          value.type === AST_NODE_TYPES.NewExpression
+        ) {
+          context.report({
+            node: value,
+            messageId,
+          });
+        }
+      }
     }
 
     return {
-      [`${dispatchExpression(
-        storeNames
-      )} :matches(NewExpression, :not(NewExpression) > ObjectExpression)`](
-        node: TSESTree.NewExpression | TSESTree.ObjectExpression
-      ) {
-        const nearestUpperCallExpression = getNearestUpperNodeFrom(
-          node,
-          isCallExpression
-        );
-        const isStoreDispatchImmediateParent =
-          nearestUpperCallExpression !== undefined &&
-          isCallExpressionWith(
-            nearestUpperCallExpression,
-            storeNames,
-            'dispatch'
-          );
-
-        if (!isStoreDispatchImmediateParent) {
-          return;
-        }
-
-        context.report({
-          node,
-          messageId,
-        });
-      },
+      ...(storeNames && {
+        [dispatchExpression(storeNames)]: checkDispatch,
+      }),
+      ...(storeImportName && {
+        [`CallExpression[callee.property.name='dispatch'][callee.object.type='Identifier']`](
+          node: TSESTree.CallExpression
+        ) {
+          const { object } = node.callee as TSESTree.MemberExpression;
+          if (isStoreVariable(object as TSESTree.Identifier)) {
+            checkDispatch(node);
+          }
+        },
+      }),
     };
   },
 });

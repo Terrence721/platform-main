@@ -17,36 +17,17 @@
       "outputs": ["{options.outputFile}"]
     },
     "build-package": {
-      "executor": "@nx/js:tsc",
+      "executor": "nx:run-commands",
       "dependsOn": ["^build"],
       "options": {
-        "outputPath": "dist/modules/schematics",
-        "tsConfig": "modules/schematics/tsconfig.build.json",
-        "packageJson": "modules/schematics/package.json",
-        "main": "modules/schematics/src/index.ts",
-        "updateBuildableProjectDepsInPackageJson": false,
-        "sourceMap": false,
-        "assets": [
-          "collection.json",
-          {
-            "input": "./modules/schematics/src",
-            "glob": "**/*.!(ts)",
-            "output": "./src"
-          },
-          {
-            "input": "./modules/schematics/ng-add",
-            "glob": "**/*.!(ts)",
-            "output": "./ng-add"
-          },
-          {
-            "input": "./modules/schematics",
-            "glob": "collection.json",
-            "output": "."
-          }
-        ],
-        "srcRootForCompilationRoot": "modules/schematics"
+        "parallel": false,
+        "commands": [
+          "rimraf dist/modules/schematics",
+          "tsc -p modules/schematics/tsconfig.build.json",
+          "cpy modules/schematics/package.json dist"
+        ]
       },
-      "outputs": ["{options.outputPath}"]
+      "outputs": ["{workspaceRoot}/dist/modules/schematics"]
     },
     "build": {
       "executor": "nx:run-commands",
@@ -64,19 +45,19 @@
             "command": "cpy modules/schematics/migrations/migration.json dist"
           },
           {
-            "command": "cpy modules/schematics/src/**/files/**/*.* dist/modules/schematics/src"
+            "command": "cpy \"modules/schematics/src/**/files/**/*.*\" dist/modules/schematics/src"
           },
           {
-            "command": "cpy modules/schematics/src/**/integration-files/**/*.* dist/modules/schematics/src"
+            "command": "cpy \"modules/schematics/src/**/integration-files/**/*.*\" dist/modules/schematics/src"
           },
           {
-            "command": "cpy modules/schematics/src/**/schema.json dist/modules/schematics/src"
+            "command": "cpy \"modules/schematics/src/**/schema.json\" dist/modules/schematics/src"
           },
           {
-            "command": "cpy modules/schematics/ng-add/**/files/**/*.* dist/modules/schematics/ng-add"
+            "command": "cpy \"modules/schematics/ng-add/**/files/**/*.*\" dist/modules/schematics/ng-add"
           },
           {
-            "command": "cpy modules/schematics/ng-add/**/schema.json dist/modules/schematics/ng-add"
+            "command": "cpy \"modules/schematics/ng-add/**/schema.json\" dist/modules/schematics/ng-add"
           },
           {
             "command": "cpy LICENSE dist/modules/schematics"

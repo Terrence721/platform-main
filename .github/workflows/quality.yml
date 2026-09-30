@@ -71,6 +71,16 @@ jobs:
       - name: Test repo scripts
         run: yarn test:scripts
 
+      # A task that writes into the source tree (as the schematics build once
+      # did into schematics-core, #478) leaves tracked or unignored changes.
+      - name: Check the tests left the source tree unchanged
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "::error::Tests changed or added files in the source tree:"
+            git status --porcelain
+            exit 1
+          fi
+
   build:
     name: Build packages
     runs-on: ubuntu-latest
@@ -97,6 +107,16 @@ jobs:
 
       - name: Run build
         run: yarn nx affected -t build
+
+      # A build that writes into the source tree (as the schematics build once
+      # did into schematics-core, #478) leaves tracked or unignored changes.
+      - name: Check the build left the source tree unchanged
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "::error::The build changed or added files in the source tree:"
+            git status --porcelain
+            exit 1
+          fi
 
   prettier:
     name: Prettier (format check)

@@ -9,6 +9,7 @@
     "moduleResolution": "nodenext",
     "outDir": "../../dist/modules/schematics-core",
     "declaration": true,
+    "composite": true,
     "sourceMap": true,
     "inlineSources": true,
     "lib": ["es2022", "dom"],

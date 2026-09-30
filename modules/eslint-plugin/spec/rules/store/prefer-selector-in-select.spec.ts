@@ -312,6 +312,32 @@ class NotOk15 {
   ),
 ];
 
+const invalidTemplateAndFunctions: () => InvalidTestCase<
+  MessageIds,
+  Options
+>[] = () => [
+  // A template-literal string is a string too.
+  fromFixture(`
+import { Store } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+class NotOkTemplate {
+  readonly store = inject(Store)
+  readonly books$ = this.store.select(\`books\`)
+                                      ~~~~~~~ [${messageId}]
+}`),
+  // A store held in a variable, as in a functional resolver.
+  fromFixture(`
+import { Store, select } from '@ngrx/store'
+import { inject } from '@angular/core'
+
+export const booksResolver = () => {
+  const store = inject(Store)
+  return store.pipe(select('books'))
+                           ~~~~~~~ [${messageId}]
+}`),
+];
+
 // Static describe so Vitest's typecheck mode finds a suite (see spec/utils/rule-tester.ts).
 describe('rule', () => {
   ruleTester(rule.meta.docs?.requiresTypeChecking).run(
@@ -319,7 +345,11 @@ describe('rule', () => {
     rule,
     {
       valid: [...validConstructor(), ...validInject()],
-      invalid: [...invalidConstructor(), ...invalidInject()],
+      invalid: [
+        ...invalidConstructor(),
+        ...invalidInject(),
+        ...invalidTemplateAndFunctions(),
+      ],
     }
   );
 });

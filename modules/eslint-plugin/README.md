@@ -23,5 +23,14 @@ export default [
 | --------------------------- | -------------------------------------------------------------------------- | ------------- |
 | `no-async-pipe-in-ngrx-let` | `*ngrxLet="items$ \| async as items"`: `ngrxLet` already subscribes itself | drops `async` |
 | `no-async-with-ngrx-push`   | `items$ \| async \| ngrxPush` (either order): both pipes subscribe         | drops `async` |
+| `prefer-ngrx-push` (opt-in) | any other `async` pipe: prefer `ngrxPush`                                  | none          |
+
+`prefer-ngrx-push` is a style choice rather than a fix — Angular's `async` pipe works in zoneless apps too — so it is in no config. Enable it by name, after the `component` config:
+
+```js
+{ files: ['**/*.html'], rules: { '@ngrx/prefer-ngrx-push': 'error' } },
+```
+
+It has no autofix: switching to `ngrxPush` also means adding `PushPipe` to the component's `imports`.
 
 License: MIT

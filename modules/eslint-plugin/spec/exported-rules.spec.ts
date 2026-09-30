@@ -72,6 +72,16 @@ describe('ESLint flat config', () => {
       .sort();
     expect(Object.keys((configs.all[1] as any).rules).sort()).toEqual(expected);
   });
+  test('opt-in rules are in no config', () => {
+    const optIn = Object.entries(exportedRules)
+      .filter(([, rule]) => rule.meta.docs?.optIn === true)
+      .map(([ruleName]) => `@ngrx/${ruleName}`);
+    expect(optIn).toContain('@ngrx/prefer-ngrx-push');
+    for (const config of Object.values(configs)) {
+      const configured = Object.keys((config[1] as any).rules);
+      expect(configured.filter((rule) => optIn.includes(rule))).toEqual([]);
+    }
+  });
   test('the component config lints Angular templates', () => {
     const linter = new Linter({ configType: 'flat' });
     const messages = linter.verify(
@@ -119,6 +129,7 @@ describe('ESLint flat config', () => {
         .filter(
           ([, rule]) =>
             rule.meta.docs?.ngrxModule === ngrxModule &&
+            rule.meta.docs?.optIn !== true &&
             (typeChecked || rule.meta.docs?.requiresTypeChecking !== true)
         )
         .map(([ruleName]) => `@ngrx/${ruleName}`)

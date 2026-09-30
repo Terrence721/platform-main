@@ -206,6 +206,12 @@ export default defineConfig(({ mode }) => {
       // (watch mode, VS Code's own runtime, all modules competing for memory),
       // where a 30s limit was still being hit.
       testTimeout: 60000,
+      // The same ceiling for beforeEach/afterAll hooks, which otherwise keep
+      // Vitest's 10s default: the schematics specs build a whole Angular
+      // workspace in beforeEach, and under a full parallel run
+      // (`nx run-many -t build,lint,test --all`) two of them took 12.8s and
+      // 13.8s and failed, while the same suite passed on its own.
+      hookTimeout: 60000,
       // How long a finished forks worker may take to exit before Vitest logs
       // "[vitest-pool]: Timeout terminating forks worker". Stopping a worker
       // waits for its output to flush into Vitest's own stdout, which lags

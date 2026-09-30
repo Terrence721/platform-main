@@ -29,11 +29,7 @@ export function migrateTapResponseImport(): Rule {
             componentStoreImportDeclaration
           );
           if (componentStoreImports) {
-            if (
-              componentStoreImports.elements.some(
-                (element) => element.name.getText() === 'tapResponse'
-              )
-            ) {
+            if (componentStoreImports.elements.some(isTapResponse)) {
               return { componentStoreImports, componentStoreImportDeclaration };
             }
             return undefined;
@@ -44,6 +40,22 @@ export function migrateTapResponseImport(): Rule {
         .filter(Boolean);
 
       if (componentStoreImportsAndDeclarations.length === 0) {
+        // `import * as cs` with `cs.tapResponse` cannot be rewritten
+        // reliably; say so rather than leave it to fail after the upgrade.
+        const namespaceUse = importDeclarations.some((node) => {
+          const bindings = node.importClause?.namedBindings;
+          return (
+            isFrom(node, '@ngrx/component-store') &&
+            bindings &&
+            ts.isNamespaceImport(bindings) &&
+            sourceFile.text.includes(`${bindings.name.text}.tapResponse`)
+          );
+        });
+        if (namespaceUse) {
+          ctx.logger.warn(
+            `[@ngrx/component-store] ${sourceFile.fileName} uses tapResponse through a namespace import; import it from '@ngrx/operators' instead`
+          );
+        }
         return;
       } else if (componentStoreImportsAndDeclarations.length > 1) {
         ctx.logger.info(
@@ -61,13 +73,33 @@ export function migrateTapResponseImport(): Rule {
         componentStoreImportsAndDeclaration;
 
       const operatorsImportDeclaration = importDeclarations.find((node) =>
-        node.moduleSpecifier.getText().includes('@ngrx/operators')
+        isFrom(node, '@ngrx/operators')
       );
 
+      // Specifiers are kept as written, so `X as Y` and `type X` survive,
+      // and an aliased `tapResponse as tr` keeps its local name.
+      const tapResponseElement =
+        componentStoreImports.elements.find(isTapResponse);
+      if (!tapResponseElement) {
+        return;
+      }
+      const tapResponseImport = tapResponseElement.getText();
       const otherComponentStoreImports = componentStoreImports.elements
-        .filter((element) => element.name.getText() !== 'tapResponse')
-        .map((element) => element.name.getText())
+        .filter((element) => !isTapResponse(element))
+        .map((element) => element.getText())
         .join(', ');
+
+      // The line break after the import, so removing it leaves no blank line
+      // and the new import goes on its own line (also at the end of a file
+      // with no final line break, and with Windows line endings).
+      const text = sourceFile.getFullText();
+      const importEnd = componentStoreImportDeclaration.getEnd();
+      const lineBreak = text.startsWith('\r\n', importEnd)
+        ? '\r\n'
+        : text.startsWith('\n', importEnd)
+          ? '\n'
+          : '';
+      const afterImportLine = importEnd + lineBreak.length;
 
       const changes: Change[] = [];
       // Remove `tapResponse` from @ngrx/component-store and leave the other imports
@@ -88,7 +120,7 @@ export function migrateTapResponseImport(): Rule {
             sourceFile,
             componentStoreImportDeclaration,
             componentStoreImportDeclaration.getStart(),
-            componentStoreImportDeclaration.getEnd() + 1
+            afterImportLine
           )
         );
       }
@@ -99,8 +131,8 @@ export function migrateTapResponseImport(): Rule {
         if (ts.isNamedImports(bindings)) {
           // Add import to existing @ngrx/operators
           const updatedImports = [
-            ...bindings.elements.map((element) => element.name.getText()),
-            'tapResponse',
+            ...bindings.elements.map((element) => element.getText()),
+            tapResponseImport,
           ];
           const newOperatorsImport = `import { ${updatedImports.join(
             ', '
@@ -119,12 +151,16 @@ export function migrateTapResponseImport(): Rule {
 
       if (!importAppendedInExistingDeclaration) {
         // Add new @ngrx/operators import line
-        const newOperatorsImport = `import { tapResponse } from '@ngrx/operators';`;
+        const newOperatorsImport = `import { ${tapResponseImport} } from '@ngrx/operators';`;
+        // After the import's line; with no line break after it (the last
+        // line of the file), the new import starts a line of its own when
+        // the old import stays.
+        const lineBefore = !lineBreak && otherComponentStoreImports ? '\n' : '';
         changes.push(
           new InsertChange(
             sourceFile.fileName,
-            componentStoreImportDeclaration.getEnd() + 1,
-            `${newOperatorsImport}\n` // not os-independent for snapshot tests
+            afterImportLine,
+            `${lineBefore}${newOperatorsImport}${lineBreak}`
           )
         );
       }
@@ -158,7 +194,7 @@ function getComponentStoreNamedBinding(
 ): ts.NamedImports | null {
   const namedBindings = node?.importClause?.namedBindings;
   if (
-    node.moduleSpecifier.getText().includes('@ngrx/component-store') &&
+    isFrom(node, '@ngrx/component-store') &&
     namedBindings &&
     ts.isNamedImports(namedBindings)
   ) {
@@ -166,6 +202,18 @@ function getComponentStoreNamedBinding(
   }
 
   return null;
+}
+
+// By the imported name, so `tapResponse as tr` counts too.
+function isTapResponse(element: ts.ImportSpecifier): boolean {
+  return (element.propertyName ?? element.name).getText() === 'tapResponse';
+}
+
+function isFrom(node: ts.ImportDeclaration, moduleName: string): boolean {
+  return (
+    ts.isStringLiteral(node.moduleSpecifier) &&
+    node.moduleSpecifier.text === moduleName
+  );
 }
 
 export default function (): Rule {

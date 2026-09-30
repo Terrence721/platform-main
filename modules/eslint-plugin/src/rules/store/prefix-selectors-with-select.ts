@@ -1,4 +1,8 @@
-import type { TSESTree } from '@typescript-eslint/utils';
+import {
+  AST_NODE_TYPES,
+  ASTUtils,
+  type TSESTree,
+} from '@typescript-eslint/utils';
 import * as path from 'path';
 import { createRule } from '../../rule-creator';
 import { capitalize } from '../../utils';
@@ -54,39 +58,48 @@ export default createRule<Options, MessageIds>({
             {
               messageId: prefixSelectorsWithSelectSuggest,
               data: { name: suggestedName },
+              // Renames the declaration and every use of it in this file
+              // (a selector is usually composed into others here), keeping a
+              // shorthand property's key and an export's public name.
               fix: (fixer) => {
-                const parent = node.parent;
-                const sourceCode =
-                  context.sourceCode ?? context.getSourceCode();
-
-                // Handle destructuring: { selectAll: allItems }
-                if (
-                  parent &&
-                  parent.type === 'Property' &&
-                  parent.value === node &&
-                  parent.parent &&
-                  parent.parent.type === 'ObjectPattern'
-                ) {
-                  return fixer.replaceText(node, suggestedName);
+                const variable = ASTUtils.findVariable(
+                  context.sourceCode.getScope(node),
+                  node
+                );
+                const identifiers = new Set<TSESTree.Identifier>([node]);
+                for (const reference of variable?.references ?? []) {
+                  identifiers.add(reference.identifier as TSESTree.Identifier);
                 }
-
-                // Handle simple variable declarator: const allItems = ...
-                if (
-                  parent &&
-                  parent.type === 'VariableDeclarator' &&
-                  parent.id.type === 'Identifier'
-                ) {
-                  const typeAnnotation = parent.id.typeAnnotation
-                    ? sourceCode.getText(parent.id.typeAnnotation)
-                    : '';
-                  return fixer.replaceText(
-                    parent.id,
-                    `${suggestedName}${typeAnnotation}`
+                return [...identifiers].map((identifier) => {
+                  const { parent } = identifier;
+                  // `{ allItems }` in an object or a destructuring: keep the
+                  // key (the property read or written), rename the value.
+                  if (
+                    parent?.type === AST_NODE_TYPES.Property &&
+                    parent.shorthand &&
+                    parent.value === identifier
+                  ) {
+                    return fixer.replaceText(
+                      identifier,
+                      `${name}: ${suggestedName}`
+                    );
+                  }
+                  if (
+                    parent?.type === AST_NODE_TYPES.ExportSpecifier &&
+                    parent.local === identifier &&
+                    parent.exported.range[0] === identifier.range[0]
+                  ) {
+                    return fixer.replaceText(
+                      parent,
+                      `${suggestedName} as ${name}`
+                    );
+                  }
+                  // Only the name: a type annotation stays in place.
+                  return fixer.replaceTextRange(
+                    [identifier.range[0], identifier.range[0] + name.length],
+                    suggestedName
                   );
-                }
-
-                // Fallback: just replace the identifier
-                return fixer.replaceText(node, suggestedName);
+                });
               },
             },
           ],

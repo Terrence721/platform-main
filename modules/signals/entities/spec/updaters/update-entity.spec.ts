@@ -336,4 +336,29 @@ describe('updateEntity', () => {
     });
     expect(store.todoIds()).toEqual(['x', 'y200', '303']);
   });
+
+  it('warns when the new id is already taken by another entity', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const Store = signalStore({ protectedState: false }, withEntities<User>());
+    const store = new Store();
+
+    patchState(
+      store,
+      addEntities([user1, user2]),
+      updateEntity({ id: user1.id, changes: { id: user2.id } })
+    );
+
+    expect(warn).toHaveBeenCalledWith(
+      '@ngrx/signals/entities: Entities with IDs:',
+      [user1.id],
+      'are not updated correctly.',
+      'Make sure to apply valid changes when using `updateEntity`,',
+      '`updateEntities`, and `updateAllEntities` updaters.'
+    );
+    // The updated entity replaces the one that had the id; `ids` keeps a
+    // duplicate.
+    expect(store.ids()).toEqual([2, 2]);
+    expect(store.entityMap()).toEqual({ 2: { ...user1, id: 2 } });
+    warn.mockRestore();
+  });
 });

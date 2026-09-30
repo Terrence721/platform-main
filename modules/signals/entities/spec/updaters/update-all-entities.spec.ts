@@ -154,4 +154,27 @@ describe('updateAllEntities', () => {
     expect(store.userIds()).toEqual([]);
     expect(store.userEntities()).toEqual([]);
   });
+
+  it('warns when changes give all entities the same id', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const Store = signalStore({ protectedState: false }, withEntities<User>());
+    const store = new Store();
+
+    patchState(
+      store,
+      addEntities([user1, user2]),
+      updateAllEntities({ id: 7 })
+    );
+
+    expect(warn).toHaveBeenCalledWith(
+      '@ngrx/signals/entities: Entities with IDs:',
+      [user1.id, user2.id],
+      'are not updated correctly.',
+      'Make sure to apply valid changes when using `updateEntity`,',
+      '`updateEntities`, and `updateAllEntities` updaters.'
+    );
+    expect(store.ids()).toEqual([7, 7]);
+    expect(store.entityMap()).toEqual({ 7: { ...user2, id: 7 } });
+    warn.mockRestore();
+  });
 });

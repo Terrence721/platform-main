@@ -470,4 +470,48 @@ describe('updateEntities', () => {
     });
     expect(store.todoIds()).toEqual(['x100', 'y100', 'z']);
   });
+
+  it('warns when changes give two entities the same id', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const Store = signalStore({ protectedState: false }, withEntities<User>());
+    const store = new Store();
+
+    patchState(
+      store,
+      addEntities([user1, user2, user3]),
+      updateEntities({ ids: [user1.id, user2.id], changes: { id: 10 } })
+    );
+
+    expect(warn).toHaveBeenCalledWith(
+      '@ngrx/signals/entities: Entities with IDs:',
+      [user1.id, user2.id],
+      'are not updated correctly.',
+      'Make sure to apply valid changes when using `updateEntity`,',
+      '`updateEntities`, and `updateAllEntities` updaters.'
+    );
+    // The documented outcome: the second entity overwrites the first, and
+    // `ids` keeps a duplicate.
+    expect(store.ids()).toEqual([10, 10, 3]);
+    expect(store.entityMap()).toEqual({ 10: { ...user2, id: 10 }, 3: user3 });
+    warn.mockRestore();
+  });
+
+  it('does not warn when entity ids change without colliding', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const Store = signalStore({ protectedState: false }, withEntities<User>());
+    const store = new Store();
+
+    patchState(
+      store,
+      addEntities([user1, user2]),
+      updateEntities({
+        ids: [user1.id, user2.id],
+        changes: ({ id }) => ({ id: id + 10 }),
+      })
+    );
+
+    expect(warn).not.toHaveBeenCalled();
+    expect(store.ids()).toEqual([11, 12]);
+    warn.mockRestore();
+  });
 });

@@ -74,7 +74,6 @@
     "@microsoft/api-extractor": "^7.59.2",
     "@microsoft/tsdoc": "^0.17.0",
     "@nx/angular": "23.2.1",
-    "firebase-admin": "^14.5.0",
     "firebase-functions": "^7.4.0",
     "rxjs": "7.8.2",
     "semver": "^7.7.2",

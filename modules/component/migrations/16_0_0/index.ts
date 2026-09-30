@@ -1,213 +1,168 @@
 import ts from 'typescript';
-import { Rule, chain, Tree } from '@angular-devkit/schematics';
+import {
+  Rule,
+  chain,
+  Tree,
+  SchematicContext,
+} from '@angular-devkit/schematics';
 import {
   visitTSSourceFiles,
   commitChanges,
   createReplaceChange,
-  ReplaceChange,
+  Change,
 } from '../../../schematics-core';
 
-const letModuleText = 'LetModule';
-const letDirectiveText = 'LetDirective';
-const pushModuleText = 'PushModule';
-const pushPipeText = 'PushPipe';
-const moduleLocations = {
-  imports: ['NgModule', 'Component'],
-  exports: ['NgModule'],
-};
+// Each deprecated module and the standalone API that replaces it.
+const replacements = {
+  LetModule: 'LetDirective',
+  PushModule: 'PushPipe',
+} as const;
+type ModuleName = keyof typeof replacements;
+const moduleNames = Object.keys(replacements) as ModuleName[];
 
 function migrateToStandaloneAPIs() {
-  return (tree: Tree) => {
+  return (tree: Tree, context: SchematicContext) => {
     visitTSSourceFiles(tree, (sourceFile) => {
+      // Exactly '@ngrx/component': `includes` also matched
+      // '@ngrx/component-store'.
       const componentImports = sourceFile.statements
         .filter(ts.isImportDeclaration)
-        .filter(({ moduleSpecifier }) =>
-          moduleSpecifier.getText(sourceFile).includes('@ngrx/component')
+        .filter(
+          ({ moduleSpecifier }) =>
+            ts.isStringLiteral(moduleSpecifier) &&
+            moduleSpecifier.text === '@ngrx/component'
         );
 
-      if (componentImports.length === 0) {
-        return;
+      warnAboutNamespaceUse(sourceFile, componentImports, context);
+
+      const specifiers = componentImports.flatMap((declaration) => {
+        const bindings = declaration.importClause?.namedBindings;
+        return bindings && ts.isNamedImports(bindings)
+          ? bindings.elements.map((element) => ({ bindings, element }))
+          : [];
+      });
+      const findImport = (name: string) =>
+        specifiers.find(({ element }) => importedName(element) === name);
+
+      const changes: Change[] = [];
+      // The new text of each named imports list that changes.
+      const newImports = new Map<ts.NamedImports, string[]>();
+
+      for (const moduleName of moduleNames) {
+        // By the imported name, so `LetModule as LM` counts too.
+        const target = findImport(moduleName);
+        if (!target) {
+          continue;
+        }
+        const localName = target.element.name.text;
+        const replacement = replacements[moduleName];
+        // The name the file already imports the replacement by, if any; it
+        // is then not imported again.
+        const existing = findImport(replacement);
+        const replacementName = existing?.element.name.text ?? replacement;
+
+        // In any array (NgModule, Component, TestBed, a shared constant,
+        // ...) the module is replaced; any other use is left and counted,
+        // for this module only.
+        let otherUsages = 0;
+        const visit = (node: ts.Node) => {
+          if (
+            ts.isIdentifier(node) &&
+            node.text === localName &&
+            node !== target.element.name &&
+            !isPropertyName(node)
+          ) {
+            if (ts.isArrayLiteralExpression(node.parent)) {
+              changes.push(
+                createReplaceChange(
+                  sourceFile,
+                  node,
+                  node.text,
+                  replacementName
+                )
+              );
+            } else {
+              otherUsages++;
+            }
+          }
+          ts.forEachChild(node, visit);
+        };
+        ts.forEachChild(sourceFile, visit);
+
+        // Keep the module while something else still uses it.
+        const elements =
+          newImports.get(target.bindings) ??
+          target.bindings.elements.map((element) =>
+            element.getText(sourceFile)
+          );
+        const index = elements.indexOf(target.element.getText(sourceFile));
+        const added = existing ? [] : [replacement];
+        elements.splice(
+          index,
+          1,
+          ...(otherUsages
+            ? [target.element.getText(sourceFile), ...added]
+            : added)
+        );
+        newImports.set(target.bindings, elements);
+
+        if (otherUsages) {
+          context.logger.warn(
+            `[@ngrx/component] ${sourceFile.fileName} still uses ${moduleName} outside an imports array; replace it with ${replacement}`
+          );
+        }
       }
 
-      const ngModuleReplacements = findNgModuleReplacements(sourceFile);
-      const possibleModulesUsageCount =
-        findPossibleModulesUsageCount(sourceFile);
-      const importAdditionReplacements = findImportDeclarationAdditions(
-        sourceFile,
-        componentImports
-      );
-      const jsImportDeclarationReplacements =
-        possibleModulesUsageCount >
-        ngModuleReplacements.length + importAdditionReplacements.length
-          ? importAdditionReplacements
-          : findImportDeclarationReplacements(sourceFile, componentImports);
-
-      const changes = [
-        ...jsImportDeclarationReplacements,
-        ...ngModuleReplacements,
-      ];
+      for (const [bindings, elements] of newImports) {
+        changes.push(
+          createReplaceChange(
+            sourceFile,
+            bindings,
+            bindings.getText(sourceFile),
+            `{ ${elements.join(', ')} }`
+          )
+        );
+      }
 
       commitChanges(tree, sourceFile.fileName, changes);
     });
   };
 }
 
-function findImportDeclarationReplacements(
-  sourceFile: ts.SourceFile,
-  imports: ts.ImportDeclaration[]
-) {
-  return findImportDeclarations(sourceFile, imports)
-    .map(({ specifier, oldText, newText }) =>
-      !!specifier && !!oldText
-        ? createReplaceChange(sourceFile, specifier, oldText, newText)
-        : undefined
-    )
-    .filter((change) => !!change) as Array<ReplaceChange>;
+function importedName(element: ts.ImportSpecifier): string {
+  return (element.propertyName ?? element.name).text;
 }
 
-function findImportDeclarationAdditions(
-  sourceFile: ts.SourceFile,
-  imports: ts.ImportDeclaration[]
-) {
-  return findImportDeclarations(sourceFile, imports)
-    .map(({ specifier, oldText, newText }) =>
-      !!specifier && !!oldText
-        ? createReplaceChange(
-            sourceFile,
-            specifier,
-            oldText,
-            `${oldText}, ${newText}`
-          )
-        : undefined
-    )
-    .filter((change) => !!change) as Array<ReplaceChange>;
+// `x.LetModule` or `{ LetModule: ... }` name something else.
+function isPropertyName(node: ts.Identifier): boolean {
+  const parent = node.parent;
+  return (
+    ((ts.isPropertyAccessExpression(parent) ||
+      ts.isPropertyAssignment(parent)) &&
+      parent.name === node) ||
+    (ts.isImportSpecifier(parent) && parent.propertyName === node)
+  );
 }
 
-function findImportDeclarations(
+// `import * as c from '@ngrx/component'` with `c.LetModule` cannot be
+// rewritten reliably; say so rather than leave it to fail.
+function warnAboutNamespaceUse(
   sourceFile: ts.SourceFile,
-  imports: ts.ImportDeclaration[]
+  componentImports: ts.ImportDeclaration[],
+  context: SchematicContext
 ) {
-  return imports
-    .map((p) => (p?.importClause?.namedBindings as ts.NamedImports)?.elements)
-    .reduce(
-      (imports, curr) => imports.concat(curr ?? []),
-      [] as ts.ImportSpecifier[]
-    )
-    .map((specifier) => {
-      if (!ts.isImportSpecifier(specifier)) {
-        return { hit: false };
-      }
-
-      if (specifier.name.text === letModuleText) {
-        return {
-          hit: true,
-          specifier,
-          oldText: specifier.name.text,
-          newText: letDirectiveText,
-        };
-      }
-
-      if (specifier.name.text === pushModuleText) {
-        return {
-          hit: true,
-          specifier,
-          oldText: specifier.name.text,
-          newText: pushPipeText,
-        };
-      }
-
-      // if `LetModule` import is renamed
-      if (specifier.propertyName?.text === letModuleText) {
-        return {
-          hit: true,
-          specifier,
-          oldText: specifier.propertyName.text,
-          newText: letDirectiveText,
-        };
-      }
-
-      // if `PushModule` import is renamed
-      if (specifier.propertyName?.text === pushModuleText) {
-        return {
-          hit: true,
-          specifier,
-          oldText: specifier.propertyName.text,
-          newText: pushPipeText,
-        };
-      }
-
-      return { hit: false };
-    })
-    .filter(({ hit }) => hit);
-}
-
-function findPossibleModulesUsageCount(sourceFile: ts.SourceFile): number {
-  let count = 0;
-  ts.forEachChild(sourceFile, (node) => countUsages(node));
-  return count;
-
-  function countUsages(node: ts.Node) {
-    if (
-      ts.isIdentifier(node) &&
-      (node.text === letModuleText || node.text === pushModuleText)
-    ) {
-      count = count + 1;
+  for (const declaration of componentImports) {
+    const bindings = declaration.importClause?.namedBindings;
+    if (!bindings || !ts.isNamespaceImport(bindings)) {
+      continue;
     }
-
-    ts.forEachChild(node, (childNode) => countUsages(childNode));
-  }
-}
-
-function findNgModuleReplacements(sourceFile: ts.SourceFile) {
-  const changes: ReplaceChange[] = [];
-  ts.forEachChild(sourceFile, (node) => find(node, changes));
-  return changes;
-
-  function find(node: ts.Node, changes: ReplaceChange[]) {
-    let change = undefined;
-
-    if (
-      ts.isIdentifier(node) &&
-      (node.text === letModuleText || node.text === pushModuleText) &&
-      ts.isArrayLiteralExpression(node.parent) &&
-      ts.isPropertyAssignment(node.parent.parent)
-    ) {
-      const property = node.parent.parent;
-      if (ts.isIdentifier(property.name)) {
-        const propertyName = String(property.name.escapedText);
-        if (Object.keys(moduleLocations).includes(propertyName)) {
-          const decorator = property.parent.parent.parent;
-          if (
-            ts.isDecorator(decorator) &&
-            ts.isCallExpression(decorator.expression) &&
-            ts.isIdentifier(decorator.expression.expression) &&
-            moduleLocations[propertyName as 'imports' | 'exports'].includes(
-              String(decorator.expression.expression.escapedText)
-            )
-          ) {
-            change = {
-              node: node,
-              oldText: node.text,
-              newText:
-                node.text === letModuleText ? letDirectiveText : pushPipeText,
-            };
-          }
-        }
+    for (const moduleName of moduleNames) {
+      if (sourceFile.text.includes(`${bindings.name.text}.${moduleName}`)) {
+        context.logger.warn(
+          `[@ngrx/component] ${sourceFile.fileName} uses ${moduleName} through a namespace import; replace it with ${replacements[moduleName]}`
+        );
       }
     }
-
-    if (change) {
-      changes.push(
-        createReplaceChange(
-          sourceFile,
-          change.node,
-          change.oldText,
-          change.newText
-        )
-      );
-    }
-
-    ts.forEachChild(node, (childNode) => find(childNode, changes));
   }
 }
 

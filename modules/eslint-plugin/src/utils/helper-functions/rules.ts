@@ -10,7 +10,6 @@ const importDefault = (moduleName: string) =>
   interopRequireDefault(require(moduleName)).default;
 
 const rulesDir = path.join(__dirname, '../../rules');
-const configsDir = path.join(__dirname, '../../configs');
 const excludedFiles = ['index'];
 
 export const rulesForGenerate = Array.from(traverseFolder(rulesDir, ['.ts']))
@@ -28,7 +27,3 @@ export const rulesForGenerate = Array.from(traverseFolder(rulesDir, ['.ts']))
       [rule.file]: ruleModule,
     };
   }, {});
-
-export const configsForGenerate = Array.from(
-  traverseFolder(configsDir, ['.ts'])
-).map((config) => config.file);

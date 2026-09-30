@@ -1,6 +1,6 @@
 import type { TSESTree } from '@typescript-eslint/utils';
 import { AST_NODE_TYPES } from '@typescript-eslint/utils';
-import type ts from 'typescript';
+import ts from 'typescript';
 
 const isNodeOfType =
   <NodeType extends AST_NODE_TYPES>(nodeType: NodeType) =>
@@ -13,7 +13,6 @@ export const isArrowFunctionExpression = isNodeOfType(
 export const isReturnStatement = isNodeOfType(AST_NODE_TYPES.ReturnStatement);
 export const isMethodDefinition = isNodeOfType(AST_NODE_TYPES.MethodDefinition);
 export const isCallExpression = isNodeOfType(AST_NODE_TYPES.CallExpression);
-export const isClassDeclaration = isNodeOfType(AST_NODE_TYPES.ClassDeclaration);
 export const isPropertyDefinition = isNodeOfType(
   AST_NODE_TYPES.PropertyDefinition
 );
@@ -39,7 +38,6 @@ export const isTemplateElement = isNodeOfType(AST_NODE_TYPES.TemplateElement);
 export const isTemplateLiteral = isNodeOfType(AST_NODE_TYPES.TemplateLiteral);
 export const isMemberExpression = isNodeOfType(AST_NODE_TYPES.MemberExpression);
 export const isProgram = isNodeOfType(AST_NODE_TYPES.Program);
-export const isThisExpression = isNodeOfType(AST_NODE_TYPES.ThisExpression);
 export const isTSParameterProperty = isNodeOfType(
   AST_NODE_TYPES.TSParameterProperty
 );
@@ -57,28 +55,12 @@ export function isIdentifierOrMemberExpression(
   return isIdentifier(node) || isMemberExpression(node);
 }
 
+// A generic class, interface or tuple instance (`Observable<Action>`), whose
+// type arguments `getTypeArguments` reads. An own `target` is not enough: an
+// instantiated type alias or mapped type has one too.
 export function isTypeReference(type: ts.Type): type is ts.TypeReference {
-  return type.hasOwnProperty('target');
-}
-
-function equalTo(one: RegExp | string, other: string) {
-  return typeof one === 'string' ? one === other : one.test(other);
-}
-
-export function isCallExpressionWith(
-  node: TSESTree.CallExpression,
-  objectName: RegExp | string,
-  propertyName: string
-) {
   return (
-    isMemberExpression(node.callee) &&
-    !node.callee.computed &&
-    node.callee.property.name === propertyName &&
-    ((isIdentifier(node.callee.object) &&
-      equalTo(objectName, node.callee.object.name)) ||
-      (isMemberExpression(node.callee.object) &&
-        isThisExpression(node.callee.object.object) &&
-        isIdentifier(node.callee.object.property) &&
-        equalTo(objectName, node.callee.object.property.name)))
+    (type.flags & ts.TypeFlags.Object) !== 0 &&
+    ((type as ts.ObjectType).objectFlags & ts.ObjectFlags.Reference) !== 0
   );
 }

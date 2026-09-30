@@ -17,5 +17,6 @@
     "types": ["node"]
   },
   "include": ["migrations/**/*.ts", "ng-add/**/*.ts"],
-  "exclude": ["**/*.spec.ts"]
+  "exclude": ["**/*.spec.ts"],
+  "references": [{ "path": "../schematics-core/tsconfig.lib.json" }]
 }

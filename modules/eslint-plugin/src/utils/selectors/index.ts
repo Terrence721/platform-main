@@ -1,9 +1,4 @@
-export const effectCreator = `PropertyDefinition[value.callee.name='createEffect']`;
 export const createEffectExpression = `CallExpression[callee.name='createEffect']`;
-
-export const effectDecorator = `Decorator[expression.callee.name='Effect']`;
-export const propertyDefinitionWithEffectDecorator =
-  `ClassDeclaration > ClassBody > PropertyDefinition > ${effectDecorator}` as const;
 
 export const actionCreator = `CallExpression[callee.name='createAction']`;
 export const actionCreatorProps =

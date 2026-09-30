@@ -258,4 +258,27 @@ import { NamedEntityProps } from '@ngrx/signals/entities';
       "[@ngrx/signals] Renamed '(Named)EntityComputed' to '(Named)EntityProps' in /file2.ts",
     ]);
   });
+
+  describe('scope of the renames', () => {
+    it('should leave a computed field inside state alone', async () => {
+      await verifySchematic(
+        `import { SignalStoreFeature } from '@ngrx/signals';\ntype F = SignalStoreFeature<{ state: { computed: boolean }; computed: {}; methods: {} }, { state: {}; computed: {}; methods: {} }>;\n`,
+        `import { SignalStoreFeature } from '@ngrx/signals';\ntype F = SignalStoreFeature<{ state: { computed: boolean }; props: {}; methods: {} }, { state: {}; props: {}; methods: {} }>;\n`
+      );
+    });
+
+    it('should migrate an aliased EntityComputed import', async () => {
+      await verifySchematic(
+        `import { EntityComputed as EC } from '@ngrx/signals/entities';\ntype X = EC<User>;\n`,
+        `import { EntityProps as EC } from '@ngrx/signals/entities';\ntype X = EC<User>;\n`
+      );
+    });
+
+    it('should keep a type modifier', async () => {
+      await verifySchematic(
+        `import { type EntityComputed, withEntities } from '@ngrx/signals/entities';\ntype X = EntityComputed<User>;\n`,
+        `import { type EntityProps, withEntities } from '@ngrx/signals/entities';\ntype X = EntityProps<User>;\n`
+      );
+    });
+  });
 });

@@ -14,10 +14,14 @@ import {
   visitCallExpression,
   visitImportDeclaration,
   visitImportSpecifier,
-  visitTypeLiteral,
   visitTypeReference,
 } from '../../../schematics-core/utility/visitors';
 import ts from 'typescript';
+
+const entityRenames: Record<string, string> = {
+  EntityComputed: 'EntityProps',
+  NamedEntityComputed: 'NamedEntityProps',
+};
 
 function migratedToEntityProps(sourceFile: ts.SourceFile) {
   const changes: Change[] = [];
@@ -27,53 +31,35 @@ function migratedToEntityProps(sourceFile: ts.SourceFile) {
     }
 
     visitImportSpecifier(importDeclaration, (importSpecifier) => {
-      if (importSpecifier.name.getText() === 'EntityComputed') {
-        changes.push(
-          createReplaceChange(
-            sourceFile,
-            importSpecifier,
-            importSpecifier.getText(),
-            'EntityProps'
-          )
-        );
-
-        visitTypeReference(sourceFile, (type) => {
-          if (type.typeName.getText() === 'EntityComputed') {
-            changes.push(
-              createReplaceChange(
-                sourceFile,
-                type,
-                type.typeName.getText(),
-                'EntityProps'
-              )
-            );
-          }
-        });
+      // By the imported name, so `EntityComputed as EC` counts too.
+      const importedName = importSpecifier.propertyName ?? importSpecifier.name;
+      const newName = entityRenames[importedName.text];
+      if (!newName) {
+        return;
       }
 
-      if (importSpecifier.name.getText() === 'NamedEntityComputed') {
-        changes.push(
-          createReplaceChange(
-            sourceFile,
-            importSpecifier,
-            importSpecifier.getText(),
-            'NamedEntityProps'
-          )
-        );
+      // Only the name, so a `type` modifier and an alias are kept.
+      changes.push(
+        createReplaceChange(
+          sourceFile,
+          importedName,
+          importedName.text,
+          newName
+        )
+      );
 
-        visitTypeReference(sourceFile, (typeReference) => {
-          if (typeReference.typeName.getText() === 'NamedEntityComputed') {
-            changes.push(
-              createReplaceChange(
-                sourceFile,
-                typeReference.typeName,
-                typeReference.typeName.getText(),
-                'NamedEntityProps'
-              )
-            );
-          }
-        });
+      // An aliased import keeps its local name, so its uses stay as they are.
+      if (importSpecifier.propertyName) {
+        return;
       }
+      visitTypeReference(sourceFile, (typeReference) => {
+        const { typeName } = typeReference;
+        if (ts.isIdentifier(typeName) && typeName.text === importedName.text) {
+          changes.push(
+            createReplaceChange(sourceFile, typeName, typeName.text, newName)
+          );
+        }
+      });
     });
   });
 
@@ -89,26 +75,46 @@ function migrateToPropsInSignalStoreFeatureType(
       return;
     }
 
-    visitTypeLiteral(typeReference, (typeLiteral) => {
-      const typeLiteralChildren = typeLiteral.members;
-      for (const propertySignature of typeLiteralChildren) {
-        if (ts.isPropertySignature(propertySignature)) {
-          if (propertySignature.name.getText() === 'computed') {
-            changes.push(
-              createReplaceChange(
-                sourceFile,
-                propertySignature.name,
-                'computed',
-                'props'
-              )
-            );
-          }
+    // Only the top-level keys of the input and output type literals: a
+    // `computed` field nested inside `state` is the user's own.
+    const typeLiterals = (typeReference.typeArguments ?? []).flatMap(
+      topLevelTypeLiterals
+    );
+    for (const typeLiteral of typeLiterals) {
+      for (const propertySignature of typeLiteral.members) {
+        if (
+          ts.isPropertySignature(propertySignature) &&
+          propertySignature.name.getText() === 'computed'
+        ) {
+          changes.push(
+            createReplaceChange(
+              sourceFile,
+              propertySignature.name,
+              'computed',
+              'props'
+            )
+          );
         }
       }
-    });
+    }
   });
 
   return changes;
+}
+
+// `{ ... }`, and each `{ ... }` of `EmptyFeatureResult & { ... }`, without
+// going into their members.
+function topLevelTypeLiterals(type: ts.TypeNode): ts.TypeLiteralNode[] {
+  if (ts.isTypeLiteralNode(type)) {
+    return [type];
+  }
+  if (ts.isIntersectionTypeNode(type)) {
+    return type.types.flatMap(topLevelTypeLiterals);
+  }
+  if (ts.isParenthesizedTypeNode(type)) {
+    return topLevelTypeLiterals(type.type);
+  }
+  return [];
 }
 
 function migrateToPropsInSignalStoreFeatureWithObjectLiteral(

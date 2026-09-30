@@ -19,6 +19,6 @@
     "resolveJsonModule": true,
     "types": ["node"]
   },
-  "include": ["**/*.ts"],
+  "include": ["src/**/*.ts", "migrations/**/*.ts"],
   "exclude": ["**/*.spec.ts", "test-setup.ts"]
 }

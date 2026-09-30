@@ -106,4 +106,40 @@ describe('21_0_0-beta_0-rename-withEffects-to-withEventHandlers', () => {
 
     await verify(input, output);
   });
+
+  describe('references beyond calls', () => {
+    const imp = `import { withEffects } from '@ngrx/signals/events';\n`;
+    const newImp = `import { withEventHandlers } from '@ngrx/signals/events';\n`;
+
+    it('should rename plain and typeof references', async () => {
+      await verify(
+        imp + `const feature = withEffects;\ntype F = typeof withEffects;\n`,
+        newImp +
+          `const feature = withEventHandlers;\ntype F = typeof withEventHandlers;\n`
+      );
+    });
+
+    it('should keep the public name of re-exports', async () => {
+      await verify(
+        `export { withEffects } from '@ngrx/signals/events';\n`,
+        `export { withEventHandlers as withEffects } from '@ngrx/signals/events';\n`
+      );
+    });
+
+    it('should not import withEventHandlers twice', async () => {
+      await verify(
+        `import { withEffects, withEventHandlers } from '@ngrx/signals/events';\nconst a = withEffects(() => ({}));\n`,
+        `import { withEventHandlers } from '@ngrx/signals/events';\nconst a = withEventHandlers(() => ({}));\n`
+      );
+    });
+
+    it('should leave shadowing parameters and property names alone', async () => {
+      await verify(
+        imp +
+          `function f(withEffects: any) { return withEffects(); }\nconst o = { withEffects: 1 };\n`,
+        newImp +
+          `function f(withEffects: any) { return withEffects(); }\nconst o = { withEffects: 1 };\n`
+      );
+    });
+  });
 });

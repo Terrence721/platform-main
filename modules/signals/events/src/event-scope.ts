@@ -15,7 +15,7 @@ export type EventScopeConfig = { scope: EventScope };
  *
  * ```ts
  * import { signalStore, type } from '@ngrx/signals';
- * import { event, Events, withEffects } from '@ngrx/signals/events';
+ * import { event, Events, withEventHandlers } from '@ngrx/signals/events';
  * import { mapResponse } from '@ngrx/operators';
  *
  * const opened = event('[Users Page] Opened');
@@ -23,7 +23,7 @@ export type EventScopeConfig = { scope: EventScope };
  * const loadedFailure = event('[Users API] Loaded Failure', type<string>());
  *
  * const UsersStore = signalStore(
- *   withEffects((
+ *   withEventHandlers((
  *     _,
  *     events = inject(Events),
  *     usersService = inject(UsersService)
@@ -59,7 +59,7 @@ export function toScope(scope: EventScope): EventScopeConfig {
  *
  * ```ts
  * import { signalStore, type } from '@ngrx/signals';
- * import { event, Events, withEffects } from '@ngrx/signals/events';
+ * import { event, Events, withEventHandlers } from '@ngrx/signals/events';
  * import { mapResponse } from '@ngrx/operators';
  *
  * const opened = event('[Users Page] Opened');
@@ -67,7 +67,7 @@ export function toScope(scope: EventScope): EventScopeConfig {
  * const loadedFailure = event('[Users API] Loaded Failure', type<string>());
  *
  * const UsersStore = signalStore(
- *   withEffects((
+ *   withEventHandlers((
  *     _,
  *     events = inject(Events),
  *     usersService = inject(UsersService)

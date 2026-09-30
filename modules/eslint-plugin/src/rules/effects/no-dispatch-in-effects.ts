@@ -1,8 +1,4 @@
-import {
-  AST_NODE_TYPES,
-  ASTUtils,
-  type TSESTree,
-} from '@typescript-eslint/utils';
+import type { TSESTree } from '@typescript-eslint/utils';
 import * as path from 'path';
 import { createRule } from '../../rule-creator';
 import {
@@ -13,10 +9,8 @@ import {
   getImportDeclarationSpecifier,
   getNgRxStores,
   isArrowFunctionExpression,
-  isCallExpression,
-  isIdentifier,
   isReturnStatement,
-  isTSTypeReference,
+  isVariableOfClass,
   NGRX_MODULE_PATHS,
 } from '../../utils';
 
@@ -84,41 +78,7 @@ export default createRule<Options, MessageIds>({
     // `inject(Store)`: a functional effect's parameter default
     // (`store = inject(Store)`) or a `const` in its body.
     function isStoreVariable(identifier: TSESTree.Identifier): boolean {
-      const variable = ASTUtils.findVariable(
-        context.sourceCode.getScope(identifier),
-        identifier
-      );
-      const name = variable?.defs[0]?.name;
-      if (!name || !isIdentifier(name)) {
-        return false;
-      }
-      const annotation = name.typeAnnotation?.typeAnnotation;
-      if (
-        annotation &&
-        isTSTypeReference(annotation) &&
-        isIdentifier(annotation.typeName) &&
-        annotation.typeName.name === storeImportName
-      ) {
-        return true;
-      }
-      const { parent } = name;
-      const initializer =
-        parent?.type === AST_NODE_TYPES.AssignmentPattern &&
-        parent.left === name
-          ? parent.right
-          : parent?.type === AST_NODE_TYPES.VariableDeclarator &&
-              parent.id === name
-            ? parent.init
-            : null;
-      return (
-        !!initializer &&
-        isCallExpression(initializer) &&
-        isIdentifier(initializer.callee) &&
-        initializer.callee.name === 'inject' &&
-        !!initializer.arguments[0] &&
-        isIdentifier(initializer.arguments[0]) &&
-        initializer.arguments[0].name === storeImportName
-      );
+      return isVariableOfClass(context.sourceCode, identifier, storeImportName);
     }
 
     return {

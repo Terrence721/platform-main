@@ -1,8 +1,4 @@
-import {
-  AST_NODE_TYPES,
-  ASTUtils,
-  type TSESTree,
-} from '@typescript-eslint/utils';
+import { AST_NODE_TYPES, type TSESTree } from '@typescript-eslint/utils';
 import * as path from 'path';
 import { createRule } from '../../rule-creator';
 import {
@@ -14,6 +10,7 @@ import {
   isArrowFunctionExpression,
   isFunctionExpression,
   isLiteral,
+  isVariableOfClass,
   pipeableSelect,
   selectExpression,
 } from '../../utils';
@@ -53,41 +50,9 @@ export default createRule<Options, MessageIds>({
       ) ?? {};
     const storeImportName = importSpecifier?.local.name;
 
-    // A variable is a store when it is typed `Store` or set to
-    // `inject(Store)` (a parameter default or a variable).
+    // Typed `Store` or set to `inject(Store)`.
     function isStoreVariable(identifier: TSESTree.Identifier): boolean {
-      const variable = ASTUtils.findVariable(
-        context.sourceCode.getScope(identifier),
-        identifier
-      );
-      const name = variable?.defs[0]?.name;
-      if (!name || name.type !== AST_NODE_TYPES.Identifier) {
-        return false;
-      }
-      const annotation = name.typeAnnotation?.typeAnnotation;
-      if (
-        annotation?.type === AST_NODE_TYPES.TSTypeReference &&
-        annotation.typeName.type === AST_NODE_TYPES.Identifier &&
-        annotation.typeName.name === storeImportName
-      ) {
-        return true;
-      }
-      const { parent } = name;
-      const initializer =
-        parent?.type === AST_NODE_TYPES.AssignmentPattern &&
-        parent.left === name
-          ? parent.right
-          : parent?.type === AST_NODE_TYPES.VariableDeclarator &&
-              parent.id === name
-            ? parent.init
-            : null;
-      return (
-        initializer?.type === AST_NODE_TYPES.CallExpression &&
-        initializer.callee.type === AST_NODE_TYPES.Identifier &&
-        initializer.callee.name === 'inject' &&
-        initializer.arguments[0]?.type === AST_NODE_TYPES.Identifier &&
-        initializer.arguments[0].name === storeImportName
-      );
+      return isVariableOfClass(context.sourceCode, identifier, storeImportName);
     }
 
     // The leading strings (template literals too) and inline functions a

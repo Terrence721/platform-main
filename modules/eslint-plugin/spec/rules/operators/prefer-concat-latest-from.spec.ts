@@ -135,6 +135,7 @@ class NotOk {
 }`,
     {
       output: `import { concatLatestFrom } from '@ngrx/operators';
+
 import { Actions } from '@ngrx/effects'
 import { of, withLatestFrom } from 'rxjs'
 
@@ -250,6 +251,7 @@ class NotOk2 {
     {
       options: [{ strict: true }],
       output: `import { concatLatestFrom } from '@ngrx/operators';
+
 import { of, withLatestFrom } from 'rxjs'
 
 class NotOk2 {
@@ -330,6 +332,7 @@ class NotOk4 {
 }`,
     {
       output: `import { concatLatestFrom } from '@ngrx/operators';
+
 import { Actions } from '@ngrx/effects'
 import { of, withLatestFrom } from 'rxjs'
 import { inject } from '@angular/core'
@@ -379,6 +382,7 @@ class NotOk5 {
 }`,
     {
       output: `import { concatLatestFrom } from '@ngrx/operators';
+
 import { Actions } from '@ngrx/effects'
 import { of, withLatestFrom } from 'rxjs'
 import { inject } from '@angular/core'
@@ -420,6 +424,7 @@ export const effect = createEffect(
 )`,
     {
       output: `import { concatLatestFrom } from '@ngrx/operators';
+
 import { Actions } from '@ngrx/effects'
 import { withLatestFrom } from 'rxjs'
 import { inject } from '@angular/core'

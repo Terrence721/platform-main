@@ -1,5 +1,5 @@
 import type { TSESLint, TSESTree } from '@typescript-eslint/utils';
-import { ASTUtils } from '@typescript-eslint/utils';
+import { AST_NODE_TYPES, ASTUtils } from '@typescript-eslint/utils';
 import {
   isCallExpression,
   isIdentifier,
@@ -37,21 +37,6 @@ type InjectedParameterWithSourceCode = Readonly<{
   identifiers?: readonly InjectedParameter[];
   sourceCode: Readonly<TSESLint.SourceCode>;
 }>;
-
-export function getNearestUpperNodeFrom<T extends TSESTree.Node>(
-  { parent }: TSESTree.Node,
-  predicate: (parent: TSESTree.Node) => parent is T
-): T | undefined {
-  while (parent && !isProgram(parent)) {
-    if (predicate(parent)) {
-      return parent;
-    }
-
-    parent = parent.parent;
-  }
-
-  return undefined;
-}
 
 export function getImportDeclarationSpecifier(
   importDeclarations: readonly TSESTree.ImportDeclaration[],
@@ -126,7 +111,8 @@ export function getImportAddFix({
   moduleName: string;
   node: TSESTree.Node;
 }): TSESLint.RuleFix | TSESLint.RuleFix[] {
-  const fullImport = `import { ${importName} } from '${moduleName}';`;
+  // On its own line, ahead of whatever the file starts with.
+  const fullImport = `import { ${importName} } from '${moduleName}';\n`;
   const importDeclarations = getImportDeclarations(node, moduleName);
 
   if (!importDeclarations?.length) {
@@ -170,36 +156,46 @@ export function getImportRemoveFix(
     return [];
   }
 
-  const isFirstImportSpecifier =
-    importDeclaration.specifiers[0] === importSpecifier;
-  const isLastImportSpecifier =
-    getLast(importDeclaration.specifiers) === importSpecifier;
-  const isSingleImportSpecifier =
-    isFirstImportSpecifier && isLastImportSpecifier;
-
-  if (isSingleImportSpecifier) {
+  if (importDeclaration.specifiers.length === 1) {
     return fixer.remove(importDeclaration);
+  }
+
+  const tokenBeforeImportSpecifier = sourceCode.getTokenBefore(importSpecifier);
+
+  // After another specifier: `, select`.
+  if (tokenBeforeImportSpecifier?.value === ',') {
+    return fixer.removeRange([
+      tokenBeforeImportSpecifier.range[0],
+      importSpecifier.range[1],
+    ]);
   }
 
   const tokenAfterImportSpecifier = sourceCode.getTokenAfter(importSpecifier);
 
-  if (isFirstImportSpecifier && tokenAfterImportSpecifier) {
+  // The first in the braces: `select, `.
+  if (tokenAfterImportSpecifier?.value === ',') {
     return fixer.removeRange([
       importSpecifier.range[0],
       tokenAfterImportSpecifier.range[1],
     ]);
   }
 
-  const tokenBeforeImportSpecifier = sourceCode.getTokenBefore(importSpecifier);
-
-  if (!tokenBeforeImportSpecifier) {
-    return [];
+  // The only one in the braces after a default import: `, { select }`.
+  const commaBeforeBraces =
+    tokenBeforeImportSpecifier &&
+    sourceCode.getTokenBefore(tokenBeforeImportSpecifier);
+  if (
+    tokenBeforeImportSpecifier?.value === '{' &&
+    commaBeforeBraces?.value === ',' &&
+    tokenAfterImportSpecifier?.value === '}'
+  ) {
+    return fixer.removeRange([
+      commaBeforeBraces.range[0],
+      tokenAfterImportSpecifier.range[1],
+    ]);
   }
 
-  return fixer.removeRange([
-    tokenBeforeImportSpecifier.range[0],
-    importSpecifier.range[1],
-  ]);
+  return [];
 }
 
 export function getNodeToCommaRemoveFix(
@@ -262,18 +258,6 @@ export function getLast<T extends readonly unknown[]>(items: T): T[number] {
   return items.slice(-1)[0];
 }
 
-export function getDecoratorName({
-  expression,
-}: TSESTree.Decorator): string | undefined {
-  if (isIdentifier(expression)) {
-    return expression.name;
-  }
-
-  return isCallExpression(expression) && isIdentifier(expression.callee)
-    ? expression.callee.name
-    : undefined;
-}
-
 export function getRawText(node: TSESTree.Node): string | null {
   if (isIdentifier(node)) {
     return node.name;
@@ -295,7 +279,8 @@ export function getRawText(node: TSESTree.Node): string | null {
     return `\`${node.value.raw}\``;
   }
 
-  if (isTemplateLiteral(node)) {
+  // Only without expressions: `${x}` has no text to read or rename.
+  if (isTemplateLiteral(node) && node.expressions.length === 0) {
     return `\`${node.quasis[0].value.raw}\``;
   }
 
@@ -327,8 +312,8 @@ function getInjectedParametersWithSourceCode(
     return { sourceCode };
   }
 
-  const variables = sourceCode.getDeclaredVariables(importSpecifier);
-  const typedVariable = variables.find(({ name }) => name === importName);
+  // The import's own variable, under its local name (`Store as AppStore` too).
+  const [typedVariable] = sourceCode.getDeclaredVariables(importSpecifier);
   const identifiers = typedVariable?.references?.reduce<
     readonly InjectedParameter[]
   >((identifiers, { identifier: { parent } }) => {
@@ -354,11 +339,10 @@ function getInjectedParametersWithSourceCode(
       parentToCheck &&
       isCallExpression(parentToCheck) &&
       isIdentifier(parentToCheck.callee) &&
-      parentToCheck.callee.name == 'inject' &&
+      parentToCheck.callee.name === injectImportSpecifier?.local.name &&
       parentToCheck.parent &&
       isPropertyDefinition(parentToCheck.parent) &&
-      isIdentifier(parentToCheck.parent.key) &&
-      injectImportSpecifier
+      isIdentifier(parentToCheck.parent.key)
     ) {
       return identifiers.concat(parentToCheck.parent.key as InjectedParameter);
     }
@@ -395,6 +379,52 @@ export function getNgRxStores(
     context,
     NGRX_MODULE_PATHS.store,
     'Store'
+  );
+}
+
+// Whether a variable holds an instance of `className` (the local name its
+// class is imported as, e.g. `Store`): it is typed with it (a parameter
+// too) or set to `inject(className)` (a variable or a parameter default).
+export function isVariableOfClass(
+  sourceCode: Readonly<TSESLint.SourceCode>,
+  identifier: TSESTree.Identifier,
+  className: string | undefined
+): boolean {
+  if (!className) {
+    return false;
+  }
+  const variable = ASTUtils.findVariable(
+    sourceCode.getScope(identifier),
+    identifier
+  );
+  const name = variable?.defs[0]?.name;
+  if (!name || !isIdentifier(name)) {
+    return false;
+  }
+  const annotation = name.typeAnnotation?.typeAnnotation;
+  if (
+    annotation &&
+    isTSTypeReference(annotation) &&
+    isIdentifier(annotation.typeName) &&
+    annotation.typeName.name === className
+  ) {
+    return true;
+  }
+  const { parent } = name;
+  const initializer =
+    parent?.type === AST_NODE_TYPES.AssignmentPattern && parent.left === name
+      ? parent.right
+      : parent?.type === AST_NODE_TYPES.VariableDeclarator && parent.id === name
+        ? parent.init
+        : null;
+  return (
+    !!initializer &&
+    isCallExpression(initializer) &&
+    isIdentifier(initializer.callee) &&
+    initializer.callee.name === 'inject' &&
+    !!initializer.arguments[0] &&
+    isIdentifier(initializer.arguments[0]) &&
+    initializer.arguments[0].name === className
   );
 }
 

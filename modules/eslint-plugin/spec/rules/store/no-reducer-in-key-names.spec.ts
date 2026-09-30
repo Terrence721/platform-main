@@ -60,6 +60,8 @@ export const reducers: ActionReducerMap<AppState> = {
 })
 export class AppModule {}`,
   `export const providers = [provideState({ name: 'books', reducer: booksReducer })];`,
+  // A key built from an expression has no fixed name to judge or rename.
+  'StoreModule.forRoot({ [`fooReducer${suffix}`]: fooReducer })',
 ];
 
 const invalid: () => InvalidTestCase<MessageIds, Options>[] = () => [

@@ -12,6 +12,7 @@ import {
   getImportDeclarationSpecifier,
   getImportRemoveFix,
   getNgRxStores,
+  isVariableOfClass,
   NGRX_MODULE_PATHS,
 } from '../../utils';
 
@@ -74,38 +75,7 @@ export default createRule<Options, MessageIds>({
     // A variable is a store when it is typed `Store` (a constructor or
     // function parameter too) or set to `inject(Store)`.
     function isStoreVariable(identifier: TSESTree.Identifier): boolean {
-      const variable = ASTUtils.findVariable(
-        sourceCode.getScope(identifier),
-        identifier
-      );
-      const name = variable?.defs[0]?.name;
-      if (!name || name.type !== AST_NODE_TYPES.Identifier) {
-        return false;
-      }
-      const annotation = name.typeAnnotation?.typeAnnotation;
-      if (
-        annotation?.type === AST_NODE_TYPES.TSTypeReference &&
-        annotation.typeName.type === AST_NODE_TYPES.Identifier &&
-        annotation.typeName.name === storeImportName
-      ) {
-        return true;
-      }
-      const { parent } = name;
-      const initializer =
-        parent?.type === AST_NODE_TYPES.AssignmentPattern &&
-        parent.left === name
-          ? parent.right
-          : parent?.type === AST_NODE_TYPES.VariableDeclarator &&
-              parent.id === name
-            ? parent.init
-            : null;
-      return (
-        initializer?.type === AST_NODE_TYPES.CallExpression &&
-        initializer.callee.type === AST_NODE_TYPES.Identifier &&
-        initializer.callee.name === 'inject' &&
-        initializer.arguments[0]?.type === AST_NODE_TYPES.Identifier &&
-        initializer.arguments[0].name === storeImportName
-      );
+      return isVariableOfClass(sourceCode, identifier, storeImportName);
     }
 
     // `this.store` (a class's injected store) or a store held in a variable.

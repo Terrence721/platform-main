@@ -1,6 +1,6 @@
 import { Linter } from 'eslint';
 import * as path from 'path';
-import { traverseFolder } from '../src/utils';
+import { NGRX_MODULE_PATHS, traverseFolder } from '../src/utils';
 import plugin, { configs, rules as exportedRules } from '../src';
 
 const rulesDirectory = path.join(__dirname, '../src/rules');
@@ -26,6 +26,23 @@ describe('ESLint flat config', () => {
         `https://ngrx.io/guide/eslint-plugin/rules/${ruleName}`
       );
       expect(rule.meta.docs?.description).toBeTruthy();
+    }
+  });
+  // The config generator takes a rule's module from its folder, so a rule
+  // declaring another module would disagree with the config it lands in.
+  test('every rule declares the NgRx module of its folder', () => {
+    for (const { file, folder } of traverseFolder(rulesDirectory, ['.ts'])) {
+      if (file === 'index') {
+        continue;
+      }
+      const ngrxModule = path.basename(folder);
+      expect(Object.keys(NGRX_MODULE_PATHS)).toContain(ngrxModule);
+      expect({
+        rule: file,
+        ngrxModule:
+          exportedRules[file as keyof typeof exportedRules].meta.docs
+            ?.ngrxModule,
+      }).toEqual({ rule: file, ngrxModule });
     }
   });
   test('exports all configurations', () => {

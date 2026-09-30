@@ -115,6 +115,62 @@ describe('22_0_0-beta_0-rename-eslint-plugin-v9-imports', () => {
     expect(tree.readText('node_modules/pkg/index.js')).toBe(content);
   });
 
+  it('does not walk node_modules', async () => {
+    tree.create(
+      'node_modules/pkg/index.js',
+      `import ngrx from '@ngrx/eslint-plugin/v9';\n`
+    );
+    tree.create(
+      'src/node_modules-like/eslint.config.js',
+      `import ngrx from '@ngrx/eslint-plugin/v9';\n`
+    );
+    const dir = vi.spyOn(tree.root, 'dir');
+
+    await schematicRunner.runSchematic(
+      '22_0_0-beta_0-rename-eslint-plugin-v9-imports',
+      {},
+      tree
+    );
+
+    expect(dir).not.toHaveBeenCalledWith('node_modules');
+    expect(tree.readText('src/node_modules-like/eslint.config.js')).toBe(
+      `import ngrx from '@ngrx/eslint-plugin';\n`
+    );
+  });
+
+  it('keeps Windows line endings', async () => {
+    tree.create(
+      'eslint.config.js',
+      `import ngrx from '@ngrx/eslint-plugin/v9';\r\nexport default [...ngrx.configs.all];\r\n`
+    );
+
+    await schematicRunner.runSchematic(
+      '22_0_0-beta_0-rename-eslint-plugin-v9-imports',
+      {},
+      tree
+    );
+
+    expect(tree.readText('eslint.config.js')).toBe(
+      `import ngrx from '@ngrx/eslint-plugin';\r\nexport default [...ngrx.configs.all];\r\n`
+    );
+  });
+
+  it('leaves files without the old import untouched', async () => {
+    const content = `import ngrx from '@ngrx/eslint-plugin';\n`;
+    tree.create('eslint.config.js', content);
+    const logs: logging.LogEntry[] = [];
+    schematicRunner.logger.subscribe((entry) => logs.push(entry));
+
+    await schematicRunner.runSchematic(
+      '22_0_0-beta_0-rename-eslint-plugin-v9-imports',
+      {},
+      tree
+    );
+
+    expect(tree.readText('eslint.config.js')).toBe(content);
+    expect(logs).toHaveLength(0);
+  });
+
   it('logs updated files', async () => {
     const logs: logging.LogEntry[] = [];
     schematicRunner.logger.subscribe((entry) => logs.push(entry));

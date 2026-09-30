@@ -1,4 +1,4 @@
-import type { TSESTree } from '@typescript-eslint/utils';
+import { AST_NODE_TYPES, type TSESTree } from '@typescript-eslint/utils';
 import * as path from 'path';
 import { createRule } from '../../rule-creator';
 
@@ -31,10 +31,28 @@ export default createRule<Options, MessageIds>({
   },
   defaultOptions: [],
   create: (context) => {
+    // Namespace imports of @ngrx/store: `ngrx.createFeatureSelector<...>()`.
+    const namespaceNames = new Set<string>();
+
     return {
-      [`CallExpression[callee.name='createFeatureSelector'] > TSTypeParameterInstantiation[params.length>1]`](
+      [`ImportDeclaration[source.value='@ngrx/store'] ImportNamespaceSpecifier`](
+        node: TSESTree.ImportNamespaceSpecifier
+      ) {
+        namespaceNames.add(node.local.name);
+      },
+      [`CallExpression:matches([callee.name='createFeatureSelector'], [callee.property.name='createFeatureSelector']) > TSTypeParameterInstantiation[params.length>1]`](
         node: TSESTree.TSTypeParameterInstantiation
       ) {
+        const { callee } = node.parent as TSESTree.CallExpression;
+        if (
+          callee.type === AST_NODE_TYPES.MemberExpression &&
+          !(
+            callee.object.type === AST_NODE_TYPES.Identifier &&
+            namespaceNames.has(callee.object.name)
+          )
+        ) {
+          return;
+        }
         context.report({
           node,
           messageId: preferOneGenericInCreateForFeatureSelector,

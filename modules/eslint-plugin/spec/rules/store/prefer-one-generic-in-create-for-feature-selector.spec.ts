@@ -17,6 +17,8 @@ const valid: () => (string | ValidTestCase<Options>)[] = () => [
   `const createFeatureSelector = test('feature-state')`,
   `const featureOk = createFeatureSelector('feature-state')`,
   `const featureOk1 = createFeatureSelector<FeatureState>('feature-state')`,
+  // A method on another object is not the @ngrx/store function.
+  `const featureOk2 = selectors.createFeatureSelector<GlobalState, FeatureState>('feature-state')`,
 ];
 
 const invalid: () => InvalidTestCase<MessageIds, Options>[] = () => [
@@ -58,6 +60,23 @@ const featureNotOk2 = createFeatureSelector<GlobalState  , StateA & StateB>('fea
           messageId: preferOneGenericInCreateForFeatureSelectorSuggest,
           output: `
 const featureNotOk2 = createFeatureSelector< StateA & StateB>('feature-state')`,
+        },
+      ],
+    }
+  ),
+  // Through a namespace import of @ngrx/store.
+  fromFixture(
+    `
+import * as fromStore from '@ngrx/store'
+const featureNotOk3 = fromStore.createFeatureSelector<GlobalState, FeatureState>('feature-state')
+                                                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~ [${preferOneGenericInCreateForFeatureSelector} suggest]`,
+    {
+      suggestions: [
+        {
+          messageId: preferOneGenericInCreateForFeatureSelectorSuggest,
+          output: `
+import * as fromStore from '@ngrx/store'
+const featureNotOk3 = fromStore.createFeatureSelector< FeatureState>('feature-state')`,
         },
       ],
     }

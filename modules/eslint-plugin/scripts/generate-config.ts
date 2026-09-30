@@ -68,8 +68,9 @@ import { NgRxRule } from '../src/rule-creator';
     predicate: (rule: NgRxRule) => boolean,
     { template = false }: { template?: boolean } = {}
   ) {
+    // Opt-in rules are in no config: users enable them by name.
     const rulesForConfig = Object.entries(rulesForGenerate).filter(
-      ([_, rule]) => predicate(rule)
+      ([_, rule]) => predicate(rule) && rule.meta.docs?.optIn !== true
     );
     const configRules = rulesForConfig.reduce<Record<string, string>>(
       (rules, [ruleName, _rule]) => {

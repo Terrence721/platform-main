@@ -7,6 +7,8 @@ export interface NgRxRuleDocs {
   // Lints Angular templates (parsed by `@angular-eslint/template-parser`),
   // so it goes in the `component` config, not in `all`.
   template?: boolean;
+  // A preference rather than a fix: in no config, so it is enabled by name.
+  optIn?: boolean;
 }
 
 export type NgRxRule = ReturnType<

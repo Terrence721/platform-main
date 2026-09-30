@@ -76,6 +76,22 @@ export function getBoundAttribute(
     : undefined;
 }
 
+// The binding an expression node sits in, however deep: the first
+// `BoundAttribute` above it, or `undefined` outside a binding (`{{ … }}`).
+export function getEnclosingBoundAttribute(
+  node: TemplateNode
+): BoundAttribute | undefined {
+  for (let current = node.parent; current; current = current.parent) {
+    if (current.type === 'BoundAttribute') {
+      return current as BoundAttribute;
+    }
+    if (current.type === 'Element' || current.type === 'Template') {
+      return undefined;
+    }
+  }
+  return undefined;
+}
+
 export function getTemplateText(
   sourceCode: Readonly<TSESLint.SourceCode>,
   { sourceSpan }: TemplateNode

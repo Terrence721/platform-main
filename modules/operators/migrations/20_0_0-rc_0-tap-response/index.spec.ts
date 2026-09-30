@@ -181,4 +181,79 @@ function handle() {
 
     await verifySchematic(input, input);
   });
+
+  describe('exact output', () => {
+    const imp = `import { tapResponse } from '@ngrx/operators';\n`;
+
+    // Compares the whole file, whitespace included.
+    const verifyExact = async (input: string, output: string) => {
+      appTree.create('main.ts', input);
+      const tree = await schematicRunner.runSchematic(
+        '20.0.0-rc_0-tap-response',
+        {},
+        appTree
+      );
+      expect(tree.readContent('main.ts')).toBe(output);
+    };
+
+    it('keeps the callbacks formatting and comments', async () => {
+      await verifyExact(
+        imp +
+          `const x = tapResponse(\n  (users) => {\n    // keep me\n    this.users.set(users);\n  },\n  (e: HttpErrorResponse) => this.log(e.message)\n);\n`,
+        imp +
+          `const x = tapResponse({\n  next: (users) => {\n    // keep me\n    this.users.set(users);\n  },\n  error: (e: HttpErrorResponse) => this.log(e.message)\n});\n`
+      );
+    });
+
+    it('keeps comments between the arguments and a trailing comma', async () => {
+      await verifyExact(
+        imp +
+          `const x = tapResponse(\n  // on next\n  () => a(),\n  // on error\n  () => b(),\n);\n`,
+        imp +
+          `const x = tapResponse({\n  // on next\n  next: () => a(),\n  // on error\n  error: () => b(),\n});\n`
+      );
+    });
+
+    it('keeps Windows line endings', async () => {
+      await verifyExact(
+        `import { tapResponse } from '@ngrx/operators';\r\nconst x = tapResponse(\r\n  () => a(),\r\n  () => b()\r\n);\r\n`,
+        `import { tapResponse } from '@ngrx/operators';\r\nconst x = tapResponse({\r\n  next: () => a(),\r\n  error: () => b()\r\n});\r\n`
+      );
+    });
+
+    it('migrates a tapResponse nested in a callback', async () => {
+      await verifyExact(
+        imp +
+          `const x = tapResponse(\n  () => inner$.pipe(tapResponse(() => a(), () => b())),\n  () => c()\n);\n`,
+        imp +
+          `const x = tapResponse({\n  next: () => inner$.pipe(tapResponse({ next: () => a(), error: () => b() })),\n  error: () => c()\n});\n`
+      );
+    });
+
+    it('migrates callbacks passed by reference', async () => {
+      await verifyExact(
+        imp +
+          `const x = tapResponse(this.onNext, this.onError);\nconst y = tapResponse(handleNext, (e) => log(e), onDone);\n`,
+        imp +
+          `const x = tapResponse({ next: this.onNext, error: this.onError });\nconst y = tapResponse({ next: handleNext, error: (e) => log(e), complete: onDone });\n`
+      );
+    });
+
+    it('migrates an aliased import', async () => {
+      await verifyExact(
+        `import { tapResponse as tr } from '@ngrx/operators';\nconst x = tr(() => a(), () => b());\n`,
+        `import { tapResponse as tr } from '@ngrx/operators';\nconst x = tr({ next: () => a(), error: () => b() });\n`
+      );
+    });
+
+    it('leaves the other @ngrx/operators imports alone', async () => {
+      const input = `import { concatLatestFrom } from '@ngrx/operators';\nconst x = concatLatestFrom(() => a(), () => b());\n`;
+      await verifyExact(input, input);
+    });
+
+    it('leaves a call with a spread argument alone', async () => {
+      const input = imp + `const x = tapResponse(...handlers, () => b());\n`;
+      await verifyExact(input, input);
+    });
+  });
 });

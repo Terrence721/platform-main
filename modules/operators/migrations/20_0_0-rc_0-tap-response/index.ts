@@ -1,9 +1,9 @@
 import { Rule, Tree, SchematicContext } from '@angular-devkit/schematics';
 import {
   visitTSSourceFiles,
-  createReplaceChange,
   commitChanges,
   Change,
+  InsertChange,
 } from '../../../schematics-core';
 import { visitCallExpression } from '../../../schematics-core/utility/visitors';
 import ts from 'typescript';
@@ -12,12 +12,12 @@ export default function migrateTapResponse(): Rule {
   return (tree: Tree, context: SchematicContext) => {
     visitTSSourceFiles(tree, (sourceFile: ts.SourceFile) => {
       const changes: Change[] = [];
-      const printer = ts.createPrinter();
 
+      // Local names of tapResponse from @ngrx/operators, matched by the
+      // imported name so `tapResponse as tr` counts and other imports do not.
       const tapResponseIdentifiers = new Set<string>();
       const namespaceImportsFromOperators = new Set<string>();
       const aliasedTapResponseVariables = new Set<string>();
-      const importOriginMap = new Map<string, string>();
 
       // Collect import origins and aliases
       ts.forEachChild(sourceFile, (node: ts.Node) => {
@@ -31,10 +31,12 @@ export default function migrateTapResponse(): Rule {
 
           if (ts.isNamedImports(bindings)) {
             for (const element of bindings.elements) {
-              const importedName = element.name.text;
-              importOriginMap.set(importedName, moduleName);
-              if (moduleName === '@ngrx/operators') {
-                tapResponseIdentifiers.add(importedName);
+              const importedName = (element.propertyName ?? element.name).text;
+              if (
+                moduleName === '@ngrx/operators' &&
+                importedName === 'tapResponse'
+              ) {
+                tapResponseIdentifiers.add(element.name.text);
               }
             }
           } else if (ts.isNamespaceImport(bindings)) {
@@ -53,10 +55,7 @@ export default function migrateTapResponse(): Rule {
               ts.isIdentifier(decl.initializer)
             ) {
               const original = decl.initializer.text;
-              if (
-                tapResponseIdentifiers.has(original) &&
-                importOriginMap.get(original) === '@ngrx/operators'
-              ) {
+              if (tapResponseIdentifiers.has(original)) {
                 aliasedTapResponseVariables.add(decl.name.text);
               }
             }
@@ -89,47 +88,47 @@ export default function migrateTapResponse(): Rule {
           }
         }
 
+        // Two or three arguments can only be the removed signature, whatever
+        // they are (arrow functions, `this.onNext`, `handleError`, ...).
         if (
           isTapResponseCall &&
           (args.length === 2 || args.length === 3) &&
-          args.every(
-            (arg) => ts.isArrowFunction(arg) || ts.isFunctionExpression(arg)
-          )
+          !args.some(ts.isSpreadElement)
         ) {
-          const props: ts.PropertyAssignment[] = [
-            ts.factory.createPropertyAssignment('next', args[0]),
-            ts.factory.createPropertyAssignment('error', args[1]),
-          ];
+          // The arguments are kept as written and only wrapped, so their
+          // formatting, comments and line endings survive, and a tapResponse
+          // nested in a callback gets its own non-overlapping insertions.
+          const text = sourceFile.getFullText();
+          const multiline = text
+            .slice(args.pos, args[0].getStart(sourceFile))
+            .includes('\n');
+          const closeParen = node.getEnd() - 1;
 
-          if (args[2]) {
-            props.push(
-              ts.factory.createPropertyAssignment('complete', args[2])
-            );
+          const insert = (pos: number, toAdd: string) =>
+            changes.push(new InsertChange(sourceFile.fileName, pos, toAdd));
+
+          if (multiline) {
+            insert(args.pos, '{');
+            insert(args[0].getStart(sourceFile), 'next: ');
+          } else {
+            insert(args[0].getStart(sourceFile), '{ next: ');
           }
-
-          const newCall = ts.factory.updateCallExpression(
-            node,
-            expression,
-            node.typeArguments,
-            [ts.factory.createObjectLiteralExpression(props, true)]
-          );
-
-          const newText = printer.printNode(
-            ts.EmitHint.Expression,
-            newCall,
-            sourceFile
-          );
-
-          changes.push(
-            createReplaceChange(sourceFile, node, node.getText(), newText)
-          );
+          insert(args[1].getStart(sourceFile), 'error: ');
+          if (args[2]) {
+            insert(args[2].getStart(sourceFile), 'complete: ');
+          }
+          if (multiline) {
+            insert(closeParen, '}');
+          } else {
+            insert(args[args.length - 1].getEnd(), ' }');
+          }
         }
       });
 
       if (changes.length) {
         commitChanges(tree, sourceFile.fileName, changes);
         context.logger.info(
-          `[ngrx/operators] Migrated deprecated tapResponse in ${sourceFile.fileName}`
+          `[@ngrx/operators] Migrated deprecated tapResponse in ${sourceFile.fileName}`
         );
       }
     });

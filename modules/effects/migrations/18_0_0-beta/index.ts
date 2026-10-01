@@ -30,11 +30,7 @@ export function migrateConcatLatestFromImport(): Rule {
             effectsImportDeclaration
           );
           if (effectsImports) {
-            if (
-              effectsImports.elements.some(
-                (element) => element.name.getText() === 'concatLatestFrom'
-              )
-            ) {
+            if (effectsImports.elements.some(isConcatLatestFrom)) {
               return { effectsImports, effectsImportDeclaration };
             }
             return undefined;
@@ -45,6 +41,22 @@ export function migrateConcatLatestFromImport(): Rule {
         .filter(Boolean);
 
       if (effectsImportsAndDeclarations.length === 0) {
+        // `import * as fx` with `fx.concatLatestFrom` cannot be rewritten
+        // reliably; say so rather than leave it to fail after the upgrade.
+        const namespaceUse = importDeclarations.some((node) => {
+          const bindings = node.importClause?.namedBindings;
+          return (
+            isFrom(node, '@ngrx/effects') &&
+            bindings &&
+            ts.isNamespaceImport(bindings) &&
+            sourceFile.text.includes(`${bindings.name.text}.concatLatestFrom`)
+          );
+        });
+        if (namespaceUse) {
+          ctx.logger.warn(
+            `[@ngrx/effects] ${sourceFile.fileName} uses concatLatestFrom through a namespace import; import it from '@ngrx/operators' instead`
+          );
+        }
         return;
       } else if (effectsImportsAndDeclarations.length > 1) {
         ctx.logger.info(
@@ -62,13 +74,33 @@ export function migrateConcatLatestFromImport(): Rule {
         effectsImportsAndDeclaration;
 
       const operatorsImportDeclaration = importDeclarations.find((node) =>
-        node.moduleSpecifier.getText().includes('@ngrx/operators')
+        isFrom(node, '@ngrx/operators')
       );
 
+      // Specifiers are kept as written, so `X as Y` and `type X` survive,
+      // and an aliased `concatLatestFrom as clf` keeps its local name.
+      const concatLatestFromElement =
+        effectsImports.elements.find(isConcatLatestFrom);
+      if (!concatLatestFromElement) {
+        return;
+      }
+      const concatLatestFromImport = concatLatestFromElement.getText();
       const otherEffectsImports = effectsImports.elements
-        .filter((element) => element.name.getText() !== 'concatLatestFrom')
-        .map((element) => element.name.getText())
+        .filter((element) => !isConcatLatestFrom(element))
+        .map((element) => element.getText())
         .join(', ');
+
+      // The line break after the import, so removing it leaves no blank line
+      // and the new import goes on its own line (also at the end of a file
+      // with no final line break, and with Windows line endings).
+      const text = sourceFile.getFullText();
+      const importEnd = effectsImportDeclaration.getEnd();
+      const lineBreak = text.startsWith('\r\n', importEnd)
+        ? '\r\n'
+        : text.startsWith('\n', importEnd)
+          ? '\n'
+          : '';
+      const afterImportLine = importEnd + lineBreak.length;
 
       const changes: Change[] = [];
       // Remove `concatLatestFrom` from @ngrx/effects and leave the other imports
@@ -89,7 +121,7 @@ export function migrateConcatLatestFromImport(): Rule {
             sourceFile,
             effectsImportDeclaration,
             effectsImportDeclaration.getStart(),
-            effectsImportDeclaration.getEnd() + 1
+            afterImportLine
           )
         );
       }
@@ -100,8 +132,8 @@ export function migrateConcatLatestFromImport(): Rule {
         if (ts.isNamedImports(bindings)) {
           // Add import to existing @ngrx/operators
           const updatedImports = [
-            ...bindings.elements.map((element) => element.name.getText()),
-            'concatLatestFrom',
+            ...bindings.elements.map((element) => element.getText()),
+            concatLatestFromImport,
           ];
           const newOperatorsImport = `import { ${updatedImports.join(
             ', '
@@ -120,12 +152,16 @@ export function migrateConcatLatestFromImport(): Rule {
 
       if (!importAppendedInExistingDeclaration) {
         // Add new @ngrx/operators import line
-        const newOperatorsImport = `import { concatLatestFrom } from '@ngrx/operators';`;
+        const newOperatorsImport = `import { ${concatLatestFromImport} } from '@ngrx/operators';`;
+        // After the import's line; with no line break after it (the last
+        // line of the file), the new import starts a line of its own when
+        // the old import stays.
+        const lineBefore = !lineBreak && otherEffectsImports ? '\n' : '';
         changes.push(
           new InsertChange(
             sourceFile.fileName,
-            effectsImportDeclaration.getEnd() + 1,
-            `${newOperatorsImport}\n` // not os-independent for snapshot tests
+            afterImportLine,
+            `${lineBefore}${newOperatorsImport}${lineBreak}`
           )
         );
       }
@@ -159,7 +195,7 @@ function getEffectsNamedBinding(
 ): ts.NamedImports | null {
   const namedBindings = node?.importClause?.namedBindings;
   if (
-    node.moduleSpecifier.getText().includes('@ngrx/effects') &&
+    isFrom(node, '@ngrx/effects') &&
     namedBindings &&
     ts.isNamedImports(namedBindings)
   ) {
@@ -167,6 +203,20 @@ function getEffectsNamedBinding(
   }
 
   return null;
+}
+
+// By the imported name, so `concatLatestFrom as clf` counts too.
+function isConcatLatestFrom(element: ts.ImportSpecifier): boolean {
+  return (
+    (element.propertyName ?? element.name).getText() === 'concatLatestFrom'
+  );
+}
+
+function isFrom(node: ts.ImportDeclaration, moduleName: string): boolean {
+  return (
+    ts.isStringLiteral(node.moduleSpecifier) &&
+    node.moduleSpecifier.text === moduleName
+  );
 }
 
 export default function (): Rule {

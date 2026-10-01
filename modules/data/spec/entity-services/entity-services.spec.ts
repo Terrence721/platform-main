@@ -239,7 +239,7 @@ function entityServicesSetup() {
   const entityActionFactory: EntityActionFactory =
     TestBed.inject(EntityActionFactory);
   const entityServices: EntityServices = TestBed.inject(EntityServices);
-  const store: Store<EntityCache> = TestBed.inject(Store);
+  const store: Store<{ entityCache: EntityCache }> = TestBed.inject(Store);
 
   return {
     actions$,

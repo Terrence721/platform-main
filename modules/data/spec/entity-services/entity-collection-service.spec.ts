@@ -468,7 +468,7 @@ describe('EntityCollectionService', () => {
   describe('selectors$', () => {
     let entityActionFactory: EntityActionFactory;
     let heroCollectionService: EntityCollectionService<Hero>;
-    let store: Store<EntityCache>;
+    let store: Store<{ entityCache: EntityCache }>;
 
     function dispatchedAction() {
       return <EntityAction>(<Mock>store.dispatch).mock.calls.at(0)?.[0];
@@ -545,7 +545,7 @@ function entityServicesSetup() {
     entityServices.getEntityCollectionService<Hero>('Hero');
   const reducedActions$: Observable<Action> =
     entityDispatcherFactory.reducedActions$;
-  const store: Store<EntityCache> = TestBed.inject(Store);
+  const store: Store<{ entityCache: EntityCache }> = TestBed.inject(Store);
   const successActions$: Observable<EntityAction> = reducedActions$.pipe(
     filter(
       (act: any) => act.payload && act.payload.entityOp.endsWith(OP_SUCCESS)

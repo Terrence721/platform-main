@@ -80,7 +80,7 @@ describe('EntityDataModule', () => {
     const entityActionFactory = new EntityActionFactory();
 
     let actions$: Actions;
-    let store: Store<EntityCache>;
+    let store: Store<{ entityCache: EntityCache }>;
     let testEffects: TestEntityEffects;
 
     beforeEach(() => {

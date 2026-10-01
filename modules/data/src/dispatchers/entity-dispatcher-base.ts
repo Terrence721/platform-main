@@ -16,7 +16,6 @@ import { defaultSelectId, toUpdateFactory } from '../utils/utilities';
 import { EntityAction, EntityActionOptions } from '../actions/entity-action';
 import { EntityActionFactory } from '../actions/entity-action-factory';
 import { EntityActionGuard } from '../actions/entity-action-guard';
-import { EntityCache } from '../reducers/entity-cache';
 import { EntityCacheSelector } from '../selectors/entity-cache-selector';
 import { EntityCollection } from '../reducers/entity-collection';
 import { EntityDispatcher, PersistenceCanceled } from './entity-dispatcher';
@@ -46,8 +45,8 @@ export class EntityDispatcherBase<T> implements EntityDispatcher<T> {
     public entityName: string,
     /** Creates an {EntityAction} */
     public entityActionFactory: EntityActionFactory,
-    /** The store, scoped to the EntityCache */
-    public store: Store<EntityCache>,
+    /** The root store; it holds the EntityCache under the cache name. */
+    public store: Store<object>,
     /** Returns the primary key (id) of this entity */
     public selectId: IdSelector<T> = defaultSelectId,
     /**

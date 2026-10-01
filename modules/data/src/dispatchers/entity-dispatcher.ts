@@ -4,7 +4,6 @@ import { IdSelector, Update } from '@ngrx/entity';
 import { EntityAction, EntityActionOptions } from '../actions/entity-action';
 import { EntityActionGuard } from '../actions/entity-action-guard';
 import { EntityCommands } from './entity-commands';
-import { EntityCache } from '../reducers/entity-cache';
 import { EntityOp } from '../actions/entity-op';
 
 /**
@@ -23,8 +22,12 @@ export interface EntityDispatcher<T> extends EntityCommands<T> {
   /** Returns the primary key (id) of this entity */
   readonly selectId: IdSelector<T>;
 
-  /** Returns the store, scoped to the EntityCache */
-  readonly store: Store<EntityCache>;
+  /**
+   * The root store. Its state holds the EntityCache under the cache name
+   * (`entityCache` by default): read the cache with `EntityServices`'
+   * `entityCache$` or the ENTITY_CACHE_SELECTOR_TOKEN selector.
+   */
+  readonly store: Store<object>;
 
   /**
    * Create an {EntityAction} for this entity type.

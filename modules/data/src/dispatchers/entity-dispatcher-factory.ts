@@ -8,7 +8,6 @@ import { CorrelationIdGenerator } from '../utils/correlation-id-generator';
 import { EntityDispatcherDefaultOptions } from './entity-dispatcher-default-options';
 import { defaultSelectId } from '../utils/utilities';
 import { EntityActionFactory } from '../actions/entity-action-factory';
-import { EntityCache } from '../reducers/entity-cache';
 import {
   EntityCacheSelector,
   ENTITY_CACHE_SELECTOR_TOKEN,
@@ -28,7 +27,7 @@ export class EntityDispatcherFactory implements OnDestroy {
 
   constructor(
     private entityActionFactory: EntityActionFactory,
-    private store: Store<EntityCache>,
+    private store: Store<object>,
     private entityDispatcherDefaultOptions: EntityDispatcherDefaultOptions,
     @Inject(ScannedActionsSubject) scannedActions$: ScannedActionsSubject,
     @Inject(ENTITY_CACHE_SELECTOR_TOKEN)

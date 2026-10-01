@@ -18,6 +18,42 @@ import {
   switchMap,
 } from 'rxjs/operators';
 
+// The types the operators are written with. They are not deprecated: the
+// public names below are, and the operators use these so that this file does
+// not use its own deprecated API (every use would be flagged as deprecated).
+interface PessimisticOpts<T extends Array<unknown>, A> {
+  run(a: A, ...slices: [...T]): Observable<Action> | Action | void;
+  onError(a: A, e: any): Observable<any> | any;
+}
+
+interface OptimisticOpts<T extends Array<unknown>, A> {
+  run(a: A, ...slices: [...T]): Observable<Action> | Action | void;
+  undoAction(a: A, e: any): Observable<Action> | Action;
+}
+
+interface FetchOptions<T extends Array<unknown>, A> {
+  id?(a: A, ...slices: [...T]): any;
+  run(a: A, ...slices: [...T]): Observable<Action> | Action | void;
+  onError?(a: A, e: any): Observable<any> | any;
+}
+
+interface NavigationOpts<T extends Array<unknown>> {
+  run(
+    a: ActivatedRouteSnapshot,
+    ...slices: [...T]
+  ): Observable<Action> | Action | void;
+  onError?(a: ActivatedRouteSnapshot, e: any): Observable<any> | any;
+}
+
+type ActionWithStates<T extends Array<unknown>, A> = A | [A, ...T];
+
+type ActionWithStatesStream<T extends Array<unknown>, A> = Observable<
+  ActionWithStates<T, A>
+>;
+
+// The public option types stay interfaces with the same members, so they can
+// still be extended or merged; the operators accept either form.
+
 /**
  * @deprecated The `@ngrx/router-store/data-persistence` APIs are deprecated and
  * will be removed in one of the upcoming major versions. Use core RxJS operators
@@ -67,30 +103,31 @@ export interface HandleNavigationOpts<T extends Array<unknown>> {
  * will be removed in one of the upcoming major versions. Use core RxJS operators
  * instead.
  */
-export type ActionOrActionWithStates<T extends Array<unknown>, A> =
-  A | [A, ...T];
+export type ActionOrActionWithStates<
+  T extends Array<unknown>,
+  A,
+> = ActionWithStates<T, A>;
 /**
  * @deprecated The `@ngrx/router-store/data-persistence` APIs are deprecated and
  * will be removed in one of the upcoming major versions. Use core RxJS operators
  * instead.
  */
-export type ActionOrActionWithState<T, A> = ActionOrActionWithStates<[T], A>;
+export type ActionOrActionWithState<T, A> = ActionWithStates<[T], A>;
 /**
  * @deprecated The `@ngrx/router-store/data-persistence` APIs are deprecated and
  * will be removed in one of the upcoming major versions. Use core RxJS operators
  * instead.
  */
-export type ActionStatesStream<T extends Array<unknown>, A> = Observable<
-  ActionOrActionWithStates<T, A>
->;
+export type ActionStatesStream<
+  T extends Array<unknown>,
+  A,
+> = ActionWithStatesStream<T, A>;
 /**
  * @deprecated The `@ngrx/router-store/data-persistence` APIs are deprecated and
  * will be removed in one of the upcoming major versions. Use core RxJS operators
  * instead.
  */
-export type ActionStateStream<T, A> = Observable<
-  ActionOrActionWithStates<[T], A>
->;
+export type ActionStateStream<T, A> = ActionWithStatesStream<[T], A>;
 
 /**
  * @deprecated The `@ngrx/router-store/data-persistence` APIs are deprecated and
@@ -154,9 +191,9 @@ export type ActionStateStream<T, A> = Observable<
  * @param opts
  */
 export function pessimisticUpdate<T extends Array<unknown>, A extends Action>(
-  opts: PessimisticUpdateOpts<T, A>
+  opts: PessimisticOpts<T, A>
 ) {
-  return (source: ActionStatesStream<T, A>): Observable<Action> => {
+  return (source: ActionWithStatesStream<T, A>): Observable<Action> => {
     return source.pipe(
       mapActionAndState(),
       concatMap(runWithErrorHandling(opts.run, opts.onError))
@@ -228,9 +265,9 @@ export function pessimisticUpdate<T extends Array<unknown>, A extends Action>(
  * @param opts
  */
 export function optimisticUpdate<T extends Array<unknown>, A extends Action>(
-  opts: OptimisticUpdateOpts<T, A>
+  opts: OptimisticOpts<T, A>
 ) {
-  return (source: ActionStatesStream<T, A>): Observable<Action> => {
+  return (source: ActionWithStatesStream<T, A>): Observable<Action> => {
     return source.pipe(
       mapActionAndState(),
       concatMap(runWithErrorHandling(opts.run, opts.undoAction))
@@ -322,9 +359,9 @@ export function optimisticUpdate<T extends Array<unknown>, A extends Action>(
  * @param opts
  */
 export function fetch<T extends Array<unknown>, A extends Action>(
-  opts: FetchOpts<T, A>
+  opts: FetchOptions<T, A>
 ) {
-  return (source: ActionStatesStream<T, A>): Observable<Action> => {
+  return (source: ActionWithStatesStream<T, A>): Observable<Action> => {
     const id = opts.id;
     if (id) {
       const groupedFetches = source.pipe(
@@ -405,9 +442,9 @@ export function fetch<T extends Array<unknown>, A extends Action>(
  */
 export function navigation<T extends Array<unknown>, A extends Action>(
   component: Type<any>,
-  opts: HandleNavigationOpts<T>
+  opts: NavigationOpts<T>
 ) {
-  return (source: ActionStatesStream<T, A>) => {
+  return (source: ActionWithStatesStream<T, A>) => {
     const nav = source.pipe(
       mapActionAndState(),
       filter(([action]) => isStateSnapshot(action)),
@@ -460,7 +497,7 @@ function runWithErrorHandling<T extends Array<unknown>, A, R>(
  * Observable<[Action, State]>
  */
 function mapActionAndState<T extends Array<unknown>, A>() {
-  return (source: Observable<ActionOrActionWithStates<T, A>>) => {
+  return (source: Observable<ActionWithStates<T, A>>) => {
     return source.pipe(
       map((value) => normalizeActionAndState(value) as [A, ...T])
     );
@@ -472,7 +509,7 @@ function mapActionAndState<T extends Array<unknown>, A>() {
  * into an array of action and slices (or undefined)
  */
 function normalizeActionAndState<T extends Array<unknown>, A>(
-  args: ActionOrActionWithStates<T, A>
+  args: ActionWithStates<T, A>
 ): [A, ...T] {
   let action: A, slices: T;
 

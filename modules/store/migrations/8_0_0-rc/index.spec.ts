@@ -257,6 +257,111 @@ describe('Migration to version 8.0.0 rc', () => {
         expect(actual).not.toMatch(/ngrx-store-freeze/);
       });
     }
+
+    const runMigration = async (content: string) => {
+      const tree = new UnitTestTree(new EmptyTree());
+      tree.create(packageJsonPath, content);
+      await createSchematicsRunner().runSchematic(
+        'ngrx-store-migration-03',
+        {},
+        tree
+      );
+      return tree.readContent(packageJsonPath);
+    };
+
+    it('leaves package.json untouched when ngrx-store-freeze is not listed', async () => {
+      const content =
+        '{\n    "dependencies": {\n        "@ngrx/store": "^7.0.0"\n    }\n}\n';
+      expect(await runMigration(content)).toBe(content);
+    });
+
+    it('keeps the indentation, Windows line endings and final line break', async () => {
+      expect(
+        await runMigration(
+          '{\r\n    "dependencies": {\r\n        "ngrx-store-freeze": "^0.2.4",\r\n        "@ngrx/store": "^7.0.0"\r\n    }\r\n}\r\n'
+        )
+      ).toBe(
+        '{\r\n    "dependencies": {\r\n        "@ngrx/store": "^7.0.0"\r\n    }\r\n}\r\n'
+      );
+    });
+  });
+
+  describe('uses that need care', () => {
+    const imp = `import { storeFreeze } from 'ngrx-store-freeze';\nimport { StoreModule } from '@ngrx/store';\n`;
+    const forRoot = `@NgModule({ imports: [StoreModule.forRoot(reducers, { metaReducers })] })\nexport class M {}\n`;
+    const forRootWithChecks = `@NgModule({ imports: [StoreModule.forRoot(reducers, { metaReducers, runtimeChecks: { strictStateImmutability: true, strictActionImmutability: true } })] })\nexport class M {}\n`;
+
+    const run = async (files: Record<string, string>) => {
+      const tree = new UnitTestTree(new EmptyTree());
+      tree.create('/package.json', JSON.stringify({}));
+      for (const [file, content] of Object.entries(files)) {
+        tree.create(file, content);
+      }
+      const schematicRunner = createSchematicsRunner();
+      const logs: string[] = [];
+      schematicRunner.logger.subscribe((entry) => logs.push(entry.message));
+      await schematicRunner.runSchematic('ngrx-store-migration-03', {}, tree);
+      return { tree, logs };
+    };
+
+    it('removes an aliased storeFreeze', async () => {
+      const { tree } = await run({
+        '/main.ts': `import { storeFreeze as freeze } from 'ngrx-store-freeze';\nimport { StoreModule } from '@ngrx/store';\nconst metaReducers = [logger, freeze];\n${forRoot}`,
+      });
+      expect(tree.readContent('/main.ts')).toBe(
+        `\nimport { StoreModule } from '@ngrx/store';\nconst metaReducers = [logger];\n${forRootWithChecks}`
+      );
+    });
+
+    it('keeps the formatting and comments of a multi-line array', async () => {
+      const { tree } = await run({
+        '/main.ts': `${imp}const metaReducers = [\n  logger, // logs\n  storeFreeze,\n  debug,\n];\n${forRoot}`,
+      });
+      expect(tree.readContent('/main.ts')).toBe(
+        `\nimport { StoreModule } from '@ngrx/store';\nconst metaReducers = [\n  logger, // logs\n  debug,\n];\n${forRootWithChecks}`
+      );
+    });
+
+    it('keeps an explicit runtimeChecks', async () => {
+      const { tree } = await run({
+        '/main.ts': `${imp}const metaReducers = [storeFreeze];\n@NgModule({ imports: [StoreModule.forRoot(reducers, { metaReducers, runtimeChecks: { strictStateSerializability: true } })] })\nexport class M {}\n`,
+      });
+      expect(tree.readContent('/main.ts')).toBe(
+        `\nimport { StoreModule } from '@ngrx/store';\nconst metaReducers = [];\n@NgModule({ imports: [StoreModule.forRoot(reducers, { metaReducers, runtimeChecks: { strictStateSerializability: true } })] })\nexport class M {}\n`
+      );
+    });
+
+    it('migrates spec files too', async () => {
+      const { tree } = await run({
+        '/main.spec.ts': `import { storeFreeze } from 'ngrx-store-freeze';\nTestBed.configureTestingModule({ imports: [StoreModule.forRoot(reducers, { metaReducers: [storeFreeze] })] });\n`,
+      });
+      expect(tree.readContent('/main.spec.ts')).toBe(
+        `\nTestBed.configureTestingModule({ imports: [StoreModule.forRoot(reducers, { metaReducers: [], runtimeChecks: { strictStateImmutability: true, strictActionImmutability: true } })] });\n`
+      );
+    });
+
+    it('keeps the import and the package, and warns, for a use outside an array', async () => {
+      const input = `${imp}const metaReducers = [logger];\nif (!environment.production) { metaReducers.push(storeFreeze); }\n${forRoot}`;
+      const tree = new UnitTestTree(new EmptyTree());
+      tree.create(
+        '/package.json',
+        JSON.stringify({ dependencies: { 'ngrx-store-freeze': '^0.2.4' } })
+      );
+      tree.create('/main.ts', input);
+      const schematicRunner = createSchematicsRunner();
+      const logs: string[] = [];
+      schematicRunner.logger.subscribe((entry) => logs.push(entry.message));
+
+      await schematicRunner.runSchematic('ngrx-store-migration-03', {}, tree);
+
+      expect(tree.readContent('/main.ts')).toBe(input);
+      expect(tree.readContent('/package.json')).toMatch(/ngrx-store-freeze/);
+      expect(logs).toContainEqual(
+        expect.stringContaining(
+          "remove storeFreeze from 'metaReducers.push(storeFreeze)' by hand"
+        )
+      );
+    });
   });
 });
 

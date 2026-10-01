@@ -61,6 +61,7 @@ describe('Store Migration 8_0_0 beta', () => {
 
   it(`should replace the meta reducer assignments`, async () => {
     const contents = `
+      import { META_REDUCERS } from '@ngrx/store';
       @NgModule({
         imports: [
           CommonModule,
@@ -81,6 +82,7 @@ describe('Store Migration 8_0_0 beta', () => {
       })
       export class AppModule {}`;
     const expected = `
+      import { USER_PROVIDED_META_REDUCERS } from '@ngrx/store';
       @NgModule({
         imports: [
           CommonModule,
@@ -114,7 +116,7 @@ describe('Store Migration 8_0_0 beta', () => {
     expect(file).toBe(expected);
   });
 
-  it(`should not run schematics when not using named imports`, async () => {
+  it(`should migrate a namespace import`, async () => {
     const contents = `
       import * as store from '@ngrx/store';
 
@@ -152,9 +154,55 @@ describe('Store Migration 8_0_0 beta', () => {
     );
     const file = newTree.readContent('app.module.ts');
 
-    expect(file).toBe(contents);
+    expect(file).toBe(
+      contents.replace(
+        'store.META_REDUCERS',
+        'store.USER_PROVIDED_META_REDUCERS'
+      )
+    );
+    expect(logs).toEqual([]);
+  });
 
-    expect(logs.length).toBe(1);
-    expect(logs[0]).toMatch(/NgRx 8 Migration: Unable to run the schematics/);
+  describe('more import and reference forms', () => {
+    const verify = async (input: string, output: string) => {
+      appTree.create('./main.ts', input);
+      const runner = new SchematicTestRunner('schematics', collectionPath);
+      const logs: string[] = [];
+      runner.logger.subscribe((log) => logs.push(log.message));
+      const newTree = await runner.runSchematic(
+        `ngrx-${pkgName}-migration-02`,
+        {},
+        appTree
+      );
+      expect(newTree.readContent('main.ts')).toBe(output);
+      return logs;
+    };
+
+    it('should migrate a double-quoted import', async () => {
+      await verify(
+        `import { META_REDUCERS } from "@ngrx/store";\nconst p = { provide: META_REDUCERS, useValue: [] };\n`,
+        `import { USER_PROVIDED_META_REDUCERS } from "@ngrx/store";\nconst p = { provide: USER_PROVIDED_META_REDUCERS, useValue: [] };\n`
+      );
+    });
+
+    it('should rename inject() and other references', async () => {
+      await verify(
+        `import { META_REDUCERS } from '@ngrx/store';\nconst r = inject(META_REDUCERS);\nclass C { constructor(@Inject(META_REDUCERS) r: any) {} }\n`,
+        `import { USER_PROVIDED_META_REDUCERS } from '@ngrx/store';\nconst r = inject(USER_PROVIDED_META_REDUCERS);\nclass C { constructor(@Inject(USER_PROVIDED_META_REDUCERS) r: any) {} }\n`
+      );
+    });
+
+    it('should leave a META_REDUCERS from another library alone', async () => {
+      const input = `import { META_REDUCERS } from 'my-lib';\nconst p = { provide: META_REDUCERS, useValue: [] };\n`;
+      await verify(input, input);
+    });
+
+    it('should not log for files that do not import @ngrx/store', async () => {
+      const logs = await verify(
+        `export const a = 1;\n`,
+        `export const a = 1;\n`
+      );
+      expect(logs).toEqual([]);
+    });
   });
 });

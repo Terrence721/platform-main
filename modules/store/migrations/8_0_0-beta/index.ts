@@ -1,42 +1,49 @@
 import ts from 'typescript';
-import { tags, logging } from '@angular-devkit/core';
+import { Path } from '@angular-devkit/core';
+import { Rule, chain, Tree } from '@angular-devkit/schematics';
 import {
-  Rule,
-  chain,
-  Tree,
-  SchematicContext,
-} from '@angular-devkit/schematics';
-import {
-  ReplaceChange,
+  Change,
   createReplaceChange,
+  replaceImport,
   visitTSSourceFiles,
   commitChanges,
 } from '../../../schematics-core';
 
-const META_REDUCERS = 'META_REDUCERS';
+const OLD_NAME = 'META_REDUCERS';
+const NEW_NAME = 'USER_PROVIDED_META_REDUCERS';
 
+// v8 made META_REDUCERS the token NgRx combines internally; an app's own
+// meta-reducers go through USER_PROVIDED_META_REDUCERS.
 function updateMetaReducersToken(): Rule {
-  return (tree: Tree, context: SchematicContext) => {
+  return (tree: Tree) => {
     visitTSSourceFiles(tree, (sourceFile) => {
-      const createChange = (node: ts.Node) =>
-        createReplaceChange(
-          sourceFile,
-          node,
-          META_REDUCERS,
-          'USER_PROVIDED_META_REDUCERS'
-        );
-
-      const changes: ReplaceChange[] = [];
-      changes.push(
-        ...findMetaReducersImportStatements(
-          sourceFile,
-          createChange,
-          context.logger
-        )
+      // Only a META_REDUCERS imported from '@ngrx/store' (single or double
+      // quotes); `type` modifiers and aliases are kept, and an aliased import
+      // keeps its local name in the code.
+      const changes: Change[] = replaceImport(
+        sourceFile,
+        sourceFile.fileName as Path,
+        '@ngrx/store',
+        OLD_NAME,
+        NEW_NAME
       );
-      changes.push(...findMetaReducersAssignment(sourceFile, createChange));
 
-      return commitChanges(tree, sourceFile.fileName, changes);
+      const { importedUnderOwnName, namespaces } = findImports(sourceFile);
+      if (importedUnderOwnName || namespaces.length) {
+        visit(sourceFile, (node) => {
+          if (
+            ts.isIdentifier(node) &&
+            node.text === OLD_NAME &&
+            isTokenReference(node, importedUnderOwnName, namespaces)
+          ) {
+            changes.push(
+              createReplaceChange(sourceFile, node, OLD_NAME, NEW_NAME)
+            );
+          }
+        });
+      }
+
+      commitChanges(tree, sourceFile.fileName, changes);
     });
   };
 }
@@ -45,79 +52,62 @@ export default function (): Rule {
   return chain([updateMetaReducersToken()]);
 }
 
-function findMetaReducersImportStatements(
-  sourceFile: ts.SourceFile,
-  createChange: (node: ts.Node) => ReplaceChange,
-  logger: any
-) {
-  let canRunSchematics = false;
-
-  const metaReducerImports = sourceFile.statements
-    .filter(ts.isImportDeclaration)
-    .filter(isNgRxStoreImport)
-    .filter((p) => {
-      canRunSchematics = Boolean(
-        p.importClause &&
-        p.importClause.namedBindings &&
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        (p.importClause!.namedBindings as ts.NamedImports).elements
+function findImports(sourceFile: ts.SourceFile) {
+  let importedUnderOwnName = false;
+  const namespaces: string[] = [];
+  for (const statement of sourceFile.statements) {
+    if (
+      !ts.isImportDeclaration(statement) ||
+      !ts.isStringLiteral(statement.moduleSpecifier) ||
+      statement.moduleSpecifier.text !== '@ngrx/store'
+    ) {
+      continue;
+    }
+    const bindings = statement.importClause?.namedBindings;
+    if (bindings && ts.isNamespaceImport(bindings)) {
+      namespaces.push(bindings.name.text);
+    } else if (bindings && ts.isNamedImports(bindings)) {
+      importedUnderOwnName ||= bindings.elements.some(
+        (element) => !element.propertyName && element.name.text === OLD_NAME
       );
-      return canRunSchematics;
-    })
-    .map((p) =>
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      (p.importClause!.namedBindings! as ts.NamedImports).elements.filter(
-        isMetaReducersImportSpecifier
-      )
-    )
-    .reduce((imports, curr) => imports.concat(curr), []);
-
-  const changes = metaReducerImports.map(createChange);
-  if (!canRunSchematics && changes.length === 0) {
-    logger.info(tags.stripIndent`
-      NgRx 8 Migration: Unable to run the schematics to rename \`META_REDUCERS\` to \`USER_PROVIDED_META_REDUCERS\`
-      in file '${sourceFile.fileName}'.
-
-      For more info see https://ngrx.io/guide/migration/v8#meta_reducers-token.
-    `);
+    }
   }
-
-  return changes;
-
-  function isNgRxStoreImport(importDeclaration: ts.ImportDeclaration) {
-    return (
-      importDeclaration.moduleSpecifier.getText(sourceFile) === "'@ngrx/store'"
-    );
-  }
-
-  function isMetaReducersImportSpecifier(importSpecifier: ts.ImportSpecifier) {
-    const isImport = () => importSpecifier.name.text === META_REDUCERS;
-    const isRenamedImport = () =>
-      importSpecifier.propertyName &&
-      importSpecifier.propertyName.text === META_REDUCERS;
-
-    return (
-      ts.isImportSpecifier(importSpecifier) && (isImport() || isRenamedImport())
-    );
-  }
+  return { importedUnderOwnName, namespaces };
 }
 
-function findMetaReducersAssignment(
-  sourceFile: ts.SourceFile,
-  createChange: (node: ts.Node) => ReplaceChange
-) {
-  const changes: ReplaceChange[] = [];
-  ts.forEachChild(sourceFile, (node) => findMetaReducers(node, changes));
-  return changes;
-
-  function findMetaReducers(node: ts.Node, changes: ReplaceChange[]) {
-    if (
-      ts.isPropertyAssignment(node) &&
-      node.initializer.getText(sourceFile) === META_REDUCERS
-    ) {
-      changes.push(createChange(node.initializer));
-    }
-
-    ts.forEachChild(node, (childNode) => findMetaReducers(childNode, changes));
+// A use of the imported token, wherever it is (`provide:`, `inject()`,
+// `@Inject()`, ...): a bare reference when it is imported under its own name,
+// or `ns.META_REDUCERS` through a namespace import. Object keys and
+// properties of other objects are left alone.
+function isTokenReference(
+  node: ts.Identifier,
+  importedUnderOwnName: boolean,
+  namespaces: string[]
+): boolean {
+  const parent = node.parent;
+  if (ts.isImportSpecifier(parent)) {
+    return false;
   }
+  if (
+    (ts.isQualifiedName(parent) && parent.right === node) ||
+    (ts.isPropertyAccessExpression(parent) && parent.name === node)
+  ) {
+    const left = ts.isQualifiedName(parent) ? parent.left : parent.expression;
+    return ts.isIdentifier(left) && namespaces.includes(left.text);
+  }
+  if (
+    (ts.isPropertyAssignment(parent) ||
+      ts.isPropertySignature(parent) ||
+      ts.isPropertyDeclaration(parent) ||
+      ts.isMethodDeclaration(parent)) &&
+    parent.name === node
+  ) {
+    return false;
+  }
+  return importedUnderOwnName;
+}
+
+function visit(node: ts.Node, callback: (node: ts.Node) => void) {
+  callback(node);
+  ts.forEachChild(node, (child) => visit(child, callback));
 }

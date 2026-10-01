@@ -1,5 +1,5 @@
 import { expectTypeOf } from 'vitest';
-import { signalStore, withMethods } from '../../src';
+import { signalStore, withMethods } from '@ngrx/signals';
 
 describe('withMethods types', () => {
   const SECRET = Symbol('secret');

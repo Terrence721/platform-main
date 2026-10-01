@@ -1,6 +1,7 @@
 import { Signal } from '@angular/core';
 import { expectTypeOf } from 'vitest';
-import { signalState } from '../../src';
+import { signalState } from '@ngrx/signals';
+// Not public: an internal helper, so imported from its source file.
 import { IsKnownRecord } from '../../src/ts-helpers';
 
 describe('ts-helpers types', () => {

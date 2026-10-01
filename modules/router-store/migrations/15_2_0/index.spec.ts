@@ -54,7 +54,7 @@ describe('Router Store Migration 15_2_0', () => {
           selectRouteData,
           selectUrl,
           selectTitle,
-        } = getSelectors(selectRouter);
+        } = getRouterSelectors(selectRouter);
       `;
 
       appTree.create('./selector.ts', input);
@@ -170,5 +170,39 @@ describe('Router Store Migration 15_2_0', () => {
 
       expect(file).toBe(input);
     }));
+  });
+
+  describe('more import and call forms', () => {
+    const verify = async (input: string, output: string) => {
+      appTree.create('./main.ts', input);
+      const runner = new SchematicTestRunner('schematics', collectionPath);
+      const newTree = await runner.runSchematic(
+        `ngrx-${pkgName}-migration-05`,
+        {},
+        appTree
+      );
+      expect(newTree.readContent('main.ts')).toBe(output);
+    };
+
+    it('should rename an aliased import and keep its local name', async () => {
+      await verify(
+        `import { getSelectors as gs } from '@ngrx/router-store';\nexport const s = gs(selectRouter);\n`,
+        `import { getRouterSelectors as gs } from '@ngrx/router-store';\nexport const s = gs(selectRouter);\n`
+      );
+    });
+
+    it('should keep a type modifier and rename typeof uses', async () => {
+      await verify(
+        `import { type getSelectors, routerReducer } from '@ngrx/router-store';\ntype G = typeof getSelectors;\n`,
+        `import { type getRouterSelectors, routerReducer } from '@ngrx/router-store';\ntype G = typeof getRouterSelectors;\n`
+      );
+    });
+
+    it('should rename namespace calls anywhere', async () => {
+      await verify(
+        `import * as rs from '@ngrx/router-store';\nexport function f() { return rs.getSelectors(selectRouter); }\nexport const a = 1, s = rs.getSelectors(selectRouter);\nexport const url = rs.getSelectors(selectRouter).selectUrl;\n`,
+        `import * as rs from '@ngrx/router-store';\nexport function f() { return rs.getRouterSelectors(selectRouter); }\nexport const a = 1, s = rs.getRouterSelectors(selectRouter);\nexport const url = rs.getRouterSelectors(selectRouter).selectUrl;\n`
+      );
+    });
   });
 });

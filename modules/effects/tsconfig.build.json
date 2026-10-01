@@ -11,7 +11,8 @@
     "ignoreDeprecations": "6.0",
     "outDir": "../../dist/modules/effects",
     "paths": {
-      "@ngrx/operators": ["../../dist/modules/operators"]
+      "@ngrx/operators": ["../../dist/modules/operators"],
+      "@ngrx/store": ["../../dist/modules/store"]
     },
     "rootDir": ".",
     "sourceMap": true,

@@ -11,7 +11,9 @@
     "noImplicitReturns": true,
     "ignoreDeprecations": "6.0",
     "outDir": "../../dist/modules/entity",
-    "paths": {},
+    "paths": {
+      "@ngrx/store": ["dist/modules/store"]
+    },
     "rootDir": ".",
     "sourceMap": true,
     "inlineSources": true,

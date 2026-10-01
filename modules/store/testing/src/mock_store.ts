@@ -77,7 +77,7 @@ export class MockStore<T = object> extends Store<T> {
     const resultSelector: Memoized<unknown> =
       typeof selector === 'string'
         ? createSelector(
-            () => {},
+            () => undefined,
             () => value
           )
         : selector;

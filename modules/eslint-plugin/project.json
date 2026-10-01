@@ -64,16 +64,6 @@
       "executor": "@analogjs/vitest-angular:test",
       "dependsOn": ["build"],
       "outputs": ["{workspaceRoot}/coverage/modules/eslint-plugin"]
-    },
-    "lint": {
-      "executor": "@nx/eslint:lint",
-      "options": {
-        "lintFilePatterns": [
-          "modules/eslint-plugin/*/**/*.ts",
-          "modules/eslint-plugin/*/**/*.html"
-        ]
-      },
-      "outputs": ["{options.outputFile}"]
     }
   }
 }

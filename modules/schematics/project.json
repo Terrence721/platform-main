@@ -6,16 +6,6 @@
   "tags": [],
   "generators": {},
   "targets": {
-    "lint": {
-      "executor": "@nx/eslint:lint",
-      "options": {
-        "lintFilePatterns": [
-          "modules/schematics/*/**/*.ts",
-          "modules/schematics/*/**/*.html"
-        ]
-      },
-      "outputs": ["{options.outputFile}"]
-    },
     "build-package": {
       "executor": "nx:run-commands",
       "dependsOn": ["^build"],

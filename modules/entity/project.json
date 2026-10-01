@@ -44,16 +44,6 @@
         "{workspaceRoot}/node_modules/@ngrx/entity"
       ]
     },
-    "lint": {
-      "executor": "@nx/eslint:lint",
-      "options": {
-        "lintFilePatterns": [
-          "modules/entity/*/**/*.ts",
-          "modules/entity/*/**/*.html"
-        ]
-      },
-      "outputs": ["{options.outputFile}"]
-    },
     "test": {
       "executor": "@analogjs/vitest-angular:test",
       "dependsOn": ["build"],

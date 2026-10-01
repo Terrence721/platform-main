@@ -44,16 +44,6 @@
         "{workspaceRoot}/node_modules/@ngrx/router-store"
       ]
     },
-    "lint": {
-      "executor": "@nx/eslint:lint",
-      "options": {
-        "lintFilePatterns": [
-          "modules/router-store/*/**/*.ts",
-          "modules/router-store/*/**/*.html"
-        ]
-      },
-      "outputs": ["{options.outputFile}"]
-    },
     "test": {
       "executor": "@analogjs/vitest-angular:test",
       "dependsOn": ["build"],

@@ -1,10 +1,10 @@
-import tseslint from 'typescript-eslint';
+import { defineConfig } from 'eslint/config';
 import baseConfig, {
   angularTemplateConfig,
   angularTsConfig,
 } from '../../eslint.config.mjs';
 
-export default tseslint.config(
+export default defineConfig(
   {
     ignores: [
       '**/dist',

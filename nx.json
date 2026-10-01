@@ -84,5 +84,14 @@
   "nxCloudAccessToken": "NTlmOGIxYmItZjM0OC00YzAxLTgzZTgtZDNiZmExMzcwZTA4fHJlYWQ=",
   "defaultBase": "main",
   "analytics": false,
-  "nxCloudId": "682c47fdf4b89e409c43e20e"
+  "nxCloudId": "682c47fdf4b89e409c43e20e",
+  "plugins": [
+    {
+      "plugin": "@nx/eslint/plugin",
+      "options": {
+        "targetName": "lint"
+      },
+      "exclude": ["modules/*/migrations/**"]
+    }
+  ]
 }

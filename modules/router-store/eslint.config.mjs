@@ -1,10 +1,10 @@
-import tseslint from 'typescript-eslint';
+import { defineConfig } from 'eslint/config';
 import baseConfig, {
   angularTemplateConfig,
   angularTsConfig,
 } from '../../eslint.config.mjs';
 
-export default tseslint.config(
+export default defineConfig(
   {
     ignores: ['**/dist'],
   },
@@ -32,9 +32,15 @@ export default tseslint.config(
   {
     // The data-persistence secondary entry point has its own tsconfigs, as
     // store/testing does: the module's own ones do not include its sources.
+    // Extending angularTsConfig again re-enables its rules for these files,
+    // so the module's overrides above are repeated here.
     files: ['data-persistence/**/*.ts'],
     extends: [angularTsConfig],
     rules: {
+      '@angular-eslint/directive-selector': 'off',
+      '@angular-eslint/component-selector': 'off',
+      '@angular-eslint/prefer-standalone': 'off',
+      '@angular-eslint/prefer-inject': 'off',
       '@nx/enforce-module-boundaries': 'off',
     },
     languageOptions: {

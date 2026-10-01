@@ -18,6 +18,7 @@ This repo is **not affiliated with, and not published by, the upstream [@ngrx/pl
 - **[`docs/architecture.md`](docs/architecture.md)** — the reasoning behind this repo's architectural decisions (context, alternatives, what each one actually cost), not just what changed.
 - **[`docs/case-study.md`](docs/case-study.md)** — problem, constraints, tradeoffs, and results, for anyone scanning this repo as a portfolio piece rather than reading it as documentation.
 - **[Module Dependency Graph](https://terrence721.github.io/platform-main/diagrams/module-dependency-graph.html)** — the 13 modules and their 3 real dependency tiers, read from every `peerDependencies` field
+- **[Nx Project Graph](docs/diagrams/nx-project-graph.png)** — Nx's own graph of the 13 projects (`nx graph`), including the implicit edges to `schematics` that order the builds
 - **[Composition Over Inheritance](https://terrence721.github.io/platform-main/diagrams/composition-over-inheritance.html)** — before/after for all 6 classes redesigned off RxJS inheritance, and what each change actually cost
 - **[Code-Review Audit Pipeline](https://terrence721.github.io/platform-main/diagrams/code-review-audit-pipeline.html)** — the per-file table → issue → PR → merge process, plus live per-module status
 - **[Effects Runtime Data Flow](https://terrence721.github.io/platform-main/diagrams/effects-runtime-data-flow.html)** — the startup ordering `EffectsRootModule` depends on, and why getting it wrong would fail silently

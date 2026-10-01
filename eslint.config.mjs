@@ -1,8 +1,8 @@
 import nxEslintPlugin from '@nx/eslint-plugin';
 import angularEslint from 'angular-eslint';
-import tseslint from 'typescript-eslint';
+import { defineConfig } from 'eslint/config';
 
-export const angularTsConfig = tseslint.config(
+export const angularTsConfig = defineConfig(
   nxEslintPlugin.configs['flat/angular'],
   {
     files: ['**/*.ts'],
@@ -14,9 +14,11 @@ export const angularTsConfig = tseslint.config(
 
 export const angularTemplateConfig = angularEslint.configs.templateRecommended;
 
-export default tseslint.config(
+export default defineConfig(
   {
-    ignores: ['**/dist'],
+    // Build output, and the Vitest HTML reports a local run writes into a
+    // module (gitignored, never source).
+    ignores: ['**/dist', '**/test-results'],
   },
   { plugins: { '@nx': nxEslintPlugin } },
   {

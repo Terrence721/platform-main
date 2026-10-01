@@ -104,6 +104,9 @@ describe('EntityEffects (normal testing)', () => {
         expect((result as EntityAction).payload.entityOp).toBe(
           EntityOp.SAVE_DELETE_ONE_SUCCESS
         );
+        // The success action says it was skipped, though the frozen original
+        // payload could not take the flag.
+        expect((result as EntityAction).payload.skip).toBe(true);
         expect(dataService.getService().delete).not.toHaveBeenCalled();
         done();
       }, fail);

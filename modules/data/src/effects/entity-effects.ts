@@ -192,8 +192,11 @@ export class EntityEffects {
   }
 
   /**
-   * Because EntityAction.payload.skip is true, skip the persistence step and
-   * return a scalar success action that looks like the operation succeeded.
+   * Because the reducer marked the action skipped, skip the persistence step
+   * and return a scalar success action that looks like the operation
+   * succeeded. The success action carries `skip: true` itself: the reducer
+   * can only set it on the original payload when the action is not frozen
+   * (runtime checks freeze it), so it is not always there to copy.
    */
   private handleSkipSuccess$(
     originalAction: EntityAction
@@ -203,6 +206,7 @@ export class EntityEffects {
       originalAction,
       {
         entityOp: successOp,
+        skip: true,
       }
     );
     // Although it could return immediately, delay it by responseDelay

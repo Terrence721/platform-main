@@ -277,7 +277,7 @@ describe('EntityCollectionService', () => {
       }));
   });
 
-  describe.skip('saves (optimistic)', () => {
+  describe('saves (optimistic)', () => {
     beforeEach(() => {
       TestBed.configureTestingModule({
         providers: [
@@ -292,7 +292,7 @@ describe('EntityCollectionService', () => {
     combinedSaveTests(true);
   });
 
-  describe.skip('saves (pessimistic)', () => {
+  describe('saves (pessimistic)', () => {
     beforeEach(() => {
       TestBed.configureTestingModule({
         providers: [

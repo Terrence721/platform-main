@@ -9,7 +9,6 @@ import { describe, expectTypeOf, it } from 'vitest';
 // Through the package names, as an app imports them, so a missing or mistyped
 // public export fails here (#162). The exports the other type specs cover
 // (createAction, createSelector, Store, createFeature, ...) are not repeated.
-/* eslint-disable @nx/enforce-module-boundaries */
 import {
   Action,
   ACTIVE_RUNTIME_CHECKS,
@@ -77,7 +76,6 @@ import {
   MockStoreConfig,
   provideMockStore,
 } from '@ngrx/store/testing';
-/* eslint-enable @nx/enforce-module-boundaries */
 
 interface State {
   count: number;
@@ -105,6 +103,9 @@ describe('@ngrx/store public types', () => {
 
     it('ActionType is the action an action creator creates', () => {
       const loaded = createAction('[Books] Loaded', props<{ ids: number[] }>());
+      expectTypeOf(loaded({ ids: [1] })).toEqualTypeOf<
+        ActionType<typeof loaded>
+      >();
       expectTypeOf<ActionType<typeof loaded>>().toEqualTypeOf<
         { ids: number[] } & Action<'[Books] Loaded'>
       >();
@@ -129,6 +130,8 @@ describe('@ngrx/store public types', () => {
         NotAllowedCheck<{ type: string }>
       >().toEqualTypeOf<'action creator cannot return an object with a property named `type`'>();
       expectTypeOf<
+        // The empty object type is the case under test.
+        // eslint-disable-next-line @typescript-eslint/no-empty-object-type
         NotAllowedCheck<{}>
       >().toEqualTypeOf<'action creator cannot return an empty object'>();
     });

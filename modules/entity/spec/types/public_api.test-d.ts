@@ -2,12 +2,12 @@ import { MemoizedSelector } from '@ngrx/store';
 import { describe, expectTypeOf, it } from 'vitest';
 // Through the package name, so a missing or mistyped public export fails here
 // (#162). The adapter, EntityState and EntitySelectors have their own specs.
-// eslint-disable-next-line @nx/enforce-module-boundaries
 import {
   Comparer,
   createEntityAdapter,
   Dictionary,
   DictionaryNum,
+  EntityAdapter,
   EntityMap,
   EntityMapOne,
   EntityState,
@@ -80,6 +80,7 @@ describe('@ngrx/entity public types', () => {
 
   it('an adapter has every state method, and only those', () => {
     const adapter = createEntityAdapter<Book>();
+    expectTypeOf(adapter).toEqualTypeOf<EntityAdapter<Book, string>>();
     expectTypeOf<keyof typeof adapter>().toEqualTypeOf<
       | 'selectId'
       | 'sortComparer'

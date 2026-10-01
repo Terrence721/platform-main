@@ -146,4 +146,13 @@ describe('PushPipe', () => {
       'interface Dictionary { o: Observable<bigint> }'
     ).toBeInferredAs('bigint | { o: bigint; } | undefined');
   });
+
+  it('should infer the result as static when potential observable is an array of observables', () => {
+    expectPotentialObservable('Observable<number>[]').toBeInferredAs(
+      'Observable<number>[]'
+    );
+    expectPotentialObservable(
+      '[Observable<number>, Observable<string>]'
+    ).toBeInferredAs('[Observable<number>, Observable<string>]');
+  });
 });

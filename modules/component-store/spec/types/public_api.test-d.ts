@@ -3,7 +3,6 @@ import { Observable, of } from 'rxjs';
 import { describe, expectTypeOf, it } from 'vitest';
 // Through the package name, as an app imports it, so a missing or mistyped
 // public export fails here (#162). effect and updater have their own spec.
-/* eslint-disable @nx/enforce-module-boundaries */
 import {
   ComponentStore,
   INITIAL_STATE_TOKEN,
@@ -16,7 +15,6 @@ import {
   SelectSignalOptions,
   SignalsProjector,
 } from '@ngrx/component-store';
-/* eslint-enable @nx/enforce-module-boundaries */
 
 interface State {
   count: number;

@@ -38,9 +38,9 @@ const featureSelector3 = createFeatureSelector<State,Feature,SomethingElse>(feat
 const featureSelector4 = createFeatureSelector<fromFeat.State>('feature4');
 
 // modified
-const featureSelector5 = createFeatureSelector< Feature>('feature5');
+const featureSelector5 = createFeatureSelector<Feature>('feature5');
 const featureSelector6 = createFeatureSelector<Feature>(feature6);
-const featureSelector7 = createFeatureSelector< fromFeat.State>('feature7');
+const featureSelector7 = createFeatureSelector<fromFeat.State>('feature7');
 `;
 
     const appTree = new UnitTestTree(Tree.empty());
@@ -55,5 +55,36 @@ const featureSelector7 = createFeatureSelector< fromFeat.State>('feature7');
     const file = newTree.readContent('fixture.ts');
 
     expect(file).toBe(expected);
+  });
+
+  const verify = async (input: string, output: string) => {
+    const appTree = new UnitTestTree(Tree.empty());
+    appTree.create('./fixture.ts', input);
+    const runner = new SchematicTestRunner('schematics', collectionPath);
+    const newTree = await runner.runSchematic(
+      `ngrx-${pkgName}-migration-13-beta`,
+      {},
+      appTree
+    );
+    expect(newTree.readContent('fixture.ts')).toBe(output);
+  };
+
+  it('should migrate an aliased createFeatureSelector', async () => {
+    await verify(
+      `import { createFeatureSelector as cfs } from '@ngrx/store';\nconst s = cfs<State, Feature>('feature');\n`,
+      `import { createFeatureSelector as cfs } from '@ngrx/store';\nconst s = cfs<Feature>('feature');\n`
+    );
+  });
+
+  it('should migrate createFeatureSelector through a namespace import', async () => {
+    await verify(
+      `import * as store from '@ngrx/store';\nconst s = store.createFeatureSelector<State, Feature>('feature');\n`,
+      `import * as store from '@ngrx/store';\nconst s = store.createFeatureSelector<Feature>('feature');\n`
+    );
+  });
+
+  it('should leave a createFeatureSelector from another module alone', async () => {
+    const input = `import { createFeatureSelector } from './my-selectors';\nconst s = createFeatureSelector<State, Feature>('feature');\n`;
+    await verify(input, input);
   });
 });

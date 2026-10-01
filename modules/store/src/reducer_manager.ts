@@ -73,7 +73,9 @@ export class ReducerManager implements OnDestroy {
             ? createFeatureReducerFactory(metaReducers)(reducers, initialState)
             : createReducerFactory(reducerFactory, metaReducers)(
                 reducers,
-                initialState
+                // provideState() and StoreModule.forFeature() resolve an
+                // initial state function before a feature gets here.
+                initialState as Partial<any> | undefined
               );
 
         reducerDict[key] = reducer;

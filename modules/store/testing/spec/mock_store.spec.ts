@@ -448,6 +448,18 @@ describe('Mock Store with Injector', () => {
             done();
           });
       }));
+
+    it('should select a key path of more than two keys', () => {
+      const store = createMockStore({
+        initialState: { user: { address: { city: 'Oslo' } } },
+      });
+      let city: string | undefined;
+      store
+        .select('user', 'address', 'city')
+        .pipe(take(1))
+        .subscribe((value) => (city = value));
+      expect(city).toBe('Oslo');
+    });
   });
 });
 

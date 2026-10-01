@@ -135,8 +135,8 @@ export function checkForActionTypeUniqueness(): Provider[] {
 }
 
 export function _runtimeChecksFactory(
-  runtimeChecks: RuntimeChecks
-): RuntimeChecks {
+  runtimeChecks: Partial<RuntimeChecks> | undefined
+): Partial<RuntimeChecks> | undefined {
   return runtimeChecks;
 }
 

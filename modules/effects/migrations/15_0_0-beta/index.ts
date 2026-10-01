@@ -15,37 +15,44 @@ import {
 export function migrateProvideEffects(): Rule {
   return (tree: Tree, ctx: SchematicContext) => {
     visitTSSourceFiles(tree, (sourceFile) => {
-      const changes: ReplaceChange[] = [];
-
-      let isProvideEffectsImported = false;
-      visitImportSpecifiers(sourceFile, (node) => {
-        if (
-          node.name.getText() === 'provideEffects' &&
-          node.parent.parent.parent.moduleSpecifier
-            .getText()
-            .includes('@ngrx/effects')
-        ) {
-          isProvideEffectsImported = true;
-          return;
-        }
-      });
-
-      if (!isProvideEffectsImported) {
+      const names = findLocalNames(sourceFile);
+      if (!names.provideEffects.length && !names.namespaces.length) {
         return;
       }
 
-      visitProvideEffects(sourceFile, (node) => {
-        const [effectClasses] = node.arguments;
-        if (effectClasses && ts.isArrayLiteralExpression(effectClasses)) {
-          const spreaded = effectClasses.elements
-            .map((e) => e.getText())
-            .join(', ');
+      const changes: ReplaceChange[] = [];
+      visitProvideEffects(sourceFile, names, (node) => {
+        // v14 took a single array of effects; v15 takes them as rest
+        // arguments.
+        const [effects] = node.arguments;
+        if (!effects || node.arguments.length !== 1) {
+          return;
+        }
+
+        if (ts.isArrayLiteralExpression(effects)) {
+          // Only the brackets go, so comments and line breaks between the
+          // effects are kept.
+          const inner = sourceFile.text.slice(
+            effects.getStart(sourceFile) + 1,
+            effects.getEnd() - 1
+          );
           changes.push(
             createReplaceChange(
               sourceFile,
-              effectClasses,
-              effectClasses.getText(),
-              spreaded
+              effects,
+              effects.getText(sourceFile),
+              inner
+            )
+          );
+        } else if (!ts.isSpreadElement(effects)) {
+          // An array held elsewhere (`provideEffects(EFFECTS)`): the only
+          // thing v14 accepted here was an array, so spread it.
+          changes.push(
+            createReplaceChange(
+              sourceFile,
+              effects,
+              effects.getText(sourceFile),
+              `...${effects.getText(sourceFile)}`
             )
           );
         }
@@ -60,31 +67,57 @@ export function migrateProvideEffects(): Rule {
   };
 }
 
-function visitProvideEffects(
-  node: ts.Node,
-  visitor: (node: ts.CallExpression) => void
-) {
-  if (
-    ts.isCallExpression(node) &&
-    ts.isIdentifier(node.expression) &&
-    node.expression.text === 'provideEffects'
-  ) {
-    visitor(node);
-  }
-
-  ts.forEachChild(node, (childNode) => visitProvideEffects(childNode, visitor));
+interface LocalNames {
+  provideEffects: string[];
+  namespaces: string[];
 }
 
-function visitImportSpecifiers(
+// The names provideEffects is imported under from '@ngrx/effects', so
+// aliases and namespace imports count too.
+function findLocalNames(sourceFile: ts.SourceFile): LocalNames {
+  const names: LocalNames = { provideEffects: [], namespaces: [] };
+  for (const statement of sourceFile.statements) {
+    if (
+      !ts.isImportDeclaration(statement) ||
+      !ts.isStringLiteral(statement.moduleSpecifier) ||
+      statement.moduleSpecifier.text !== '@ngrx/effects'
+    ) {
+      continue;
+    }
+    const bindings = statement.importClause?.namedBindings;
+    if (bindings && ts.isNamespaceImport(bindings)) {
+      names.namespaces.push(bindings.name.text);
+    } else if (bindings && ts.isNamedImports(bindings)) {
+      for (const element of bindings.elements) {
+        if ((element.propertyName ?? element.name).text === 'provideEffects') {
+          names.provideEffects.push(element.name.text);
+        }
+      }
+    }
+  }
+  return names;
+}
+
+function visitProvideEffects(
   node: ts.Node,
-  visitor: (node: ts.ImportSpecifier) => void
+  names: LocalNames,
+  visitor: (node: ts.CallExpression) => void
 ) {
-  if (ts.isImportSpecifier(node)) {
-    visitor(node);
+  if (ts.isCallExpression(node)) {
+    const callee = node.expression;
+    if (
+      (ts.isIdentifier(callee) && names.provideEffects.includes(callee.text)) ||
+      (ts.isPropertyAccessExpression(callee) &&
+        ts.isIdentifier(callee.expression) &&
+        names.namespaces.includes(callee.expression.text) &&
+        callee.name.text === 'provideEffects')
+    ) {
+      visitor(node);
+    }
   }
 
   ts.forEachChild(node, (childNode) =>
-    visitImportSpecifiers(childNode, visitor)
+    visitProvideEffects(childNode, names, visitor)
   );
 }
 

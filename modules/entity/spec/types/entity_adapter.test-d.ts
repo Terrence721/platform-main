@@ -1,5 +1,7 @@
 import { expectTypeOf, describe, it } from 'vitest';
-import { createEntityAdapter, EntityAdapter } from '../..';
+// Through the package name, so a missing public export fails here (#162).
+// eslint-disable-next-line @nx/enforce-module-boundaries
+import { createEntityAdapter, EntityAdapter } from '@ngrx/entity';
 
 interface EntityWithStringId {
   id: string;

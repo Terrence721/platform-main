@@ -4,8 +4,7 @@ import ts from 'typescript';
 
 // Every generator reads its options through the `Schema` type in schema.ts,
 // and the CLI validates them against schema.json: the two must describe the
-// same options, or an option the CLI accepts is never read (#162). The
-// generators under src/ also have a per-folder schema.spec.ts.
+// same options, or an option the CLI accepts is never read (#162).
 const root = path.join(__dirname, '..');
 
 function schemaFolders(dir: string): string[] {
@@ -29,7 +28,7 @@ const folders = [
 ].map((folder) => path.relative(root, folder).split(path.sep).join('/'));
 
 interface JsonSchema {
-  properties?: Record<string, { default?: unknown }>;
+  properties?: Record<string, { default?: unknown; 'x-prompt'?: string }>;
   required?: string[];
 }
 
@@ -83,6 +82,17 @@ describe('generator schemas', () => {
         .filter((member) => !member.questionToken)
         .map(name);
       expect(alwaysSet).toEqual(expect.arrayContaining(nonOptional));
+    });
+
+    it('prompts for every option schema.json requires', () => {
+      // Without an x-prompt, interactive `ng generate` fails on a required
+      // option that was not given instead of asking for it.
+      const { json } = read(folder);
+      expect(
+        (json.required ?? []).filter(
+          (option) => !json.properties?.[option]?.['x-prompt']
+        )
+      ).toEqual([]);
     });
   });
 });

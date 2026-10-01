@@ -11,9 +11,8 @@ export type RouterStateSelectors<V> = {
   selectRouteParams: MemoizedSelector<V, Params | undefined>;
   selectRouteParam: (param: string) => MemoizedSelector<V, string | undefined>;
   selectRouteData: MemoizedSelector<V, Data | undefined>;
-  selectRouteDataParam: (
-    param: string
-  ) => MemoizedSelector<V, string | undefined>;
+  // Route data holds any value (an array, an object, ...), not only strings.
+  selectRouteDataParam: (param: string) => MemoizedSelector<V, unknown>;
   selectUrl: MemoizedSelector<V, string | undefined>;
   selectTitle: MemoizedSelector<V, string | undefined>;
 };

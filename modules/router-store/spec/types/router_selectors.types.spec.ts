@@ -18,11 +18,13 @@ describe('getRouterSelectors', () => {
 
       export const {
         selectCurrentRoute,
+        selectFragment,
         selectQueryParams,
         selectQueryParam,
         selectRouteParams,
         selectRouteParam,
         selectRouteData,
+        selectRouteDataParam,
         selectUrl,
         selectTitle,
       } = getRouterSelectors(selectRouter);
@@ -39,6 +41,18 @@ describe('getRouterSelectors', () => {
         route => route
       );
     `).toInfer('selector', 'MemoizedSelector<State, any, (s1: any) => any>');
+  });
+
+  it('selectFragment should return string, null or undefined', () => {
+    expectSnippet(`
+      export const selector = createSelector(
+        selectFragment,
+        fragment => fragment
+      );
+    `).toInfer(
+      'selector',
+      'MemoizedSelector<State, string | null | undefined, (s1: string | null | undefined) => string | null | undefined>'
+    );
   });
 
   it('selectQueryParams should return Params or undefined', () => {
@@ -103,6 +117,19 @@ describe('getRouterSelectors', () => {
     );
   });
 
+  it('selectRouteDataParam should return unknown: route data holds any value', () => {
+    expectSnippet(`
+      export const selectBreadcrumbs = selectRouteDataParam('breadcrumbs')
+      export const selector = createSelector(
+        selectBreadcrumbs,
+        breadcrumbs => breadcrumbs
+      );
+    `).toInfer(
+      'selector',
+      'MemoizedSelector<State, unknown, (s1: unknown) => unknown>'
+    );
+  });
+
   it('selectUrl should return string or undefined', () => {
     expectSnippet(`
       export const selector = createSelector(
@@ -132,7 +159,7 @@ describe('RouterStateSelectors', () => {
   const expectSnippet = expecter(
     (code) => `
       import { Selector } from '@ngrx/store';
-      import { RouterStateSelectors } from './modules/router-store/src/models';
+      import { RouterStateSelectors } from '@ngrx/router-store';
 
       ${code}
     `,

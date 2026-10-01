@@ -1,5 +1,4 @@
 // Through the package name, so a missing public export fails here (#162).
-// eslint-disable-next-line @nx/enforce-module-boundaries
 import { ComponentStore } from '@ngrx/component-store';
 import { Observable } from 'rxjs';
 import { describe, it } from 'vitest';
@@ -11,6 +10,8 @@ describe('regression component-store', () => {
       prop: string;
     }
 
+    // Never used: the test is that this class compiles.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     abstract class MyStore<
       QueryVariables extends SomeType,
     > extends ComponentStore<any> {

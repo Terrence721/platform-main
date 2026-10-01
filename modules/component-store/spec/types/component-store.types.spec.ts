@@ -1,7 +1,9 @@
+// The effect and updater callbacks declare parameters (e, v) only for their
+// types, which are what these tests check; the values are never read.
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { expectTypeOf, describe, it } from 'vitest';
 import { EMPTY, Observable, Subscription, of, concatMap } from 'rxjs';
 // Through the package name, so a missing public export fails here (#162).
-// eslint-disable-next-line @nx/enforce-module-boundaries
 import { ComponentStore } from '@ngrx/component-store';
 
 interface Obj {

@@ -14,7 +14,6 @@ import { describe, expectTypeOf, it } from 'vitest';
 // Through the package names, as an app imports them, so a missing or mistyped
 // public export fails here (#162). createEffect, ofType, Actions,
 // EffectsModule and provideEffects have their own ts-snippet specs.
-/* eslint-disable @nx/enforce-module-boundaries */
 import {
   Actions,
   createEffect,
@@ -42,7 +41,6 @@ import {
   USER_PROVIDED_EFFECTS,
 } from '@ngrx/effects';
 import { provideMockActions } from '@ngrx/effects/testing';
-/* eslint-enable @nx/enforce-module-boundaries */
 
 const load = createAction('[Books] Load');
 const loaded = createAction('[Books] Loaded');

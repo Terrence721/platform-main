@@ -147,4 +147,13 @@ describe('LetDirective', () => {
       'interface Dictionary { o: Observable<boolean> }'
     ).toBeInferredAs('boolean | { o: boolean; }');
   });
+
+  it('should infer the value as static when potential observable is an array of observables', () => {
+    expectPotentialObservable('Observable<number>[]').toBeInferredAs(
+      'Observable<number>[]'
+    );
+    expectPotentialObservable(
+      'readonly [Observable<number>, Observable<string>]'
+    ).toBeInferredAs('readonly [Observable<number>, Observable<string>]');
+  });
 });

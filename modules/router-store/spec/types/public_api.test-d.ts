@@ -17,7 +17,6 @@ import { describe, expectTypeOf, it } from 'vitest';
 // Through the package name, as an app imports it, so a missing or mistyped
 // public export fails here (#162). getRouterSelectors and
 // RouterStateSelectors have their own ts-snippet spec.
-// eslint-disable-next-line @nx/enforce-module-boundaries
 import {
   BaseRouterStoreState,
   createRouterSelector,

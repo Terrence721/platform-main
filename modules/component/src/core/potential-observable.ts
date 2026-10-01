@@ -14,16 +14,19 @@ export type PotentialObservableResult<PO, ExtendedResult = never> =
     ? Result | ExtendedResult
     : PO extends Primitive
       ? PO
-      : keyof PO extends never
+      : // An array is never combined, even of Observables: it is a value.
+        PO extends readonly unknown[]
         ? PO
-        : PO extends ObservableDictionary<PO>
-          ? | {
-                [Key in keyof PO]: PO[Key] extends Observable<infer Value>
-                  ? Value
-                  : never;
-              }
-            | ExtendedResult
-          : PO;
+        : keyof PO extends never
+          ? PO
+          : PO extends ObservableDictionary<PO>
+            ? | {
+                  [Key in keyof PO]: PO[Key] extends Observable<infer Value>
+                    ? Value
+                    : never;
+                }
+              | ExtendedResult
+            : PO;
 
 export function fromPotentialObservable<PO>(
   potentialObservable: PO

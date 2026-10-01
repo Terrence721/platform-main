@@ -1,138 +1,108 @@
 import ts from 'typescript';
+import { Path } from '@angular-devkit/core';
 import { Rule, chain, Tree } from '@angular-devkit/schematics';
 import {
   visitTSSourceFiles,
   commitChanges,
   createReplaceChange,
-  ReplaceChange,
+  replaceImport,
+  Change,
 } from '../../../schematics-core';
 
-const renames = {
-  DefaultRouterStateSerializer: 'FullRouterStateSerializer',
-};
+const OLD_NAME = 'DefaultRouterStateSerializer';
+const NEW_NAME = 'FullRouterStateSerializer';
 
 function renameSerializers() {
   return (tree: Tree) => {
     visitTSSourceFiles(tree, (sourceFile) => {
-      const routerStoreImports = sourceFile.statements
-        .filter(ts.isImportDeclaration)
-        .filter(({ moduleSpecifier }) =>
-          moduleSpecifier.getText(sourceFile).includes('@ngrx/router-store')
-        );
+      // Only the imported name is replaced, so `type` modifiers and aliases
+      // are kept; an aliased import keeps its local name in the code.
+      const changes: Change[] = replaceImport(
+        sourceFile,
+        sourceFile.fileName as Path,
+        '@ngrx/router-store',
+        OLD_NAME,
+        NEW_NAME
+      );
 
-      if (routerStoreImports.length === 0) {
-        return;
+      const { importedUnderOwnName, namespaces } = findImports(sourceFile);
+      if (importedUnderOwnName || namespaces.length) {
+        visit(sourceFile, (node) => {
+          if (
+            ts.isIdentifier(node) &&
+            node.text === OLD_NAME &&
+            isSerializerReference(node, importedUnderOwnName, namespaces)
+          ) {
+            changes.push(
+              createReplaceChange(sourceFile, node, OLD_NAME, NEW_NAME)
+            );
+          }
+        });
       }
-
-      const changes = [
-        ...findSerializerImportDeclarations(sourceFile, routerStoreImports),
-        ...findSerializerReplacements(sourceFile),
-      ];
 
       commitChanges(tree, sourceFile.fileName, changes);
     });
   };
 }
 
-function findSerializerImportDeclarations(
-  sourceFile: ts.SourceFile,
-  imports: ts.ImportDeclaration[]
-) {
-  const changes = imports
-    .map((p) => (p?.importClause?.namedBindings as ts.NamedImports)?.elements)
-    .reduce(
-      (imports, curr) => imports.concat(curr ?? []),
-      [] as ts.ImportSpecifier[]
-    )
-    .map((specifier) => {
-      if (!ts.isImportSpecifier(specifier)) {
-        return { hit: false };
-      }
-
-      const serializerImports = Object.keys(renames);
-      if (serializerImports.includes(specifier.name.text)) {
-        return { hit: true, specifier, text: specifier.name.text };
-      }
-
-      // if import is renamed
-      if (
-        specifier.propertyName &&
-        serializerImports.includes(specifier.propertyName.text)
-      ) {
-        return { hit: true, specifier, text: specifier.propertyName.text };
-      }
-
-      return { hit: false };
-    })
-    .filter(({ hit }) => hit)
-    .map(({ specifier, text }) =>
-      !!specifier && !!text
-        ? createReplaceChange(
-            sourceFile,
-            specifier,
-            text,
-            (renames as any)[text]
-          )
-        : undefined
-    )
-    .filter((change) => !!change) as Array<ReplaceChange>;
-
-  return changes;
-}
-
-function findSerializerReplacements(sourceFile: ts.SourceFile) {
-  const renameKeys = Object.keys(renames);
-  const changes: ReplaceChange[] = [];
-  ts.forEachChild(sourceFile, (node) => find(node, changes));
-  return changes;
-
-  function find(node: ts.Node, changes: ReplaceChange[]) {
-    let change = undefined;
-
+function findImports(sourceFile: ts.SourceFile) {
+  let importedUnderOwnName = false;
+  const namespaces: string[] = [];
+  for (const statement of sourceFile.statements) {
     if (
-      ts.isPropertyAssignment(node) &&
-      renameKeys.includes(node.initializer.getText(sourceFile))
+      !ts.isImportDeclaration(statement) ||
+      !ts.isStringLiteral(statement.moduleSpecifier) ||
+      statement.moduleSpecifier.text !== '@ngrx/router-store'
     ) {
-      change = {
-        node: node.initializer,
-        text: node.initializer.getText(sourceFile),
-      };
+      continue;
     }
-
-    if (
-      ts.isPropertyAccessExpression(node) &&
-      renameKeys.includes(node.expression.getText(sourceFile))
-    ) {
-      change = {
-        node: node.expression,
-        text: node.expression.getText(sourceFile),
-      };
-    }
-
-    if (
-      ts.isVariableDeclaration(node) &&
-      node.type &&
-      renameKeys.includes(node.type.getText(sourceFile))
-    ) {
-      change = {
-        node: node.type,
-        text: node.type.getText(sourceFile),
-      };
-    }
-
-    if (change) {
-      changes.push(
-        createReplaceChange(
-          sourceFile,
-          change.node,
-          change.text,
-          (renames as any)[change.text]
-        )
+    const bindings = statement.importClause?.namedBindings;
+    if (bindings && ts.isNamespaceImport(bindings)) {
+      namespaces.push(bindings.name.text);
+    } else if (bindings && ts.isNamedImports(bindings)) {
+      importedUnderOwnName ||= bindings.elements.some(
+        (element) => !element.propertyName && element.name.text === OLD_NAME
       );
     }
-
-    ts.forEachChild(node, (childNode) => find(childNode, changes));
   }
+  return { importedUnderOwnName, namespaces };
+}
+
+// A use of the imported serializer, wherever it is (`useClass`, `extends`,
+// `new`, a type, ...): a bare reference when it is imported under its own
+// name, or `ns.DefaultRouterStateSerializer` through a namespace import.
+// Object keys and properties of other objects are left alone.
+function isSerializerReference(
+  node: ts.Identifier,
+  importedUnderOwnName: boolean,
+  namespaces: string[]
+): boolean {
+  const parent = node.parent;
+  if (ts.isImportSpecifier(parent)) {
+    return false;
+  }
+  if (
+    (ts.isQualifiedName(parent) && parent.right === node) ||
+    (ts.isPropertyAccessExpression(parent) && parent.name === node)
+  ) {
+    const left = ts.isQualifiedName(parent) ? parent.left : parent.expression;
+    return ts.isIdentifier(left) && namespaces.includes(left.text);
+  }
+  if (
+    (ts.isPropertyAssignment(parent) ||
+      ts.isPropertySignature(parent) ||
+      ts.isPropertyDeclaration(parent) ||
+      ts.isMethodDeclaration(parent)) &&
+    parent.name === node
+  ) {
+    return false;
+  }
+  return importedUnderOwnName;
+}
+
+function visit(node: ts.Node, callback: (node: ts.Node) => void) {
+  callback(node);
+  ts.forEachChild(node, (child) => visit(child, callback));
 }
 
 export default function (): Rule {

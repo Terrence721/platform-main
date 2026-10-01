@@ -1,4 +1,6 @@
-import { ComponentStore } from '../../';
+// Through the package name, so a missing public export fails here (#162).
+// eslint-disable-next-line @nx/enforce-module-boundaries
+import { ComponentStore } from '@ngrx/component-store';
 import { Observable } from 'rxjs';
 import { describe, it } from 'vitest';
 

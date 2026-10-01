@@ -22,12 +22,11 @@ export class EntityServicesElements {
     /** Creates observable EntitySelectors$ for entity collections. */
     entitySelectors$Factory: EntitySelectors$Factory,
     /**
-     * The ngrx store. Although typed `Store<EntityCache>`, it is the root
-     * store: its state holds the EntityCache under the cache name
-     * (`entityCache` by default). Read the cache with `entityCache$` or the
-     * ENTITY_CACHE_SELECTOR_TOKEN selector.
+     * The root ngrx store: its state holds the EntityCache under the cache
+     * name (`entityCache` by default). Read the cache with `entityCache$` or
+     * the ENTITY_CACHE_SELECTOR_TOKEN selector.
      */
-    public readonly store: Store<EntityCache>
+    public readonly store: Store<object>
   ) {
     this.entityActionErrors$ = entitySelectors$Factory.entityActionErrors$;
     this.entityCache$ = entitySelectors$Factory.entityCache$;

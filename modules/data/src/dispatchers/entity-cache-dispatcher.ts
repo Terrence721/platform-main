@@ -48,8 +48,8 @@ export class EntityCacheDispatcher implements OnDestroy {
     private defaultDispatcherOptions: EntityDispatcherDefaultOptions,
     /** Actions scanned by the store after it processed them with reducers. */
     @Inject(ScannedActionsSubject) scannedActions$: ScannedActionsSubject,
-    /** The store, scoped to the EntityCache */
-    private store: Store<EntityCache>
+    /** The root store; it holds the EntityCache under the cache name. */
+    private store: Store<object>
   ) {
     // Replay because sometimes in tests will fake data service with synchronous observable
     // which makes subscriber miss the dispatched actions.

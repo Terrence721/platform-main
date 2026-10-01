@@ -40,7 +40,7 @@ describe('EntityCacheDispatcher', () => {
     dispatched = [];
     const store = {
       dispatch: vi.fn((action: Action) => dispatched.push(action)),
-    } as unknown as Store<EntityCache>;
+    } as unknown as Store<object>;
     dispatcher = new EntityCacheDispatcher(
       new CorrelationIdGenerator(),
       new EntityDispatcherDefaultOptions(),

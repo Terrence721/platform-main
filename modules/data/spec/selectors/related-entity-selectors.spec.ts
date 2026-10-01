@@ -31,7 +31,7 @@ describe('Related-entity Selectors', () => {
   // #region setup
   let eaFactory: EntityActionFactory;
   let entitySelectorsFactory: EntitySelectorsFactory;
-  let store: Store<EntityCache>;
+  let store: Store<{ entityCache: EntityCache }>;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -451,7 +451,7 @@ export function sortByName(a: { name: string }, b: { name: string }): number {
 
 function initializeCache(
   eaFactory: EntityActionFactory,
-  store: Store<EntityCache>
+  store: Store<{ entityCache: EntityCache }>
 ) {
   let action: EntityAction;
 

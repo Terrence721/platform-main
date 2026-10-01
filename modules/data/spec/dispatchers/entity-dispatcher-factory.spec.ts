@@ -7,7 +7,6 @@ import {
   createEntityCacheSelector,
   EntityAction,
   EntityActionFactory,
-  EntityCache,
   EntityDispatcherDefaultOptions,
   EntityDispatcherFactory,
 } from '../../';
@@ -28,7 +27,7 @@ describe('EntityDispatcherFactory', () => {
     const store = {
       dispatch: vi.fn((action: Action) => dispatched.push(action)),
       select: vi.fn(() => of({})),
-    } as unknown as Store<EntityCache>;
+    } as unknown as Store<object>;
     factory = new EntityDispatcherFactory(
       new EntityActionFactory(),
       store,

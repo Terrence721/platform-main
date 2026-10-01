@@ -30,6 +30,20 @@ export default tseslint.config(
     },
   },
   {
+    // The data-persistence secondary entry point has its own tsconfigs, as
+    // store/testing does: the module's own ones do not include its sources.
+    files: ['data-persistence/**/*.ts'],
+    extends: [angularTsConfig],
+    rules: {
+      '@nx/enforce-module-boundaries': 'off',
+    },
+    languageOptions: {
+      parserOptions: {
+        project: ['modules/router-store/data-persistence/tsconfig.*.json'],
+      },
+    },
+  },
+  {
     files: ['**/*.html'],
     extends: [angularTemplateConfig],
   }

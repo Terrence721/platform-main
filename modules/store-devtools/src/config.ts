@@ -5,8 +5,9 @@ export type ActionSanitizer = (action: Action, id: number) => Action;
 export type StateSanitizer = (state: any, index: number) => any;
 export type SerializationOptions = {
   options?: boolean | any;
-  replacer?: (key: any, value: any) => {};
-  reviver?: (key: any, value: any) => {};
+  // Like JSON's: a replacer may return undefined to leave a key out.
+  replacer?: (key: any, value: any) => unknown;
+  reviver?: (key: any, value: any) => unknown;
   immutable?: any;
   refs?: Array<any>;
 };
@@ -133,9 +134,11 @@ export const STORE_DEVTOOLS_CONFIG = new InjectionToken<StoreDevtoolsConfig>(
 );
 
 /**
- * Used to provide a `StoreDevtoolsConfig` for the store-devtools.
+ * Used to provide the store-devtools options: the ones given to
+ * `provideStoreDevtools()` or `StoreDevtoolsModule.instrument()`, a partial
+ * config or a function returning one. The defaults are filled in later.
  */
-export const INITIAL_OPTIONS = new InjectionToken<StoreDevtoolsConfig>(
+export const INITIAL_OPTIONS = new InjectionToken<StoreDevtoolsOptions>(
   '@ngrx/store-devtools Initial Config'
 );
 

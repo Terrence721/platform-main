@@ -3980,7 +3980,17 @@ Replaces `ngrx-store-freeze` with NgRx 8's runtime checks: removes the package f
 
 **Bugs, fixed:** `package.json` was always rewritten (2-space indent, no final line break, CRLF lost), even without `ngrx-store-freeze`, the bug fixed in `updatePackage` by #766; and the array was rebuilt from its elements' text, collapsing multi-line lists and dropping comments. `package.json` is now written only when it changes, keeping its formatting, and only the `storeFreeze` element and its comma are removed.
 
-**Verification:** the migration's spec passes (30 tests, 7 new); `nx run-many -t lint,test -p store` passes.
+**Verification:** the migration's spec passes (23 tests, 7 new); `nx run-many -t lint,test -p store` passes.
+
+### [`store/migrations/13_0_0-beta/index.ts`](https://github.com/Terrence721/platform-main/blob/044dfb1e7be76f9df7a9c2fe965b4b4a292ba6e1/modules/store/migrations/13_0_0-beta/index.ts)
+
+**3 real bugs fixed** — reviewed in [issue #819](https://github.com/Terrence721/platform-main/issues/819)
+
+v13 deprecated feature selectors with a root state: `createFeatureSelector<State, Feature>(...)` becomes `createFeatureSelector<Feature>(...)`. The two-generic overload still exists (deprecated), so anything missed keeps a deprecation warning rather than breaking.
+
+**Bugs, fixed:** the removal started at the first generic's `pos` (its leading trivia), leaving `< Feature>` with a stray space, which the existing spec had pinned; and calls through an aliased `createFeatureSelector as cfs` or a namespace import (`store.createFeatureSelector`) were not migrated, because calls were matched by the literal name. `createFeatureSelector` is matched by its imported name from `@ngrx/store` now, and the removal runs from the first generic's start to the second's.
+
+**Verification:** the migration's spec passes (4 tests, 3 new; the existing expectation now has no stray space); `nx run-many -t lint,test -p store` passes.
 
 ---
 

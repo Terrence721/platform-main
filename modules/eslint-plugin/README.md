@@ -33,6 +33,22 @@ export default [
 
 It has no autofix: switching to `ngrxPush` also means adding `PushPipe` to the component's `imports`.
 
+## TypeScript config files
+
+The configs and the default export are typed to work with ESLint's own types, so an `eslint.config.ts` can pass them to `defineConfig()` from `eslint/config`:
+
+```ts
+import { defineConfig } from 'eslint/config';
+import ngrx from '@ngrx/eslint-plugin';
+
+export default defineConfig(ngrx.configs.all, {
+  plugins: { '@ngrx': ngrx },
+  rules: { '@ngrx/select-style': ['warn', 'operator'] },
+});
+```
+
+Their types are deliberately loose, as typescript-eslint's own presets are, because ESLint's and typescript-eslint's config types disagree in detail. For the same reason the default export's type has no `rules`; import the named `rules` export for the rules with their full types.
+
 ## Which modules have rules
 
 A lint rule can only check the code in an app that calls a library, so a module gets rules only where code that compiles can still be wrong in a way a static check can find.

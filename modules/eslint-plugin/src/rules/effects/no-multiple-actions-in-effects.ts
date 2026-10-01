@@ -16,7 +16,7 @@ import {
 export const messageId = 'noMultipleActionsInEffects';
 
 type MessageIds = typeof messageId;
-type Options = readonly unknown[];
+type Options = readonly [];
 type EffectsMapLikeOperatorsReturn =
   | TSESTree.ArrowFunctionExpression
   | TSESTree.CallExpression

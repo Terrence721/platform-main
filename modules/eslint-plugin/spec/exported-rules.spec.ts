@@ -86,8 +86,7 @@ describe('ESLint flat config', () => {
     const linter = new Linter({ configType: 'flat' });
     const messages = linter.verify(
       `<ng-container *ngrxLet="items$ | async as items">{{ items }}</ng-container>`,
-      // typescript-eslint's config types differ from ESLint's own.
-      configs.component as Linter.Config[],
+      configs.component,
       'file.html'
     );
     expect(messages.filter((message) => message.fatal)).toEqual([]);
@@ -100,8 +99,7 @@ describe('ESLint flat config', () => {
     const messages = linter.verify(
       `import { createAction } from '@ngrx/store';
       const x = createAction('x');`,
-      // typescript-eslint's config types differ from ESLint's own.
-      [...configs.all, { files: ['**/*.ts'] }] as Linter.Config[],
+      [...configs.all, { files: ['**/*.ts'] }],
       'file.ts'
     );
     expect(messages.filter((message) => message.fatal)).toEqual([]);
@@ -145,7 +143,6 @@ describe('ESLint flat config', () => {
     const messages = linter.verify(
       `import { createAction } from '@ngrx/store';
       const x = createAction('x');`,
-      // typescript-eslint's config types differ from ESLint's own.
       [
         ...configs.store,
         {
@@ -153,7 +150,7 @@ describe('ESLint flat config', () => {
           plugins: { '@ngrx': plugin },
           rules: { '@ngrx/good-action-hygiene': 'warn' },
         },
-      ] as Linter.Config[],
+      ],
       'file.ts'
     );
     expect(

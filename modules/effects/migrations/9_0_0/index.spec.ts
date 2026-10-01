@@ -29,7 +29,7 @@ describe('Effects Migration 9_0_0', () => {
 
   describe('Replaces resubscribeOnError with useEffectsErrorHandler in effect options', () => {
     describe('should replace resubscribeOnError configuration key with useEffectsErrorHandler', () => {
-      it('in createEffect() effect creator', () => {
+      it('in createEffect() effect creator', async () => {
         const input = `
   import { Injectable } from '@angular/core';
   import { Actions, ofType, createEffect } from '@ngrx/effects';
@@ -62,10 +62,10 @@ describe('Effects Migration 9_0_0', () => {
   }
         `;
 
-        test(input, expected);
+        await test(input, expected);
       });
 
-      it('in @Effect() decorator', () => {
+      it('in @Effect() decorator', async () => {
         const input = `
   import { Injectable } from '@angular/core';
   import { Actions, Effect, ofType } from '@ngrx/effects';
@@ -98,20 +98,20 @@ describe('Effects Migration 9_0_0', () => {
   }
         `;
 
-        test(input, expected);
+        await test(input, expected);
       });
     });
 
     describe('should not replace non-ngrx identifiers', () => {
-      it('in module scope', () => {
+      it('in module scope', async () => {
         const input = `
 export const resubscribeOnError = null;
       `;
 
-        test(input, input);
+        await test(input, input);
       });
 
-      it('within create effect callback', () => {
+      it('within create effect callback', async () => {
         const input = `
 import { Injectable } from '@angular/core';
 import { Actions, ofType, createEffect } from '@ngrx/effects';
@@ -128,7 +128,59 @@ export class LogEffects {
 }
       `;
 
-        test(input, input);
+        await test(input, input);
+      });
+    });
+
+    describe('should rename only the config key', () => {
+      const imp = `import { createEffect, Effect } from '@ngrx/effects';\n`;
+
+      it('keeps a value with the same name', async () => {
+        await test(
+          imp +
+            `const resubscribeOnError = false;\na$ = createEffect(() => x$, { resubscribeOnError: resubscribeOnError });\nclass E { @Effect({ resubscribeOnError: this.resubscribeOnError }) b$ = x$; }\n`,
+          imp +
+            `const resubscribeOnError = false;\na$ = createEffect(() => x$, { useEffectsErrorHandler: resubscribeOnError });\nclass E { @Effect({ useEffectsErrorHandler: this.resubscribeOnError }) b$ = x$; }\n`
+        );
+      });
+
+      it('expands a shorthand property', async () => {
+        await test(
+          imp +
+            `const resubscribeOnError = false;\na$ = createEffect(() => x$, { resubscribeOnError });\n`,
+          imp +
+            `const resubscribeOnError = false;\na$ = createEffect(() => x$, { useEffectsErrorHandler: resubscribeOnError });\n`
+        );
+      });
+
+      it('migrates an aliased createEffect', async () => {
+        await test(
+          `import { createEffect as ce } from '@ngrx/effects';\na$ = ce(() => x$, { resubscribeOnError: false });\n`,
+          `import { createEffect as ce } from '@ngrx/effects';\na$ = ce(() => x$, { useEffectsErrorHandler: false });\n`
+        );
+      });
+
+      it('warns about a config passed as a variable', async () => {
+        const input =
+          imp +
+          `const config = { resubscribeOnError: false };\na$ = createEffect(() => x$, config);\n`;
+        const runner = new SchematicTestRunner('schematics', collectionPath);
+        const logs: string[] = [];
+        runner.logger.subscribe((entry) => logs.push(entry.message));
+        appTree.create('./app.module.ts', input);
+
+        const newTree = await runner.runSchematic(
+          `ngrx-${pkgName}-migration-02`,
+          {},
+          appTree
+        );
+
+        expect(newTree.readContent('app.module.ts')).toBe(input);
+        expect(logs).toContainEqual(
+          expect.stringContaining(
+            "the effect config 'config' is not an object literal"
+          )
+        );
       });
     });
 

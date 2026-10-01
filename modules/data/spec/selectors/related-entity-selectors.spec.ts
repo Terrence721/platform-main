@@ -139,7 +139,7 @@ describe('Related-entity Selectors', () => {
       new Promise<void>((done) => {
         let alphaCount = 0;
 
-        createHeroSidekickSelector$(1).subscribe((sk) => {
+        createHeroSidekickSelector$(1).subscribe(() => {
           alphaCount += 1;
         });
 

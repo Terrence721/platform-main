@@ -48,6 +48,8 @@ describe('EntityCollectionService', () => {
   describe('queries', () => {
     let heroCollectionService: EntityCollectionService<Hero>;
     let dataService: TestDataService;
+    // A debugging hook: call it in a test to log the reduced actions.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     let reducedActions$Snoop: () => void;
 
     beforeEach(() => {
@@ -57,7 +59,7 @@ describe('EntityCollectionService', () => {
 
     // Compare to next test which subscribes to getAll() result
     it('can use loading$ to learn when getAll() succeeds', () =>
-      new Promise<void>((done, fail) => {
+      new Promise<void>((done) => {
         const hero1 = { id: 1, name: 'A' } as Hero;
         const hero2 = { id: 2, name: 'B' } as Hero;
         const heroes = [hero1, hero2];
@@ -70,7 +72,7 @@ describe('EntityCollectionService', () => {
             filter((loading) => !loading),
             withLatestFrom(heroCollectionService.entities$)
           )
-          .subscribe(([loading, data]) => {
+          .subscribe(([, data]) => {
             expect(data).toEqual(heroes);
             done();
           });
@@ -202,6 +204,8 @@ describe('EntityCollectionService', () => {
 
     let heroCollectionService: EntityCollectionService<Hero>;
     let dataService: TestDataService;
+    // A debugging hook: call it in a test to log the reduced actions.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     let reducedActions$Snoop: () => void;
 
     beforeEach(() => {
@@ -220,7 +224,7 @@ describe('EntityCollectionService', () => {
         const correlationId = 'CRID007';
         const options: EntityActionOptions = { correlationId };
         heroCollectionService.getAll(options).subscribe({
-          next: (data) => fail('should not have data but got data'),
+          next: () => fail('should not have data but got data'),
           error: (error) => {
             expect(error instanceof PersistenceCanceled).toBe(true);
             expect(error.message).toBe('Test cancel');
@@ -276,7 +280,6 @@ describe('EntityCollectionService', () => {
   describe.skip('saves (optimistic)', () => {
     beforeEach(() => {
       TestBed.configureTestingModule({
-        /* eslint-disable-next-line @typescript-eslint/no-use-before-define */
         providers: [
           {
             provide: EntityDispatcherDefaultOptions,
@@ -292,7 +295,6 @@ describe('EntityCollectionService', () => {
   describe.skip('saves (pessimistic)', () => {
     beforeEach(() => {
       TestBed.configureTestingModule({
-        /* eslint-disable-next-line @typescript-eslint/no-use-before-define */
         providers: [
           {
             provide: EntityDispatcherDefaultOptions,
@@ -310,6 +312,8 @@ describe('EntityCollectionService', () => {
     let heroCollectionService: EntityCollectionService<Hero>;
     let dataService: TestDataService;
     let expectOptimisticSuccess: (expect: boolean) => () => void;
+    // A debugging hook: call it in a test to log the reduced actions.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     let reducedActions$Snoop: () => void;
     let successActions$: Observable<EntityAction>;
 
@@ -433,7 +437,7 @@ describe('EntityCollectionService', () => {
         let responseDelay = delayMs;
         const savedHeroes: Hero[] = [];
 
-        successActions$.pipe(delay(1)).subscribe((act) => {
+        successActions$.pipe(delay(1)).subscribe(() => {
           successActionCount += 1;
           if (successActionCount === 2) {
             // Confirm hero2 actually saved before hero1
@@ -470,10 +474,6 @@ describe('EntityCollectionService', () => {
     let heroCollectionService: EntityCollectionService<Hero>;
     let store: Store<{ entityCache: EntityCache }>;
 
-    function dispatchedAction() {
-      return <EntityAction>(<Mock>store.dispatch).mock.calls.at(0)?.[0];
-    }
-
     beforeEach(() => {
       const setup = entityServicesSetup();
       ({ entityActionFactory, heroCollectionService, store } = setup);
@@ -505,7 +505,7 @@ class Villain {
 
 const entityMetadata: EntityMetadataMap = {
   Hero: {},
-  Villain: { selectId: (villain) => villain.key },
+  Villain: { selectId: (villain: Villain) => villain.key },
 };
 
 function entityServicesSetup() {
@@ -525,7 +525,6 @@ function entityServicesSetup() {
     ],
     providers: [
       { provide: EntityCacheEffects, useValue: {} },
-      /* eslint-disable-next-line @typescript-eslint/no-use-before-define */
       { provide: EntityDataService, useClass: TestDataService },
       { provide: Logger, useValue: logger },
     ],
@@ -555,7 +554,6 @@ function entityServicesSetup() {
   /** Returns fn that confirms EntityAction was (or was not Optimistic) after success */
   function expectOptimisticSuccess(expected: boolean) {
     let wasOptimistic: boolean;
-    const msg = `${expected ? 'Optimistic' : 'Pessimistic'} save `;
     successActions$.subscribe(
       (act: EntityAction) => (wasOptimistic = act.payload.isOptimistic === true)
     );
@@ -603,8 +601,7 @@ function expectDataToBe(
 
 function expectErrorToBe(
   expected: any,
-  { done, fail }: { done: any; fail: any },
-  message?: string
+  { done, fail }: { done: any; fail: any }
 ) {
   return {
     next: (data: any) => {

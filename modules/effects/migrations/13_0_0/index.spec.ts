@@ -247,6 +247,46 @@ describe('Effects Migration 13_0_0', () => {
       await runTest(input, output);
     });
 
+    describe('imports and effects that cannot be wrapped', () => {
+      const imp = `import { Effect } from '@ngrx/effects';\n`;
+
+      it('migrates an aliased Effect import', async () => {
+        await runTest(
+          `import { Effect as Fx } from '@ngrx/effects';\nclass E {\n  @Fx() a$ = this.actions$.pipe();\n}\n`,
+          `import { createEffect as Fx } from '@ngrx/effects';\nclass E {\n   a$ = Fx(() => this.actions$.pipe());\n}\n`
+        );
+      });
+
+      it('migrates an effect through a namespace import', async () => {
+        await runTest(
+          `import * as fx from '@ngrx/effects';\nclass E {\n  @fx.Effect() a$ = this.actions$.pipe();\n}\n`,
+          `import * as fx from '@ngrx/effects';\nclass E {\n   a$ = fx.createEffect(() => this.actions$.pipe());\n}\n`
+        );
+      });
+
+      it('wraps an initializer that only mentions createEffect', async () => {
+        await runTest(
+          imp +
+            `class E {\n  @Effect() a$ = this.actions$.pipe(map(() => createEffectFailed()));\n}\n`,
+          `import { createEffect } from '@ngrx/effects';\nclass E {\n   a$ = createEffect(() => this.actions$.pipe(map(() => createEffectFailed())));\n}\n`
+        );
+      });
+
+      it('keeps @Effect on an effect without an initializer, and warns', async () => {
+        const logs: string[] = [];
+        schematicRunner.logger.subscribe((entry) => logs.push(entry.message));
+
+        await runTest(
+          imp +
+            `class E {\n  @Effect() a$ = this.actions$.pipe();\n  @Effect() b$: Observable<Action>;\n}\n`,
+          `import { Effect, createEffect } from '@ngrx/effects';\nclass E {\n   a$ = createEffect(() => this.actions$.pipe());\n  @Effect() b$: Observable<Action>;\n}\n`
+        );
+        expect(logs).toContainEqual(
+          expect.stringContaining("'b$' has no initializer")
+        );
+      });
+    });
+
     async function runTest(input: string, expected: string) {
       const effectPath = '/some.effects.ts';
       appTree.create(effectPath, input);

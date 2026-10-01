@@ -140,4 +140,62 @@ const action: Action<'[SOURCE] Event'> = { type: '[SOURCE] Event' };
       await verifySchematic(input, output);
     });
   });
+
+  describe('imports and line breaks', () => {
+    const models = `import { TypedAction } from '@ngrx/store/src/models';\n`;
+
+    it('should not add Action to an @ngrx/store-devtools import', async () => {
+      await verifySchematic(
+        models +
+          `import { StoreDevtoolsModule } from '@ngrx/store-devtools';\nlet a: TypedAction<'x'>;\n`,
+        `import { Action } from '@ngrx/store';\nimport { StoreDevtoolsModule } from '@ngrx/store-devtools';\nlet a: Action<'x'>;\n`
+      );
+    });
+
+    it('should leave files without TypedAction alone', async () => {
+      const input = `import { ActionReducer } from '@ngrx/store/src/models';\nimport { createAction } from '@ngrx/store';\nlet r: ActionReducer<any>;\n`;
+      await verifySchematic(input, input);
+    });
+
+    it('should keep aliases and type modifiers', async () => {
+      await verifySchematic(
+        `import { TypedAction, ActionReducer as AR } from '@ngrx/store/src/models';\nlet a: TypedAction<'x'>; let r: AR<any>;\n`,
+        `import { ActionReducer as AR } from '@ngrx/store/src/models';\nimport { Action } from '@ngrx/store';\nlet a: Action<'x'>; let r: AR<any>;\n`
+      );
+      appTree.delete('main.ts');
+      appTree.delete('other.ts');
+      await verifySchematic(
+        `import { type TypedAction, type ActionReducer } from '@ngrx/store/src/models';\nlet a: TypedAction<'x'>;\n`,
+        `import { type ActionReducer } from '@ngrx/store/src/models';\nimport { type Action } from '@ngrx/store';\nlet a: Action<'x'>;\n`
+      );
+    });
+
+    it('should import Action under the alias of TypedAction', async () => {
+      await verifySchematic(
+        `import { TypedAction as TA } from '@ngrx/store/src/models';\nlet a: TA<'x'>;\n`,
+        `import { Action as TA } from '@ngrx/store';\nlet a: TA<'x'>;\n`
+      );
+    });
+
+    it('should keep Windows line endings', async () => {
+      await verifySchematic(
+        `import { TypedAction } from '@ngrx/store/src/models';\r\nlet a: TypedAction<'x'>;\r\n`,
+        `import { Action } from '@ngrx/store';\r\nlet a: Action<'x'>;\r\n`
+      );
+    });
+
+    it('should handle the import on the last line without a line break', async () => {
+      await verifySchematic(
+        `let a: TypedAction<'x'>;\nimport { TypedAction } from '@ngrx/store/src/models';`,
+        `let a: Action<'x'>;\nimport { Action } from '@ngrx/store';`
+      );
+    });
+
+    it('should leave object keys alone', async () => {
+      await verifySchematic(
+        models + `const o = { TypedAction: 1 };\nlet a: TypedAction<'x'>;\n`,
+        `import { Action } from '@ngrx/store';\nconst o = { TypedAction: 1 };\nlet a: Action<'x'>;\n`
+      );
+    });
+  });
 });

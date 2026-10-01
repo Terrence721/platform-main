@@ -15,187 +15,196 @@ import {
 import { createRemoveChange } from '../../../schematics-core/utility/change';
 
 const storeModelsPath = '@ngrx/store/src/models';
-const filesWithChanges: string[] = [];
 
+// TypedAction (from @ngrx/store/src/models) was removed in favour of Action
+// from @ngrx/store.
 export function migrateStoreTypedAction(): Rule {
   return (tree: Tree, ctx: SchematicContext) => {
     visitTSSourceFiles(tree, (sourceFile) => {
-      const changes: Change[] = [];
+      const imports = sourceFile.statements.filter(ts.isImportDeclaration);
 
-      const importDeclarations = new Array<ts.ImportDeclaration>();
-      getImportDeclarations(sourceFile, importDeclarations);
-
-      const storeModelsImportsAndDeclaration = importDeclarations
-        .map((storeModelsImportDeclaration) => {
-          const storeModelsImports = getStoreModelsNamedBindings(
-            storeModelsImportDeclaration
-          );
-          if (storeModelsImports) {
-            return { storeModelsImports, storeModelsImportDeclaration };
-          } else {
-            return undefined;
-          }
+      // The models import that holds TypedAction, matched by its imported
+      // name, so `TypedAction as TA` counts too; files without it are left
+      // alone.
+      const models = imports
+        .filter((node) => isFrom(node, storeModelsPath))
+        .map((declaration) => {
+          const bindings = declaration.importClause?.namedBindings;
+          const element =
+            bindings && ts.isNamedImports(bindings)
+              ? bindings.elements.find(
+                  (spec) => importedName(spec) === 'TypedAction'
+                )
+              : undefined;
+          return element && bindings && ts.isNamedImports(bindings)
+            ? { declaration, bindings, element }
+            : undefined;
         })
         .find(Boolean);
-
-      if (!storeModelsImportsAndDeclaration) {
+      if (!models) {
         return;
       }
 
-      const { storeModelsImports, storeModelsImportDeclaration } =
-        storeModelsImportsAndDeclaration;
+      const changes: Change[] = [];
+      const text = sourceFile.getFullText();
+      const typeOnly =
+        models.element.isTypeOnly ||
+        !!models.declaration.importClause?.isTypeOnly;
 
-      const storeImportDeclaration = importDeclarations.find(
-        (node) =>
-          node.moduleSpecifier.getText().includes('@ngrx/store') &&
-          !node.moduleSpecifier.getText().includes('@ngrx/store/')
-      );
+      // Action under the name the file already imports it by; otherwise
+      // under TypedAction's local name (`Action as TA` for an alias), so the
+      // uses only need renaming when TypedAction was imported without an
+      // alias.
+      const storeImport = imports.find((node) => isFrom(node, '@ngrx/store'));
+      const storeBindings = storeImport?.importClause?.namedBindings;
+      const existingAction =
+        storeBindings && ts.isNamedImports(storeBindings)
+          ? storeBindings.elements.find(
+              (spec) => importedName(spec) === 'Action'
+            )
+          : undefined;
+      const localName = models.element.name.text;
+      const actionName = existingAction?.name.text ?? localName;
+      const actionSpecifier = `${typeOnly ? 'type ' : ''}${
+        localName === 'TypedAction' ? 'Action' : `Action as ${localName}`
+      }`;
+      const newName = existingAction ? actionName : 'Action';
+      const renameUses =
+        localName === 'TypedAction' || !!existingAction
+          ? { from: localName, to: newName }
+          : undefined;
 
-      const otherStoreModelImports = storeModelsImports.elements
-        .filter((element) => element.name.getText() !== 'TypedAction')
-        .map((element) => element.name.getText())
-        .join(', ');
-
-      // Remove `TypedAction` from @ngrx/store/src/models and leave the other imports
-      if (otherStoreModelImports) {
+      // Remove TypedAction from the models import, keeping the other
+      // specifiers as written (aliases and `type` included), or the whole
+      // import with its line break.
+      const lineBreak = lineBreakAfter(text, models.declaration.getEnd());
+      const afterModelsLine = models.declaration.getEnd() + lineBreak.length;
+      const otherModelImports = models.bindings.elements
+        .filter((spec) => spec !== models.element)
+        .map((spec) => spec.getText(sourceFile));
+      if (otherModelImports.length) {
         changes.push(
           createReplaceChange(
             sourceFile,
-            storeModelsImportDeclaration,
-            storeModelsImportDeclaration.getText(),
-            `import { ${otherStoreModelImports} } from '${storeModelsPath}';`
+            models.bindings,
+            models.bindings.getText(sourceFile),
+            `{ ${otherModelImports.join(', ')} }`
           )
         );
-      }
-      // Remove complete import because it's empty
-      else {
+      } else {
         changes.push(
           createRemoveChange(
             sourceFile,
-            storeModelsImportDeclaration,
-            storeModelsImportDeclaration.getStart(),
-            storeModelsImportDeclaration.getEnd() + 1
+            models.declaration,
+            models.declaration.getStart(sourceFile),
+            afterModelsLine
           )
         );
       }
 
-      let importAppendedInExistingDeclaration = false;
-      if (storeImportDeclaration?.importClause?.namedBindings) {
-        const bindings = storeImportDeclaration.importClause.namedBindings;
-        if (ts.isNamedImports(bindings)) {
-          // Add import to existing @ngrx/operators
-          const updatedImports = new Set([
-            ...bindings.elements.map((element) => element.name.getText()),
-            'Action',
-          ]);
-          const importStatement = `import { ${[...updatedImports].join(
-            ', '
-          )} } from '@ngrx/store';`;
+      // Import Action unless it already is.
+      if (!existingAction) {
+        if (storeBindings && ts.isNamedImports(storeBindings)) {
+          const specifiers = [
+            ...storeBindings.elements.map((spec) => spec.getText(sourceFile)),
+            actionSpecifier,
+          ];
           changes.push(
             createReplaceChange(
               sourceFile,
-              storeImportDeclaration,
-              storeImportDeclaration.getText(),
-              importStatement
+              storeBindings,
+              storeBindings.getText(sourceFile),
+              `{ ${specifiers.join(', ')} }`
             )
           );
-          importAppendedInExistingDeclaration = true;
+        } else {
+          const lineBefore = !lineBreak && otherModelImports.length ? '\n' : '';
+          changes.push(
+            new InsertChange(
+              sourceFile.fileName,
+              afterModelsLine,
+              `${lineBefore}import { ${actionSpecifier} } from '@ngrx/store';${lineBreak}`
+            )
+          );
         }
       }
 
-      if (!importAppendedInExistingDeclaration) {
-        // Add new @ngrx/operators import line
-        const importStatement = `import { Action } from '@ngrx/store';`;
-        changes.push(
-          new InsertChange(
-            sourceFile.fileName,
-            storeModelsImportDeclaration.getEnd() + 1,
-            `${importStatement}\n`
-          )
-        );
+      if (renameUses && renameUses.from !== renameUses.to) {
+        visit(sourceFile, (node) => {
+          if (
+            ts.isIdentifier(node) &&
+            node.text === renameUses.from &&
+            isReference(node)
+          ) {
+            changes.push(
+              createReplaceChange(
+                sourceFile,
+                node,
+                renameUses.from,
+                renameUses.to
+              )
+            );
+          }
+        });
       }
 
       commitChanges(tree, sourceFile.fileName, changes);
-
-      if (changes.length) {
-        filesWithChanges.push(sourceFile.fileName);
-        ctx.logger.info(
-          `[@ngrx/store] ${sourceFile.fileName}: Replaced TypedAction to Action`
-        );
-      }
+      ctx.logger.info(
+        `[@ngrx/store] ${sourceFile.fileName}: Replaced TypedAction to Action`
+      );
     });
   };
 }
 
-export function migrateStoreTypedActionReferences(): Rule {
-  return (tree: Tree, _ctx: SchematicContext) => {
-    visitTSSourceFiles(tree, (sourceFile) => {
-      if (!filesWithChanges.includes(sourceFile.fileName)) {
-        return;
-      }
-      const changes: Change[] = [];
-      const typedActionIdentifiers = new Array<ts.Identifier>();
-      getTypedActionUsages(sourceFile, typedActionIdentifiers);
-
-      typedActionIdentifiers.forEach((identifier) => {
-        changes.push(
-          createReplaceChange(
-            sourceFile,
-            identifier,
-            identifier.getText(),
-            'Action'
-          )
-        );
-      });
-      commitChanges(tree, sourceFile.fileName, changes);
-    });
-  };
+// The line break right after a node: none (last line), LF or CRLF.
+function lineBreakAfter(text: string, end: number): string {
+  return text.startsWith('\r\n', end)
+    ? '\r\n'
+    : text.startsWith('\n', end)
+      ? '\n'
+      : '';
 }
 
-function getImportDeclarations(
-  node: ts.Node,
-  imports: ts.ImportDeclaration[]
-): void {
-  if (ts.isImportDeclaration(node)) {
-    imports.push(node);
-  }
+function importedName(spec: ts.ImportSpecifier): string {
+  return (spec.propertyName ?? spec.name).text;
+}
 
-  ts.forEachChild(node, (childNode) =>
-    getImportDeclarations(childNode, imports)
+// Exact module, so '@ngrx/store-devtools' is not '@ngrx/store'.
+function isFrom(node: ts.ImportDeclaration, moduleName: string): boolean {
+  return (
+    ts.isStringLiteral(node.moduleSpecifier) &&
+    node.moduleSpecifier.text === moduleName
   );
 }
 
-function getTypedActionUsages(
-  node: ts.Node,
-  nodeIdentifiers: ts.Identifier[]
-): void {
-  if (ts.isIdentifier(node) && node.getText() === 'TypedAction') {
-    nodeIdentifiers.push(node);
+// A use of the type, not an import specifier, an object key or a property of
+// another object.
+function isReference(node: ts.Identifier): boolean {
+  const parent = node.parent;
+  if (ts.isImportSpecifier(parent)) {
+    return false;
   }
-
-  ts.forEachChild(node, (childNode) =>
-    getTypedActionUsages(childNode, nodeIdentifiers)
-  );
-}
-
-function getStoreModelsNamedBindings(
-  node: ts.ImportDeclaration
-): ts.NamedImports | null {
-  const namedBindings = node?.importClause?.namedBindings;
   if (
-    node.moduleSpecifier.getText().includes(storeModelsPath) &&
-    namedBindings &&
-    ts.isNamedImports(namedBindings)
+    (ts.isPropertyAccessExpression(parent) ||
+      ts.isPropertyAssignment(parent) ||
+      ts.isPropertySignature(parent) ||
+      ts.isPropertyDeclaration(parent) ||
+      ts.isMethodDeclaration(parent)) &&
+    parent.name === node
   ) {
-    return namedBindings;
+    return false;
   }
+  if (ts.isQualifiedName(parent) && parent.right === node) {
+    return false;
+  }
+  return true;
+}
 
-  return null;
+function visit(node: ts.Node, callback: (node: ts.Node) => void) {
+  callback(node);
+  ts.forEachChild(node, (child) => visit(child, callback));
 }
 
 export default function (): Rule {
-  return chain([
-    migrateStoreTypedAction(),
-    migrateStoreTypedActionReferences(),
-  ]);
+  return chain([migrateStoreTypedAction()]);
 }

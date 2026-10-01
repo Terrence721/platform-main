@@ -1,28 +1,44 @@
 import ts from 'typescript';
+import { Path } from '@angular-devkit/core';
 import { Rule, chain, Tree } from '@angular-devkit/schematics';
 import {
   visitTSSourceFiles,
   commitChanges,
   createReplaceChange,
-  ReplaceChange,
+  replaceImport,
+  Change,
 } from '../../../schematics-core';
 
-const renames: { [key: string]: string } = {
-  getSelectors: 'getRouterSelectors',
-};
+const OLD_NAME = 'getSelectors';
+const NEW_NAME = 'getRouterSelectors';
 
 function renameSelector() {
   return (tree: Tree) => {
     visitTSSourceFiles(tree, (sourceFile) => {
-      const routerStoreImports = sourceFile.statements
-        .filter((p): p is ts.ImportDeclaration => ts.isImportDeclaration(p))
-        .filter(({ moduleSpecifier }) =>
-          moduleSpecifier.getText(sourceFile).includes('@ngrx/router-store')
-        );
-      const changes: ReplaceChange[] = [
-        ...replaceNamedImports(routerStoreImports, sourceFile),
-        ...replaceNamespaceImports(routerStoreImports, sourceFile),
-      ];
+      // Only the imported name is replaced, so `type` modifiers and aliases
+      // are kept; an aliased import keeps its local name in the code.
+      const changes: Change[] = replaceImport(
+        sourceFile,
+        sourceFile.fileName as Path,
+        '@ngrx/router-store',
+        OLD_NAME,
+        NEW_NAME
+      );
+
+      const { importedUnderOwnName, namespaces } = findImports(sourceFile);
+      if (importedUnderOwnName || namespaces.length) {
+        visit(sourceFile, (node) => {
+          if (
+            ts.isIdentifier(node) &&
+            node.text === OLD_NAME &&
+            isSelectorReference(node, importedUnderOwnName, namespaces)
+          ) {
+            changes.push(
+              createReplaceChange(sourceFile, node, OLD_NAME, NEW_NAME)
+            );
+          }
+        });
+      }
 
       if (changes.length) {
         commitChanges(tree, sourceFile.fileName, changes);
@@ -31,95 +47,64 @@ function renameSelector() {
   };
 }
 
-function replaceNamedImports(
-  routerStoreImports: ts.ImportDeclaration[],
-  sourceFile: ts.SourceFile
-): ReplaceChange[] {
-  const changes: ReplaceChange[] = [];
-
-  const namedImports = routerStoreImports
-    .flatMap((p) =>
-      !!p.importClause && ts.isImportClause(p.importClause)
-        ? p.importClause.namedBindings
-        : []
-    )
-    .flatMap((p) => (!!p && ts.isNamedImports(p) ? p.elements : []));
-
-  for (const namedImport of namedImports) {
-    tryToAddReplacement(namedImport.name, sourceFile, changes);
-  }
-  return changes;
-}
-
-function replaceNamespaceImports(
-  routerStoreImports: ts.ImportDeclaration[],
-  sourceFile: ts.SourceFile
-): ReplaceChange[] {
-  const changes: ReplaceChange[] = [];
-
-  const namespaceImports = routerStoreImports
-    .map((p) =>
-      !!p.importClause &&
-      ts.isImportClause(p.importClause) &&
-      !!p.importClause.namedBindings &&
-      ts.isNamespaceImport(p.importClause.namedBindings)
-        ? p.importClause.namedBindings.name.getText(sourceFile)
-        : null
-    )
-    .filter((p): p is string => !!p);
-
-  if (namespaceImports.length === 0) {
-    return changes;
-  }
-
+function findImports(sourceFile: ts.SourceFile) {
+  let importedUnderOwnName = false;
+  const namespaces: string[] = [];
   for (const statement of sourceFile.statements) {
-    statement.forEachChild((child) => {
-      if (ts.isVariableDeclarationList(child)) {
-        const [declaration] = child.declarations;
-        if (
-          ts.isVariableDeclaration(declaration) &&
-          declaration.initializer &&
-          ts.isCallExpression(declaration.initializer) &&
-          declaration.initializer.expression &&
-          ts.isPropertyAccessExpression(declaration.initializer.expression) &&
-          ts.isIdentifier(declaration.initializer.expression.expression) &&
-          ts.isIdentifier(declaration.initializer.expression.name)
-        ) {
-          if (
-            namespaceImports.includes(
-              declaration.initializer.expression.expression.getText(sourceFile)
-            )
-          ) {
-            tryToAddReplacement(
-              declaration.initializer.expression.name,
-              sourceFile,
-              changes
-            );
-          }
-        }
-      }
-    });
+    if (
+      !ts.isImportDeclaration(statement) ||
+      !ts.isStringLiteral(statement.moduleSpecifier) ||
+      statement.moduleSpecifier.text !== '@ngrx/router-store'
+    ) {
+      continue;
+    }
+    const bindings = statement.importClause?.namedBindings;
+    if (bindings && ts.isNamespaceImport(bindings)) {
+      namespaces.push(bindings.name.text);
+    } else if (bindings && ts.isNamedImports(bindings)) {
+      importedUnderOwnName ||= bindings.elements.some(
+        (element) => !element.propertyName && element.name.text === OLD_NAME
+      );
+    }
   }
-
-  return changes;
+  return { importedUnderOwnName, namespaces };
 }
 
-function tryToAddReplacement(
-  oldName: ts.Identifier,
-  sourceFile: ts.SourceFile,
-  changes: ReplaceChange[]
-) {
-  const oldNameText = oldName.getText(sourceFile);
-  const newName = renames[oldNameText];
-  if (newName) {
-    const change = createReplaceChange(
-      sourceFile,
-      oldName,
-      oldNameText,
-      newName
-    );
-    changes.push(change);
+// A use of the imported getSelectors, wherever it is (a call, `typeof`, a
+// reference): a bare reference when it is imported under its own name, or
+// `ns.getSelectors` through a namespace import. Object keys and properties
+// of other objects (`store.getSelectors`) are left alone.
+function isSelectorReference(
+  node: ts.Identifier,
+  importedUnderOwnName: boolean,
+  namespaces: string[]
+): boolean {
+  const parent = node.parent;
+  if (ts.isImportSpecifier(parent)) {
+    return false;
   }
+  if (
+    (ts.isQualifiedName(parent) && parent.right === node) ||
+    (ts.isPropertyAccessExpression(parent) && parent.name === node)
+  ) {
+    const left = ts.isQualifiedName(parent) ? parent.left : parent.expression;
+    return ts.isIdentifier(left) && namespaces.includes(left.text);
+  }
+  if (
+    (ts.isPropertyAssignment(parent) ||
+      ts.isPropertySignature(parent) ||
+      ts.isPropertyDeclaration(parent) ||
+      ts.isMethodDeclaration(parent)) &&
+    parent.name === node
+  ) {
+    return false;
+  }
+  return importedUnderOwnName;
+}
+
+function visit(node: ts.Node, callback: (node: ts.Node) => void) {
+  callback(node);
+  ts.forEachChild(node, (child) => visit(child, callback));
 }
 
 export default function (): Rule {

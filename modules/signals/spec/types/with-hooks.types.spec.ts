@@ -7,7 +7,7 @@ import {
   withMethods,
   withProps,
   withState,
-} from '../../src';
+} from '@ngrx/signals';
 
 describe('withHooks types', () => {
   it('provides state signals, props, methods and the writable state source to a hook', () => {

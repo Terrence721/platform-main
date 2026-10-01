@@ -6,7 +6,7 @@ import {
   SignalStoreFeatureResult,
   SignalStoreHooks,
   withMethods,
-} from '../../src';
+} from '@ngrx/signals';
 
 // A library author has to be able to name the types that a SignalStoreFeature,
 // SignalStoreFeatureResult and withMethods are made of. A name that the barrel

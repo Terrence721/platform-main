@@ -1,3 +1,7 @@
+// These tests declare features and stores only to check their types: they
+// are never used as values, their methods are empty, and `{}` is the shape
+// SignalStoreFeatureType gives an empty part of a feature.
+/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function, @typescript-eslint/no-empty-object-type */
 import { Signal } from '@angular/core';
 import { describe, expectTypeOf, it } from 'vitest';
 import {
@@ -8,7 +12,7 @@ import {
   withMethods,
   withProps,
   withState,
-} from '../../src';
+} from '@ngrx/signals';
 
 describe('SignalStoreFeatureType', () => {
   function withCounter() {

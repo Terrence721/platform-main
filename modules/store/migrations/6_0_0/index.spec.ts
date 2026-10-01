@@ -39,4 +39,30 @@ describe('Store Migration 6_0_0', () => {
       );
     });
   });
+
+  const runMigration = async (content: string) => {
+    appTree = new UnitTestTree(Tree.empty());
+    appTree.create(packagePath, content);
+    const runner = new SchematicTestRunner('schematics', collectionPath);
+    const newTree = await runner.runSchematic(
+      `ngrx-${pkgName}-migration-01`,
+      {},
+      appTree
+    );
+    return newTree.readContent(packagePath);
+  };
+
+  it('should update a devDependency', async () => {
+    expect(
+      await runMigration(
+        '{\n  "devDependencies": {\n    "@ngrx/store": "^5.2.0"\n  }\n}\n'
+      )
+    ).toBe('{\n  "devDependencies": {\n    "@ngrx/store": "^6.0.0"\n  }\n}\n');
+  });
+
+  it('should leave package.json untouched when the package is not listed', async () => {
+    const content =
+      '{\n    "dependencies": {\n        "@ngrx/effects": "^5.2.0"\n    }\n}\n';
+    expect(await runMigration(content)).toBe(content);
+  });
 });

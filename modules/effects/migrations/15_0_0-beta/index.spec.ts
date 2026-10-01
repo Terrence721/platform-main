@@ -124,7 +124,7 @@ describe('Effects Migration 15_0_0-beta', () => {
             provideRouterStore(),
             provideEffects(),
             provideEffects(AppEffects),
-            provideEffects(AppEffects1, AppEffect2),
+            provideEffects(AppEffects1,AppEffect2),
           ],
         });
       `;
@@ -140,5 +140,42 @@ describe('Effects Migration 15_0_0-beta', () => {
     const actual = tree.readContent('main.ts');
 
     expect(actual).toBe(expected);
+  });
+
+  describe('more call forms', () => {
+    const imp = `import { provideEffects } from '@ngrx/effects';\n`;
+
+    const verify = async (input: string, output: string) => {
+      appTree.create('main.ts', input);
+      const tree = await schematicRunner.runSchematic(
+        `ngrx-effects-migration-15-beta`,
+        {},
+        appTree
+      );
+      expect(tree.readContent('main.ts')).toBe(output);
+    };
+
+    it('keeps comments and line breaks between the effects', async () => {
+      await verify(
+        imp +
+          `const p = provideEffects([\n  A, // users\n  // orders\n  B,\n]);\n`,
+        imp +
+          `const p = provideEffects(\n  A, // users\n  // orders\n  B,\n);\n`
+      );
+    });
+
+    it('migrates aliased and namespace imports', async () => {
+      await verify(
+        `import { provideEffects as pe } from '@ngrx/effects';\nimport * as fx from '@ngrx/effects';\nconst a = pe([A, B]);\nconst b = fx.provideEffects([C]);\n`,
+        `import { provideEffects as pe } from '@ngrx/effects';\nimport * as fx from '@ngrx/effects';\nconst a = pe(A, B);\nconst b = fx.provideEffects(C);\n`
+      );
+    });
+
+    it('spreads an array held in a variable', async () => {
+      await verify(
+        imp + `const EFFECTS = [A, B];\nconst p = provideEffects(EFFECTS);\n`,
+        imp + `const EFFECTS = [A, B];\nconst p = provideEffects(...EFFECTS);\n`
+      );
+    });
   });
 });

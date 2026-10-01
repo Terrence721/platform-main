@@ -71,6 +71,30 @@ const modules: Record<string, { testTimeout?: number }> = {
 };
 
 /**
+ * The apps under projects/ are Vitest projects too, named after their Nx
+ * projects and taking overrides the same way.
+ */
+const apps: Record<string, { testTimeout?: number }> = {
+  'standalone-app': {},
+};
+
+/** Every module and app project, with the folder it is rooted at. */
+const testProjects = [
+  ...Object.entries(modules).map(([name, overrides]) => ({
+    name,
+    folder: `modules/${name}`,
+    overrides,
+  })),
+  ...Object.entries(apps).map(([name, overrides]) => ({
+    name,
+    folder: `projects/${name}`,
+    overrides,
+  })),
+];
+const isTestProject = (name: string) =>
+  testProjects.some((project) => project.name === name);
+
+/**
  * The repo's own tooling scripts (scripts/) are tested as one more project. It
  * is not an Nx project, so `nx test` never runs it; CI runs it with
  * `yarn test:scripts`.
@@ -80,17 +104,17 @@ const scriptsProject = 'scripts';
 /**
  * Which project to run, when the run is scoped to one:
  * - Nx sets NX_TASK_TARGET_PROJECT for every task, so `nx test <module>` runs
- *   only that module even though the executor starts Vitest from the
+ *   only that module (or app) even though the executor starts Vitest from the
  *   workspace root.
- * - Otherwise, a run started from inside a module folder
- *   (`cd modules/signals && npx vitest run`) is scoped to that module, and
+ * - Otherwise, a run started from inside a module or app folder
+ *   (`cd modules/signals && npx vitest run`) is scoped to that project, and
  *   one started from inside scripts/ to the scripts project.
  * A run from the workspace root (`yarn test:report`, the VS Code Testing
- * panel) covers every module and the scripts.
+ * panel) covers every module, app and the scripts.
  */
 function scopedProject(): string | undefined {
   const fromNx = process.env['NX_TASK_TARGET_PROJECT'];
-  if (fromNx && fromNx in modules) return fromNx;
+  if (fromNx && isTestProject(fromNx)) return fromNx;
 
   const normalize = (path: string) => path.replace(/\\/g, '/');
   const relative = normalize(process.cwd()).replace(
@@ -99,8 +123,8 @@ function scopedProject(): string | undefined {
   );
   if (/^scripts(\/|$)/.test(relative)) return scriptsProject;
 
-  const match = /^modules\/([^/]+)/.exec(relative);
-  return match && match[1] in modules ? match[1] : undefined;
+  const match = /^(?:modules|projects)\/([^/]+)/.exec(relative);
+  return match && isTestProject(match[1]) ? match[1] : undefined;
 }
 
 /**
@@ -157,9 +181,9 @@ const parseSpecificationsShim = {
 };
 
 /**
- * Single Vitest configuration for the whole workspace. All modules share the
- * settings below; each one becomes a project rooted at its own folder, so
- * per-module files (setup file, tsconfig.spec.json) resolve as before.
+ * Single Vitest configuration for the whole workspace. All modules and apps
+ * share the settings below; each one becomes a project rooted at its own
+ * folder, so its own files (setup file, tsconfig.spec.json) resolve there.
  */
 export default defineConfig(({ mode }) => {
   const only = scopedProject();
@@ -245,11 +269,11 @@ export default defineConfig(({ mode }) => {
             ['json', { outputFile: './test-results/results.json' }],
           ],
       projects: [
-        ...Object.entries(modules)
-          .filter(([name]) => !only || name === only)
-          .map(([name, overrides]) => ({
+        ...testProjects
+          .filter(({ name }) => !only || name === only)
+          .map(({ name, folder, overrides }) => ({
             extends: true,
-            root: fileURLToPath(new URL(`./modules/${name}`, import.meta.url)),
+            root: fileURLToPath(new URL(`./${folder}`, import.meta.url)),
             test: { name, ...overrides },
           })),
         ...(!only || only === scriptsProject

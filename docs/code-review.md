@@ -1695,7 +1695,7 @@ The data schematic (`ng generate @ngrx/schematics:data`) writes an entity model,
 
 **Real defect, fixed: the generated spec failed.** It type-checked, but running it failed:
 
-```
+```text
 NG0201: No provider found for `EntityDispatcherFactory`.
 Path: HeroService -> EntityCollectionServiceElementsFactory -> EntityDispatcherFactory
 ```
@@ -1801,7 +1801,7 @@ The entity schematic (`ng generate @ngrx/schematics:entity`) writes a model, act
 
 **Real defect, fixed: `ng generate entity` failed in a standalone app.** `index.ts` called `findModuleFromOptions` unconditionally, so without `--module` it searched for the nearest NgModule. A standalone app, the default since Angular 17, has none, so the schematic stopped with
 
-```
+```text
 Could not find an NgModule. Use the skip-import option to skip importing in NgModule.
 ```
 
@@ -1865,7 +1865,7 @@ The feature schematic (`ng generate @ngrx/schematics:feature`) runs `action`, `r
 
 **Real defect, fixed: `--entity --api` and `--entity --prefix` generated effects that did not compile.** In entity mode the actions come from the `entity` schematic, which declares fixed events (`Load Foos`, `Add Foo`, …) with no success or failure actions. But `feature` still passed `api` and `prefix` to the `effect` schematic, so the effect referenced actions that do not exist:
 
-```
+```text
 entity-api/foo.effects.ts:     TS2339: Property 'loadFoosSuccess' does not exist on type 'ActionGroup<"Foo/API", …>'
 entity-api/foo.effects.ts:     TS2339: Property 'loadFoosFailure' does not exist …
 entity-prefix/foo.effects.ts:  TS2339: Property 'customFoos' does not exist …
@@ -1944,7 +1944,7 @@ The file was `// eslint-disable-next-line @typescript-eslint/no-empty-interface`
 
 **Real defect, fixed: one of the module's standing lint warnings.** typescript-eslint v8 deprecated `no-empty-interface` in favour of `no-empty-object-type`. The repo config enables both: the old one as an error, which the comment suppressed, and the new one as a warning, which it did not. So the line was reported:
 
-```
+```text
 2:18  warning  An empty interface declaration allows any non-nullish value, including literals like `0` and `""`.  @typescript-eslint/no-empty-object-type
 ```
 
@@ -1966,7 +1966,7 @@ No test is added: the change is type-only, and lint (`--report-unused-disable-di
 
 **Real defect 1, fixed: it imported `PushModule`, which `@ngrx/component` no longer exports.** `PushModule` was deprecated in NgRx v16 in favour of the standalone `PushPipe` (the `component` module's own `16_0_0` migration moves apps off it), and it is not in `@ngrx/component`'s public API any more. But this schematic still added `import { PushModule } from '@ngrx/component'` and put it in `imports`/`exports`:
 
-```
+```text
 foo.module.ts(3,10): error TS2305: Module '"@ngrx/component"' has no exported member 'PushModule'.
 ```
 
@@ -2016,7 +2016,7 @@ The reducer schematic (`ng generate @ngrx/schematics:reducer`) writes a reducer 
 
 **Real defect 1, fixed: the default output did not compile.** The template imported `{ FooActions } from './foo.actions'` and `on` unconditionally, but only uses them with `--feature`, and the reducer schematic never creates the actions file:
 
-```
+```text
 default/foo.reducer.ts(2,28): error TS2307: Cannot find module './foo.actions' or its corresponding type declarations.
 ```
 
@@ -2474,7 +2474,7 @@ Its parts were traced in earlier files: copying the original action's `error`/`s
 
 Interfaces only: `EntityServerCommands<T>` (commands that call the server), `EntityCacheCommands<T>` (cache-only commands) and `EntityCommands<T>` (both), checked against their implementation in `EntityDispatcherBase`.
 
-**Doc comments fixed:** `upsertOneInCache` and `upsertManyInCache` said "Pass the Update<T> structure as the payload", but `EntityDispatcherBase` dispatches the entities themselves, so the line is removed. `getByKey` said it returns "the queried entities that are in the collection"; it returns one entity, looked up in the collection by the key of the server's result. `delete(entity)` and `removeManyFromCache(entities)` documented their parameters under the wrong names, and a sentence in `updateManyInCache` ran into the next.
+**Doc comments fixed:** `upsertOneInCache` and `upsertManyInCache` said "Pass the Update\<T> structure as the payload", but `EntityDispatcherBase` dispatches the entities themselves, so the line is removed. `getByKey` said it returns "the queried entities that are in the collection"; it returns one entity, looked up in the collection by the key of the server's result. `delete(entity)` and `removeManyFromCache(entities)` documented their parameters under the wrong names, and a sentence in `updateManyInCache` ran into the next.
 
 **Checked, not defects:** the `add` overloads (a partial entity when pessimistic, a full entity when optimistic) match `add`'s guard, which checks the entity only for an optimistic save; the cache commands' "ignored if already in cache" and "ignored if not in cache" match the entity adapter's behaviour.
 
@@ -2488,7 +2488,7 @@ Interfaces only: `EntityServerCommands<T>` (commands that call the server), `Ent
 
 **Bugs, fixed: options silently dropped, and a correlation id of `0` rejected.** `cancel` threw for any falsy correlation id, while the query and save methods treat only `null`/`undefined` as missing (the same fix as #519), and it dispatched only `{ correlationId }`, losing a tag passed in `options`. `setFilter`, `setLoaded` and `setLoading` had no `options` parameter at all, although `EntityCommands` declares one for each, so their options were dropped too.
 
-**Also:** `throwError(value)` (deprecated in RxJS 7) is now `throwError(() => …)`; the two `delete` overloads had their doc comments swapped, `getByKey` claimed to return "the collection", `upsertOneInCache` still said "Pass the Update<T>", and a comment in `removeManyFromCache` sat on the wrong branch; two unused imports are removed. In the spec, two tests built the expected `Update` payload without ever asserting it, and now do; with that, both files are lint-clean.
+**Also:** `throwError(value)` (deprecated in RxJS 7) is now `throwError(() => …)`; the two `delete` overloads had their doc comments swapped, `getByKey` claimed to return "the collection", `upsertOneInCache` still said "Pass the Update\<T>", and a comment in `removeManyFromCache` sat on the wrong branch; two unused imports are removed. In the spec, two tests built the expected `Update` payload without ever asserting it, and now do; with that, both files are lint-clean.
 
 **Noted, not changed:** as in `EntityCacheDispatcher` (#519), the response Observables are cold and `reducedActions$` replays only the latest action, so a caller that subscribes after the response and a later action have both been reduced never gets the response; subscribing at the call is fine.
 
@@ -2700,7 +2700,7 @@ Every call matches its callee, and a throwaway probe confirmed the behaviour: an
 
 `EntityCollectionServiceFactory.create<T, S$>(entityName)` builds an `EntityCollectionServiceBase` for an entity type from the elements factory.
 
-**Type bug, fixed: the custom selectors$ type was lost.** `create<T, S$>` returned `EntityCollectionService<T>`, whose `selectors$` is plain `EntitySelectors$<T>`. That interface has a catch-all index signature, so a custom selector$ such as `foo$` for `additionalCollectionState.foo` came back as `any` instead of the `Observable<string>` declared in `S$`; a throwaway probe showed `foo$.subscribe(v => ...)` failing type checking on the implicit `any` while `foo$` emitted its value at runtime. The return type is now `EntityCollectionServiceBase<T, S$>`, the class actually returned, whose `selectors$` is exactly `S$`. The change is type-only and more specific, so callers holding the interface are unaffected; an intersection with `{ selectors$: S$ }` would not have worked, since `any & X` is `any`.
+**Type bug, fixed: the custom selectors\$ type was lost.** `create<T, S$>` returned `EntityCollectionService<T>`, whose `selectors$` is plain `EntitySelectors$<T>`. That interface has a catch-all index signature, so a custom selector\$ such as `foo$` for `additionalCollectionState.foo` came back as `any` instead of the `Observable<string>` declared in `S$`; a throwaway probe showed `foo$.subscribe(v => ...)` failing type checking on the implicit `any` while `foo$` emitted its value at runtime. The return type is now `EntityCollectionServiceBase<T, S$>`, the class actually returned, whose `selectors$` is exactly `S$`. The change is type-only and more specific, so callers holding the interface are unaffected; an intersection with `{ selectors$: S$ }` would not have worked, since `any & X` is `any`.
 
 **Coverage gap, closed:** the file had no spec. The new `entity-collection-service-factory.spec.ts` checks the created class, the custom selectors$ type (an `expectTypeOf` test, shown to fail against the old `any`) and value, and the unknown-type error. `create` now documents its return value and its error, and an unused import is gone.
 
@@ -2714,7 +2714,7 @@ Every call matches its callee, and a throwaway probe confirmed the behaviour: an
 
 The `EntityCollectionService<T>` interface: the facade apps get from `EntityServices`, combining `EntityCommands<T>` and `EntitySelectors$<T>`. Both findings were probed on the unchanged source with a throwaway spec.
 
-**Real bug, fixed: custom selectors$ were offered on the service but missing.** The interface extends `EntitySelectors$<T>`, whose index signature exists for `additionalCollectionState` selectors$, so `service.foo$` type-checks; but `EntityCollectionServiceBase` copied only the built-in selectors$ onto itself, so `service.foo$` was `undefined` and only `service.selectors$.foo$` existed. The base class now also puts the custom selectors$ on the service, skipping any name the service already has, so they can never replace a command or a built-in selector$. This is an additive behaviour change.
+**Real bug, fixed: custom selectors\$ were offered on the service but missing.** The interface extends `EntitySelectors$<T>`, whose index signature exists for `additionalCollectionState` selectors\$, so `service.foo$` type-checks; but `EntityCollectionServiceBase` copied only the built-in selectors\$ onto itself, so `service.foo$` was `undefined` and only `service.selectors$.foo$` existed. The base class now also puts the custom selectors\$ on the service, skipping any name the service already has, so they can never replace a command or a built-in selector\$. This is an additive behaviour change.
 
 **Type bug, fixed: `createEntityAction` was typed by the entity, not the data.** The interface returned `EntityAction<T>` for any payload, so for `QUERY_BY_KEY` with key `42`, `action.payload.data!.name` type-checked as a `string` but was `undefined`. It now matches the dispatcher: `createEntityAction<P>(op, data?: P, options?): EntityAction<P>`.
 

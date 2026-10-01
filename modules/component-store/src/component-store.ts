@@ -477,8 +477,13 @@ function processSelectorArgs<
     equal: defaultEqualityFn,
   };
 
-  // Last argument is either config or projector or selectorsObject
-  if (isSelectConfig(selectorArgs[selectorArgs.length - 1])) {
+  // Last argument is either config or projector or selectorsObject. A
+  // selectorsObject is always the only argument, so a last object after other
+  // arguments is the config, even an empty one.
+  if (
+    selectorArgs.length > 1 &&
+    isSelectConfig(selectorArgs[selectorArgs.length - 1])
+  ) {
     config = { ...config, ...selectorArgs.pop() };
   }
 
@@ -503,14 +508,12 @@ function processSelectorArgs<
   };
 }
 
+// A config is a plain object: neither a projector nor a selector Observable.
+// Its fields are all optional, so `{}` or `{ debounce: undefined }` is one too.
 function isSelectConfig(
   arg: SelectConfig<unknown> | unknown
 ): arg is SelectConfig<unknown> {
-  const typedArg = arg as SelectConfig<unknown>;
-  return (
-    typeof typedArg.debounce !== 'undefined' ||
-    typeof typedArg.equal !== 'undefined'
-  );
+  return typeof arg === 'object' && arg !== null && !isObservable(arg);
 }
 
 function hasProjectFnOnly(

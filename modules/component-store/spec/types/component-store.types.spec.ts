@@ -1,6 +1,8 @@
 import { expectTypeOf, describe, it } from 'vitest';
 import { EMPTY, Observable, Subscription, of, concatMap } from 'rxjs';
-import { ComponentStore } from '../../';
+// Through the package name, so a missing public export fails here (#162).
+// eslint-disable-next-line @nx/enforce-module-boundaries
+import { ComponentStore } from '@ngrx/component-store';
 
 interface Obj {
   prop: string;

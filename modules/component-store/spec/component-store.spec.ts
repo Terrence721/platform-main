@@ -18,12 +18,13 @@ import {
 import { createSelector } from '@ngrx/store';
 import {
   asyncScheduler,
-  ConnectableObservable,
+  connectable,
   from,
   interval,
   Observable,
   of,
   queueScheduler,
+  ReplaySubject,
   scheduled,
   Subscription,
   throwError,
@@ -36,7 +37,6 @@ import {
   delayWhen,
   finalize,
   map,
-  publishReplay,
   take,
   tap,
 } from 'rxjs/operators';
@@ -226,10 +226,11 @@ describe('Component Store', () => {
         const UPDATED_STATE = { updatedState: 'processed' };
 
         // Record all the values that go through state$.
-        const recordedStateValues$ =
-          componentStore.state$.pipe(publishReplay());
+        const recordedStateValues$ = connectable(componentStore.state$, {
+          connector: () => new ReplaySubject<object>(),
+        });
         // Need to "connect" to start getting notifications.
-        (recordedStateValues$ as ConnectableObservable<object>).connect();
+        recordedStateValues$.connect();
 
         const asynchronousObservable$ = of(UPDATED_STATE).pipe(
           // Delays until the state gets the init value.
@@ -410,10 +411,11 @@ describe('Component Store', () => {
         );
 
         // Record all the values that go through state$.
-        const recordedStateValues$ =
-          componentStore.state$.pipe(publishReplay());
+        const recordedStateValues$ = connectable(componentStore.state$, {
+          connector: () => new ReplaySubject<State>(),
+        });
         // Need to "connect" to start getting notifications.
-        (recordedStateValues$ as ConnectableObservable<object>).connect();
+        recordedStateValues$.connect();
 
         // Update with Observable.
         updater(
@@ -751,6 +753,25 @@ describe('Component Store', () => {
         );
       })
     );
+
+    it('takes a config with no fields set, after a projector or selectors', () => {
+      const values: string[] = [];
+      componentStore
+        .select((s) => s.value, {})
+        .subscribe((value) => values.push(value));
+      componentStore
+        .select((s) => s.value, { debounce: undefined })
+        .subscribe((value) => values.push(value));
+      const value$ = componentStore.select((s) => s.value);
+      componentStore
+        .select(value$, (value) => `${value}!`, {})
+        .subscribe((value) => values.push(value));
+      componentStore
+        .select({ value: value$ }, {})
+        .subscribe(({ value }) => values.push(value));
+
+      expect(values).toEqual(['init', 'init', 'init!', 'init']);
+    });
 
     it('reads the values synchronously', () => {
       const selector = componentStore.select((s) => s.value);
@@ -1608,7 +1629,7 @@ describe('Component Store', () => {
 
     it(
       'is run when value is provided',
-      marbles((m) => {
+      marbles(() => {
         const results: string[] = [];
         const mockGenerator = vi.fn((origin$: Observable<string>) =>
           origin$.pipe(tap((v) => results.push(v)))
@@ -1623,7 +1644,7 @@ describe('Component Store', () => {
 
     it(
       'is run when undefined value is provided',
-      marbles((m) => {
+      marbles(() => {
         const results: string[] = [];
         const mockGenerator = vi.fn((origin$: Observable<undefined>) =>
           origin$.pipe(tap((v) => results.push(typeof v)))
@@ -1873,8 +1894,13 @@ describe('Component Store', () => {
     }
 
     @Injectable()
-    class NonProviderStore extends ComponentStore<{}> implements OnStoreInit {
-      ngrxOnStoreInit() {}
+    class NonProviderStore
+      extends ComponentStore<object>
+      implements OnStoreInit
+    {
+      ngrxOnStoreInit() {
+        // Only its presence matters: the store is not provided.
+      }
     }
 
     function setup({

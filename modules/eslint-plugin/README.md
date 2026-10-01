@@ -33,4 +33,21 @@ export default [
 
 It has no autofix: switching to `ngrxPush` also means adding `PushPipe` to the component's `imports`.
 
+## Which modules have rules
+
+A lint rule can only check the code in an app that calls a library, so a module gets rules only where code that compiles can still be wrong in a way a static check can find.
+
+Rules exist for `store`, `effects`, `component-store`, `operators` and `signals`, plus the template rules for `component` above. These have patterns that compile but are wrong: dispatching in effects, cyclic effects, mapping selectors instead of combining them.
+
+The other modules have none, on purpose:
+
+| Module                             | Why no rules                                                                                                                                                                                                                                                                 |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `schematics-core`                  | Internal helpers shared by the other packages' generators and migrations. It is not published and no app imports it, so there is nothing to lint.                                                                                                                            |
+| `schematics`                       | `ng generate` / `ng add` tooling that runs from the CLI and writes files; apps never import it. The code it generates is ordinary store, effects or entity code, which the existing rules already cover, and its output is checked by its specs.                             |
+| `router-store`                     | App code is mostly setup (`provideRouterStore()`, `StoreRouterConnectingModule.forRoot()`, `getRouterSelectors()`). Those APIs are small and fully typed, so misuse fails to compile; the real pitfalls, such as serializing the full router state, only show up at runtime. |
+| `entity`, `data`, `store-devtools` | Their APIs are typed configuration and adapter calls, with no misuse a static check can find beyond what TypeScript and the `store` rules already catch.                                                                                                                     |
+
+This was decided during the eslint-plugin review ([#45](https://github.com/Terrence721/platform-main/issues/45)) and recorded in [#767](https://github.com/Terrence721/platform-main/issues/767). It is worth revisiting only for a concrete misuse pattern a static check can find; propose that as its own rule and link it from #767.
+
 License: MIT

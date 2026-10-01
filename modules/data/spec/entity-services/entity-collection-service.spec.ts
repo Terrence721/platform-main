@@ -4,8 +4,15 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Action, StoreModule, Store } from '@ngrx/store';
 import { Actions, EffectsModule } from '@ngrx/effects';
 
-import { Observable, of, throwError, timer } from 'rxjs';
-import { delay, filter, mergeMap, tap, withLatestFrom } from 'rxjs/operators';
+import {
+  firstValueFrom,
+  Observable,
+  of,
+  Subject,
+  throwError,
+  timer,
+} from 'rxjs';
+import { delay, filter, mergeMap, withLatestFrom } from 'rxjs/operators';
 
 import { commandDispatchTest } from '../dispatchers/entity-dispatcher.spec';
 import {
@@ -428,45 +435,40 @@ describe('EntityCollectionService', () => {
           .subscribe(expectErrorToBe(error, { done, fail }));
       }));
 
-    it('can handle out-of-order save results', () =>
-      new Promise<void>((done) => {
-        const hero1 = { id: 1, name: 'A' } as Hero;
-        const hero2 = { id: 2, name: 'B' } as Hero;
-        let successActionCount = 0;
-        const delayMs = 5;
-        let responseDelay = delayMs;
-        const savedHeroes: Hero[] = [];
+    it('can handle out-of-order save results', async () => {
+      const hero1 = { id: 1, name: 'A' } as Hero;
+      const hero2 = { id: 2, name: 'B' } as Hero;
 
-        successActions$.pipe(delay(1)).subscribe(() => {
-          successActionCount += 1;
-          if (successActionCount === 2) {
-            // Confirm hero2 actually saved before hero1
-            expect(savedHeroes).toEqual([hero2, hero1]);
-            done();
-          }
-        });
+      // Each save gets a response the test answers itself, so the server's
+      // order is set here, not left to timers (#852).
+      const responses = new Map<number, Subject<Hero>>();
+      dataService['add'].mockImplementation((data: Hero) => {
+        const response = new Subject<Hero>();
+        responses.set(data.id, response);
+        return response;
+      });
+      const savedIds: number[] = [];
+      successActions$.subscribe((action) =>
+        savedIds.push((action.payload.data as Hero).id)
+      );
 
-        // dataService.add returns odd responses later than even responses
-        // so add of hero2 should complete before add of hero1
-        dataService['add'].mockImplementation((data: Hero) => {
-          const result = of(data).pipe(
-            delay(responseDelay),
-            tap((h) => savedHeroes.push(h))
-          );
-          responseDelay = delayMs === responseDelay ? 1 : responseDelay;
-          return result;
-        });
+      // Save hero1 before hero2; the server answers hero2 first.
+      const added1 = firstValueFrom(heroCollectionService.add(hero1));
+      const added2 = firstValueFrom(heroCollectionService.add(hero2));
+      await vi.waitFor(() => expect(responses.size).toBe(2));
+      for (const [id, hero] of [
+        [2, hero2],
+        [1, hero1],
+      ] as const) {
+        responses.get(id)?.next(hero);
+        responses.get(id)?.complete();
+      }
 
-        // Save hero1 before hero2
-        // Confirm that each add returns with its own hero
-        heroCollectionService
-          .add(hero1)
-          .subscribe((data) => expect(data).toEqual(hero1));
-
-        heroCollectionService
-          .add(hero2)
-          .subscribe((data) => expect(data).toEqual(hero2));
-      }));
+      // Each add returns its own hero, and the saves finished hero2 first.
+      expect(await added1).toEqual(hero1);
+      expect(await added2).toEqual(hero2);
+      expect(savedIds).toEqual([2, 1]);
+    });
   }
 
   describe('selectors$', () => {

@@ -61,24 +61,26 @@ export const META_REDUCERS = new InjectionToken<MetaReducer[]>(
  * Concats the user provided meta reducers and the meta reducers provided on the multi
  * injection token
  */
-export const _RESOLVED_META_REDUCERS = new InjectionToken<MetaReducer>(
+export const _RESOLVED_META_REDUCERS = new InjectionToken<MetaReducer[]>(
   '@ngrx/store Internal Resolved Meta Reducers'
 );
 
 /**
  * Runtime checks defined by the user via an InjectionToken
- * Defaults to `_USER_RUNTIME_CHECKS`
+ * Defaults to `_USER_RUNTIME_CHECKS`: the checks passed as `runtimeChecks`,
+ * only those set, or `undefined` when none were passed. The defaults are
+ * applied in `ACTIVE_RUNTIME_CHECKS`.
  */
-export const USER_RUNTIME_CHECKS = new InjectionToken<RuntimeChecks>(
-  '@ngrx/store User Runtime Checks Config'
-);
+export const USER_RUNTIME_CHECKS = new InjectionToken<
+  Partial<RuntimeChecks> | undefined
+>('@ngrx/store User Runtime Checks Config');
 
 /**
  * Runtime checks defined by the user via forRoot()
  */
-export const _USER_RUNTIME_CHECKS = new InjectionToken<RuntimeChecks>(
-  '@ngrx/store Internal User Runtime Checks Config'
-);
+export const _USER_RUNTIME_CHECKS = new InjectionToken<
+  Partial<RuntimeChecks> | undefined
+>('@ngrx/store Internal User Runtime Checks Config');
 
 /**
  * Runtime checks currently in use

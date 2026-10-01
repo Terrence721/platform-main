@@ -28,7 +28,8 @@ export type ActionReducerMap<T, V extends Action = Action> = {
 export interface ActionReducerFactory<T, V extends Action = Action> {
   (
     reducerMap: ActionReducerMap<T, V>,
-    initialState?: InitialState<T>
+    // Already resolved: a factory never gets an initial state function.
+    initialState?: Partial<T>
   ): ActionReducer<T, V>;
 }
 

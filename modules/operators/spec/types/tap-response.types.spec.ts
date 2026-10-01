@@ -1,20 +1,21 @@
 import { expectTypeOf, describe, it } from 'vitest';
 import { of } from 'rxjs';
-import { tapResponse } from '../../';
+// Through the package name, so a missing public export fails here (#162).
+import { tapResponse } from '@ngrx/operators';
 
 describe('tapResponse types', () => {
   it('requires next and error handlers', () => {
     of(1).pipe(
       // @ts-expect-error error handler is required
       tapResponse({
-        next: () => {},
+        next: () => undefined,
       })
     );
 
     of(1).pipe(
       // @ts-expect-error next handler is required
       tapResponse({
-        error: () => {},
+        error: () => undefined,
       })
     );
   });

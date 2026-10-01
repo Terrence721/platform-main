@@ -36,6 +36,9 @@
       "@ngrx/eslint-plugin": ["./modules/eslint-plugin/src"],
       "@ngrx/operators": ["./modules/operators"],
       "@ngrx/router-store": ["./modules/router-store"],
+      "@ngrx/router-store/data-persistence": [
+        "./modules/router-store/data-persistence"
+      ],
       "@ngrx/router-store/schematics-core": [
         "./modules/router-store/schematics-core"
       ],

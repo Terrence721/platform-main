@@ -235,4 +235,73 @@ class SomeEffects {}
     const packageJson = JSON.parse(tree.readContent('/package.json'));
     expect(packageJson.dependencies['@ngrx/operators']).toBeDefined();
   });
+
+  describe('aliases and modifiers', () => {
+    it('should move an aliased concatLatestFrom and keep its local name', async () => {
+      await verifySchematic(
+        `import { concatLatestFrom as clf } from '@ngrx/effects';\nconst x = clf;\n`,
+        `import { concatLatestFrom as clf } from '@ngrx/operators';\nconst x = clf;\n`
+      );
+    });
+
+    it('should keep the aliases of the other effects imports', async () => {
+      await verifySchematic(
+        `import { Actions as A, concatLatestFrom } from '@ngrx/effects';\nconst x = [A, concatLatestFrom];\n`,
+        `import { Actions as A } from '@ngrx/effects';\nimport { concatLatestFrom } from '@ngrx/operators';\nconst x = [A, concatLatestFrom];\n`
+      );
+    });
+
+    it('should keep a type modifier', async () => {
+      await verifySchematic(
+        `import { type EffectConfig, concatLatestFrom } from '@ngrx/effects';\n`,
+        `import { type EffectConfig } from '@ngrx/effects';\nimport { concatLatestFrom } from '@ngrx/operators';\n`
+      );
+    });
+  });
+
+  describe('line breaks', () => {
+    it('should keep Windows line endings', async () => {
+      await verifySchematic(
+        `import { Actions, concatLatestFrom } from '@ngrx/effects';\r\nconst x = concatLatestFrom;\r\n`,
+        `import { Actions } from '@ngrx/effects';\r\nimport { concatLatestFrom } from '@ngrx/operators';\r\nconst x = concatLatestFrom;\r\n`
+      );
+    });
+
+    it('should not leave a blank line with Windows line endings', async () => {
+      await verifySchematic(
+        `import { concatLatestFrom } from '@ngrx/effects';\r\nconst x = concatLatestFrom;\r\n`,
+        `import { concatLatestFrom } from '@ngrx/operators';\r\nconst x = concatLatestFrom;\r\n`
+      );
+    });
+
+    it('should handle the import on the last line without a line break', async () => {
+      await verifySchematic(
+        `const a = 1;\nimport { concatLatestFrom } from '@ngrx/effects';`,
+        `const a = 1;\nimport { concatLatestFrom } from '@ngrx/operators';`
+      );
+    });
+  });
+
+  it('should warn about concatLatestFrom used through a namespace import', async () => {
+    const input = `import * as fx from '@ngrx/effects';\nconst x = fx.concatLatestFrom;\n`;
+    appTree.create('main.ts', input);
+    const logEntries: logging.LogEntry[] = [];
+    schematicRunner.logger.subscribe((logEntry) => logEntries.push(logEntry));
+
+    const tree = await schematicRunner.runSchematic(
+      `ngrx-effects-migration-18-beta`,
+      {},
+      appTree
+    );
+
+    expect(tree.readContent('main.ts')).toBe(input);
+    expect(logEntries).toContainEqual(
+      expect.objectContaining({
+        level: 'warn',
+        message: expect.stringContaining(
+          'uses concatLatestFrom through a namespace import'
+        ),
+      })
+    );
+  });
 });

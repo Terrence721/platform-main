@@ -62,8 +62,28 @@ const configs = {
   signalsTypeChecked: signalsTypeChecked(tsPlugin, parser),
 };
 
+// The public configs and plugin are typed loosely, as typescript-eslint types
+// its own: ESLint's types (`defineConfig()`, `Linter.Config`, `ESLint.Plugin`)
+// and typescript-eslint's `FlatConfig` disagree in detail, so with the detailed
+// types `defineConfig(ngrx.configs.all)` or `plugins: { '@ngrx': ngrx }` fail
+// to compile in an eslint.config.ts. The plugin's type leaves out `rules` (its
+// node handlers take `never`, ESLint's take `any[]`, and neither fits the
+// other); the named `rules` export keeps the detailed types.
+interface PublicConfig {
+  name?: string;
+  rules?: object;
+}
+type PublicConfigs = Record<keyof typeof configs, PublicConfig[]>;
+interface PublicPlugin {
+  meta: typeof meta;
+  configs: PublicConfigs;
+}
+
+const publicConfigs: PublicConfigs = configs;
+
 // The default export is the same object the configs register under '@ngrx':
 // ESLint rejects two different objects under one plugin name, so a config
 // that also registers the default export (to change a rule) must get this one.
-export default Object.assign(tsPlugin, { configs });
-export { configs, meta, rules };
+const plugin: PublicPlugin = Object.assign(tsPlugin, { configs });
+export default plugin;
+export { publicConfigs as configs, meta, rules };

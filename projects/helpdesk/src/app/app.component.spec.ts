@@ -14,7 +14,7 @@ describe('AppComponent', () => {
   it('shows the app name as the toolbar heading', () => {
     const heading = render().querySelector('mat-toolbar h1');
 
-    expect(heading?.textContent?.trim()).toBe('Bookshelf');
+    expect(heading?.textContent?.trim()).toBe('Helpdesk');
   });
 
   it('renders routed pages inside main', () => {

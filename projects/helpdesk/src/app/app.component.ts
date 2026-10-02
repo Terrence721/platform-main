@@ -3,11 +3,11 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { RouterOutlet } from '@angular/router';
 
 @Component({
-  selector: 'ngrx-root',
+  selector: 'hd-root',
   imports: [MatToolbarModule, RouterOutlet],
   template: `
     <mat-toolbar>
-      <h1>Bookshelf</h1>
+      <h1>Helpdesk</h1>
     </mat-toolbar>
 
     <main>

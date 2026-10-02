@@ -13,17 +13,17 @@ export default defineConfig(
       // An app, unlike the modules, keeps the Angular selector and OnPush rules.
       '@angular-eslint/component-selector': [
         'error',
-        { type: 'element', prefix: 'ngrx', style: 'kebab-case' },
+        { type: 'element', prefix: 'hd', style: 'kebab-case' },
       ],
       '@angular-eslint/directive-selector': [
         'error',
-        { type: 'attribute', prefix: 'ngrx', style: 'camelCase' },
+        { type: 'attribute', prefix: 'hd', style: 'camelCase' },
       ],
       '@angular-eslint/prefer-on-push-component-change-detection': 'error',
     },
     languageOptions: {
       parserOptions: {
-        project: ['projects/standalone-app/tsconfig.*.json'],
+        project: ['projects/helpdesk/tsconfig.*.json'],
       },
     },
   },

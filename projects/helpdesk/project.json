@@ -1,23 +1,23 @@
 {
-  "name": "standalone-app",
+  "name": "helpdesk",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "projectType": "application",
-  "sourceRoot": "projects/standalone-app/src",
-  "prefix": "ngrx",
+  "sourceRoot": "projects/helpdesk/src",
+  "prefix": "hd",
   "tags": [],
   "targets": {
     "build": {
       "executor": "@angular/build:application",
       "outputs": ["{options.outputPath}"],
       "options": {
-        "outputPath": "dist/projects/standalone-app",
-        "index": "projects/standalone-app/src/index.html",
-        "browser": "projects/standalone-app/src/main.ts",
-        "tsConfig": "projects/standalone-app/tsconfig.app.json",
-        "assets": ["projects/standalone-app/src/favicon.ico"],
+        "outputPath": "dist/projects/helpdesk",
+        "index": "projects/helpdesk/src/index.html",
+        "browser": "projects/helpdesk/src/main.ts",
+        "tsConfig": "projects/helpdesk/tsconfig.app.json",
+        "assets": ["projects/helpdesk/src/favicon.ico"],
         "styles": [
           "@angular/material/prebuilt-themes/azure-blue.css",
-          "projects/standalone-app/src/styles.css"
+          "projects/helpdesk/src/styles.css"
         ],
         "scripts": []
       },
@@ -50,10 +50,10 @@
       "executor": "@angular/build:dev-server",
       "configurations": {
         "production": {
-          "buildTarget": "standalone-app:build:production"
+          "buildTarget": "helpdesk:build:production"
         },
         "development": {
-          "buildTarget": "standalone-app:build:development"
+          "buildTarget": "helpdesk:build:development"
         }
       },
       "defaultConfiguration": "development",
@@ -61,7 +61,7 @@
     },
     "test": {
       "executor": "@analogjs/vitest-angular:test",
-      "outputs": ["{workspaceRoot}/coverage/projects/standalone-app"]
+      "outputs": ["{workspaceRoot}/coverage/projects/helpdesk"]
     }
   }
 }

@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { LandingPageActions } from './landing.actions';
+import { TicketPreview } from './ticket-preview';
 
 /**
  * The public product page: what Helpdesk does, for someone who has not
@@ -10,9 +11,10 @@ import { LandingPageActions } from './landing.actions';
  */
 @Component({
   selector: 'hd-landing-page',
+  imports: [TicketPreview],
   template: `
     <section class="hero" aria-labelledby="landing-title">
-      <div class="column">
+      <div class="column hero-grid">
         <div class="intro">
           <p class="eyebrow">Customer support, organized</p>
           <h1 id="landing-title">
@@ -24,6 +26,7 @@ import { LandingPageActions } from './landing.actions';
             showing up for everyone at once.
           </p>
         </div>
+        <hd-ticket-preview />
       </div>
     </section>
   `,
@@ -38,6 +41,14 @@ import { LandingPageActions } from './landing.actions';
       max-width: 70rem;
       margin-inline: auto;
       padding-inline: 1rem;
+    }
+
+    /* The hero's text on the left, the "My tickets" card on the right. */
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+      gap: 3rem;
+      align-items: center;
     }
 
     .intro {
@@ -65,6 +76,13 @@ import { LandingPageActions } from './landing.actions';
       font: var(--mat-sys-body-large);
       font-size: 1.125rem;
       color: var(--mat-sys-on-surface-variant);
+    }
+
+    @media (max-width: 860px) {
+      .hero-grid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 2rem;
+      }
     }
 
     @media (max-width: 600px) {

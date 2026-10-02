@@ -17,7 +17,8 @@ This repo is **not affiliated with, and not published by, the upstream [@ngrx/pl
 ## 🧭 Start Here
 
 - **[`todo.md`](todo.md)** — the phase-by-phase log of everything done and everything still open. This is the source of truth for progress.
-- **[GitHub Project board](https://github.com/users/Terrence721/projects/2)** — a lighter-weight, at-a-glance view of the same work, kept in sync with `todo.md`.
+- **[Platform Project board](https://github.com/users/Terrence721/projects/2)** — a lighter-weight, at-a-glance view of the same work, kept in sync with `todo.md`.
+- **[HelpDesk project board](https://github.com/users/Terrence721/projects/11)** — the Helpdesk app's own board: its issues and PRs, from the scaffold through the landing page and on.
 - **[`docs/architecture.md`](docs/architecture.md)** — the reasoning behind this repo's architectural decisions (context, alternatives, what each one actually cost), not just what changed.
 - **[`docs/case-study.md`](docs/case-study.md)** — problem, constraints, tradeoffs, and results, for anyone scanning this repo as a portfolio piece rather than reading it as documentation.
 - **[Module Dependency Graph](https://terrence721.github.io/platform-main/diagrams/module-dependency-graph.html)** — the 13 modules and their 3 real dependency tiers, read from every `peerDependencies` field

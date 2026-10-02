@@ -96,13 +96,14 @@ describe('browserCandidates / findBrowser', () => {
 });
 
 describe('browserArgs', () => {
-  it('opens the app in its own window with a separate profile', () => {
+  it('opens the app in its own window with a separate profile and no extensions', () => {
     expect(browserArgs('http://localhost:4201/', 'C:\\tmp\\profile')).toEqual([
       '--app=http://localhost:4201/',
       '--user-data-dir=C:\\tmp\\profile',
       '--no-first-run',
       '--no-default-browser-check',
       '--disable-background-mode',
+      '--disable-extensions',
     ]);
   });
 });

@@ -84,6 +84,9 @@ export function browserArgs(url: string, profileDir: string): string[] {
     '--no-first-run',
     '--no-default-browser-check',
     '--disable-background-mode',
+    // The new profile would otherwise install any extension registered for
+    // every profile on the machine, and some open a sign-in page on install.
+    '--disable-extensions',
   ];
 }
 

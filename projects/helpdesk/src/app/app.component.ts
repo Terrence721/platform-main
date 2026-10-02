@@ -1,8 +1,11 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { RouterLink, RouterOutlet } from '@angular/router';
+import { LetDirective } from '@ngrx/component';
+import { Store } from '@ngrx/store';
+import { PAGE_SECTIONS, selectCurrentSection } from './router.selectors';
 
 /**
  * The app shell: the toolbar and the routed page below it. Pages lay out
@@ -11,6 +14,7 @@ import { RouterLink, RouterOutlet } from '@angular/router';
 @Component({
   selector: 'hd-root',
   imports: [
+    LetDirective,
     MatButtonModule,
     MatIconModule,
     MatToolbarModule,
@@ -30,10 +34,26 @@ import { RouterLink, RouterOutlet } from '@angular/router';
           </svg>
           Helpdesk
         </a>
-        <a matButton="filled" routerLink="/sign-in">
-          <mat-icon>login</mat-icon>
-          Sign in
-        </a>
+        <nav aria-label="Page" *ngrxLet="currentSection$ as current">
+          @for (section of sections; track section.fragment) {
+            <a
+              class="section-link"
+              matButton
+              routerLink="/"
+              [fragment]="section.fragment"
+              [class.current]="section.fragment === current"
+              [attr.aria-current]="
+                section.fragment === current ? 'location' : null
+              "
+            >
+              {{ section.label }}
+            </a>
+          }
+          <a matButton="filled" routerLink="/sign-in">
+            <mat-icon>login</mat-icon>
+            Sign in
+          </a>
+        </nav>
       </div>
     </mat-toolbar>
 
@@ -95,7 +115,30 @@ import { RouterLink, RouterOutlet } from '@angular/router';
     .mic {
       fill: #42a5f5;
     }
+
+    nav {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .current {
+      background: var(--mat-sys-secondary-container);
+      --mat-button-text-label-text-color: var(--mat-sys-on-secondary-container);
+    }
+
+    /* Narrow screens keep only the logo and Sign in, as in the mockup. */
+    @media (max-width: 860px) {
+      .section-link {
+        display: none;
+      }
+    }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AppComponent {}
+export class AppComponent {
+  protected readonly sections = PAGE_SECTIONS;
+  /** The landing section the URL points at, from the router state. */
+  protected readonly currentSection$ =
+    inject(Store).select(selectCurrentSection);
+}

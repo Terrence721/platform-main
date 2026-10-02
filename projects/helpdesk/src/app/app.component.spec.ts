@@ -2,11 +2,16 @@ import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { TestBed } from '@angular/core/testing';
 import { MatButtonHarness } from '@angular/material/button/testing';
 import { provideRouter } from '@angular/router';
+import { MockStore, provideMockStore } from '@ngrx/store/testing';
 import { AppComponent } from './app.component';
+import { PageSection, selectCurrentSection } from './router.selectors';
 
 describe('AppComponent', () => {
-  function render() {
-    TestBed.configureTestingModule({ providers: [provideRouter([])] });
+  function render(current: PageSection | null = null) {
+    TestBed.configureTestingModule({
+      providers: [provideRouter([]), provideMockStore()],
+    });
+    TestBed.inject(MockStore).overrideSelector(selectCurrentSection, current);
 
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
@@ -36,6 +41,44 @@ describe('AppComponent', () => {
 
     expect(await signIn.getAppearance()).toBe('filled');
     expect(await (await signIn.host()).getAttribute('href')).toBe('/sign-in');
+  });
+
+  const sectionLinks = (shell: HTMLElement) =>
+    [...shell.querySelectorAll('nav a.section-link')].map((link) => ({
+      label: link.textContent?.trim(),
+      href: link.getAttribute('href'),
+      current: link.getAttribute('aria-current'),
+    }));
+
+  it('links to each section of the landing page from a "Page" nav', () => {
+    const { shell } = render();
+
+    expect(
+      shell.querySelector('mat-toolbar nav')?.getAttribute('aria-label')
+    ).toBe('Page');
+    expect(sectionLinks(shell).map(({ label, href }) => [label, href])).toEqual(
+      [
+        ['Features', '/#features'],
+        ['How it works', '/#workflow'],
+        ['Roles', '/#roles'],
+      ]
+    );
+  });
+
+  it('marks the link to the section the URL points at, and only that one', () => {
+    const links = sectionLinks(render('workflow').shell);
+
+    expect(links.map(({ current }) => current)).toEqual([
+      null,
+      'location',
+      null,
+    ]);
+  });
+
+  it('marks no link when the URL points at no section', () => {
+    expect(
+      sectionLinks(render(null).shell).every(({ current }) => current === null)
+    ).toBe(true);
   });
 
   it('renders routed pages inside main', () => {

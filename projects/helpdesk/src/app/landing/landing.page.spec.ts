@@ -5,6 +5,7 @@ import { provideRouter } from '@angular/router';
 import { MockStore, provideMockStore } from '@ngrx/store/testing';
 import { of } from 'rxjs';
 import { routes } from '../app.routes';
+import { PAGE_SECTIONS } from '../router.selectors';
 import { CapabilitiesService } from './capabilities.service';
 import { LandingPageActions } from './landing.actions';
 import { initialLandingState } from './landing.feature';
@@ -120,12 +121,33 @@ describe('LandingPage', () => {
     expect(roles?.classList).toContain('alt');
   });
 
-  it('leaves signing in to the toolbar', async () => {
-    const { loader } = render();
+  it('ends with a sign-in band, named by its heading', () => {
+    const { page } = render();
+    const signin = page.querySelector('section#roles + section#signin');
 
-    expect(
-      await loader.getAllHarnesses(MatButtonHarness.with({ text: /Sign in/ }))
-    ).toHaveLength(0);
+    expect(signin?.querySelector('.column > hd-sign-in-cta')).not.toBeNull();
+    expect(signin?.getAttribute('aria-labelledby')).toBe('signin-title');
+    expect(page.querySelector('section:last-of-type')).toBe(signin);
+  });
+
+  it('offers Sign in once on the page, in the closing band', async () => {
+    const { loader } = render();
+    const buttons = await loader.getAllHarnesses(
+      MatButtonHarness.with({ text: /Sign in/ })
+    );
+
+    expect(buttons).toHaveLength(1);
+    expect(await (await buttons[0].host()).matchesSelector('#signin a')).toBe(
+      true
+    );
+  });
+
+  it('has a section for every link in the toolbar', () => {
+    const { page } = render();
+
+    for (const { fragment } of PAGE_SECTIONS) {
+      expect(page.querySelector(`section#${fragment}`)).not.toBeNull();
+    }
   });
 
   it('is the first page, at the root address', async () => {

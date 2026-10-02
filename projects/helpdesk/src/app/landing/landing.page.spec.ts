@@ -111,6 +111,15 @@ describe('LandingPage', () => {
     expect(workflow?.classList).not.toContain('alt');
   });
 
+  it('shows the roles below the workflow, named by its heading', () => {
+    const { page } = render();
+    const roles = page.querySelector('section#workflow + section#roles');
+
+    expect(roles?.querySelector('.column > hd-roles-table')).not.toBeNull();
+    expect(roles?.getAttribute('aria-labelledby')).toBe('roles-title');
+    expect(roles?.classList).toContain('alt');
+  });
+
   it('leaves signing in to the toolbar', async () => {
     const { loader } = render();
 

@@ -18,6 +18,7 @@
     "strict": true,
     "skipLibCheck": true,
     "paths": {
+      "@helpdesk/contract": ["./projects/helpdesk-contract/src/index.ts"],
       "@ngrx/component": ["./modules/component"],
       "@ngrx/component-store": ["./modules/component-store"],
       "@ngrx/component-store/schematics-core": [

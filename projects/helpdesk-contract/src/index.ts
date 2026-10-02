@@ -7,3 +7,4 @@
 export * from './lib/page';
 export * from './lib/roles';
 export * from './lib/ticket';
+export * from './lib/ticket-api';

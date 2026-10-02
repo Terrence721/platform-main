@@ -1,5 +1,8 @@
-import ngrx from '@ngrx/eslint-plugin';
 import { defineConfig } from 'eslint/config';
+// The plugin's build (a dependency of this project's lint target), not the
+// package: a remote-cache hit restores dist/ but not the copy the build
+// makes in node_modules/@ngrx/eslint-plugin.
+import ngrx from '../../dist/modules/eslint-plugin/src/index.js';
 import baseConfig, {
   angularTemplateConfig,
   angularTsConfig,

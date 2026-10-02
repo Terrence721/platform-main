@@ -4,11 +4,16 @@ import { MatButtonHarness } from '@angular/material/button/testing';
 import { MockStore, provideMockStore } from '@ngrx/store/testing';
 import { routes } from '../app.routes';
 import { LandingPageActions } from './landing.actions';
+import { initialLandingState } from './landing.feature';
 import LandingPage from './landing.page';
 
 describe('LandingPage', () => {
   function render() {
-    TestBed.configureTestingModule({ providers: [provideMockStore()] });
+    TestBed.configureTestingModule({
+      providers: [
+        provideMockStore({ initialState: { landing: initialLandingState } }),
+      ],
+    });
     const dispatch = vi.spyOn(TestBed.inject(MockStore), 'dispatch');
     const fixture = TestBed.createComponent(LandingPage);
     fixture.detectChanges();
@@ -25,6 +30,14 @@ describe('LandingPage', () => {
     expect(dispatch).toHaveBeenCalledExactlyOnceWith(
       LandingPageActions.opened()
     );
+  });
+
+  it('shows the My tickets card beside the hero text', () => {
+    const { page } = render();
+
+    expect(
+      page.querySelector('section.hero .hero-grid > .intro + hd-ticket-preview')
+    ).not.toBeNull();
   });
 
   it('says what Helpdesk is for', () => {

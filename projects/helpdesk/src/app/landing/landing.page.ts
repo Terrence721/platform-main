@@ -5,14 +5,15 @@ import { Store } from '@ngrx/store';
 import { CapabilitiesSection } from './features';
 import { LandingPageActions } from './landing.actions';
 import { RolesTable } from './roles-table';
+import { SignInCta } from './sign-in-cta';
 import { TicketPreview } from './ticket-preview';
 import { TicketWorkflowSection } from './ticket-workflow';
 
 /**
  * The public product page: what Helpdesk does, for someone who has not
- * signed in. Its sections are separate components, added one at a time.
- * Signing in is offered in the toolbar, which stays visible as the page
- * scrolls.
+ * signed in. Each section is its own component, in a full-width band that
+ * alternates with a tinted one. Signing in is offered in the toolbar, which
+ * stays visible as the page scrolls, and again at the end of the page.
  */
 @Component({
   selector: 'hd-landing-page',
@@ -21,6 +22,7 @@ import { TicketWorkflowSection } from './ticket-workflow';
     MatButtonModule,
     RolesTable,
     RouterLink,
+    SignInCta,
     TicketPreview,
     TicketWorkflowSection,
   ],
@@ -66,6 +68,11 @@ import { TicketWorkflowSection } from './ticket-workflow';
     <section class="band alt" id="roles" aria-labelledby="roles-title">
       <div class="column">
         <hd-roles-table />
+      </div>
+    </section>
+    <section class="band" id="signin" aria-labelledby="signin-title">
+      <div class="column">
+        <hd-sign-in-cta />
       </div>
     </section>
   `,

@@ -6,48 +6,13 @@ import { formatTicketNumber } from '@helpdesk/contract';
 import { LetDirective, PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { landingFeature } from './landing.feature';
+import { TicketPreviewStore } from './ticket-preview.store';
 
-export type SlaTone = 'overdue' | 'soon' | 'ok' | 'none';
-
-const MINUTE = 60_000;
-/** Due within this many minutes counts as "soon". */
-const SOON_MINUTES = 4 * 60;
-
-/** A duration in minutes as people read it: "25m", "2h", "1d 4h". */
-function formatDuration(minutes: number): string {
-  const days = Math.floor(minutes / (24 * 60));
-  const hours = Math.floor((minutes % (24 * 60)) / 60);
-  const rest = minutes % 60;
-  if (days > 0) {
-    return hours > 0 ? `${days}d ${hours}h` : `${days}d`;
-  }
-  if (hours > 0) {
-    return rest > 0 ? `${hours}h ${rest}m` : `${hours}h`;
-  }
-  return `${rest}m`;
-}
-
-/** How a ticket stands against its SLA at `now`, in words and as a tone. */
-export function slaLabel(
-  slaDueAt: string | null,
-  now: Date
-): { text: string; tone: SlaTone } {
-  if (slaDueAt === null) {
-    return { text: 'No SLA', tone: 'none' };
-  }
-  const minutes = Math.round(
-    (new Date(slaDueAt).getTime() - now.getTime()) / MINUTE
-  );
-  if (minutes < 0) {
-    return { text: `Overdue ${formatDuration(-minutes)}`, tone: 'overdue' };
-  }
-  return {
-    text: `Due in ${formatDuration(minutes)}`,
-    tone: minutes <= SOON_MINUTES ? 'soon' : 'ok',
-  };
-}
-
-/** The landing page's "My tickets" card: the showcase tickets, by SLA. */
+/**
+ * The landing page's "My tickets" card: the showcase tickets by SLA, their
+ * labels kept current by the card's own TicketPreviewStore. A ticket's
+ * subject opens it to show its description.
+ */
 @Component({
   selector: 'hd-ticket-preview',
   imports: [
@@ -57,13 +22,14 @@ export function slaLabel(
     MatIconModule,
     PushPipe,
   ],
+  providers: [TicketPreviewStore],
   template: `
     <mat-card appearance="raised" aria-labelledby="preview-title">
       <header>
         <mat-icon aria-hidden="true">inbox</mat-icon>
         <h2 id="preview-title">My tickets</h2>
         <span class="count">
-          Example data · {{ (tickets$ | ngrxPush)?.length ?? 0 }} tickets
+          Example data · {{ (preview.rows$ | ngrxPush)?.length ?? 0 }} tickets
         </span>
       </header>
       @switch (loadState$ | ngrxPush) {
@@ -74,24 +40,40 @@ export function slaLabel(
           <p class="message">Loading…</p>
         }
         @default {
-          <ul *ngrxLet="tickets$ as tickets">
-            @for (ticket of tickets; track ticket.id) {
-              @let sla = slaLabel(ticket.slaDueAt, now);
+          <ul *ngrxLet="preview.rows$ as rows">
+            @for (row of rows; track row.ticket.id) {
               <li>
                 <span class="number">{{
-                  formatTicketNumber(ticket.ticketNumber)
+                  formatTicketNumber(row.ticket.ticketNumber)
                 }}</span>
-                <span class="subject">{{ ticket.subject }}</span>
-                <span class="sla" [class]="sla.tone">{{ sla.text }}</span>
+                <button
+                  type="button"
+                  class="subject"
+                  [attr.aria-expanded]="row.expanded"
+                  [attr.aria-controls]="'details-' + row.ticket.id"
+                  (click)="preview.toggleExpanded(row.ticket.id)"
+                >
+                  {{ row.ticket.subject }}
+                </button>
+                <span class="sla" [class]="row.sla.tone">{{
+                  row.sla.text
+                }}</span>
                 <span class="meta">
                   <mat-chip-set>
-                    <mat-chip [class]="ticket.priority">
-                      {{ ticket.priority }}
+                    <mat-chip [class]="row.ticket.priority">
+                      {{ row.ticket.priority }}
                     </mat-chip>
                   </mat-chip-set>
-                  <span>{{ ticket.queue.name }}</span>
-                  <span>{{ ticket.requester.name }}</span>
+                  <span>{{ row.ticket.queue.name }}</span>
+                  <span>{{ row.ticket.requester.name }}</span>
                 </span>
+                <p
+                  class="description"
+                  [id]="'details-' + row.ticket.id"
+                  [hidden]="!row.expanded"
+                >
+                  {{ row.ticket.description }}
+                </p>
               </li>
             }
           </ul>
@@ -143,14 +125,34 @@ export function slaLabel(
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      padding: 0;
+      border: 0;
+      background: none;
+      color: inherit;
+      text-align: start;
+      cursor: pointer;
       font: var(--mat-sys-title-small);
     }
-    .meta {
+    .subject:hover {
+      text-decoration: underline;
+    }
+    .subject:focus-visible {
+      outline: 2px solid var(--mat-sys-primary);
+      outline-offset: 2px;
+    }
+    .meta,
+    .description {
       grid-column: 2 / 4;
+    }
+    .meta {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       gap: 0.25rem 0.75rem;
+    }
+    .description {
+      margin: 0.25rem 0 0;
+      font: var(--mat-sys-body-medium);
     }
     .sla {
       font: var(--mat-sys-label-medium);
@@ -183,16 +185,9 @@ export function slaLabel(
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TicketPreview {
-  private readonly store = inject(Store);
-
-  protected readonly tickets$ = this.store.select(
-    landingFeature.selectVisibleTickets
-  );
-  protected readonly loadState$ = this.store.select(
+  protected readonly preview = inject(TicketPreviewStore);
+  protected readonly loadState$ = inject(Store).select(
     landingFeature.selectLoadState
   );
-  /** Fixed when the card is created; step 6 keeps it ticking. */
-  protected readonly now = new Date();
-  protected readonly slaLabel = slaLabel;
   protected readonly formatTicketNumber = formatTicketNumber;
 }

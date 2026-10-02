@@ -1,45 +1,31 @@
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MockStore, provideMockStore } from '@ngrx/store/testing';
 import { landingFeature, LandingState } from './landing.feature';
 import { showcaseTickets } from './showcase-tickets';
-import { slaLabel, TicketPreview } from './ticket-preview';
+import { TicketPreview } from './ticket-preview';
 
 const now = new Date('2026-10-02T12:00:00.000Z');
-const at = (minutes: number) =>
-  new Date(now.getTime() + minutes * 60_000).toISOString();
-
-describe('slaLabel', () => {
-  it.each([
-    [null, 'No SLA', 'none'],
-    [at(-25), 'Overdue 25m', 'overdue'],
-    [at(-2 * 24 * 60), 'Overdue 2d', 'overdue'],
-    [at(0), 'Due in 0m', 'soon'],
-    [at(2 * 60 + 15), 'Due in 2h 15m', 'soon'],
-    [at(4 * 60), 'Due in 4h', 'soon'],
-    [at(4 * 60 + 1), 'Due in 4h 1m', 'ok'],
-    [at(28 * 60), 'Due in 1d 4h', 'ok'],
-    [at(3 * 24 * 60), 'Due in 3d', 'ok'],
-  ] as const)('labels %s as "%s" (%s)', (dueAt, text, tone) => {
-    expect(slaLabel(dueAt, now)).toEqual({ text, tone });
-  });
-});
 
 describe('TicketPreview', () => {
   const tickets = showcaseTickets(now);
+  let fixture: ComponentFixture<TicketPreview>;
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   function render(
     loadState: LandingState['loadState'],
     visible = tickets
   ): HTMLElement {
-    vi.useFakeTimers({ now, toFake: ['Date'] });
+    vi.useFakeTimers({ now });
     TestBed.configureTestingModule({ providers: [provideMockStore()] });
     const store = TestBed.inject(MockStore);
     store.overrideSelector(landingFeature.selectLoadState, loadState);
     store.overrideSelector(landingFeature.selectVisibleTickets, visible);
 
-    const fixture = TestBed.createComponent(TicketPreview);
+    fixture = TestBed.createComponent(TicketPreview);
     fixture.detectChanges();
-    vi.useRealTimers();
     return fixture.nativeElement as HTMLElement;
   }
 
@@ -105,5 +91,34 @@ describe('TicketPreview', () => {
       card.querySelector('mat-card')?.getAttribute('aria-labelledby')
     ).toBe(card.querySelector('h2')?.id);
     expect(card.querySelector('h2')?.textContent).toBe('My tickets');
+  });
+
+  it('opens a ticket to show its description, and closes it again', () => {
+    const card = render('loaded');
+    const subject = card.querySelector<HTMLButtonElement>('li button.subject');
+    const description = card.querySelector<HTMLElement>('li .description');
+
+    expect(subject?.getAttribute('aria-expanded')).toBe('false');
+    expect(subject?.getAttribute('aria-controls')).toBe(description?.id);
+    expect(description?.hidden).toBe(true);
+
+    subject?.click();
+    fixture.detectChanges();
+    expect(subject?.getAttribute('aria-expanded')).toBe('true');
+    expect(description?.hidden).toBe(false);
+    expect(description?.textContent).toContain('The reset link worked');
+
+    subject?.click();
+    fixture.detectChanges();
+    expect(description?.hidden).toBe(true);
+  });
+
+  it('keeps the SLA labels current while it is shown', () => {
+    const card = render('loaded');
+
+    vi.advanceTimersByTime(60_000);
+    fixture.detectChanges();
+
+    expect(card.querySelector('li .sla')?.textContent).toBe('Overdue 26m');
   });
 });

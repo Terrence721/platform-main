@@ -1,4 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
+import { RouterLink } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { CapabilitiesSection } from './features';
 import { LandingPageActions } from './landing.actions';
@@ -12,7 +14,7 @@ import { TicketPreview } from './ticket-preview';
  */
 @Component({
   selector: 'hd-landing-page',
-  imports: [CapabilitiesSection, TicketPreview],
+  imports: [CapabilitiesSection, MatButtonModule, RouterLink, TicketPreview],
   template: `
     <section class="hero" aria-labelledby="landing-title">
       <div class="column hero-grid">
@@ -26,6 +28,14 @@ import { TicketPreview } from './ticket-preview';
             queues, assign, and resolve before their deadline, with every change
             showing up for everyone at once.
           </p>
+          <a
+            class="tour"
+            matButton="outlined"
+            routerLink="/"
+            fragment="features"
+          >
+            See what it does
+          </a>
         </div>
         <hd-ticket-preview />
       </div>
@@ -95,6 +105,10 @@ import { TicketPreview } from './ticket-preview';
       font: var(--mat-sys-body-large);
       font-size: 1.125rem;
       color: var(--mat-sys-on-surface-variant);
+    }
+
+    .tour {
+      margin-top: 1.75rem;
     }
 
     @media (max-width: 860px) {

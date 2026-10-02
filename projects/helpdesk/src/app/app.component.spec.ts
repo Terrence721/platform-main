@@ -5,11 +5,19 @@ import { provideRouter } from '@angular/router';
 import { MockStore, provideMockStore } from '@ngrx/store/testing';
 import { AppComponent } from './app.component';
 import { PageSection, selectCurrentSection } from './router.selectors';
+import { SignInLauncher } from './sign-in/sign-in-launcher';
 
 describe('AppComponent', () => {
+  const launcher = { open: vi.fn() };
+
   function render(current: PageSection | null = null) {
+    launcher.open.mockClear();
     TestBed.configureTestingModule({
-      providers: [provideRouter([]), provideMockStore()],
+      providers: [
+        provideRouter([]),
+        provideMockStore(),
+        { provide: SignInLauncher, useValue: launcher },
+      ],
     });
     TestBed.inject(MockStore).overrideSelector(selectCurrentSection, current);
 
@@ -34,13 +42,15 @@ describe('AppComponent', () => {
     expect(render().shell.querySelector('mat-toolbar h1')).toBeNull();
   });
 
-  it('offers a filled Sign in button that goes to the sign-in page', async () => {
+  it('offers a filled Sign in button that opens the sign-in popup', async () => {
     const signIn = await render().loader.getHarness(
       MatButtonHarness.with({ text: /Sign in/ })
     );
 
     expect(await signIn.getAppearance()).toBe('filled');
-    expect(await (await signIn.host()).getAttribute('href')).toBe('/sign-in');
+    expect(await (await signIn.host()).getAttribute('href')).toBeNull();
+    await signIn.click();
+    expect(launcher.open).toHaveBeenCalledOnce();
   });
 
   const sectionLinks = (shell: HTMLElement) =>

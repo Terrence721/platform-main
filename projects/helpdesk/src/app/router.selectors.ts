@@ -1,8 +1,15 @@
-import { getRouterSelectors } from '@ngrx/router-store';
+import { getRouterSelectors, RouterReducerState } from '@ngrx/router-store';
 import { createSelector } from '@ngrx/store';
 
-/** Selectors over the router state that `provideRouterStore()` keeps. */
-export const { selectFragment } = getRouterSelectors();
+/**
+ * Selectors over the router state that `provideRouterStore()` keeps. The
+ * slice is read directly, not through createFeatureSelector, because it is
+ * undefined until the first navigation and the feature selector warns
+ * about that in development.
+ */
+export const { selectFragment } = getRouterSelectors(
+  (state: { router: RouterReducerState }) => state.router
+);
 
 /** The landing page's sections that the toolbar links to, in page order. */
 export const PAGE_SECTIONS = [

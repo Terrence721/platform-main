@@ -1,12 +1,17 @@
 import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { TestBed } from '@angular/core/testing';
 import { MatButtonHarness } from '@angular/material/button/testing';
-import { provideRouter } from '@angular/router';
+import { SignInLauncher } from '../sign-in/sign-in-launcher';
 import { SignInCta } from './sign-in-cta';
 
 describe('SignInCta', () => {
+  const launcher = { open: vi.fn() };
+
   function render() {
-    TestBed.configureTestingModule({ providers: [provideRouter([])] });
+    launcher.open.mockClear();
+    TestBed.configureTestingModule({
+      providers: [{ provide: SignInLauncher, useValue: launcher }],
+    });
     const fixture = TestBed.createComponent(SignInCta);
     fixture.detectChanges();
     return {
@@ -26,12 +31,14 @@ describe('SignInCta', () => {
     );
   });
 
-  it('offers a filled Sign in button that goes to the sign-in page', async () => {
+  it('offers a filled Sign in button that opens the sign-in popup', async () => {
     const signIn = await render().loader.getHarness(
       MatButtonHarness.with({ text: /Sign in/ })
     );
 
     expect(await signIn.getAppearance()).toBe('filled');
-    expect(await (await signIn.host()).getAttribute('href')).toBe('/sign-in');
+    expect(await (await signIn.host()).getAttribute('href')).toBeNull();
+    await signIn.click();
+    expect(launcher.open).toHaveBeenCalledOnce();
   });
 });

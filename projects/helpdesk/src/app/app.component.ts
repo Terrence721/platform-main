@@ -6,6 +6,7 @@ import { RouterLink, RouterOutlet } from '@angular/router';
 import { LetDirective } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { PAGE_SECTIONS, selectCurrentSection } from './router.selectors';
+import { SignInLauncher } from './sign-in/sign-in-launcher';
 
 /**
  * The app shell: the toolbar and the routed page below it. Pages lay out
@@ -49,10 +50,10 @@ import { PAGE_SECTIONS, selectCurrentSection } from './router.selectors';
               {{ section.label }}
             </a>
           }
-          <a matButton="filled" routerLink="/sign-in">
+          <button matButton="filled" type="button" (click)="signIn.open()">
             <mat-icon>login</mat-icon>
             Sign in
-          </a>
+          </button>
         </nav>
       </div>
     </mat-toolbar>
@@ -137,6 +138,7 @@ import { PAGE_SECTIONS, selectCurrentSection } from './router.selectors';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppComponent {
+  protected readonly signIn = inject(SignInLauncher);
   protected readonly sections = PAGE_SECTIONS;
   /** The landing section the URL points at, from the router state. */
   protected readonly currentSection$ =

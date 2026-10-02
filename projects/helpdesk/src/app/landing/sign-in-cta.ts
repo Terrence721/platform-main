@@ -1,7 +1,7 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { RouterLink } from '@angular/router';
+import { SignInLauncher } from '../sign-in/sign-in-launcher';
 
 /**
  * The landing page's closing call to action: for the support team member
@@ -10,17 +10,17 @@ import { RouterLink } from '@angular/router';
  */
 @Component({
   selector: 'hd-sign-in-cta',
-  imports: [MatButtonModule, MatIconModule, RouterLink],
+  imports: [MatButtonModule, MatIconModule],
   template: `
     <div class="panel">
       <div>
         <h2 id="signin-title">Ready to pick up the next ticket?</h2>
         <p>Sign in with the account your admin set up for you.</p>
       </div>
-      <a matButton="filled" routerLink="/sign-in">
+      <button matButton="filled" type="button" (click)="signIn.open()">
         <mat-icon>login</mat-icon>
         Sign in
-      </a>
+      </button>
     </div>
   `,
   styles: `
@@ -53,4 +53,6 @@ import { RouterLink } from '@angular/router';
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class SignInCta {}
+export class SignInCta {
+  protected readonly signIn = inject(SignInLauncher);
+}

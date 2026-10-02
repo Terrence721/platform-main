@@ -1,6 +1,10 @@
+import { inject, provideEnvironmentInitializer } from '@angular/core';
 import { Routes } from '@angular/router';
+import { EntityDataService } from '@ngrx/data';
 import { provideEffects } from '@ngrx/effects';
 import { provideState } from '@ngrx/store';
+import { CapabilitiesDataService } from './landing/capabilities.data-service';
+import { CAPABILITY } from './landing/capability';
 import * as landingEffects from './landing/landing.effects';
 import { landingFeature } from './landing/landing.feature';
 
@@ -14,7 +18,17 @@ export const routes: Routes = [
   {
     path: '',
     loadComponent: () => import('./landing/landing.page'),
-    providers: [provideState(landingFeature), provideEffects(landingEffects)],
+    providers: [
+      provideState(landingFeature),
+      provideEffects(landingEffects),
+      // The capabilities come from the app itself until the API serves them.
+      provideEnvironmentInitializer(() =>
+        inject(EntityDataService).registerService(
+          CAPABILITY,
+          inject(CapabilitiesDataService)
+        )
+      ),
+    ],
     title: 'Helpdesk',
   },
 ];

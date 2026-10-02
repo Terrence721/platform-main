@@ -2,7 +2,9 @@ import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { TestBed } from '@angular/core/testing';
 import { MatButtonHarness } from '@angular/material/button/testing';
 import { MockStore, provideMockStore } from '@ngrx/store/testing';
+import { of } from 'rxjs';
 import { routes } from '../app.routes';
+import { CapabilitiesService } from './capabilities.service';
 import { LandingPageActions } from './landing.actions';
 import { initialLandingState } from './landing.feature';
 import LandingPage from './landing.page';
@@ -12,6 +14,11 @@ describe('LandingPage', () => {
     TestBed.configureTestingModule({
       providers: [
         provideMockStore({ initialState: { landing: initialLandingState } }),
+        // The features section's own spec covers @ngrx/data.
+        {
+          provide: CapabilitiesService,
+          useValue: { entities$: of([]), load: vi.fn() },
+        },
       ],
     });
     const dispatch = vi.spyOn(TestBed.inject(MockStore), 'dispatch');
@@ -67,6 +74,16 @@ describe('LandingPage', () => {
     const { page } = render();
 
     expect(page.querySelector('section.hero > .column h1')).not.toBeNull();
+  });
+
+  it('shows the features section below the hero, named by its heading', () => {
+    const { page } = render();
+    const features = page.querySelector('section.hero + section#features');
+
+    expect(features?.querySelector('.column > hd-capabilities')).not.toBeNull();
+    expect(features?.getAttribute('aria-labelledby')).toBe(
+      'capabilities-title'
+    );
   });
 
   it('leaves signing in to the toolbar', async () => {

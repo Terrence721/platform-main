@@ -1,16 +1,34 @@
+import { provideHttpClient } from '@angular/common/http';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
+import { provideEntityData, withEffects } from '@ngrx/data';
 import { provideEffects } from '@ngrx/effects';
 import { provideStore, Store } from '@ngrx/store';
 import { firstValueFrom } from 'rxjs';
 import { routes } from './app.routes';
+import { CapabilitiesService } from './landing/capabilities.service';
+import { CAPABILITIES, CAPABILITY } from './landing/capability';
 import { landingFeature } from './landing/landing.feature';
 
 describe('routes', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [provideRouter(routes), provideStore(), provideEffects()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter(routes),
+        provideStore(),
+        provideEffects(),
+        provideEntityData(
+          { entityMetadata: { [CAPABILITY]: {} } },
+          withEffects()
+        ),
+      ],
     });
   });
 
@@ -34,5 +52,14 @@ describe('routes', () => {
         ({ ticketNumber }) => ticketNumber
       )
     ).toEqual([1042, 1039, 1035, 1031]);
+  });
+
+  it('serves the capabilities from the app, not the server', async () => {
+    await RouterTestingHarness.create('/');
+
+    expect(
+      await firstValueFrom(TestBed.inject(CapabilitiesService).load())
+    ).toEqual(CAPABILITIES);
+    TestBed.inject(HttpTestingController).verify();
   });
 });

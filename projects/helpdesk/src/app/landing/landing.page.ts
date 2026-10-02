@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Store } from '@ngrx/store';
+import { CapabilitiesSection } from './features';
 import { LandingPageActions } from './landing.actions';
 import { TicketPreview } from './ticket-preview';
 
@@ -11,7 +12,7 @@ import { TicketPreview } from './ticket-preview';
  */
 @Component({
   selector: 'hd-landing-page',
-  imports: [TicketPreview],
+  imports: [CapabilitiesSection, TicketPreview],
   template: `
     <section class="hero" aria-labelledby="landing-title">
       <div class="column hero-grid">
@@ -29,10 +30,28 @@ import { TicketPreview } from './ticket-preview';
         <hd-ticket-preview />
       </div>
     </section>
+    <section
+      class="band alt"
+      id="features"
+      aria-labelledby="capabilities-title"
+    >
+      <div class="column">
+        <hd-capabilities />
+      </div>
+    </section>
   `,
   styles: `
     .hero {
       padding-block: 3.5rem 3rem;
+    }
+
+    /* The sections below the hero, full width; every other one tinted. */
+    .band {
+      padding-block: 3.5rem;
+    }
+
+    .alt {
+      background: var(--mat-sys-surface-container-low);
     }
 
     /* The page's content column, shared with the toolbar: centered, at most

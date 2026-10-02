@@ -42,12 +42,22 @@ describe('LandingPage', () => {
     );
   });
 
-  it('shows the My tickets card beside the hero text', () => {
+  it('shows a photo of a support agent beside the hero text', () => {
     const { page } = render();
+    const photo = page.querySelector<HTMLImageElement>(
+      'section.hero .hero-grid > .intro + img.photo'
+    );
 
-    expect(
-      page.querySelector('section.hero .hero-grid > .intro + hd-ticket-preview')
-    ).not.toBeNull();
+    expect(photo?.getAttribute('src')).toBe('assets/hero-agent-960.webp');
+    expect(photo?.getAttribute('srcset')?.replace(/\s+/g, ' ').trim()).toBe(
+      'assets/hero-agent-960.webp 960w, assets/hero-agent-1440.webp 1440w'
+    );
+    expect([
+      photo?.getAttribute('width'),
+      photo?.getAttribute('height'),
+    ]).toEqual(['960', '640']);
+    expect(photo?.alt).toContain('support agent wearing a headset');
+    expect(page.querySelector('hd-ticket-preview')).toBeNull();
   });
 
   it('says what Helpdesk is for', () => {

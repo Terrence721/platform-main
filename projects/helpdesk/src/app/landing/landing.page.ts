@@ -6,7 +6,6 @@ import { CapabilitiesSection } from './features';
 import { LandingPageActions } from './landing.actions';
 import { RolesTable } from './roles-table';
 import { SignInCta } from './sign-in-cta';
-import { TicketPreview } from './ticket-preview';
 import { TicketWorkflowSection } from './ticket-workflow';
 
 /**
@@ -23,7 +22,6 @@ import { TicketWorkflowSection } from './ticket-workflow';
     RolesTable,
     RouterLink,
     SignInCta,
-    TicketPreview,
     TicketWorkflowSection,
   ],
   template: `
@@ -48,7 +46,20 @@ import { TicketWorkflowSection } from './ticket-workflow';
             See what it does
           </a>
         </div>
-        <hd-ticket-preview />
+        <img
+          class="photo"
+          src="assets/hero-agent-960.webp"
+          srcset="
+            assets/hero-agent-960.webp   960w,
+            assets/hero-agent-1440.webp 1440w
+          "
+          sizes="(max-width: 860px) calc(100vw - 2rem), 36rem"
+          width="960"
+          height="640"
+          loading="eager"
+          fetchpriority="high"
+          alt="A smiling support agent wearing a headset at her desk, with a colleague on a call behind her."
+        />
       </div>
     </section>
     <section
@@ -98,7 +109,7 @@ import { TicketWorkflowSection } from './ticket-workflow';
       padding-inline: 1rem;
     }
 
-    /* The hero's text on the left, the "My tickets" card on the right. */
+    /* The hero's text on the left, a photo of a support agent on the right. */
     .hero-grid {
       display: grid;
       grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
@@ -135,6 +146,13 @@ import { TicketWorkflowSection } from './ticket-workflow';
 
     .tour {
       margin-top: 1.75rem;
+    }
+
+    .photo {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 1.75rem;
     }
 
     @media (max-width: 860px) {

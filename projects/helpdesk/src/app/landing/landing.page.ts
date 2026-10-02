@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { CapabilitiesSection } from './features';
 import { LandingPageActions } from './landing.actions';
+import { RolesTable } from './roles-table';
 import { TicketPreview } from './ticket-preview';
 import { TicketWorkflowSection } from './ticket-workflow';
 
@@ -18,6 +19,7 @@ import { TicketWorkflowSection } from './ticket-workflow';
   imports: [
     CapabilitiesSection,
     MatButtonModule,
+    RolesTable,
     RouterLink,
     TicketPreview,
     TicketWorkflowSection,
@@ -59,6 +61,11 @@ import { TicketWorkflowSection } from './ticket-workflow';
     <section class="band" id="workflow" aria-labelledby="workflow-title">
       <div class="column">
         <hd-ticket-workflow />
+      </div>
+    </section>
+    <section class="band alt" id="roles" aria-labelledby="roles-title">
+      <div class="column">
+        <hd-roles-table />
       </div>
     </section>
   `,

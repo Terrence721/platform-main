@@ -1,6 +1,7 @@
 import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { TestBed } from '@angular/core/testing';
 import { MatButtonHarness } from '@angular/material/button/testing';
+import { provideRouter } from '@angular/router';
 import { MockStore, provideMockStore } from '@ngrx/store/testing';
 import { of } from 'rxjs';
 import { routes } from '../app.routes';
@@ -13,6 +14,7 @@ describe('LandingPage', () => {
   function render() {
     TestBed.configureTestingModule({
       providers: [
+        provideRouter([]),
         provideMockStore({ initialState: { landing: initialLandingState } }),
         // The features section's own spec covers @ngrx/data.
         {
@@ -74,6 +76,18 @@ describe('LandingPage', () => {
     const { page } = render();
 
     expect(page.querySelector('section.hero > .column h1')).not.toBeNull();
+  });
+
+  it('links from the hero down to the features', async () => {
+    const { loader } = render();
+    const tour = await loader.getHarness(
+      MatButtonHarness.with({ text: 'See what it does' })
+    );
+    const host = await tour.host();
+
+    expect(await tour.getAppearance()).toBe('outlined');
+    expect(await host.matchesSelector('section.hero .intro > a')).toBe(true);
+    expect(await host.getAttribute('href')).toBe('/#features');
   });
 
   it('shows the features section below the hero, named by its heading', () => {

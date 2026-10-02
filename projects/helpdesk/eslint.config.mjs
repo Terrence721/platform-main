@@ -1,3 +1,4 @@
+import ngrx from '@ngrx/eslint-plugin';
 import { defineConfig } from 'eslint/config';
 import baseConfig, {
   angularTemplateConfig,
@@ -28,7 +29,18 @@ export default defineConfig(
     },
   },
   {
+    // Every NgRx rule, including those that need type information, which
+    // the block above provides. Scoped to TypeScript: the config itself
+    // applies to every file.
+    files: ['**/*.ts'],
+    extends: [ngrx.configs.allTypeChecked],
+  },
+  {
     files: ['**/*.html'],
-    extends: [angularTemplateConfig],
+    extends: [angularTemplateConfig, ngrx.configs.component],
+    rules: {
+      // Opt-in: use ngrxPush instead of the async pipe in templates.
+      '@ngrx/prefer-ngrx-push': 'error',
+    },
   }
 );

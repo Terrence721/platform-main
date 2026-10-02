@@ -16,10 +16,11 @@ function isErrorAction(action: Action): action is ErrorAction {
  * bar, so each feature reports its failures without its own error UI.
  */
 export const showErrors = createEffect(
-  (actions$ = inject(Actions), snackBar = inject(MatSnackBar)) =>
-    actions$.pipe(
+  (actions$ = inject(Actions), snackBar = inject(MatSnackBar)) => {
+    return actions$.pipe(
       filter(isErrorAction),
       tap(({ error }) => snackBar.open(error, 'Dismiss', { duration: 5000 }))
-    ),
+    );
+  },
   { functional: true, dispatch: false }
 );

@@ -100,6 +100,14 @@ yarn test    # Vitest across all projects
 yarn build   # ng-packagr build across all projects
 ```
 
+To run the Helpdesk app:
+
+```shell
+yarn start:helpdesk   # dev server + the app in its own window; closing it stops the server
+```
+
+It picks the next free port when 4200 is taken, and closing the window (or Ctrl+C) stops the dev server and releases its port. `yarn nx serve helpdesk` still works for a normal browser tab.
+
 The full-suite [HTML test report](https://terrence721.github.io/platform-main/) is deployed to GitHub Pages on every push to `main` (grows as more modules and test cases are added) — or see the [at-a-glance summary](https://terrence721.github.io/platform-main/summary.html) for just the pass/fail/slow breakdown. To generate either locally instead, run `yarn build && yarn test:report && yarn test:summary`, then `yarn test:report:view` to serve and open them.
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for more, including the commit-message convention this repo's history follows.

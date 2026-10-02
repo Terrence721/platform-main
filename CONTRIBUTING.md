@@ -35,6 +35,14 @@ yarn vitest <relative path> --watch
 yarn test:scripts
 ```
 
+## Running the Helpdesk app
+
+```shell
+yarn start:helpdesk
+```
+
+Starts the dev server and opens the app in a window of its own, using a separate Edge (or Chrome) profile so it runs as its own browser process. Closing that window, or Ctrl+C, stops the dev server's whole process tree and releases its port, so no server is left running from an earlier session. If port 4200 is taken it uses the next free one. `yarn nx serve helpdesk` still starts the server on its own, for a normal browser tab; stop it with Ctrl+C. The launcher's logic is `scripts/app-launcher.ts`, tested by `yarn test:scripts`.
+
 ## Dependency ranges
 
 Each module declares its own dependency and peer-dependency ranges. `yarn check:versions` (also run in CI) checks that a package declared by several modules uses the same range in all of them, and that the version this repo develops against (the root `package.json`) falls inside every module's range. A range that has to differ can be listed, and pinned, in `scripts/check-version-ranges.ts`; none does today.

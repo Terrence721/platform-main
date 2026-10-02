@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: September 30, 2026** (audit COMPLETE — all 13 modules; `schematics-core` module COMPLETE — 16/16 files; `signals` module COMPLETE — 18/18 files; `schematics` module COMPLETE — 25/25 files; `data` module COMPLETE — 61/61 files; `eslint-plugin` module COMPLETE — 55/55 files)
+**Last Updated: October 2, 2026** (audit COMPLETE — all 13 modules; `migrations/` review COMPLETE — 31/31 files, 2026-10-01; type-level coverage COMPLETE — 13/13 modules, 2026-10-01; `schematics-core` module COMPLETE — 16/16 files; `signals` module COMPLETE — 18/18 files; `schematics` module COMPLETE — 25/25 files; `data` module COMPLETE — 61/61 files; `eslint-plugin` module COMPLETE — 55/55 files)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -3644,6 +3644,25 @@ The shared esquery selectors the rules match on. Each one in use was exercised, 
 
 The `migrations/` folders — the code `ng update` runs to rewrite a user's app — were outside #32. Each of the 31 files is reviewed on its own sub-issue and PR, with its module's `migration.json`.
 
+**Result (complete 2026-10-01):** 27 of the 31 files had defects and were fixed; 4 had none and only gained spec cases.
+
+| Module          | Files | Fixed | No defect |
+| --------------- | ----- | ----- | --------- |
+| component-store | 1     | 1     | 0         |
+| entity          | 1     | 1     | 0         |
+| eslint-plugin   | 1     | 1     | 0         |
+| operators       | 1     | 1     | 0         |
+| schematics      | 1     | 1     | 0         |
+| component       | 2     | 2     | 0         |
+| store-devtools  | 2     | 1     | 1 (6.0.0) |
+| signals         | 4     | 4     | 0         |
+| effects         | 5     | 4     | 1 (6.0.0) |
+| router-store    | 5     | 4     | 1 (6.0.0) |
+| store           | 8     | 7     | 1 (6.0.0) |
+| **Total**       | 31    | 27    | 4         |
+
+**Recurring defects:** aliased, `type` and namespace imports missed or corrupted (names are now matched by their imported name, from the exact module); prefix module matching (`@ngrx/store` matched `@ngrx/store-devtools`, `includes()` matched similarly named APIs); formatting lost (printer reformatting, dropped comments, CRLF and final newlines); over-renaming of object keys, properties and shadowed names; and specs that hid bugs (un-awaited tests, whitespace-normalized comparisons, old specs pinning wrong output). Two shared helpers in `schematics-core` were fixed for every migration that uses them: `updatePackage` ([#768](https://github.com/Terrence721/platform-main/pull/768)) and `replaceImport` ([#786](https://github.com/Terrence721/platform-main/pull/786)).
+
 ### [`component-store/migrations/18_0_0-beta/index.ts`](https://github.com/Terrence721/platform-main/blob/044dfb1e7be76f9df7a9c2fe965b4b4a292ba6e1/modules/component-store/migrations/18_0_0-beta/index.ts)
 
 **6 real bugs fixed, 1 gap closed** — reviewed in [issue #764](https://github.com/Terrence721/platform-main/issues/764)
@@ -4039,6 +4058,28 @@ v18 removed `TypedAction` (from `@ngrx/store/src/models`) in favour of `Action` 
 **Bugs, fixed:** files importing anything else from `@ngrx/store/src/models` got an unused `Action` import; `type` modifiers were dropped; Windows line endings left a blank line and mixed endings; and object keys named `TypedAction` were renamed. Modules are matched exactly now and `TypedAction` by its imported name; other specifiers are kept as written; `Action` is imported under `TypedAction`'s alias (`Action as TA`), reused if already imported, or added to the real `@ngrx/store` import or on its own line; edits follow the actual line break; only real references are renamed. The module-level `filesWithChanges` array, which leaked between runs, is gone.
 
 **Verification:** the migration's spec passes (12 tests, 7 new); `nx run-many -t lint,test -p store` passes.
+
+## Type-level coverage ([#162](https://github.com/Terrence721/platform-main/issues/162))
+
+Found during `router-store`'s review: its three real bugs were all type-only, and its type spec had let them through. #162 gave every module type-level tests of its public API, one sub-issue per module: cover every export, and import through the real package name wherever the module has one. Complete 2026-10-01.
+
+| Module          | Sub-issue / PR                                                                                                                                                                                                                                                   | Found                                                                                                                                                   |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| eslint-plugin   | [#170](https://github.com/Terrence721/platform-main/issues/170) / [#832](https://github.com/Terrence721/platform-main/pull/832)                                                                                                                                  | configs and plugin failed ESLint's `defineConfig`/`Linter.Config`/`ESLint.Plugin` types; `no-multiple-actions-in-effects` options typed `unknown[]`     |
+| store           | [#163](https://github.com/Terrence721/platform-main/issues/163) / [#833](https://github.com/Terrence721/platform-main/pull/833)                                                                                                                                  | `USER_RUNTIME_CHECKS`, `ActionReducerFactory`'s initial state, `MockStore.select` (**runtime bug: key paths lost keys**), `overrideSelector` with a key |
+| entity          | [#164](https://github.com/Terrence721/platform-main/issues/164) / [#834](https://github.com/Terrence721/platform-main/pull/834)                                                                                                                                  | none                                                                                                                                                    |
+| effects         | [#165](https://github.com/Terrence721/platform-main/issues/165) / [#835](https://github.com/Terrence721/platform-main/pull/835)                                                                                                                                  | none (`EffectsErrorHandler`'s `T extends Action` is looser than runtime; kept, since widening breaks documented handlers)                               |
+| router-store    | [#166](https://github.com/Terrence721/platform-main/issues/166) / [#836](https://github.com/Terrence721/platform-main/pull/836)                                                                                                                                  | `selectRouteDataParam` typed `string` (route data is any value, now `unknown`); the selectors spec now covers all 10 fields                             |
+| component-store | [#168](https://github.com/Terrence721/platform-main/issues/168) / [#837](https://github.com/Terrence721/platform-main/pull/837)                                                                                                                                  | **runtime bug: `select(fn, {})` threw** (an empty config was taken for the projector)                                                                   |
+| component       | [#167](https://github.com/Terrence721/platform-main/issues/167) / [#838](https://github.com/Terrence721/platform-main/pull/838)                                                                                                                                  | arrays of Observables typed as arrays of their values in `ngrxPush`/`ngrxLet`                                                                           |
+| data            | [#571](https://github.com/Terrence721/platform-main/issues/571) / [#839](https://github.com/Terrence721/platform-main/pull/839), [#169](https://github.com/Terrence721/platform-main/issues/169) / [#840](https://github.com/Terrence721/platform-main/pull/840) | the injected store typed `Store<EntityCache>` but is the root store                                                                                     |
+| signals         | [#174](https://github.com/Terrence721/platform-main/issues/174) / [#842](https://github.com/Terrence721/platform-main/pull/842)                                                                                                                                  | none; tests over all 5 entry points                                                                                                                     |
+| store-devtools  | [#175](https://github.com/Terrence721/platform-main/issues/175) / [#843](https://github.com/Terrence721/platform-main/pull/843)                                                                                                                                  | `INITIAL_OPTIONS` (holds the options as given, not the full config); the `serialize` replacer could not return `undefined`                              |
+| operators       | [#171](https://github.com/Terrence721/platform-main/issues/171) / [#844](https://github.com/Terrence721/platform-main/pull/844)                                                                                                                                  | none                                                                                                                                                    |
+| schematics      | [#172](https://github.com/Terrence721/platform-main/issues/172) / [#845](https://github.com/Terrence721/platform-main/pull/845)                                                                                                                                  | **runtime bug: `ng add @ngrx/data` defined `effect` but read `effects`**, so effects could not be turned off; all 23 schema pairs now checked           |
+| schematics-core | [#173](https://github.com/Terrence721/platform-main/issues/173) / [#846](https://github.com/Terrence721/platform-main/pull/846)                                                                                                                                  | none; its barrel is pinned through the relative path the migrations import                                                                              |
+
+**Total:** 11 declared-type defects fixed, and 3 runtime bugs found while writing the type tests and fixed. Every public type change was agreed before it was made. New type tests are `.test-d.ts` files using Vitest's `expectTypeOf`, which run faster than the older `ts-snippet` specs and avoid their timeouts.
 
 ---
 

@@ -89,11 +89,11 @@ A revert commit starts with `revert:` followed by the header of the reverted com
 
 ### Type
 
-One of: `build`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `style`, `test`.
+One of: `build`, `chore`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `style`, `test`.
 
 ### Scope
 
-The package affected, matching the `modules/` layout as it gets built out:
+The module or app affected, matching its folder under `modules/` or `projects/`:
 
 - **component**
 - **component-store**
@@ -108,6 +108,9 @@ The package affected, matching the `modules/` layout as it gets built out:
 - **signals**
 - **store**
 - **store-devtools**
+- **helpdesk** (`projects/helpdesk`)
+
+Changes that span the repo use a scope naming the area instead, such as `deps` for dependency updates, `lint`, `ci` or `todo`.
 
 ### Subject and body
 

@@ -1,3 +1,6 @@
+<!-- The portfolio link comes before the title on purpose. -->
+<!-- markdownlint-disable MD041 -->
+
 **[→ Read the one-page portfolio](https://terrence721.github.io/platform-main/portfolio.html)** — the 60-second version, with links back into this repo for anyone who wants to go deeper.
 
 # ⚙️ Principal Frontend Engineering Demonstration
@@ -5,7 +8,7 @@
 [![Quality](https://github.com/Terrence721/platform-main/actions/workflows/quality.yml/badge.svg)](https://github.com/Terrence721/platform-main/actions/workflows/quality.yml)
 [![CodeQL](https://github.com/Terrence721/platform-main/actions/workflows/codeql.yml/badge.svg)](https://github.com/Terrence721/platform-main/actions/workflows/codeql.yml)
 
-Last updated: September 26, 2026
+Last updated: October 2, 2026
 
 This repository is a personal demonstration workspace: real, MIT-licensed NgRx source added module by module, with specific pieces **redesigned by choice** — not copied verbatim — where the goal is to show a defensible, different architectural call instead of reproducing an existing one.
 
@@ -18,7 +21,7 @@ This repo is **not affiliated with, and not published by, the upstream [@ngrx/pl
 - **[`docs/architecture.md`](docs/architecture.md)** — the reasoning behind this repo's architectural decisions (context, alternatives, what each one actually cost), not just what changed.
 - **[`docs/case-study.md`](docs/case-study.md)** — problem, constraints, tradeoffs, and results, for anyone scanning this repo as a portfolio piece rather than reading it as documentation.
 - **[Module Dependency Graph](https://terrence721.github.io/platform-main/diagrams/module-dependency-graph.html)** — the 13 modules and their 3 real dependency tiers, read from every `peerDependencies` field
-- **[Nx Project Graph](docs/diagrams/nx-project-graph.png)** — Nx's own graph of the 13 projects (`nx graph`), including the implicit edges to `schematics` that order the builds
+- **[Nx Project Graph](docs/diagrams/nx-project-graph.png)** — Nx's own graph of the 13 modules and the Helpdesk app (`nx graph`), including the implicit edges to `schematics` that order the builds
 - **[Composition Over Inheritance](https://terrence721.github.io/platform-main/diagrams/composition-over-inheritance.html)** — before/after for all 6 classes redesigned off RxJS inheritance, and what each change actually cost
 - **[Code-Review Audit Pipeline](https://terrence721.github.io/platform-main/diagrams/code-review-audit-pipeline.html)** — the per-file table → issue → PR → merge process, plus live per-module status
 - **[Effects Runtime Data Flow](https://terrence721.github.io/platform-main/diagrams/effects-runtime-data-flow.html)** — the startup ordering `EffectsRootModule` depends on, and why getting it wrong would fail silently
@@ -36,7 +39,7 @@ Anyone can `cp -r` a well-known open-source library. The more useful exercise �
 
 ## 🏗 What's Here So Far
 
-An [Nx](https://nx.dev/) workspace (`modules/` for libraries, `projects/` for apps — none added yet), using Yarn 4, Vitest, and ESLint's flat config.
+An [Nx](https://nx.dev/) workspace (`modules/` for libraries, `projects/` for apps), using Yarn 4, Vitest, and ESLint's flat config.
 
 ```text
 modules/
@@ -75,9 +78,13 @@ modules/
                            including template rules for @ngrx/component;
                            13th and last module — all module additions
                            complete
+projects/
+  helpdesk/                ← in progress: a real help desk app that uses
+                           every module (Angular Material; a NestJS API,
+                           PostgreSQL and sign-in to come), see #303
 ```
 
-All 13 modules are added, and the per-module code review audit is complete ([#32](https://github.com/Terrence721/platform-main/issues/32), closed 2026-09-30): all 270 source files reviewed, each with its own issue and PR. `store` — 3 real bugs found and fixed; `entity` and `effects` — none; `router-store` — 7 real bugs fixed across 12/12 files; `store-devtools` — 6 real bugs plus 1 minor cleanup across 11/11 files; `component-store` — 1 real gap across 4/4 files; `component` — 1 real bug plus 2 barrel-export gaps across 10/10 files; `operators` — 2 barrel-export gaps across 4/4 files; `schematics-core` — 9 real bugs, 2 test-coverage gaps and 13 barrel-export gaps across 16/16 files; `signals` — 14 defects across 11 of 18 files, including the most severe of the audit (a state property named `set`/`update`/`asReadonly` silently and permanently broke `patchState`); `schematics` — 25/25 files, including standalone-app failures, generated code that did not compile, and weak tests; `data` — 42 of 61 files needed fixes; `eslint-plugin` — 38 of 55 files needed fixes (an aliased `Store` import silently turned off 14 rules; the rules now also cover functional effects, standalone providers and stores held in variables). Every finding is in [`docs/code-review.md`](docs/code-review.md). See `todo.md`'s "Still to do" table for what's left (the deferred `migrations/`-folder pass, type-level test coverage, tooling migration, containerization).
+All 13 modules are added, and the per-module code review audit is complete ([#32](https://github.com/Terrence721/platform-main/issues/32), closed 2026-09-30): all 270 source files reviewed, each with its own issue and PR. `store` — 3 real bugs found and fixed; `entity` and `effects` — none; `router-store` — 7 real bugs fixed across 12/12 files; `store-devtools` — 6 real bugs plus 1 minor cleanup across 11/11 files; `component-store` — 1 real gap across 4/4 files; `component` — 1 real bug plus 2 barrel-export gaps across 10/10 files; `operators` — 2 barrel-export gaps across 4/4 files; `schematics-core` — 9 real bugs, 2 test-coverage gaps and 13 barrel-export gaps across 16/16 files; `signals` — 14 defects across 11 of 18 files, including the most severe of the audit (a state property named `set`/`update`/`asReadonly` silently and permanently broke `patchState`); `schematics` — 25/25 files, including standalone-app failures, generated code that did not compile, and weak tests; `data` — 42 of 61 files needed fixes; `eslint-plugin` — 38 of 55 files needed fixes (an aliased `Store` import silently turned off 14 rules; the rules now also cover functional effects, standalone providers and stores held in variables). Every finding is in [`docs/code-review.md`](docs/code-review.md). After the audit, the `migrations/` folders were reviewed the same way ([#106](https://github.com/Terrence721/platform-main/issues/106), 31 files, 27 fixed) and every module gained type-level tests of its public API ([#162](https://github.com/Terrence721/platform-main/issues/162), 11 type defects and 3 runtime bugs fixed). Now in progress: the Helpdesk app ([#303](https://github.com/Terrence721/platform-main/issues/303)), which also brings containerization ([#20](https://github.com/Terrence721/platform-main/issues/20)); see `todo.md`'s "Still to do" table for the rest.
 
 ## 🖥 Getting Started
 

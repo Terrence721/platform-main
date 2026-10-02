@@ -14,7 +14,14 @@
         "index": "projects/helpdesk/src/index.html",
         "browser": "projects/helpdesk/src/main.ts",
         "tsConfig": "projects/helpdesk/tsconfig.app.json",
-        "assets": ["projects/helpdesk/src/favicon.ico"],
+        "assets": [
+          "projects/helpdesk/src/favicon.ico",
+          {
+            "glob": "**/*",
+            "input": "projects/helpdesk/src/assets",
+            "output": "assets"
+          }
+        ],
         "styles": [
           "@angular/material/prebuilt-themes/azure-blue.css",
           "projects/helpdesk/src/styles.css"

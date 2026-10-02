@@ -9,9 +9,26 @@
   "targets": {
     "build": {
       "executor": "nx:run-commands",
-      "outputs": ["{workspaceRoot}/dist/modules/schematics-core"],
+      "outputs": [
+        "{workspaceRoot}/dist/modules/schematics-core",
+        "{workspaceRoot}/node_modules/@ngrx/schematics-core"
+      ],
       "options": {
-        "command": "tsc -p modules/schematics-core/tsconfig.lib.json"
+        "parallel": false,
+        "commands": [
+          {
+            "command": "tsc -p modules/schematics-core/tsconfig.lib.json"
+          },
+          {
+            "command": "rimraf node_modules/@ngrx/schematics-core"
+          },
+          {
+            "command": "mkdirp node_modules/@ngrx/schematics-core"
+          },
+          {
+            "command": "ncp dist/modules/schematics-core node_modules/@ngrx/schematics-core"
+          }
+        ]
       }
     },
     "test": {

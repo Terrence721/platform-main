@@ -14,6 +14,7 @@
     "clean": "git clean -xdf",
     "clean:logs": "npx tsx scripts/clean-logs.ts",
     "check:versions": "npx tsx scripts/check-version-ranges.ts",
+    "start:helpdesk": "npx tsx scripts/start-app.ts helpdesk",
     "prettier": "prettier --write \"**/*.ts\"",
     "schematics:check": "git diff --name-only --exit-code ./modules",
     "nx": "nx",

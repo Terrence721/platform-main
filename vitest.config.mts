@@ -75,7 +75,7 @@ const modules: Record<string, { testTimeout?: number }> = {
  * projects and taking overrides the same way.
  */
 const apps: Record<string, { testTimeout?: number }> = {
-  'standalone-app': {},
+  helpdesk: {},
 };
 
 /** Every module and app project, with the folder it is rooted at. */

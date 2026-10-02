@@ -2,13 +2,14 @@ import { TestBed } from '@angular/core/testing';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { provideMockActions } from '@ngrx/effects/testing';
 import { Action } from '@ngrx/store';
-import { of } from 'rxjs';
+import { lastValueFrom, of } from 'rxjs';
 import { showErrors } from './app.effects';
 
 describe('showErrors', () => {
   const open = vi.fn();
 
-  function run(...actions: Action[]) {
+  /** Runs the effect over these actions and waits until it has finished. */
+  async function run(...actions: Action[]): Promise<void> {
     TestBed.configureTestingModule({
       providers: [
         provideMockActions(of(...actions)),
@@ -16,13 +17,18 @@ describe('showErrors', () => {
       ],
     });
 
-    TestBed.runInInjectionContext(() => showErrors()).subscribe();
+    await lastValueFrom(
+      TestBed.runInInjectionContext(() => showErrors()),
+      {
+        defaultValue: undefined,
+      }
+    );
   }
 
   beforeEach(() => open.mockClear());
 
-  it('opens a snack bar with the message of an action with a string error', () => {
-    run({
+  it('opens a snack bar with the message of an action with a string error', async () => {
+    await run({
       type: '[Books API] Load Failure',
       error: 'Books failed to load',
     } as Action);
@@ -34,20 +40,23 @@ describe('showErrors', () => {
     );
   });
 
-  it('ignores actions without an error', () => {
-    run({ type: '[Books API] Load Success' });
+  it('ignores actions without an error', async () => {
+    await run({ type: '[Books API] Load Success' });
 
     expect(open).not.toHaveBeenCalled();
   });
 
-  it('ignores an error that is not a string', () => {
-    run({ type: '[Books API] Load Failure', error: new Error('x') } as Action);
+  it('ignores an error that is not a string', async () => {
+    await run({
+      type: '[Books API] Load Failure',
+      error: new Error('x'),
+    } as Action);
 
     expect(open).not.toHaveBeenCalled();
   });
 
-  it('shows one snack bar per error action', () => {
-    run(
+  it('shows one snack bar per error action, in order', async () => {
+    await run(
       { type: 'First Failure', error: 'first' } as Action,
       { type: 'Some Success' },
       { type: 'Second Failure', error: 'second' } as Action

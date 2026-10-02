@@ -20,6 +20,7 @@ import { provideStoreDevtools } from '@ngrx/store-devtools';
 import * as appEffects from './app.effects';
 import { routes } from './app.routes';
 import { CAPABILITY } from './landing/capability';
+import { hidePasswords } from './sign-in/hide-passwords';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -54,6 +55,8 @@ export const appConfig: ApplicationConfig = {
       maxAge: 25,
       logOnly: !isDevMode(),
       name: 'Helpdesk',
+      // The devtools see sign-in actions with the password hidden.
+      actionSanitizer: hidePasswords,
     }),
   ],
 };

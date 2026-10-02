@@ -137,9 +137,9 @@ describe('LandingPage', () => {
     );
 
     expect(buttons).toHaveLength(1);
-    expect(await (await buttons[0].host()).matchesSelector('#signin a')).toBe(
-      true
-    );
+    expect(
+      await (await buttons[0].host()).matchesSelector('#signin button')
+    ).toBe(true);
   });
 
   it('has a section for every link in the toolbar', () => {

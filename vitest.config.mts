@@ -71,21 +71,22 @@ const modules: Record<string, { testTimeout?: number }> = {
 };
 
 /**
- * The apps under projects/ are Vitest projects too, named after their Nx
- * projects and taking overrides the same way.
+ * The apps and libraries under projects/ are Vitest projects too, named after
+ * their Nx projects and taking overrides the same way.
  */
-const apps: Record<string, { testTimeout?: number }> = {
+const projectsFolder: Record<string, { testTimeout?: number }> = {
   helpdesk: {},
+  'helpdesk-contract': {},
 };
 
-/** Every module and app project, with the folder it is rooted at. */
+/** Every project under modules/ and projects/, with the folder it is rooted at. */
 const testProjects = [
   ...Object.entries(modules).map(([name, overrides]) => ({
     name,
     folder: `modules/${name}`,
     overrides,
   })),
-  ...Object.entries(apps).map(([name, overrides]) => ({
+  ...Object.entries(projectsFolder).map(([name, overrides]) => ({
     name,
     folder: `projects/${name}`,
     overrides,
@@ -181,9 +182,10 @@ const parseSpecificationsShim = {
 };
 
 /**
- * Single Vitest configuration for the whole workspace. All modules and apps
- * share the settings below; each one becomes a project rooted at its own
- * folder, so its own files (setup file, tsconfig.spec.json) resolve there.
+ * Single Vitest configuration for the whole workspace. Every project under
+ * modules/ and projects/ shares the settings below; each one becomes a project
+ * rooted at its own folder, so its own files (setup file, tsconfig.spec.json)
+ * resolve there.
  */
 export default defineConfig(({ mode }) => {
   const only = scopedProject();

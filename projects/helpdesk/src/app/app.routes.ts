@@ -1,14 +1,20 @@
 import { Routes } from '@angular/router';
+import { provideEffects } from '@ngrx/effects';
+import { provideState } from '@ngrx/store';
+import * as landingEffects from './landing/landing.effects';
+import { landingFeature } from './landing/landing.feature';
 
 /**
  * The app's top-level routes, each page lazy-loaded. The public landing page
  * is the first page; the sign-in page and the signed-in screens (tickets,
- * admin) add their entries as they are built.
+ * admin) add their entries as they are built. A page's state and effects are
+ * registered on its route, so they exist only once it is visited.
  */
 export const routes: Routes = [
   {
     path: '',
     loadComponent: () => import('./landing/landing.page'),
+    providers: [provideState(landingFeature), provideEffects(landingEffects)],
     title: 'Helpdesk',
   },
 ];

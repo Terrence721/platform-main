@@ -1,18 +1,31 @@
 import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { TestBed } from '@angular/core/testing';
 import { MatButtonHarness } from '@angular/material/button/testing';
+import { MockStore, provideMockStore } from '@ngrx/store/testing';
 import { routes } from '../app.routes';
+import { LandingPageActions } from './landing.actions';
 import LandingPage from './landing.page';
 
 describe('LandingPage', () => {
   function render() {
+    TestBed.configureTestingModule({ providers: [provideMockStore()] });
+    const dispatch = vi.spyOn(TestBed.inject(MockStore), 'dispatch');
     const fixture = TestBed.createComponent(LandingPage);
     fixture.detectChanges();
     return {
       page: fixture.nativeElement as HTMLElement,
       loader: TestbedHarnessEnvironment.loader(fixture),
+      dispatch,
     };
   }
+
+  it('reports that it opened, which loads its showcase tickets', () => {
+    const { dispatch } = render();
+
+    expect(dispatch).toHaveBeenCalledExactlyOnceWith(
+      LandingPageActions.opened()
+    );
+  });
 
   it('says what Helpdesk is for', () => {
     const { page } = render();

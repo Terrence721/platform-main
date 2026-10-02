@@ -1,4 +1,6 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { Store } from '@ngrx/store';
+import { LandingPageActions } from './landing.actions';
 
 /**
  * The public product page: what Helpdesk does, for someone who has not
@@ -73,4 +75,8 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export default class LandingPage {}
+export default class LandingPage {
+  constructor() {
+    inject(Store).dispatch(LandingPageActions.opened());
+  }
+}

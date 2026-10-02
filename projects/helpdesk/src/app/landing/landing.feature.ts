@@ -3,7 +3,7 @@ import { createEntityAdapter, EntityState } from '@ngrx/entity';
 import { createFeature, createReducer, createSelector, on } from '@ngrx/store';
 import { LandingApiActions, LandingPageActions } from './landing.actions';
 
-/** The landing page's state: the example tickets its preview shows. */
+/** The landing page's state: the showcase tickets its preview shows. */
 export interface LandingState extends EntityState<TicketDto> {
   /** The status the preview shows; `null` shows every status. */
   statusFilter: TicketStatus | null;
@@ -42,11 +42,11 @@ export const landingFeature = createFeature({
   reducer: createReducer(
     initialLandingState,
     on(
-      LandingApiActions.exampleTicketsLoaded,
+      LandingApiActions.showcaseTicketsLoaded,
       (state, { tickets }): LandingState =>
         landingAdapter.setAll(tickets, { ...state, loadState: 'loaded' })
     ),
-    on(LandingApiActions.exampleTicketsLoadFailed, (state): LandingState => ({
+    on(LandingApiActions.showcaseTicketsLoadFailed, (state): LandingState => ({
       ...state,
       loadState: 'failed',
     })),

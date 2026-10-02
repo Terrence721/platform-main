@@ -1,6 +1,8 @@
+<!-- markdownlint-configure-file { "MD024": { "siblings_only": true } } -->
+
 # Architecture Decisions
 
-Last updated: September 2, 2026
+Last updated: October 2, 2026
 
 This document records the architectural decisions made in this repo that deviate from the real ngrx/platform source — not a general description of how NgRx works. For what was added verbatim vs. redesigned, and why, see the [README](../README.md#-why-this-matters). For the phase-by-phase build log, see [todo.md](../todo.md).
 
@@ -57,7 +59,7 @@ A third pass — this time a deliberate full-module audit (`grep extends` across
 
 ### Consequences going forward
 
-`entity`, `effects`, `router-store`, `store-devtools`, and `data` — all still not yet added as of this writing — consume `Store`/`ActionsSubject`/`ReducerManager`/`State` directly. This redesign is finished, end to end, before adding any of them, specifically so each one targets the final shape once rather than needing a second pass. Anything in their source that relied on `Store extends Observable` or `State extends BehaviorSubject` (unlikely, but not yet verified) will surface as a build/test failure when each is added, the same way this redesign's own blast radius did — checked via the same discipline: grep first, verify with the real build/test/lint, fix what grep missed. That discipline is what caught `State`/`StateObservable` in the first place — a second `grep 'extends' modules/store` pass after the first round of fixes landed, not something planned upfront.
+`entity`, `effects`, `router-store`, `store-devtools`, and `data` — none of them added yet when this was written; all are now — consume `Store`/`ActionsSubject`/`ReducerManager`/`State` directly. This redesign is finished, end to end, before adding any of them, specifically so each one targets the final shape once rather than needing a second pass. Anything in their source that relied on `Store extends Observable` or `State extends BehaviorSubject` (unlikely, but not yet verified) will surface as a build/test failure when each is added, the same way this redesign's own blast radius did — checked via the same discipline: grep first, verify with the real build/test/lint, fix what grep missed. That discipline is what caught `State`/`StateObservable` in the first place — a second `grep 'extends' modules/store` pass after the first round of fixes landed, not something planned upfront.
 
 **This prediction came true the moment `effects` was added** — see the next section.
 
@@ -115,3 +117,21 @@ Two real gaps found and fixed along the way, both pre-existing and unrelated to 
 Verified for real, not just "the shared implementation still works": every pre-existing `ng-add` spec pointed `SchematicTestRunner` directly at the shared collection and invoked the module-qualified name (`store-ng-add`) — none of them would have caught a broken per-module wrapper. Each module got a new `collection.spec.ts` instead pointing at its own per-module `collection.json` and invoking the literal `ng-add` name, proving the real per-package path actually resolves.
 
 The rollout itself surfaced two Nx Cloud remote-cache race conditions in CI — the Quality workflow racing itself (`push` + `pull_request` both firing per commit) and Quality racing Deploy Pages's own concurrent build on `main` — fixed in [`#289`](https://github.com/Terrence721/platform-main/pull/289) and [`#290`](https://github.com/Terrence721/platform-main/pull/290). See [CI and Security](https://github.com/Terrence721/platform-main/wiki/⭐-CI-and-Security) on the wiki for the full detail; `todo.md` phases 44–45 carry the complete PR-by-PR log.
+
+## Supported, not deprecated: `@ngrx/router-store/data-persistence`
+
+### Context
+
+Upstream's `router-store` ships a second entry point, `data-persistence`, with four RxJS operators for effects: `pessimisticUpdate` (update the server first), `optimisticUpdate` (update the client first, undo on failure), `fetch` (in order, or per `id` with the newer fetch cancelling the running one) and `navigation` (run when a navigation activates a given component). Upstream marks every public name in it `@deprecated`, yet still ships it, and real apps still use it. It was missed when `router-store` was added here and ported on 2026-10-01 ([#301](https://github.com/Terrence721/platform-main/issues/301), [PR #850](https://github.com/Terrence721/platform-main/pull/850)).
+
+### Decision
+
+Port it as a supported API: the `@deprecated` notice is removed from all 12 public names (the 4 operators, their 4 option interfaces and 4 stream types), so neither the published declarations nor apps using it show deprecation hints. The entry point also re-exports `src/public_api`, so the option and stream types are importable, as they are from upstream's published package.
+
+### What it actually cost
+
+Upstream has no tests for this entry point, so supporting it meant writing them: 11 tests through `@ngrx/router-store/data-persistence` covering every operator's outputs, errors, state slices and ordering. Writing them found a real defect: `fetch` and `navigation` document `onError` as optional, but without one a failing `run` errored the stream with `TypeError: onError is not a function`, hiding the real error. The original error is now rethrown. This repo now owns that code: a future upstream change to it is not something to follow automatically.
+
+### Consequences going forward
+
+The Helpdesk app ([#303](https://github.com/Terrence721/platform-main/issues/303)) uses these operators for its URL-driven ticket loading and optimistic updates, so the API gets a real consumer here, not only its spec.

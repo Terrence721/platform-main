@@ -428,7 +428,7 @@
 
 <div class="hero">
   <div class="wrap">
-    <p class="eyebrow">Portfolio Manifest — Updated 2026-09-26</p>
+    <p class="eyebrow">Portfolio Manifest — Updated 2026-10-02</p>
     <h1 class="name">Terrence&nbsp;Daniels</h1>
     <p class="role">Principal Frontend Engineer</p>
     <p class="thesis">
@@ -466,10 +466,10 @@
   <div class="wrap">
     <div class="manifest-row">
       <div class="manifest-cell">
-        <span class="v">941</span><span class="k">commits</span>
+        <span class="v">1,089</span><span class="k">commits</span>
       </div>
       <div class="manifest-cell">
-        <span class="v">6,466</span><span class="k">Vitest tests</span>
+        <span class="v">7,046</span><span class="k">Vitest tests</span>
       </div>
       <div class="manifest-cell">
         <span class="v">13/13</span><span class="k">modules ported</span>
@@ -690,11 +690,11 @@
     </p>
     <div class="twocol">
       <div class="card">
-        <h3>6,466 tests, 0 lint errors</h3>
+        <h3>7,046 tests, 0 lint errors</h3>
         <p>
-          Across all 13 ported modules, real assertions against real behavior —
-          not snapshot tests, not compilation-only checks passing for the wrong
-          reason.
+          Across all 13 modules and the Helpdesk app, real assertions against
+          real behavior — not snapshot tests, not compilation-only checks
+          passing for the wrong reason.
         </p>
       </div>
       <div class="card">
@@ -747,6 +747,22 @@
         </p>
       </div>
     </div>
+    <p class="lede">
+      The same discipline then covered what the audit left out. All 31
+      <code>ng update</code> migrations were reviewed one by one (<a
+        href="https://github.com/Terrence721/platform-main/issues/106"
+        >#106</a
+      >): 27 had defects, mostly aliased or namespace imports they missed or
+      corrupted. And every module gained type-level tests of its public API (<a
+        href="https://github.com/Terrence721/platform-main/issues/162"
+        >#162</a
+      >), which found 11 declared types that did not match the code, plus 3
+      runtime bugs. Next is a real app, not a demo: a help desk that uses every
+      module, with a NestJS API, PostgreSQL and sign-in (<a
+        href="https://github.com/Terrence721/platform-main/issues/303"
+        >#303</a
+      >).
+    </p>
   </section>
 
   <section>

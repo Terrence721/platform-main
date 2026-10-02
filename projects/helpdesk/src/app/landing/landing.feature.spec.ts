@@ -31,7 +31,7 @@ const { reducer } = landingFeature;
 function loaded(tickets: TicketDto[]): LandingState {
   return reducer(
     initialLandingState,
-    LandingApiActions.exampleTicketsLoaded({ tickets })
+    LandingApiActions.showcaseTicketsLoaded({ tickets })
   );
 }
 
@@ -92,7 +92,7 @@ describe('landing reducer', () => {
   it('replaces the tickets when they load again', () => {
     const state = reducer(
       loaded([ticket({ ticketNumber: 1 })]),
-      LandingApiActions.exampleTicketsLoaded({
+      LandingApiActions.showcaseTicketsLoaded({
         tickets: [ticket({ ticketNumber: 2 })],
       })
     );
@@ -103,7 +103,7 @@ describe('landing reducer', () => {
   it('marks a failed load and keeps the tickets it had', () => {
     const state = reducer(
       loaded([ticket({ ticketNumber: 1 })]),
-      LandingApiActions.exampleTicketsLoadFailed({ error: 'Offline' })
+      LandingApiActions.showcaseTicketsLoadFailed({ error: 'Offline' })
     );
 
     expect(state.loadState).toBe('failed');

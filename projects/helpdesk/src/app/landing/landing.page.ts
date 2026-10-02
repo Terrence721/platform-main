@@ -5,6 +5,7 @@ import { Store } from '@ngrx/store';
 import { CapabilitiesSection } from './features';
 import { LandingPageActions } from './landing.actions';
 import { TicketPreview } from './ticket-preview';
+import { TicketWorkflowSection } from './ticket-workflow';
 
 /**
  * The public product page: what Helpdesk does, for someone who has not
@@ -14,7 +15,13 @@ import { TicketPreview } from './ticket-preview';
  */
 @Component({
   selector: 'hd-landing-page',
-  imports: [CapabilitiesSection, MatButtonModule, RouterLink, TicketPreview],
+  imports: [
+    CapabilitiesSection,
+    MatButtonModule,
+    RouterLink,
+    TicketPreview,
+    TicketWorkflowSection,
+  ],
   template: `
     <section class="hero" aria-labelledby="landing-title">
       <div class="column hero-grid">
@@ -47,6 +54,11 @@ import { TicketPreview } from './ticket-preview';
     >
       <div class="column">
         <hd-capabilities />
+      </div>
+    </section>
+    <section class="band" id="workflow" aria-labelledby="workflow-title">
+      <div class="column">
+        <hd-ticket-workflow />
       </div>
     </section>
   `,

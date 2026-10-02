@@ -100,6 +100,17 @@ describe('LandingPage', () => {
     );
   });
 
+  it('shows how a ticket moves below the features, named by its heading', () => {
+    const { page } = render();
+    const workflow = page.querySelector('section#features + section#workflow');
+
+    expect(
+      workflow?.querySelector('.column > hd-ticket-workflow')
+    ).not.toBeNull();
+    expect(workflow?.getAttribute('aria-labelledby')).toBe('workflow-title');
+    expect(workflow?.classList).not.toContain('alt');
+  });
+
   it('leaves signing in to the toolbar', async () => {
     const { loader } = render();
 

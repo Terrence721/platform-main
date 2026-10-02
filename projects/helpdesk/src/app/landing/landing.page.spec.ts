@@ -1,13 +1,11 @@
 import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { TestBed } from '@angular/core/testing';
 import { MatButtonHarness } from '@angular/material/button/testing';
-import { provideRouter } from '@angular/router';
 import { routes } from '../app.routes';
 import LandingPage from './landing.page';
 
 describe('LandingPage', () => {
   function render() {
-    TestBed.configureTestingModule({ providers: [provideRouter([])] });
     const fixture = TestBed.createComponent(LandingPage);
     fixture.detectChanges();
     return {
@@ -39,17 +37,18 @@ describe('LandingPage', () => {
     expect(heading?.id).toBeTruthy();
   });
 
-  it('offers a filled Sign in button that goes to the sign-in page', async () => {
-    const { page, loader } = render();
-    const signIn = await loader.getHarness(
-      MatButtonHarness.with({ text: /Sign in/ })
-    );
+  it('sets the hero in the centered content column', () => {
+    const { page } = render();
 
-    expect(await signIn.getAppearance()).toBe('filled');
-    expect(await (await signIn.host()).getAttribute('href')).toBe('/sign-in');
+    expect(page.querySelector('section.hero > .column h1')).not.toBeNull();
+  });
+
+  it('leaves signing in to the toolbar', async () => {
+    const { loader } = render();
+
     expect(
-      page.querySelector('a[href="/sign-in"] mat-icon')?.textContent?.trim()
-    ).toBe('login');
+      await loader.getAllHarnesses(MatButtonHarness.with({ text: /Sign in/ }))
+    ).toHaveLength(0);
   });
 
   it('is the first page, at the root address', async () => {

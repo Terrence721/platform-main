@@ -5454,6 +5454,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@oxc-project/runtime@npm:0.151.0":
+  version: 0.151.0
+  resolution: "@oxc-project/runtime@npm:0.151.0"
+  checksum: 10c0/09b0ab7b87184ddd727793e47bb7883262dd2290ed1fccb69660676cc1004e450feb164875a1d12ae13a033a549d8949c624ad9daa1b461db73b7900ab9d469a
+  languageName: node
+  linkType: hard
+
 "@oxc-project/types@npm:=0.149.0":
   version: 0.149.0
   resolution: "@oxc-project/types@npm:0.149.0"
@@ -14194,6 +14201,7 @@ __metadata:
     "@nx/webpack": "npm:23.2.1"
     "@nx/workspace": "npm:23.2.1"
     "@octokit/rest": "npm:^22.0.1"
+    "@oxc-project/runtime": "npm:0.151.0"
     "@playwright/test": "npm:1.63.0"
     "@rollup/plugin-alias": "npm:^6.0.0"
     "@rollup/plugin-commonjs": "npm:^29.0.3"

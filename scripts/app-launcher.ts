@@ -10,26 +10,41 @@ export const FIRST_API_PORT = 3000;
 /** Node's debugger port, which `nx serve helpdesk-api` opens as well. */
 export const DEBUGGER_PORT = 9229;
 
-/** One process `yarn start:<app>` runs, and how to tell it is ready. */
+/**
+ * The database's default port (compose.yaml, HELPDESK_DB_PORT): 5435, not
+ * PostgreSQL's usual 5432, so it runs beside other local databases.
+ */
+export const DEFAULT_DB_PORT = 5435;
+
+/**
+ * One thing `yarn start:<app>` runs, and how to tell it is ready. Either a
+ * long-running process (a dev server), ready once `readyUrl` answers and
+ * stopped by ending its process tree; or a service (the database in
+ * Docker), whose `command` finishes once it is ready and which is stopped
+ * by `stopCommand`.
+ */
 export interface StackServer {
   name: string;
   command: string;
   /** Added to the environment the command runs in. */
   env: Record<string, string>;
-  /** Answers once the server is ready. */
-  readyUrl: string;
-  /** Every port the server holds, all free again once it has stopped. */
+  /** A process: answers once it is ready. */
+  readyUrl?: string;
+  /** A service: stops it (its `command` only starts it, then finishes). */
+  stopCommand?: string;
+  /** Every port it holds, all free again once it has stopped. */
   ports: number[];
 }
 
 /**
  * The servers `yarn start:<app>` runs, in start order. The Helpdesk runs its
- * API first, then the app, whose dev server forwards /api to it (see
- * projects/helpdesk/proxy.conf.mjs); any other app runs on its own.
+ * database (Docker Compose), then its API, then the app, whose dev server
+ * forwards /api to the API (see projects/helpdesk/proxy.conf.mjs); any
+ * other app runs on its own.
  */
 export function stackFor(
   app: string,
-  ports: { app: number; api: number }
+  ports: { app: number; api: number; db: number }
 ): StackServer[] {
   const appServer: StackServer = {
     name: app,
@@ -42,6 +57,13 @@ export function stackFor(
     return [appServer];
   }
   return [
+    {
+      name: 'database',
+      command: 'docker compose up -d --wait db',
+      env: {},
+      stopCommand: 'docker compose stop db',
+      ports: [ports.db],
+    },
     {
       name: 'helpdesk-api',
       command: 'yarn nx serve helpdesk-api',
@@ -64,12 +86,18 @@ function canListen(port: number, host?: string): Promise<boolean> {
 }
 
 /**
- * Whether nothing is listening on a port of this machine. Both checks are
- * needed: a server on all addresses (like the Helpdesk API) does not stop a
- * new listener on localhost on Windows, and the reverse also happens.
+ * Whether nothing is listening on a port of this machine. All three checks
+ * are needed on Windows, where a listener on one address does not stop a
+ * new one on another: localhost (which Node resolves to ::1 first),
+ * 127.0.0.1 (how Docker publishes a database to this machine only), and all
+ * addresses (like the Helpdesk API).
  */
 export async function isPortFree(port: number): Promise<boolean> {
-  return (await canListen(port, 'localhost')) && (await canListen(port));
+  return (
+    (await canListen(port, 'localhost')) &&
+    (await canListen(port, '127.0.0.1')) &&
+    (await canListen(port))
+  );
 }
 
 /**
@@ -145,6 +173,9 @@ export function browserArgs(url: string, profileDir: string): string[] {
     // The new profile would otherwise install any extension registered for
     // every profile on the machine, and some open a sign-in page on install.
     '--disable-extensions',
+    // Edge would otherwise sign the new profile in with the Windows account
+    // and show a "We are now syncing your browsing data" popup every time.
+    '--disable-features=msImplicitSignin',
   ];
 }
 

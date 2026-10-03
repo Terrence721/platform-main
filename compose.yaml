@@ -1,0 +1,31 @@
+# The Helpdesk's database for local development. `yarn start:helpdesk`
+# starts it (`docker compose up -d --wait db`) and stops it when the app
+# window closes; `yarn db:reset` deletes its data for a clean slate.
+# Values come from .env (copy .env.example); the defaults below match it.
+name: helpdesk
+
+services:
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: ${HELPDESK_DB_NAME:-helpdesk}
+      POSTGRES_USER: ${HELPDESK_DB_USER:-helpdesk}
+      POSTGRES_PASSWORD: ${HELPDESK_DB_PASSWORD:-helpdesk-dev-only}
+    ports:
+      # localhost only: the database is not reachable from other machines.
+      # 5435, not PostgreSQL's usual 5432, so it can run beside other local
+      # databases (5432-5434 are commonly taken by other projects).
+      - '127.0.0.1:${HELPDESK_DB_PORT:-5435}:5432'
+    volumes:
+      # PostgreSQL 18+ keeps its data under /var/lib/postgresql (older
+      # images used /var/lib/postgresql/data).
+      - helpdesk-db:/var/lib/postgresql
+    healthcheck:
+      test:
+        ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  helpdesk-db:

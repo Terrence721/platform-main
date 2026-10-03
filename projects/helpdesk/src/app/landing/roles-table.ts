@@ -19,7 +19,7 @@ export const ABILITIES: readonly Ability[] = [
   },
   { label: 'Take a ticket', permissions: ['tickets:assign-self'] },
   {
-    label: 'Assign or reassign to anyone',
+    label: "Assign or reassign within one's team",
     permissions: ['tickets:assign-others'],
   },
   {

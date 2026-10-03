@@ -43,6 +43,12 @@ class PagesController {
     return { ok: true };
   }
 
+  @Get('work')
+  @OnlyFor('supervisor', 'agent')
+  work() {
+    return { ok: true };
+  }
+
   /** RoleGuard without OnlyFor: a mistake, which must fail safe. */
   @Get('forgotten')
   @UseGuards(AuthGuard, RoleGuard)
@@ -108,6 +114,17 @@ describe('OnlyFor and RoleGuard', () => {
       expect(await statusOf('/supervisor-area/settings', 'supervisor')).toBe(
         403
       );
+    });
+  });
+
+  describe('with several roles', () => {
+    it.each(['supervisor', 'agent'] as const)('lets a %s in', async (role) => {
+      expect(await statusOf('/pages/work', role)).toBe(200);
+    });
+
+    it('turns away the role not listed with 403, and signed out with 401', async () => {
+      expect(await statusOf('/pages/work', 'admin')).toBe(403);
+      expect(await statusOf('/pages/work', null)).toBe(401);
     });
   });
 

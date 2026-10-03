@@ -5,7 +5,13 @@ import {
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import type { TeamOverview, TicketDto } from '@helpdesk/contract';
-import { memberTicketsApi, MY_TEAM_API, MyTeamStore } from './my-team.store';
+import {
+  ASSIGN_UNAVAILABLE_MESSAGE,
+  assigneeApi,
+  memberTicketsApi,
+  MY_TEAM_API,
+  MyTeamStore,
+} from './my-team.store';
 
 const atlas: TeamOverview = {
   id: 'atlas',
@@ -169,6 +175,116 @@ describe('MyTeamStore', () => {
 
       expect(pending.cancelled).toBe(true);
       expect(store.memberTicketsState()).toBe('idle');
+    });
+  });
+
+  describe('assign', () => {
+    const TICKET_ID = '7d0f6c2e-4b1a-4c3e-9a51-2f8d6e0b1c34';
+    const assigned = {
+      id: TICKET_ID,
+      ticketNumber: 1312,
+      assignee: { id: 'sam.rivera', name: 'Sam Rivera' },
+    } as TicketDto;
+    /** The team after the assignment: Sam has one more ticket. */
+    const atlasAfter: TeamOverview = {
+      ...atlas,
+      members: [
+        {
+          id: 'sam.rivera',
+          name: 'Sam Rivera',
+          openTickets: 3,
+          overdueTickets: 1,
+        },
+      ],
+    };
+
+    /** A store with its team loaded, as the page has it. */
+    function loadedStore() {
+      const store = TestBed.inject(MyTeamStore);
+      http.expectOne(MY_TEAM_API).flush(atlas);
+      return store;
+    }
+
+    const put = () =>
+      http.expectOne({ method: 'PUT', url: assigneeApi(TICKET_ID) });
+
+    it('starts with no assignment in progress', () => {
+      const store = loadedStore();
+
+      expect(store.assignState()).toBe('idle');
+      expect(store.assignError()).toBeNull();
+    });
+
+    it('sends the agent, saving until the API answers', () => {
+      const store = loadedStore();
+
+      store.assign({ ticketId: TICKET_ID, agentId: 'sam.rivera' });
+
+      expect(store.assignState()).toBe('saving');
+      const call = put();
+      expect(call.request.body).toEqual({ assigneeId: 'sam.rivera' });
+      call.flush(assigned);
+      http.expectOne(MY_TEAM_API).flush(atlasAfter);
+    });
+
+    it('then fetches the team again, quietly, with no spinner', () => {
+      const store = loadedStore();
+
+      store.assign({ ticketId: TICKET_ID, agentId: 'sam.rivera' });
+      put().flush(assigned);
+
+      expect(store.loadState()).toBe('loaded');
+      http.expectOne(MY_TEAM_API).flush(atlasAfter);
+      expect(store.team()).toEqual(atlasAfter);
+      expect(store.assignState()).toBe('assigned');
+      expect(store.lastAssigned()).toEqual(assigned);
+    });
+
+    it("also fetches the chosen member's tickets again", () => {
+      const store = loadedStore();
+      store.selectMember('sam.rivera');
+      http.expectOne(memberTicketsApi('sam.rivera')).flush([]);
+
+      store.assign({ ticketId: TICKET_ID, agentId: 'sam.rivera' });
+      put().flush(assigned);
+      http.expectOne(MY_TEAM_API).flush(atlasAfter);
+      http.expectOne(memberTicketsApi('sam.rivera')).flush([assigned]);
+
+      expect(store.memberTickets()).toEqual([assigned]);
+      expect(store.memberTicketsState()).toBe('loaded');
+    });
+
+    it.each([
+      [404, 'No such agent on your team.'],
+      [409, "This ticket is finished, so it can't be assigned."],
+    ])("keeps the API's message for a %s", (status, message) => {
+      const store = loadedStore();
+
+      store.assign({ ticketId: TICKET_ID, agentId: 'omar.other' });
+      put().flush({ message }, { status, statusText: 'Error' });
+
+      expect(store.assignState()).toBe('failed');
+      expect(store.assignError()).toBe(message);
+      expect(store.team()).toEqual(atlas);
+    });
+
+    it('says assigning is unavailable when the API cannot explain', () => {
+      const store = loadedStore();
+
+      store.assign({ ticketId: TICKET_ID, agentId: 'sam.rivera' });
+      put().error(new ProgressEvent('error'));
+
+      expect(store.assignError()).toBe(ASSIGN_UNAVAILABLE_MESSAGE);
+    });
+
+    it('ignores a second assignment while one is saving', () => {
+      const store = loadedStore();
+
+      store.assign({ ticketId: TICKET_ID, agentId: 'sam.rivera' });
+      store.assign({ ticketId: TICKET_ID, agentId: 'benny.lind' });
+
+      put().flush(assigned);
+      http.expectOne(MY_TEAM_API).flush(atlasAfter);
     });
   });
 });

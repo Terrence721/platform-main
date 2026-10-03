@@ -74,6 +74,16 @@ export interface UpdateTicketRequest {
   tags?: string[];
 }
 
+/**
+ * Gives an open ticket to an agent. A supervisor may give an unassigned
+ * ticket, or one held by an agent on their team, to an agent on their
+ * team; assigning a `new` ticket also opens it. Finished (resolved or
+ * closed) tickets cannot be assigned.
+ */
+export interface AssignTicketRequest {
+  assigneeId: string;
+}
+
 /** The fields a ticket list can be sorted by. */
 export const TICKET_SORT_FIELDS = [
   'ticketNumber',

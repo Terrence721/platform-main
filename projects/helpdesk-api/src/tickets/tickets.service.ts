@@ -3,11 +3,19 @@ import type {
   TicketDto,
   TicketStatus,
 } from '@helpdesk/contract';
-import { Inject, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { and, asc, desc, eq, gte, inArray, or, sql } from 'drizzle-orm';
 import { DATABASE, type Database } from '../database/database.module';
-import { tickets } from '../database/schema';
+import { teams, tickets, users } from '../database/schema';
 import { MOST_URGENT_FIRST, selectTickets, toTicketDto } from './ticket-dto';
+
+/** A ticket's id is a UUID; anything else names no ticket. */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * The statuses that still need someone's work. Resolved and closed tickets
@@ -99,5 +107,76 @@ export class TicketsService {
       }
     }
     return { summary, tickets: rows.map(toTicketDto) };
+  }
+
+  /**
+   * A supervisor gives an open ticket to an active agent on their team: an
+   * unassigned ticket, or one an agent on their team holds (reassigning).
+   * A `new` ticket becomes `open`. All checked in one transaction; 404 for
+   * a ticket or agent the supervisor cannot reach (the same answer as for
+   * none at all), 409 for a finished ticket. Answers with the ticket.
+   */
+  async assign(
+    ticketId: string,
+    assigneeId: string,
+    supervisorId: string
+  ): Promise<TicketDto> {
+    if (!UUID.test(ticketId)) {
+      throw new NotFoundException('No such ticket.');
+    }
+    await this.database.transaction(async (tx) => {
+      /** The user, if an active agent on this supervisor's team. */
+      const agentOnTeam = async (userId: string) =>
+        (
+          await tx
+            .select({ id: users.id })
+            .from(users)
+            .innerJoin(teams, eq(users.teamId, teams.id))
+            .where(
+              and(
+                eq(users.id, userId),
+                eq(users.role, 'agent'),
+                eq(users.active, true),
+                eq(teams.supervisorId, supervisorId)
+              )
+            )
+        ).length > 0;
+
+      const [ticket] = await tx
+        .select({ status: tickets.status, assigneeId: tickets.assigneeId })
+        .from(tickets)
+        .where(eq(tickets.id, ticketId))
+        // Held until the transaction ends, so two assignments cannot race.
+        .for('update');
+      if (ticket === undefined) {
+        throw new NotFoundException('No such ticket.');
+      }
+      if (!OPEN_WORK_STATUSES.includes(ticket.status)) {
+        throw new ConflictException(
+          "This ticket is finished, so it can't be assigned."
+        );
+      }
+      if (
+        ticket.assigneeId !== null &&
+        !(await agentOnTeam(ticket.assigneeId))
+      ) {
+        throw new NotFoundException('No such ticket on your team.');
+      }
+      if (!(await agentOnTeam(assigneeId))) {
+        throw new NotFoundException('No such agent on your team.');
+      }
+      await tx
+        .update(tickets)
+        .set({
+          assigneeId,
+          status: ticket.status === 'new' ? 'open' : ticket.status,
+        })
+        .where(eq(tickets.id, ticketId));
+    });
+
+    const [row] = await selectTickets(this.database).where(
+      eq(tickets.id, ticketId)
+    );
+    return toTicketDto(row);
   }
 }

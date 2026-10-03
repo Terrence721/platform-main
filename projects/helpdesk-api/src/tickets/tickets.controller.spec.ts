@@ -1,12 +1,17 @@
 import type { CurrentUser, Role, TicketDto } from '@helpdesk/contract';
-import { INestApplication } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  INestApplication,
+  NotFoundException,
+} from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import cookieParser from 'cookie-parser';
 import { AddressInfo } from 'net';
 import { SESSION_COOKIE } from '../auth/auth-config';
 import { AuthGuard } from '../auth/auth.guard';
 import { AuthService } from '../auth/auth.service';
-import { TicketsController } from './tickets.controller';
+import { readAssigneeId, TicketsController } from './tickets.controller';
 import { TicketsService } from './tickets.service';
 
 /** One user per role; each one's session token is their role's name. */
@@ -43,13 +48,34 @@ const overdue = {
   subject: 'Cannot sign in after the password reset',
 } as TicketDto;
 
+describe('readAssigneeId', () => {
+  it('reads the agent a body names', () => {
+    expect(readAssigneeId({ assigneeId: 'benny.lind' })).toBe('benny.lind');
+  });
+
+  it.each([
+    ['no body', null],
+    ['no agent', {}],
+    ['an agent that is not a user ID', { assigneeId: 'Benny Lind' }],
+    ['an agent that is not text', { assigneeId: 7 }],
+  ])('refuses %s with 400', (_, body) => {
+    expect(() => readAssigneeId(body)).toThrow(BadRequestException);
+    expect(() => readAssigneeId(body)).toThrow(
+      'Choose an agent to assign the ticket to.'
+    );
+  });
+});
+
 describe('/api/tickets', () => {
-  const tickets = { assignedTo: vi.fn(async () => [overdue]) };
+  const tickets = {
+    assignedTo: vi.fn(async () => [overdue]),
+    assign: vi.fn(async (): Promise<TicketDto> => overdue),
+  };
   let app: INestApplication;
   let base: string;
 
   beforeEach(async () => {
-    tickets.assignedTo.mockClear();
+    vi.clearAllMocks();
     const moduleRef = await Test.createTestingModule({
       controllers: [TicketsController],
       providers: [
@@ -102,5 +128,73 @@ describe('/api/tickets', () => {
         expect(tickets.assignedTo).not.toHaveBeenCalled();
       }
     );
+  });
+
+  describe('PUT :ticketId/assignee', () => {
+    /** PUT an Assign body for the overdue ticket, as `role` or signed out. */
+    const assign = (
+      role: Role | null,
+      body: unknown = { assigneeId: 'benny.lind' }
+    ) =>
+      fetch(`${base}/${overdue.id}/assignee`, {
+        method: 'PUT',
+        headers: {
+          'content-type': 'application/json',
+          ...(role === null ? {} : { cookie: `${SESSION_COOKIE}=${role}` }),
+        },
+        body: JSON.stringify(body),
+      });
+
+    it("assigns for a supervisor, on that supervisor's behalf", async () => {
+      const response = await assign('supervisor');
+
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual(overdue);
+      expect(tickets.assign).toHaveBeenCalledExactlyOnceWith(
+        overdue.id,
+        'benny.lind',
+        'chris.taylor'
+      );
+    });
+
+    it('answers a body with no agent with 400, assigning nothing', async () => {
+      const response = await assign('supervisor', {});
+
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual(
+        expect.objectContaining({
+          message: 'Choose an agent to assign the ticket to.',
+        })
+      );
+      expect(tickets.assign).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      [new NotFoundException('No such agent on your team.'), 404],
+      [
+        new ConflictException(
+          "This ticket is finished, so it can't be assigned."
+        ),
+        409,
+      ],
+    ])("passes on the service's %s", async (error, status) => {
+      tickets.assign.mockRejectedValueOnce(error);
+
+      const response = await assign('supervisor');
+
+      expect(response.status).toBe(status);
+      expect(await response.json()).toEqual(
+        expect.objectContaining({ message: error.message })
+      );
+    });
+
+    it.each([
+      ['an agent', 'agent', 403],
+      ['an admin', 'admin', 403],
+      ['a signed-out request', null, 401],
+    ] as const)('turns away %s, assigning nothing', async (_, role, status) => {
+      expect((await assign(role)).status).toBe(status);
+      expect(tickets.assign).not.toHaveBeenCalled();
+    });
   });
 });

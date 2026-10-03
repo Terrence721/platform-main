@@ -30,15 +30,14 @@ const TICKET_WORK: readonly Permission[] = [
 
 /**
  * What each role may do. Agents work tickets and take them; supervisors can
- * also assign them to anyone; admins can also manage the help desk and its
- * users.
+ * also assign them to the agents on their team; admins manage the help desk
+ * and its users, and leave assigning to the supervisors (#936).
  */
 export const ROLE_PERMISSIONS: Readonly<Record<Role, readonly Permission[]>> = {
   agent: TICKET_WORK,
   supervisor: [...TICKET_WORK, 'tickets:assign-others'],
   admin: [
     ...TICKET_WORK,
-    'tickets:assign-others',
     'admin:queues',
     'admin:customers',
     'admin:canned-replies',

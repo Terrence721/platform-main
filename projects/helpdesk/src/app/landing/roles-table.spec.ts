@@ -39,7 +39,7 @@ describe('RolesTable', () => {
         'Yes',
       ],
       ['Take a ticket', 'Yes', 'Yes', 'Yes'],
-      ['Assign or reassign to anyone', 'No', 'Yes', 'Yes'],
+      ["Assign or reassign within one's team", 'No', 'Yes', 'No'],
       ['Manage queues, customers and canned replies', 'No', 'No', 'Yes'],
       ["Manage the team's accounts", 'No', 'No', 'Yes'],
     ]);

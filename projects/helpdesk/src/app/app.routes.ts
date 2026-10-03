@@ -7,11 +7,13 @@ import { CapabilitiesDataService } from './landing/capabilities.data-service';
 import { CAPABILITY } from './landing/capability';
 import * as landingEffects from './landing/landing.effects';
 import { landingFeature } from './landing/landing.feature';
+import { canMatchRole } from './session/role.guard';
 
 /**
  * The app's top-level routes, each page lazy-loaded. The public landing page
- * is the first page; the sign-in page and the signed-in screens (tickets,
- * admin) add their entries as they are built. A page's state and effects are
+ * is the first page. Each role then has its own page, which only that role
+ * can open: anyone else is sent to their own page, or, signed out, to the
+ * landing page with the sign-in popup open. A page's state and effects are
  * registered on its route, so they exist only once it is visited.
  */
 export const routes: Routes = [
@@ -30,5 +32,23 @@ export const routes: Routes = [
       ),
     ],
     title: 'Helpdesk',
+  },
+  {
+    path: 'agent',
+    canMatch: [canMatchRole('agent')],
+    loadComponent: () => import('./agent/agent.page'),
+    title: 'My tickets · Helpdesk',
+  },
+  {
+    path: 'supervisor',
+    canMatch: [canMatchRole('supervisor')],
+    loadComponent: () => import('./supervisor/supervisor.page'),
+    title: 'My team · Helpdesk',
+  },
+  {
+    path: 'admin',
+    canMatch: [canMatchRole('admin')],
+    loadComponent: () => import('./admin/admin.page'),
+    title: 'Team accounts · Helpdesk',
   },
 ];

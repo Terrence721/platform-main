@@ -2,30 +2,52 @@ import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { TestBed } from '@angular/core/testing';
 import { MatButtonHarness } from '@angular/material/button/testing';
 import { provideRouter } from '@angular/router';
+import { CurrentUser } from '@helpdesk/contract';
 import { MockStore, provideMockStore } from '@ngrx/store/testing';
 import { AppComponent } from './app.component';
 import { PageSection, selectCurrentSection } from './router.selectors';
+import { ToolbarActions } from './session/session.actions';
+import { initialSessionState, SessionState } from './session/session.feature';
 import { SignInLauncher } from './sign-in/sign-in-launcher';
+
+const sam: CurrentUser = {
+  id: 'sam.rivera',
+  name: 'Sam Rivera',
+  role: 'agent',
+  teamId: 'atlas',
+};
 
 describe('AppComponent', () => {
   const launcher = { open: vi.fn() };
 
-  function render(current: PageSection | null = null) {
+  /**
+   * Renders the shell with the URL on `current`. The session defaults to
+   * signed out, with the start-up check done.
+   */
+  function render(
+    current: PageSection | null = null,
+    session: Partial<SessionState> = { checked: true }
+  ) {
     launcher.open.mockClear();
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
-        provideMockStore(),
+        provideMockStore({
+          initialState: { session: { ...initialSessionState, ...session } },
+        }),
         { provide: SignInLauncher, useValue: launcher },
       ],
     });
-    TestBed.inject(MockStore).overrideSelector(selectCurrentSection, current);
+    const store = TestBed.inject(MockStore);
+    store.overrideSelector(selectCurrentSection, current);
+    const dispatch = vi.spyOn(store, 'dispatch');
 
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
     return {
       shell: fixture.nativeElement as HTMLElement,
       loader: TestbedHarnessEnvironment.loader(fixture),
+      dispatch,
     };
   }
 
@@ -93,5 +115,57 @@ describe('AppComponent', () => {
 
   it('renders routed pages inside main', () => {
     expect(render().shell.querySelector('main router-outlet')).not.toBeNull();
+  });
+
+  it('offers neither Sign in nor Sign out until the start-up check answers', async () => {
+    const { shell, loader } = render(null, { checked: false });
+
+    expect(await loader.getAllHarnesses(MatButtonHarness)).toEqual([]);
+    expect(shell.querySelector('mat-toolbar nav')).toBeNull();
+    expect(shell.querySelector('.who')).toBeNull();
+  });
+
+  describe('signed in', () => {
+    const signedIn = () => render(null, { user: sam, checked: true });
+
+    it('shows who is signed in, and their role', () => {
+      const who = signedIn().shell.querySelector('.who');
+
+      expect(who?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+        'Sam Rivera · agent'
+      );
+      expect(getComputedStyle(who?.querySelector('.role') as Element)).toEqual(
+        expect.objectContaining({ textTransform: 'capitalize' })
+      );
+    });
+
+    it('offers Sign out instead of Sign in and the landing sections', async () => {
+      const { shell, loader } = signedIn();
+
+      const buttons = await loader.getAllHarnesses(MatButtonHarness);
+      expect(await Promise.all(buttons.map((b) => b.getText()))).toEqual([
+        'logout Sign out',
+      ]);
+      expect(await buttons[0].getAppearance()).toBe('outlined');
+      expect(shell.querySelector('mat-toolbar nav')).toBeNull();
+    });
+
+    it('signs out from the toolbar', async () => {
+      const { loader, dispatch } = signedIn();
+
+      await (
+        await loader.getHarness(MatButtonHarness.with({ text: /Sign out/ }))
+      ).click();
+
+      expect(dispatch).toHaveBeenCalledExactlyOnceWith(
+        ToolbarActions.signOutClicked()
+      );
+    });
+
+    it("links the logo to the user's own page", () => {
+      expect(
+        signedIn().shell.querySelector('a.brand')?.getAttribute('href')
+      ).toBe('/agent');
+    });
   });
 });

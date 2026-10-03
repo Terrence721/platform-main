@@ -197,9 +197,11 @@ describe('stackFor', () => {
     expect(stackFor('helpdesk', { app: 4200, api: 3000, db: 5435 })).toEqual([
       {
         name: 'database',
-        command: 'docker compose up -d --wait db && yarn db:migrate',
+        command:
+          'docker compose down --volumes db && docker compose up -d --wait db' +
+          ' && yarn db:migrate && yarn db:seed',
         env: {},
-        stopCommand: 'docker compose stop db',
+        stopCommand: 'docker compose down --volumes db',
         ports: [5435],
       },
       {
@@ -233,6 +235,19 @@ describe('stackFor', () => {
     expect(app.command).toBe('yarn nx serve helpdesk --port 4201');
   });
 
+  it('wipes and reseeds the database on every start, and deletes it on close', () => {
+    const [db] = stackFor('helpdesk', { app: 4200, api: 3000, db: 5435 });
+    const steps = db.command.split(' && ');
+
+    expect(steps).toEqual([
+      'docker compose down --volumes db',
+      'docker compose up -d --wait db',
+      'yarn db:migrate',
+      'yarn db:seed',
+    ]);
+    expect(db.stopCommand).toBe('docker compose down --volumes db');
+  });
+
   it('starts the database as a service: its command finishes once it is ready', () => {
     const [db, api, app] = stackFor('helpdesk', {
       app: 4200,
@@ -243,7 +258,7 @@ describe('stackFor', () => {
     // A service has a stop command and no URL to poll; the dev servers are
     // the other way round.
     expect([db.stopCommand, db.readyUrl]).toEqual([
-      'docker compose stop db',
+      'docker compose down --volumes db',
       undefined,
     ]);
     expect([api.stopCommand, app.stopCommand]).toEqual([undefined, undefined]);

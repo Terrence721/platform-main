@@ -1,6 +1,6 @@
 # The Helpdesk's database for local development. `yarn start:helpdesk`
-# starts it (`docker compose up -d --wait db`) and stops it when the app
-# window closes; `yarn db:reset` deletes its data for a clean slate.
+# starts it fresh on every run (migrated and seeded) and deletes it, data
+# and all, when the app window closes; `yarn db:reset` deletes it by hand.
 # Values come from .env (copy .env.example); the defaults below match it.
 name: helpdesk
 

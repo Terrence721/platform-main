@@ -59,10 +59,14 @@ export function stackFor(
   return [
     {
       name: 'database',
-      // Ready once healthy AND its tables are up to date.
-      command: 'docker compose up -d --wait db && yarn db:migrate',
+      // Every run starts from fresh seed data: wipe whatever an earlier run
+      // left, start, migrate, seed. Ready only once all of that is done.
+      command:
+        'docker compose down --volumes db && docker compose up -d --wait db' +
+        ' && yarn db:migrate && yarn db:seed',
       env: {},
-      stopCommand: 'docker compose stop db',
+      // Closing the app deletes the data with the container.
+      stopCommand: 'docker compose down --volumes db',
       ports: [ports.db],
     },
     {

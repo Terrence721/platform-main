@@ -1,6 +1,14 @@
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { existsSync } from 'fs';
 import { AppModule } from './app/app.module';
+
+// .env (copied from .env.example) sets DATABASE_URL and the like. Read from
+// the repo root, where `nx serve` and `yarn start:helpdesk` run the API;
+// values already in the environment win.
+if (existsSync('.env')) {
+  process.loadEnvFile('.env');
+}
 
 /** Every route sits under /api, e.g. GET /api/health. */
 const GLOBAL_PREFIX = 'api';

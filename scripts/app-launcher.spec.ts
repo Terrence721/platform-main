@@ -4,6 +4,7 @@ import {
   browserArgs,
   browserCandidates,
   DEBUGGER_PORT,
+  DEFAULT_DB_PORT,
   findBrowser,
   findFreePort,
   FIRST_API_PORT,
@@ -100,7 +101,7 @@ describe('browserCandidates / findBrowser', () => {
 });
 
 describe('browserArgs', () => {
-  it('opens the app in its own window with a separate profile and no extensions', () => {
+  it('opens the app in its own window with a separate profile, no extensions and no automatic sign-in', () => {
     expect(browserArgs('http://localhost:4201/', 'C:\\tmp\\profile')).toEqual([
       '--app=http://localhost:4201/',
       '--user-data-dir=C:\\tmp\\profile',
@@ -108,6 +109,7 @@ describe('browserArgs', () => {
       '--no-default-browser-check',
       '--disable-background-mode',
       '--disable-extensions',
+      '--disable-features=msImplicitSignin',
     ]);
   });
 });
@@ -172,9 +174,34 @@ describe('isPortFree, against a server on every address', () => {
   });
 });
 
+describe('isPortFree, against a server on 127.0.0.1 only', () => {
+  // How Docker publishes a database on 127.0.0.1 (e.g. another project's
+  // Postgres): Node resolves "localhost" to ::1 first, so only a check on
+  // 127.0.0.1 itself sees it.
+  it('reports the port as taken while that server runs', async () => {
+    const server = createServer();
+    await new Promise<void>((resolve) =>
+      server.listen(0, '127.0.0.1', resolve)
+    );
+    const { port } = server.address() as AddressInfo;
+
+    expect(await isPortFree(port)).toBe(false);
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    expect(await isPortFree(port)).toBe(true);
+  });
+});
+
 describe('stackFor', () => {
-  it('runs the Helpdesk API first, then the app that forwards /api to it', () => {
-    expect(stackFor('helpdesk', { app: 4200, api: 3000 })).toEqual([
+  it('runs the database, then the API, then the app that forwards /api to it', () => {
+    expect(stackFor('helpdesk', { app: 4200, api: 3000, db: 5435 })).toEqual([
+      {
+        name: 'database',
+        command: 'docker compose up -d --wait db',
+        env: {},
+        stopCommand: 'docker compose stop db',
+        ports: [5435],
+      },
       {
         name: 'helpdesk-api',
         command: 'yarn nx serve helpdesk-api',
@@ -193,16 +220,38 @@ describe('stackFor', () => {
   });
 
   it('passes on the ports it was given, not the defaults', () => {
-    const [api, app] = stackFor('helpdesk', { app: 4201, api: 3002 });
+    const [db, api, app] = stackFor('helpdesk', {
+      app: 4201,
+      api: 3002,
+      db: 5433,
+    });
 
+    expect(db.ports).toEqual([5433]);
     expect(api.env).toEqual({ PORT: '3002' });
     expect(api.ports).toEqual([3002, DEBUGGER_PORT]);
     expect(app.env).toEqual({ HELPDESK_API_PORT: '3002' });
     expect(app.command).toBe('yarn nx serve helpdesk --port 4201');
   });
 
+  it('starts the database as a service: its command finishes once it is ready', () => {
+    const [db, api, app] = stackFor('helpdesk', {
+      app: 4200,
+      api: 3000,
+      db: DEFAULT_DB_PORT,
+    });
+
+    // A service has a stop command and no URL to poll; the dev servers are
+    // the other way round.
+    expect([db.stopCommand, db.readyUrl]).toEqual([
+      'docker compose stop db',
+      undefined,
+    ]);
+    expect([api.stopCommand, app.stopCommand]).toEqual([undefined, undefined]);
+    expect(DEFAULT_DB_PORT).toBe(5435);
+  });
+
   it('runs any other app on its own', () => {
-    expect(stackFor('other-app', { app: 4200, api: 3000 })).toEqual([
+    expect(stackFor('other-app', { app: 4200, api: 3000, db: 5435 })).toEqual([
       {
         name: 'other-app',
         command: 'yarn nx serve other-app --port 4200',

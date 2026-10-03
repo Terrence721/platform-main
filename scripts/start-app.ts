@@ -1,10 +1,11 @@
 import { ChildProcess, spawn, spawnSync } from 'child_process';
-import { mkdtempSync, rmSync } from 'fs';
+import { existsSync, mkdtempSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import {
   browserArgs,
   browserCandidates,
+  DEFAULT_DB_PORT,
   findBrowser,
   findFreePort,
   FIRST_API_PORT,
@@ -31,6 +32,13 @@ if (!/^[a-z0-9-]+$/.test(app)) {
 }
 
 const repoRoot = join(__dirname, '..');
+
+// .env (copied from .env.example) can change the database's port; Docker
+// Compose reads the same file, so both agree.
+const envFile = join(repoRoot, '.env');
+if (existsSync(envFile)) {
+  process.loadEnvFile(envFile);
+}
 
 async function isUp(url: string): Promise<boolean> {
   try {
@@ -67,19 +75,51 @@ async function main(): Promise<void> {
 
   const appPort = await findFreePort(FIRST_PORT);
   const apiPort = await findFreePort(FIRST_API_PORT);
-  const stack = stackFor(app, { app: appPort, api: apiPort });
-  // Only ports free now are checked afterwards: one held by something else
-  // (e.g. a debugger from another project on 9229) is not ours to wait for.
+  const dbPort = Number(process.env['HELPDESK_DB_PORT'] ?? DEFAULT_DB_PORT);
+  const stack = stackFor(app, { app: appPort, api: apiPort, db: dbPort });
+
+  // The database's port must be free, unless this project's own database
+  // was left running (then `docker compose up` just keeps it). Otherwise
+  // Docker fails with "port is already allocated", which says nothing
+  // about what to do.
+  const hasDatabase = stack.some((server) => server.stopCommand !== undefined);
+  const ownDatabaseRunning =
+    hasDatabase &&
+    (
+      spawnSync('docker compose ps --status running --services', {
+        cwd: repoRoot,
+        shell: true,
+        encoding: 'utf8',
+      }).stdout ?? ''
+    )
+      .split(/\r?\n/)
+      .includes('db');
+  if (hasDatabase && !ownDatabaseRunning && !(await isPortFree(dbPort))) {
+    throw new Error(
+      `Port ${dbPort} is in use, so the Helpdesk database cannot start. ` +
+        'Stop what uses it, or set HELPDESK_DB_PORT in .env (see .env.example).'
+    );
+  }
+
+  // Only ports free now (or held by our own database) are checked
+  // afterwards: one held by something else (e.g. a debugger from another
+  // project on 9229) is not ours to wait for.
   const ours: number[] = [];
   for (const port of stack.flatMap((server) => server.ports)) {
-    if (await isPortFree(port)) {
+    if ((ownDatabaseRunning && port === dbPort) || (await isPortFree(port))) {
       ours.push(port);
     }
   }
 
+  // The window opens on the last server's page: the app.
   const url = stack[stack.length - 1].readyUrl;
+  if (url === undefined) {
+    throw new Error(`${app} has no page to open.`);
+  }
   const profileDir = mkdtempSync(join(tmpdir(), `${app}-window-`));
   const running: ChildProcess[] = [];
+  // Services (the database) started so far, stopped by their stopCommand.
+  const services: StackServer[] = [];
   // Set once every server answers; shutdown() can run before that.
   let browser: ChildProcess | undefined = undefined;
   let stopping = false;
@@ -94,9 +134,19 @@ async function main(): Promise<void> {
     const removed = await removeWhenFree(profileDir, (dir) =>
       rmSync(dir, { recursive: true, force: true })
     );
-    // The app first, then what it depends on.
+    // The app first, then what it depends on; the database last.
     for (const child of [...running].reverse()) {
       stopTree(child);
+    }
+    for (const service of [...services].reverse()) {
+      if (service.stopCommand !== undefined) {
+        console.log(`Stopping ${service.name}.`);
+        spawnSync(service.stopCommand, {
+          cwd: repoRoot,
+          stdio: 'inherit',
+          shell: true,
+        });
+      }
     }
     if (!removed) {
       console.warn(`Could not delete the window's profile: ${profileDir}`);
@@ -135,7 +185,39 @@ async function main(): Promise<void> {
     return child;
   };
 
+  // A service's command starts it and finishes once it is ready (for the
+  // database, `docker compose up --wait` waits for its health check).
+  const runToEnd = (server: StackServer): Promise<number> =>
+    new Promise((resolve) => {
+      const child = spawn(server.command, {
+        cwd: repoRoot,
+        env: { ...process.env, ...server.env },
+        stdio: 'inherit',
+        shell: true,
+      });
+      child.once('error', () => resolve(1));
+      child.once('exit', (code) => resolve(code ?? 1));
+    });
+
   for (const server of stack) {
+    if (server.readyUrl === undefined) {
+      console.log(`Starting ${server.name}.`);
+      // Listed before it starts, so a half-started service is stopped too.
+      services.push(server);
+      const code = await runToEnd(server);
+      if (stopping) {
+        return;
+      }
+      if (code !== 0) {
+        await shutdown(
+          `${server.name} did not start (exit code ${code}; is Docker Desktop running?)`,
+          1
+        );
+        return;
+      }
+      continue;
+    }
+
     console.log(`Starting ${server.name}: ${server.readyUrl}`);
     start(server);
     try {

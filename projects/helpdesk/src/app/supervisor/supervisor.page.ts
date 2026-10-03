@@ -2,25 +2,38 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   inject,
   Injector,
+  untracked,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
-import type { PersonSummary } from '@helpdesk/contract';
+import {
+  formatTicketNumber,
+  type PersonSummary,
+  type TicketDto,
+  type TicketStatus,
+} from '@helpdesk/contract';
 import { Store } from '@ngrx/store';
 import { sessionFeature } from '../session/session.feature';
 import { TicketTable } from '../tickets/ticket-table';
+import type { AssignTicketData } from './assign-ticket.dialog';
 import { MyTeamStore } from './my-team.store';
+
+/** The statuses that still need work, and so can be assigned. */
+const OPEN_WORK: readonly TicketStatus[] = ['new', 'open', 'pending'];
 
 /**
  * A supervisor's own page: My team, their agents' workload, one agent's
  * tickets at a time (chosen from the Team member list; assigned tickets
- * show nowhere else), plus the unassigned work nobody holds yet. Only
- * supervisors get here (the route's `canMatchRole('supervisor')`). The
- * page provides `MyTeamStore`, which loads the team when the page opens.
+ * show nowhere else), plus the unassigned work nobody holds yet. The
+ * supervisor assigns unassigned tickets and reassigns a member's open ones
+ * through "Assign to…". Only supervisors get here (the route's
+ * `canMatchRole('supervisor')`). The page provides `MyTeamStore`, which
+ * loads the team when the page opens.
  */
 @Component({
   selector: 'hd-supervisor-page',
@@ -114,6 +127,9 @@ import { MyTeamStore } from './my-team.store';
                     <hd-ticket-table
                       class="member"
                       [tickets]="store.memberTickets()"
+                      actionLabel="Reassign"
+                      [canAct]="isOpenWork"
+                      (action)="openAssign($event)"
                     />
                   }
                 }
@@ -124,7 +140,12 @@ import { MyTeamStore } from './my-team.store';
             @if (team.unassigned.length === 0) {
               <p class="message">Nothing is waiting to be picked up.</p>
             } @else {
-              <hd-ticket-table class="unassigned" [tickets]="team.unassigned" />
+              <hd-ticket-table
+                class="unassigned"
+                [tickets]="team.unassigned"
+                actionLabel="Assign"
+                (action)="openAssign($event)"
+              />
             }
           }
         }
@@ -202,6 +223,74 @@ export default class SupervisorPage {
       data: { id, name },
       width: '60rem',
       maxWidth: 'calc(100vw - 2rem)',
+    });
+  }
+
+  /** Whether a ticket still needs work, so it can be (re)assigned. */
+  protected readonly isOpenWork = (ticket: TicketDto): boolean =>
+    OPEN_WORK.includes(ticket.status);
+
+  /**
+   * Opens "Assign to…" for a ticket, with the team's agents and their
+   * load; if one is chosen, the store assigns it. The popup's code is
+   * loaded on the first click.
+   */
+  protected async openAssign(ticket: TicketDto): Promise<void> {
+    const team = this.store.team();
+    if (team === null) {
+      return;
+    }
+    const [{ MatDialog }, { AssignTicketDialog }] = await Promise.all([
+      import('@angular/material/dialog'),
+      import('./assign-ticket.dialog'),
+    ]);
+    const data: AssignTicketData = {
+      ticketNumber: ticket.ticketNumber,
+      subject: ticket.subject,
+      currentAssigneeId: ticket.assignee?.id ?? null,
+      members: team.members,
+    };
+    this.injector
+      .get(MatDialog)
+      .open(AssignTicketDialog, {
+        data,
+        width: '28rem',
+        maxWidth: 'calc(100vw - 2rem)',
+      })
+      .afterClosed()
+      // The chosen agent's user ID; nothing when cancelled.
+      .subscribe((agentId: unknown) => {
+        if (typeof agentId === 'string') {
+          this.store.assign({ ticketId: ticket.id, agentId });
+        }
+      });
+  }
+
+  /**
+   * Says how an assignment went, in a snack bar: who has the ticket now,
+   * or why it was refused. The snack bar's code is loaded when first
+   * needed.
+   */
+  private async report(message: string): Promise<void> {
+    const { MatSnackBar } = await import('@angular/material/snack-bar');
+    this.injector.get(MatSnackBar).open(message, undefined, {
+      duration: 5000,
+    });
+  }
+
+  constructor() {
+    effect(() => {
+      const state = this.store.assignState();
+      untracked(() => {
+        const ticket = this.store.lastAssigned();
+        if (state === 'assigned' && ticket?.assignee) {
+          void this.report(
+            `${formatTicketNumber(ticket.ticketNumber)} assigned to ${ticket.assignee.name}`
+          );
+        } else if (state === 'failed') {
+          void this.report(this.store.assignError() ?? '');
+        }
+      });
     });
   }
 }

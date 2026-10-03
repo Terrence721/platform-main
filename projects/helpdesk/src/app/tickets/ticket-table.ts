@@ -4,8 +4,10 @@ import {
   computed,
   effect,
   input,
+  output,
   viewChild,
 } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
@@ -32,6 +34,8 @@ type Column = (typeof COLUMNS)[number];
 
 /** A ticket as a row: what each cell shows, and what each column sorts by. */
 interface TicketRow {
+  /** The ticket itself, for the row's action. */
+  ticket: TicketDto;
   ticketNumber: string;
   subject: string;
   customer: string;
@@ -48,11 +52,13 @@ interface TicketRow {
  * each click sorts by that column, then reverses, then returns to the
  * order given. Priority and status sort in their workflow order, not
  * alphabetically; Due sorts by due time, no SLA last. Time left is as of
- * when the tickets arrive.
+ * when the tickets arrive. Given an `actionLabel` (such as "Assign"), each
+ * row that `canAct` allows ends with a button that emits its ticket
+ * through `action`.
  */
 @Component({
   selector: 'hd-ticket-table',
-  imports: [MatChipsModule, MatSortModule, MatTableModule],
+  imports: [MatButtonModule, MatChipsModule, MatSortModule, MatTableModule],
   template: `
     <table mat-table [dataSource]="dataSource" matSort>
       <ng-container matColumnDef="ticketNumber">
@@ -92,8 +98,25 @@ interface TicketRow {
           {{ row.sla.text }}
         </td>
       </ng-container>
-      <tr mat-header-row *matHeaderRowDef="columns"></tr>
-      <tr mat-row *matRowDef="let row; columns: columns"></tr>
+      <ng-container matColumnDef="action">
+        <th mat-header-cell *matHeaderCellDef>
+          <span class="cdk-visually-hidden">Actions</span>
+        </th>
+        <td mat-cell *matCellDef="let row">
+          @if (canAct()(row.ticket)) {
+            <button
+              matButton
+              type="button"
+              [attr.aria-label]="actionLabel() + ' ' + row.ticketNumber"
+              (click)="action.emit(row.ticket)"
+            >
+              {{ actionLabel() }}
+            </button>
+          }
+        </td>
+      </ng-container>
+      <tr mat-header-row *matHeaderRowDef="columns()"></tr>
+      <tr mat-row *matRowDef="let row; columns: columns()"></tr>
     </table>
   `,
   styles: `
@@ -116,11 +139,20 @@ interface TicketRow {
 export class TicketTable {
   /** The tickets to show, in this order. */
   readonly tickets = input.required<TicketDto[]>();
+  /** The text of each row's action button; no button without one. */
+  readonly actionLabel = input<string | null>(null);
+  /** Which rows get the action button; every row unless given. */
+  readonly canAct = input<(ticket: TicketDto) => boolean>(() => true);
+  /** The ticket whose action button was clicked. */
+  readonly action = output<TicketDto>();
 
-  protected readonly columns = COLUMNS;
+  protected readonly columns = computed(() =>
+    this.actionLabel() === null ? [...COLUMNS] : [...COLUMNS, 'action']
+  );
   private readonly rows = computed(() => {
     const now = new Date();
     return this.tickets().map((ticket): TicketRow => ({
+      ticket,
       ticketNumber: formatTicketNumber(ticket.ticketNumber),
       subject: ticket.subject,
       customer: ticket.requester.name,

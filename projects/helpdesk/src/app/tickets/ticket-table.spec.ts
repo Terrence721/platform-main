@@ -40,12 +40,25 @@ describe('TicketTable', () => {
 
   afterEach(() => vi.useRealTimers());
 
-  function render(tickets: TicketDto[]) {
+  function render(tickets: TicketDto[], actionLabel: string | null = null) {
     const fixture = TestBed.createComponent(TicketTable);
     fixture.componentRef.setInput('tickets', tickets);
+    fixture.componentRef.setInput('actionLabel', actionLabel);
+    const actioned: TicketDto[] = [];
+    fixture.componentInstance.action.subscribe((chosen) =>
+      actioned.push(chosen)
+    );
     fixture.detectChanges();
     const table = fixture.nativeElement as HTMLElement;
     return {
+      /** The tickets whose action button was clicked, in order. */
+      actioned,
+      /** The rows' action buttons. */
+      actionButtons: () => [
+        ...table.querySelectorAll<HTMLButtonElement>(
+          'td.mat-column-action button'
+        ),
+      ],
       headers: () =>
         [...table.querySelectorAll('th')].map((cell) =>
           cell.textContent?.trim()
@@ -143,6 +156,77 @@ describe('TicketTable', () => {
       true,
       false,
     ]);
+  });
+
+  describe('row action', () => {
+    it('has no action column without a label', () => {
+      const { headers, actionButtons } = render([ticket(1001, null)]);
+
+      expect(actionButtons()).toEqual([]);
+      expect(headers()).toHaveLength(6);
+    });
+
+    it('ends each row with a button, named for its ticket', () => {
+      const { actionButtons } = render(
+        [ticket(1312, null), ticket(1045, null)],
+        'Assign'
+      );
+
+      expect(
+        actionButtons().map((button) => [
+          button.textContent?.trim(),
+          button.getAttribute('aria-label'),
+        ])
+      ).toEqual([
+        ['Assign', 'Assign #1312'],
+        ['Assign', 'Assign #1045'],
+      ]);
+    });
+
+    it('gives a button only to the rows canAct allows', () => {
+      const fixture = TestBed.createComponent(TicketTable);
+      fixture.componentRef.setInput('tickets', [
+        ticket(1001, null),
+        ticket(1002, null, { status: 'closed' }),
+      ]);
+      fixture.componentRef.setInput('actionLabel', 'Reassign');
+      fixture.componentRef.setInput(
+        'canAct',
+        (candidate: TicketDto) => candidate.status !== 'closed'
+      );
+      fixture.detectChanges();
+
+      expect(
+        [
+          ...(fixture.nativeElement as HTMLElement).querySelectorAll(
+            'td.mat-column-action'
+          ),
+        ].map((cell) => cell.querySelector('button')?.textContent?.trim())
+      ).toEqual(['Reassign', undefined]);
+    });
+
+    it("emits the row's ticket when its button is clicked", () => {
+      const tickets = [ticket(1312, null), ticket(1045, null)];
+      const { actionButtons, actioned } = render(tickets, 'Reassign');
+
+      actionButtons()[1].click();
+
+      expect(actioned).toEqual([tickets[1]]);
+    });
+
+    it('emits the right ticket after sorting moves the rows', async () => {
+      const tickets = [ticket(1003, null), ticket(1001, null)];
+      const { actionButtons, actioned, clickHeader } = render(
+        tickets,
+        'Assign'
+      );
+
+      await clickHeader('#');
+      actionButtons()[0].click();
+
+      // #1001 now leads.
+      expect(actioned).toEqual([tickets[1]]);
+    });
   });
 
   describe('sorting', () => {

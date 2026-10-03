@@ -64,7 +64,8 @@ describe('isRole', () => {
 });
 
 describe('role permissions', () => {
-  // The agreed table (#866), written out independently of the implementation.
+  // The agreed table (#866, admins' assigning removed in #936), written out
+  // independently of the implementation.
   const granted: Record<Role, readonly Permission[]> = {
     agent: [
       'tickets:read',
@@ -79,7 +80,9 @@ describe('role permissions', () => {
       'tickets:assign-self',
       'tickets:assign-others',
     ],
-    admin: [...PERMISSIONS],
+    admin: PERMISSIONS.filter(
+      (permission) => permission !== 'tickets:assign-others'
+    ),
   };
 
   it.each(
@@ -92,13 +95,18 @@ describe('role permissions', () => {
     );
   });
 
-  it('gives each role everything the role below it has', () => {
-    for (let i = 1; i < ROLES.length; i++) {
-      const below = ROLE_PERMISSIONS[ROLES[i - 1]];
-      expect(ROLE_PERMISSIONS[ROLES[i]]).toEqual(
-        expect.arrayContaining([...below])
+  it("gives supervisors and admins all of an agent's ticket work", () => {
+    for (const role of ['supervisor', 'admin'] as const) {
+      expect(ROLE_PERMISSIONS[role]).toEqual(
+        expect.arrayContaining([...ROLE_PERMISSIONS.agent])
       );
     }
+  });
+
+  it('lets only supervisors assign tickets to others', () => {
+    expect(
+      ROLES.filter((role) => hasPermission(role, 'tickets:assign-others'))
+    ).toEqual(['supervisor']);
   });
 
   it.each(ROLES)('lists no permission twice for %s', (role) => {

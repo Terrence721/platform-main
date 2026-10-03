@@ -8,11 +8,14 @@ import { TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldHarness } from '@angular/material/form-field/testing';
 import { MatSelectHarness } from '@angular/material/select/testing';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import type { CurrentUser, TeamOverview, TicketDto } from '@helpdesk/contract';
 import { provideMockStore } from '@ngrx/store/testing';
+import { of } from 'rxjs';
 import { initialSessionState } from '../session/session.feature';
+import { AssignTicketDialog } from './assign-ticket.dialog';
 import { MemberHistoryDialog } from './member-history.dialog';
-import { memberTicketsApi, MY_TEAM_API } from './my-team.store';
+import { assigneeApi, memberTicketsApi, MY_TEAM_API } from './my-team.store';
 import SupervisorPage from './supervisor.page';
 
 const chris: CurrentUser = {
@@ -54,13 +57,20 @@ const atlas: TeamOverview = {
 };
 
 describe('SupervisorPage', () => {
-  /** Stands in for Material's dialog service, to see what is opened. */
-  const dialog = { open: vi.fn() };
+  /** What a popup closes with: the chosen agent, or nothing. */
+  let closedWith: string | undefined;
+  /** Stand-ins for Material's dialog and snack bar, to see what they do. */
+  const dialog = {
+    open: vi.fn(() => ({ afterClosed: () => of(closedWith) })),
+  };
+  const snackBar = { open: vi.fn() };
 
   afterEach(() => TestBed.inject(HttpTestingController).verify());
 
   function render() {
+    closedWith = undefined;
     dialog.open.mockClear();
+    snackBar.open.mockClear();
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
@@ -71,6 +81,7 @@ describe('SupervisorPage', () => {
           },
         }),
         { provide: MatDialog, useValue: dialog },
+        { provide: MatSnackBar, useValue: snackBar },
       ],
     });
     const fixture = TestBed.createComponent(SupervisorPage);
@@ -341,5 +352,137 @@ describe('SupervisorPage', () => {
     detectChanges();
     expect(page.querySelector('mat-spinner')).not.toBeNull();
     http.expectOne(MY_TEAM_API).flush(atlas);
+  });
+
+  describe('assigning', () => {
+    /** A ticket Benny holds, with this status. */
+    const heldByBenny = (
+      ticketNumber: number,
+      status: TicketDto['status']
+    ) => ({
+      ...ticket(ticketNumber),
+      status,
+      assignee: { id: 'benny.lind', name: 'Benny Lind' },
+    });
+
+    /** The action buttons in the ticket table with this class. */
+    const actionButtons = (page: HTMLElement, table: string) => [
+      ...page.querySelectorAll<HTMLButtonElement>(
+        `hd-ticket-table.${table} td.mat-column-action button`
+      ),
+    ];
+
+    it('offers Assign on every unassigned ticket', () => {
+      const { answer, page } = render();
+      answer(atlas);
+
+      expect(
+        actionButtons(page, 'unassigned').map((button) =>
+          button.getAttribute('aria-label')
+        )
+      ).toEqual(['Assign #1009', 'Assign #1008']);
+    });
+
+    it("offers Reassign only on a member's open tickets", async () => {
+      const { answer, chooseMember, http, page, detectChanges } = render();
+      answer(atlas);
+      await chooseMember('Benny Lind (5 open · 3 overdue)');
+      http
+        .expectOne(memberTicketsApi('benny.lind'))
+        .flush([heldByBenny(1312, 'open'), heldByBenny(1290, 'closed')]);
+      detectChanges();
+
+      expect(
+        actionButtons(page, 'member').map((button) =>
+          button.getAttribute('aria-label')
+        )
+      ).toEqual(['Reassign #1312']);
+    });
+
+    it('opens "Assign to…" with the ticket and the team\'s agents', async () => {
+      const { answer, page } = render();
+      answer(atlas);
+
+      actionButtons(page, 'unassigned')[0].click();
+
+      await vi.waitFor(() => expect(dialog.open).toHaveBeenCalledOnce());
+      expect(dialog.open).toHaveBeenCalledWith(
+        AssignTicketDialog,
+        expect.objectContaining({
+          data: {
+            ticketNumber: 1009,
+            subject: 'Subject 1009',
+            currentAssigneeId: null,
+            members: atlas.members,
+          },
+        })
+      );
+    });
+
+    it('assigns to the chosen agent, then says so', async () => {
+      const { answer, page, http } = render();
+      answer(atlas);
+      closedWith = 'ida.idle';
+
+      actionButtons(page, 'unassigned')[0].click();
+
+      await vi
+        .waitFor(() =>
+          http.expectOne({ method: 'PUT', url: assigneeApi('ticket-1009') })
+        )
+        .then((call) =>
+          call.flush({
+            ...ticket(1009),
+            assignee: { id: 'ida.idle', name: 'Ida Idle' },
+          })
+        );
+      http.expectOne(MY_TEAM_API).flush(atlas);
+
+      await vi.waitFor(() =>
+        expect(snackBar.open).toHaveBeenCalledWith(
+          '#1009 assigned to Ida Idle',
+          undefined,
+          expect.objectContaining({ duration: 5000 })
+        )
+      );
+    });
+
+    it('says why an assignment was refused', async () => {
+      const { answer, page, http } = render();
+      answer(atlas);
+      closedWith = 'ida.idle';
+
+      actionButtons(page, 'unassigned')[0].click();
+
+      await vi
+        .waitFor(() =>
+          http.expectOne({ method: 'PUT', url: assigneeApi('ticket-1009') })
+        )
+        .then((call) =>
+          call.flush(
+            { message: 'No such agent on your team.' },
+            { status: 404, statusText: 'Not Found' }
+          )
+        );
+
+      await vi.waitFor(() =>
+        expect(snackBar.open).toHaveBeenCalledWith(
+          'No such agent on your team.',
+          undefined,
+          expect.objectContaining({ duration: 5000 })
+        )
+      );
+    });
+
+    it('assigns nothing when the popup is cancelled', async () => {
+      const { answer, page } = render();
+      answer(atlas);
+
+      actionButtons(page, 'unassigned')[0].click();
+
+      await vi.waitFor(() => expect(dialog.open).toHaveBeenCalledOnce());
+      // afterEach's verify() fails on any request left unanswered.
+      expect(snackBar.open).not.toHaveBeenCalled();
+    });
   });
 });

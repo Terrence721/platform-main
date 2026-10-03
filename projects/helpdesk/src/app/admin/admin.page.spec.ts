@@ -4,10 +4,14 @@ import {
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { MatDialog } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import type { CurrentUser, UserAccount } from '@helpdesk/contract';
 import { provideMockStore } from '@ngrx/store/testing';
+import { of } from 'rxjs';
 import { initialSessionState } from '../session/session.feature';
 import AdminPage, { groupByTeam } from './admin.page';
+import { CreateAccountDialog } from './create-account.dialog';
 import { TEAM_ACCOUNTS_API } from './team-accounts.store';
 
 const alex: CurrentUser = {
@@ -27,6 +31,7 @@ const ACCOUNTS: UserAccount[] = [
     name: 'Alex Morgan',
     role: 'admin',
     team: null,
+    leadsTeam: false,
     active: true,
   },
   {
@@ -34,6 +39,7 @@ const ACCOUNTS: UserAccount[] = [
     name: 'Chris Taylor',
     role: 'supervisor',
     team: atlas,
+    leadsTeam: true,
     active: true,
   },
   {
@@ -41,6 +47,7 @@ const ACCOUNTS: UserAccount[] = [
     name: 'Dee Parted',
     role: 'agent',
     team: beacon,
+    leadsTeam: false,
     active: false,
   },
   {
@@ -48,6 +55,7 @@ const ACCOUNTS: UserAccount[] = [
     name: 'Sam Rivera',
     role: 'agent',
     team: atlas,
+    leadsTeam: false,
     active: true,
   },
 ];
@@ -79,9 +87,19 @@ describe('groupByTeam', () => {
 });
 
 describe('AdminPage', () => {
+  /** What the Create Account popup closes with: a user ID, or nothing. */
+  let closedWith: string | undefined;
+  /** Stand-ins for Material's dialog and snack bar, to see what they do. */
+  const dialog = {
+    open: vi.fn(() => ({ afterClosed: () => of(closedWith) })),
+  };
+  const snackBar = { open: vi.fn() };
+
   afterEach(() => TestBed.inject(HttpTestingController).verify());
 
   function render() {
+    closedWith = undefined;
+    vi.clearAllMocks();
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
@@ -91,6 +109,8 @@ describe('AdminPage', () => {
             session: { ...initialSessionState, user: alex, checked: true },
           },
         }),
+        { provide: MatDialog, useValue: dialog },
+        { provide: MatSnackBar, useValue: snackBar },
       ],
     });
     const fixture = TestBed.createComponent(AdminPage);
@@ -184,5 +204,75 @@ describe('AdminPage', () => {
     detectChanges();
     expect(page.querySelector('mat-spinner')).not.toBeNull();
     http.expectOne(TEAM_ACCOUNTS_API).flush(ACCOUNTS);
+  });
+
+  describe('Create Account', () => {
+    it('offers Create Account beside the summary and at the bottom', () => {
+      const { page, answer } = render();
+      answer(ACCOUNTS);
+
+      expect(
+        page.querySelector('.summary-row button')?.textContent?.trim()
+      ).toContain('Create Account');
+      expect(
+        page.querySelector('.bottom-actions button')?.textContent?.trim()
+      ).toContain('Create Account');
+      // At the bottom: after the last team's table.
+      const tables = page.querySelectorAll('hd-accounts-table');
+      expect(
+        tables[tables.length - 1].compareDocumentPosition(
+          page.querySelector('.bottom-actions') as Node
+        ) & Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy();
+    });
+
+    it.each(['.summary-row', '.bottom-actions'])(
+      'opens the popup from %s with the teams and who leads each',
+      async (where) => {
+        const { page, answer } = render();
+        answer(ACCOUNTS);
+
+        page.querySelector<HTMLButtonElement>(`${where} button`)?.click();
+
+        // The popup's code loads on the first click.
+        await vi.waitFor(() => expect(dialog.open).toHaveBeenCalledOnce());
+        expect(dialog.open).toHaveBeenCalledWith(
+          CreateAccountDialog,
+          expect.objectContaining({
+            data: {
+              teams: [
+                { id: 'atlas', name: 'Atlas', leadName: 'Chris Taylor' },
+                { id: 'beacon', name: 'Beacon', leadName: null },
+              ],
+            },
+          })
+        );
+      }
+    );
+
+    it('confirms a created account in a snack bar', async () => {
+      const { page, answer } = render();
+      answer(ACCOUNTS);
+      closedWith = 'nia.new';
+
+      page.querySelector<HTMLButtonElement>('.summary-row button')?.click();
+
+      await vi.waitFor(() => expect(snackBar.open).toHaveBeenCalledOnce());
+      expect(snackBar.open).toHaveBeenCalledWith(
+        'Account nia.new created',
+        undefined,
+        expect.objectContaining({ duration: 5000 })
+      );
+    });
+
+    it('says nothing when the popup is cancelled', async () => {
+      const { page, answer } = render();
+      answer(ACCOUNTS);
+
+      page.querySelector<HTMLButtonElement>('.summary-row button')?.click();
+
+      await vi.waitFor(() => expect(dialog.open).toHaveBeenCalledOnce());
+      expect(snackBar.open).not.toHaveBeenCalled();
+    });
   });
 });

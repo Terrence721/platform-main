@@ -13,6 +13,7 @@ const ACCOUNTS: UserAccount[] = [
     name: 'Benny Lind',
     role: 'agent',
     team: atlas,
+    leadsTeam: false,
     active: true,
   },
   {
@@ -20,6 +21,7 @@ const ACCOUNTS: UserAccount[] = [
     name: 'Chris Taylor',
     role: 'supervisor',
     team: atlas,
+    leadsTeam: true,
     active: true,
   },
   {
@@ -27,6 +29,7 @@ const ACCOUNTS: UserAccount[] = [
     name: 'Dee Parted',
     role: 'agent',
     team: atlas,
+    leadsTeam: false,
     active: false,
   },
   {
@@ -34,6 +37,7 @@ const ACCOUNTS: UserAccount[] = [
     name: 'Sam Rivera',
     role: 'agent',
     team: atlas,
+    leadsTeam: false,
     active: true,
   },
 ];
@@ -46,10 +50,11 @@ describe('AccountsTable', () => {
     const table = fixture.nativeElement as HTMLElement;
     return {
       table,
+      /** Each row's cells, as text, with runs of spaces as one. */
       rows: () =>
         [...table.querySelectorAll('tr.mat-mdc-row')].map((row) =>
           [...row.querySelectorAll('td')].map((cell) =>
-            cell.textContent?.trim()
+            cell.textContent?.replace(/\s+/g, ' ').trim()
           )
         ),
       /** The user IDs shown, top to bottom. */
@@ -80,7 +85,7 @@ describe('AccountsTable', () => {
   it('shows the accounts in the order given', () => {
     expect(render().rows()).toEqual([
       ['benny.lind', 'Benny Lind', 'agent', 'Active'],
-      ['chris.taylor', 'Chris Taylor', 'supervisor', 'Active'],
+      ['chris.taylor', 'Chris Taylor', 'supervisor · lead', 'Active'],
       ['dee.parted', 'Dee Parted', 'agent', 'Inactive'],
       ['sam.rivera', 'Sam Rivera', 'agent', 'Active'],
     ]);
@@ -96,6 +101,21 @@ describe('AccountsTable', () => {
       'role agent',
       'role agent',
     ]);
+  });
+
+  it("marks the team's lead, and not a supervisor who was replaced", () => {
+    const replaced: UserAccount = {
+      ...ACCOUNTS[1],
+      id: 'old.lead',
+      name: 'Old Lead',
+      leadsTeam: false,
+    };
+    const pills = [
+      ...render([ACCOUNTS[1], replaced]).table.querySelectorAll('span.role'),
+    ].map((pill) => pill.textContent?.replace(/\s+/g, ' ').trim());
+
+    // Shown capitalized by the styles: "Supervisor · Lead", "Supervisor".
+    expect(pills).toEqual(['supervisor · lead', 'supervisor']);
   });
 
   it('marks inactive accounts', () => {

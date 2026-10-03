@@ -74,9 +74,15 @@ const modules: Record<string, { testTimeout?: number }> = {
  * The apps and libraries under projects/ are Vitest projects too, named after
  * their Nx projects and taking overrides the same way.
  */
-const projectsFolder: Record<string, { testTimeout?: number }> = {
+const projectsFolder: Record<
+  string,
+  { testTimeout?: number; environment?: 'node' | 'jsdom' }
+> = {
   helpdesk: {},
   'helpdesk-contract': {},
+  // A server: its tests run in Node, not the simulated browser (jsdom) the
+  // Angular projects use.
+  'helpdesk-api': { environment: 'node' },
 };
 
 /** Every project under modules/ and projects/, with the folder it is rooted at. */

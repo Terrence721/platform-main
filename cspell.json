@@ -12,7 +12,8 @@
     "yarn.lock",
     "**/*.js",
     "**/*.js.map",
-    "**/*.min.js"
+    "**/*.min.js",
+    "projects/helpdesk-api/drizzle/**"
   ],
   "words": [
     "AAQBAJ",

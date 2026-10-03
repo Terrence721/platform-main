@@ -197,7 +197,7 @@ describe('stackFor', () => {
     expect(stackFor('helpdesk', { app: 4200, api: 3000, db: 5435 })).toEqual([
       {
         name: 'database',
-        command: 'docker compose up -d --wait db',
+        command: 'docker compose up -d --wait db && yarn db:migrate',
         env: {},
         stopCommand: 'docker compose stop db',
         ports: [5435],

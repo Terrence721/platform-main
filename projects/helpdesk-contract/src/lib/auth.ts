@@ -1,3 +1,5 @@
+import type { Role } from './roles';
+
 /**
  * How a user ID looks: 3 to 32 characters, lowercase letters, digits, dots
  * and hyphens, starting with a letter, such as `sam.rivera` or `agent-sam`.
@@ -18,6 +20,30 @@ export interface SignInRequest {
   userId: string;
   password: string;
 }
+
+/** The signed-in user, as the API describes them to the app. */
+export interface CurrentUser {
+  /** The sign-in user ID, e.g. `sam.rivera`. */
+  id: string;
+  name: string;
+  role: Role;
+  /** The user's team; `null` for admins, who belong to none. */
+  teamId: string | null;
+}
+
+/**
+ * What a successful sign-in returns. The session itself travels in an
+ * httpOnly cookie the browser keeps, never in the response body.
+ */
+export interface SignInResponse {
+  user: CurrentUser;
+}
+
+/** The one answer for any failed sign-in, so user IDs cannot be guessed. */
+export const SIGN_IN_FAILED_MESSAGE = 'User ID or password is incorrect.';
+
+/** How long a sign-in lasts: one support shift. */
+export const SESSION_HOURS = 8;
 
 /** Whether a value, such as a form field, is a well-formed user ID. */
 export function isUserId(value: unknown): value is string {

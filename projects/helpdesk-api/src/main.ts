@@ -1,5 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import cookieParser from 'cookie-parser';
 import { existsSync } from 'fs';
 import { AppModule } from './app/app.module';
 
@@ -18,6 +19,8 @@ const DEFAULT_PORT = 3000;
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix(GLOBAL_PREFIX);
+  // Reads the session cookie into request.cookies for AuthGuard.
+  app.use(cookieParser());
 
   const port = Number(process.env['PORT'] ?? DEFAULT_PORT);
   await app.listen(port);

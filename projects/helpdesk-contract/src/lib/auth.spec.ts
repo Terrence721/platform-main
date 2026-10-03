@@ -1,10 +1,15 @@
 import {
+  CurrentUser,
   isUserId,
   PASSWORD_MAX_LENGTH,
   PASSWORD_MIN_LENGTH,
+  SESSION_HOURS,
+  SIGN_IN_FAILED_MESSAGE,
   SignInRequest,
+  SignInResponse,
   USER_ID_MAX_LENGTH,
 } from './auth';
+import type { Role } from './roles';
 
 describe('user IDs', () => {
   it.each(['sam.rivera', 'agent-sam', 'ada', 'k.johnson2'])(
@@ -53,5 +58,38 @@ describe('SignInRequest', () => {
       userId: string;
       password: string;
     }>();
+  });
+});
+
+describe('the signed-in user', () => {
+  it('is described by user ID, name, role and team (none for admins)', () => {
+    expectTypeOf<CurrentUser>().toEqualTypeOf<{
+      id: string;
+      name: string;
+      role: Role;
+      teamId: string | null;
+    }>();
+  });
+
+  it('comes back from a sign-in, without the session itself', () => {
+    expectTypeOf<SignInResponse>().toEqualTypeOf<{ user: CurrentUser }>();
+  });
+});
+
+describe('a failed sign-in', () => {
+  it('says the same thing whatever went wrong', () => {
+    expect(SIGN_IN_FAILED_MESSAGE).toBe('User ID or password is incorrect.');
+  });
+
+  it('never tells which part was wrong, so user IDs cannot be guessed', () => {
+    expect(SIGN_IN_FAILED_MESSAGE).not.toMatch(
+      /not found|does not exist|unknown|wrong password|inactive/i
+    );
+  });
+});
+
+describe('a sign-in session', () => {
+  it('lasts one support shift', () => {
+    expect(SESSION_HOURS).toBe(8);
   });
 });

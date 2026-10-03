@@ -1,14 +1,54 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+} from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import type { UserAccount } from '@helpdesk/contract';
 import { Store } from '@ngrx/store';
 import { sessionFeature } from '../session/session.feature';
+import { AccountsTable } from './accounts-table';
+import { TeamAccountsStore } from './team-accounts.store';
+
+/** One team's accounts. */
+export interface AccountGroup {
+  id: string;
+  name: string;
+  accounts: UserAccount[];
+}
 
 /**
- * An admin's own page: everyone's Helpdesk accounts. Only admins get here
- * (the route's `canMatchRole('admin')`). The accounts come with the API's
- * users endpoint; until then the page says where they will be.
+ * Groups accounts by team, teams by name. Each group keeps the accounts'
+ * order (by name). Accounts with no team (admins) are left out: this page
+ * is about the teams.
+ */
+export function groupByTeam(accounts: UserAccount[]): AccountGroup[] {
+  const groups = new Map<string, AccountGroup>();
+  for (const { team, ...rest } of accounts) {
+    if (team === null) {
+      continue;
+    }
+    const group = groups.get(team.id) ?? { ...team, accounts: [] };
+    group.accounts.push({ team, ...rest });
+    groups.set(team.id, group);
+  }
+  return [...groups.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * An admin's own page: Team accounts, each team's people in a sortable
+ * table of its own, team leads (supervisors) in green and members (agents)
+ * in blue. Admins belong to no team, so none is shown. Only admins get here (the route's
+ * `canMatchRole('admin')`). The page provides `TeamAccountsStore`, which
+ * loads the accounts when the page opens. Read only; adding and changing
+ * accounts comes later (#905).
  */
 @Component({
   selector: 'hd-admin-page',
+  imports: [MatButtonModule, MatProgressSpinnerModule, AccountsTable],
+  providers: [TeamAccountsStore],
   template: `
     <section class="column" aria-labelledby="admin-title">
       <p class="eyebrow">Admin</p>
@@ -16,9 +56,35 @@ import { sessionFeature } from '../session/session.feature';
       @if (user(); as user) {
         <p class="greeting">Signed in as {{ user.name }}</p>
       }
-      <p class="placeholder">
-        Everyone's Helpdesk accounts, with their roles and teams, show here.
-      </p>
+      @switch (store.loadState()) {
+        @case ('loading') {
+          <mat-spinner diameter="40" aria-label="Loading the accounts" />
+        }
+        @case ('failed') {
+          <p class="message" role="alert">
+            The accounts couldn't be loaded.
+            <button matButton type="button" (click)="store.load()">
+              Try again
+            </button>
+          </p>
+        }
+        @default {
+          <p class="summary">
+            {{ teamAccountCount() }} accounts in {{ groups().length }} teams
+          </p>
+          @for (group of groups(); track group.id) {
+            <section class="team" [attr.aria-label]="group.name">
+              <h2>
+                {{ group.name }}
+                <span class="count"
+                  >· {{ group.accounts.length }} accounts</span
+                >
+              </h2>
+              <hd-accounts-table [accounts]="group.accounts" />
+            </section>
+          }
+        }
+      }
     </section>
   `,
   styles: `
@@ -28,7 +94,6 @@ import { sessionFeature } from '../session/session.feature';
       margin-inline: auto;
       padding: 2.5rem 1rem;
     }
-
     .eyebrow {
       margin: 0;
       font: var(--mat-sys-label-large);
@@ -36,31 +101,41 @@ import { sessionFeature } from '../session/session.feature';
       text-transform: uppercase;
       color: var(--mat-sys-primary);
     }
-
     h1 {
       margin: 0.5rem 0 0;
       font: var(--mat-sys-headline-large);
     }
-
+    h2 {
+      margin: 2.5rem 0 0.75rem;
+      font: var(--mat-sys-title-large);
+    }
     .greeting {
-      margin: 0.5rem 0 0;
+      margin: 0.5rem 0 1rem;
       font: var(--mat-sys-body-large);
       color: var(--mat-sys-on-surface-variant);
     }
-
-    .placeholder {
-      margin: 2rem 0 0;
-      padding: 1.5rem;
-      border: 1px dashed var(--mat-sys-outline-variant);
-      border-radius: 0.75rem;
-      font: var(--mat-sys-body-medium);
+    .message,
+    .summary,
+    .count {
       color: var(--mat-sys-on-surface-variant);
+    }
+    .count {
+      font: var(--mat-sys-body-large);
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export default class AdminPage {
+  protected readonly store = inject(TeamAccountsStore);
   protected readonly user = inject(Store).selectSignal(
     sessionFeature.selectUser
+  );
+  /** The accounts on teams, one group per team. */
+  protected readonly groups = computed(() =>
+    groupByTeam(this.store.entities())
+  );
+  /** How many accounts the teams hold between them. */
+  protected readonly teamAccountCount = computed(() =>
+    this.groups().reduce((total, group) => total + group.accounts.length, 0)
   );
 }

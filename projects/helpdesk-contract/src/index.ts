@@ -4,6 +4,7 @@
  * priorities, roles, signing in, then the API's request and response types)
  * is exported from here as it is added.
  */
+export * from './lib/account';
 export * from './lib/auth';
 export * from './lib/page';
 export * from './lib/roles';

@@ -15,11 +15,19 @@ import {
 import { provideEntityData, withEffects } from '@ngrx/data';
 import { provideEffects } from '@ngrx/effects';
 import { provideRouterStore, routerReducer } from '@ngrx/router-store';
-import { provideStore } from '@ngrx/store';
+import { provideState, provideStore } from '@ngrx/store';
 import { provideStoreDevtools } from '@ngrx/store-devtools';
 import * as appEffects from './app.effects';
 import { routes } from './app.routes';
 import { CAPABILITY } from './landing/capability';
+import {
+  goHomeAfterSignIn,
+  leaveAfterSignOut,
+  restoreSession,
+  signIn,
+  signOut,
+} from './session/session.effects';
+import { sessionFeature } from './session/session.feature';
 import { hidePasswords } from './sign-in/hide-passwords';
 
 export const appConfig: ApplicationConfig = {
@@ -47,7 +55,15 @@ export const appConfig: ApplicationConfig = {
     }),
     provideStore({ router: routerReducer }),
     provideRouterStore(),
-    provideEffects(appEffects),
+    // Who is signed in: checked with the API on start-up, then kept here.
+    provideState(sessionFeature),
+    provideEffects(appEffects, {
+      restoreSession,
+      signIn,
+      goHomeAfterSignIn,
+      signOut,
+      leaveAfterSignOut,
+    }),
     // @ngrx/data's entity cache, for data the app only lists and edits
     // (the landing page's capabilities now; admin data once there is some).
     provideEntityData({ entityMetadata: { [CAPABILITY]: {} } }, withEffects()),

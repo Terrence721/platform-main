@@ -4,19 +4,39 @@ import { MatButtonHarness } from '@angular/material/button/testing';
 import { MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldHarness } from '@angular/material/form-field/testing';
 import { MatInputHarness } from '@angular/material/input/testing';
+import { CurrentUser, SIGN_IN_FAILED_MESSAGE } from '@helpdesk/contract';
+import { provideMockActions } from '@ngrx/effects/testing';
+import { Action } from '@ngrx/store';
 import { MockStore, provideMockStore } from '@ngrx/store/testing';
+import { Subject } from 'rxjs';
+import { SessionApiActions } from '../session/session.actions';
+import { initialSessionState, SessionState } from '../session/session.feature';
 import { SignInDialog } from './sign-in-dialog';
 import { SignInDialogActions } from './sign-in.actions';
 
+const sam: CurrentUser = {
+  id: 'sam.rivera',
+  name: 'Sam Rivera',
+  role: 'agent',
+  teamId: 'atlas',
+};
+
 describe('SignInDialog', () => {
-  async function render() {
+  /** Renders the popup over this session state (signed out, by default). */
+  async function render(session: Partial<SessionState> = {}) {
+    const actions$ = new Subject<Action>();
+    const close = vi.fn();
     TestBed.configureTestingModule({
       providers: [
-        provideMockStore(),
-        { provide: MatDialogRef, useValue: { close: vi.fn() } },
+        provideMockStore({
+          initialState: { session: { ...initialSessionState, ...session } },
+        }),
+        provideMockActions(() => actions$),
+        { provide: MatDialogRef, useValue: { close } },
       ],
     });
-    const dispatch = vi.spyOn(TestBed.inject(MockStore), 'dispatch');
+    const store = TestBed.inject(MockStore);
+    const dispatch = vi.spyOn(store, 'dispatch');
     const fixture = TestBed.createComponent(SignInDialog);
     fixture.detectChanges();
     const loader = TestbedHarnessEnvironment.loader(fixture);
@@ -34,6 +54,15 @@ describe('SignInDialog', () => {
     return {
       dialog,
       dispatch,
+      actions$,
+      close,
+      /** What the session reducer would make of the API's answer. */
+      setSession: (changes: Partial<SessionState>) => {
+        store.setState({ session: { ...initialSessionState, ...changes } });
+        fixture.detectChanges();
+      },
+      /** The error box under the form, if any. */
+      errorBox: () => dialog.querySelector('.error'),
       userId: await input('User ID'),
       password: await input('Password'),
       errors: async (label: string) => (await field(label)).getTextErrors(),
@@ -100,8 +129,9 @@ describe('SignInDialog', () => {
     expect(dispatch).not.toHaveBeenCalled();
   });
 
-  it('sends the user ID and password, then says sign-in is not available yet', async () => {
-    const { dialog, userId, password, signIn, dispatch } = await render();
+  it('sends the user ID and password once, and waits for the answer', async () => {
+    const { userId, password, signIn, dispatch, button, errorBox } =
+      await render();
 
     await userId.setValue('sam.rivera');
     await password.setValue('correct horse battery');
@@ -112,11 +142,42 @@ describe('SignInDialog', () => {
         request: { userId: 'sam.rivera', password: 'correct horse battery' },
       })
     );
-    const notice = dialog.querySelector('.notice');
-    expect(notice?.getAttribute('role')).toBe('status');
-    expect(notice?.textContent?.trim()).toBe(
-      'Signing in becomes available once the Helpdesk API is running.'
-    );
+    expect(await (await button('Sign in')).isDisabled()).toBe(true);
+    expect(errorBox()).toBeNull();
+  });
+
+  it('shows why signing in failed, and lets the user try again', async () => {
+    const { userId, password, signIn, button, errorBox, setSession } =
+      await render();
+    await userId.setValue('sam.rivera');
+    await password.setValue('wrong password');
+    await signIn();
+
+    setSession({ checked: true, signInError: SIGN_IN_FAILED_MESSAGE });
+
+    expect(errorBox()?.getAttribute('role')).toBe('alert');
+    expect(errorBox()?.textContent?.trim()).toBe(SIGN_IN_FAILED_MESSAGE);
+    expect(await (await button('Sign in')).isDisabled()).toBe(false);
+  });
+
+  it('does not show a failure from before it opened', async () => {
+    const { errorBox, button } = await render({
+      checked: true,
+      signInError: SIGN_IN_FAILED_MESSAGE,
+    });
+
+    expect(errorBox()).toBeNull();
+    expect(await (await button('Sign in')).isDisabled()).toBe(false);
+  });
+
+  it('closes once signed in', async () => {
+    const { actions$, close } = await render();
+
+    actions$.next(SessionApiActions.signInFailed({ message: 'no' }));
+    expect(close).not.toHaveBeenCalled();
+
+    actions$.next(SessionApiActions.signedIn({ user: sam }));
+    expect(close).toHaveBeenCalledOnce();
   });
 
   it('shows and hides the password', async () => {

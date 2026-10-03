@@ -6,11 +6,16 @@ import { RouterLink, RouterOutlet } from '@angular/router';
 import { LetDirective } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { PAGE_SECTIONS, selectCurrentSection } from './router.selectors';
+import { ToolbarActions } from './session/session.actions';
+import { sessionFeature } from './session/session.feature';
 import { SignInLauncher } from './sign-in/sign-in-launcher';
 
 /**
  * The app shell: the toolbar and the routed page below it. Pages lay out
- * their own content, so the shell adds no padding around them.
+ * their own content, so the shell adds no padding around them. Signed out,
+ * the toolbar offers the landing page's sections and Sign in; signed in, it
+ * shows who is signed in and Sign out. Until the start-up session check
+ * answers, it shows neither, so a reload does not flash Sign in.
  */
 @Component({
   selector: 'hd-root',
@@ -25,7 +30,11 @@ import { SignInLauncher } from './sign-in/sign-in-launcher';
   template: `
     <mat-toolbar>
       <div class="bar">
-        <a class="brand" routerLink="/" aria-label="Helpdesk home">
+        <a
+          class="brand"
+          [routerLink]="homePage() ?? '/'"
+          aria-label="Helpdesk home"
+        >
           <svg viewBox="0 0 32 32" aria-hidden="true">
             <path class="band" d="M4.5 17a11.5 11.5 0 0 1 23 0" />
             <rect x="2.5" y="14" width="7" height="11" rx="2.5" />
@@ -35,26 +44,40 @@ import { SignInLauncher } from './sign-in/sign-in-launcher';
           </svg>
           Helpdesk
         </a>
-        <nav aria-label="Page" *ngrxLet="currentSection$ as current">
-          @for (section of sections; track section.fragment) {
-            <a
-              class="section-link"
-              matButton
-              routerLink="/"
-              [fragment]="section.fragment"
-              [class.current]="section.fragment === current"
-              [attr.aria-current]="
-                section.fragment === current ? 'location' : null
-              "
-            >
-              {{ section.label }}
-            </a>
+        @if (session().checked) {
+          @if (session().user; as user) {
+            <div class="account">
+              <span class="who">
+                {{ user.name }} · <span class="role">{{ user.role }}</span>
+              </span>
+              <button matButton="outlined" type="button" (click)="signOut()">
+                <mat-icon>logout</mat-icon>
+                Sign out
+              </button>
+            </div>
+          } @else {
+            <nav aria-label="Page" *ngrxLet="currentSection$ as current">
+              @for (section of sections; track section.fragment) {
+                <a
+                  class="section-link"
+                  matButton
+                  routerLink="/"
+                  [fragment]="section.fragment"
+                  [class.current]="section.fragment === current"
+                  [attr.aria-current]="
+                    section.fragment === current ? 'location' : null
+                  "
+                >
+                  {{ section.label }}
+                </a>
+              }
+              <button matButton="filled" type="button" (click)="signIn.open()">
+                <mat-icon>login</mat-icon>
+                Sign in
+              </button>
+            </nav>
           }
-          <button matButton="filled" type="button" (click)="signIn.open()">
-            <mat-icon>login</mat-icon>
-            Sign in
-          </button>
-        </nav>
+        }
       </div>
     </mat-toolbar>
 
@@ -123,6 +146,21 @@ import { SignInLauncher } from './sign-in/sign-in-launcher';
       gap: 0.25rem;
     }
 
+    .account {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .who {
+      font: var(--mat-sys-body-medium);
+      color: var(--mat-sys-on-surface-variant);
+    }
+
+    .role {
+      text-transform: capitalize;
+    }
+
     .current {
       background: var(--mat-sys-secondary-container);
       --mat-button-text-label-text-color: var(--mat-sys-on-secondary-container);
@@ -138,9 +176,21 @@ import { SignInLauncher } from './sign-in/sign-in-launcher';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppComponent {
+  private readonly store = inject(Store);
   protected readonly signIn = inject(SignInLauncher);
   protected readonly sections = PAGE_SECTIONS;
   /** The landing section the URL points at, from the router state. */
-  protected readonly currentSection$ =
-    inject(Store).select(selectCurrentSection);
+  protected readonly currentSection$ = this.store.select(selectCurrentSection);
+  /** Who is signed in, and whether the start-up check has answered. */
+  protected readonly session = this.store.selectSignal(
+    sessionFeature.selectSessionState
+  );
+  /** The signed-in user's own page, where the logo leads. */
+  protected readonly homePage = this.store.selectSignal(
+    sessionFeature.selectHomePage
+  );
+
+  protected signOut(): void {
+    this.store.dispatch(ToolbarActions.signOutClicked());
+  }
 }

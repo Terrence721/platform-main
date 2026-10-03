@@ -1,12 +1,20 @@
 import { TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
+import { provideMockActions } from '@ngrx/effects/testing';
 import { provideMockStore } from '@ngrx/store/testing';
+import { EMPTY } from 'rxjs';
+import { initialSessionState } from '../session/session.feature';
 import { SignInDialog } from './sign-in-dialog';
 import { SignInLauncher } from './sign-in-launcher';
 
 describe('SignInLauncher', () => {
   function setUp() {
-    TestBed.configureTestingModule({ providers: [provideMockStore()] });
+    TestBed.configureTestingModule({
+      providers: [
+        provideMockStore({ initialState: { session: initialSessionState } }),
+        provideMockActions(() => EMPTY),
+      ],
+    });
     return {
       launcher: TestBed.inject(SignInLauncher),
       dialog: TestBed.inject(MatDialog),

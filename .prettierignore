@@ -10,3 +10,6 @@ yarn.lock
 /.nx/workspace-data
 
 .nx/self-healing
+
+# Migrations drizzle-kit generates and rewrites (yarn db:generate)
+/projects/helpdesk-api/drizzle

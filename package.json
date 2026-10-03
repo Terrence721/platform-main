@@ -16,6 +16,8 @@
     "check:versions": "npx tsx scripts/check-version-ranges.ts",
     "start:helpdesk": "npx tsx scripts/start-app.ts helpdesk",
     "db:reset": "docker compose down --volumes db",
+    "db:generate": "drizzle-kit generate --config projects/helpdesk-api/drizzle.config.ts",
+    "db:migrate": "drizzle-kit migrate --config projects/helpdesk-api/drizzle.config.ts",
     "prettier": "prettier --write \"**/*.ts\"",
     "schematics:check": "git diff --name-only --exit-code ./modules",
     "nx": "nx",

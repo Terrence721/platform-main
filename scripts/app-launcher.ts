@@ -59,7 +59,8 @@ export function stackFor(
   return [
     {
       name: 'database',
-      command: 'docker compose up -d --wait db',
+      // Ready once healthy AND its tables are up to date.
+      command: 'docker compose up -d --wait db && yarn db:migrate',
       env: {},
       stopCommand: 'docker compose stop db',
       ports: [ports.db],

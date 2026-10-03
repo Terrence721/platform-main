@@ -92,6 +92,13 @@
         "targetName": "lint"
       },
       "exclude": ["modules/*/migrations/**"]
+    },
+    {
+      "plugin": "@nx/webpack/plugin",
+      "include": ["projects/helpdesk-api/**"],
+      "options": {
+        "buildTargetName": "build"
+      }
     }
   ]
 }

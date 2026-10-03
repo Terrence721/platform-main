@@ -79,7 +79,7 @@ async function main(): Promise<void> {
   const stack = stackFor(app, { app: appPort, api: apiPort, db: dbPort });
 
   // The database's port must be free, unless this project's own database
-  // was left running (then `docker compose up` just keeps it). Otherwise
+  // was left running (the start wipes and recreates it anyway). Otherwise
   // Docker fails with "port is already allocated", which says nothing
   // about what to do.
   const hasDatabase = stack.some((server) => server.stopCommand !== undefined);

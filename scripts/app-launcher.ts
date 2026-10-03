@@ -4,14 +4,72 @@ import { createServer } from 'net';
 /** The port the Angular dev server uses by default; the search starts here. */
 export const FIRST_PORT = 4200;
 
-/** Whether nothing is listening on a port of this machine. */
-export function isPortFree(port: number): Promise<boolean> {
+/** The Helpdesk API's default port (main.ts); its search starts here. */
+export const FIRST_API_PORT = 3000;
+
+/** Node's debugger port, which `nx serve helpdesk-api` opens as well. */
+export const DEBUGGER_PORT = 9229;
+
+/** One process `yarn start:<app>` runs, and how to tell it is ready. */
+export interface StackServer {
+  name: string;
+  command: string;
+  /** Added to the environment the command runs in. */
+  env: Record<string, string>;
+  /** Answers once the server is ready. */
+  readyUrl: string;
+  /** Every port the server holds, all free again once it has stopped. */
+  ports: number[];
+}
+
+/**
+ * The servers `yarn start:<app>` runs, in start order. The Helpdesk runs its
+ * API first, then the app, whose dev server forwards /api to it (see
+ * projects/helpdesk/proxy.conf.mjs); any other app runs on its own.
+ */
+export function stackFor(
+  app: string,
+  ports: { app: number; api: number }
+): StackServer[] {
+  const appServer: StackServer = {
+    name: app,
+    command: `yarn nx serve ${app} --port ${ports.app}`,
+    env: app === 'helpdesk' ? { HELPDESK_API_PORT: String(ports.api) } : {},
+    readyUrl: `http://localhost:${ports.app}/`,
+    ports: [ports.app],
+  };
+  if (app !== 'helpdesk') {
+    return [appServer];
+  }
+  return [
+    {
+      name: 'helpdesk-api',
+      command: 'yarn nx serve helpdesk-api',
+      env: { PORT: String(ports.api) },
+      readyUrl: `http://localhost:${ports.api}/api/health`,
+      ports: [ports.api, DEBUGGER_PORT],
+    },
+    appServer,
+  ];
+}
+
+/** Whether a server could listen on a port, on one host or on all of them. */
+function canListen(port: number, host?: string): Promise<boolean> {
   return new Promise((resolve) => {
     const server = createServer();
     server.once('error', () => resolve(false));
     server.once('listening', () => server.close(() => resolve(true)));
-    server.listen(port, 'localhost');
+    server.listen(port, host);
   });
+}
+
+/**
+ * Whether nothing is listening on a port of this machine. Both checks are
+ * needed: a server on all addresses (like the Helpdesk API) does not stop a
+ * new listener on localhost on Windows, and the reverse also happens.
+ */
+export async function isPortFree(port: number): Promise<boolean> {
+  return (await canListen(port, 'localhost')) && (await canListen(port));
 }
 
 /**
@@ -128,6 +186,32 @@ export async function removeWhenFree(
     }
   }
   return false;
+}
+
+/**
+ * Waits until every port is free again, checking every `intervalMs` for up
+ * to `timeoutMs`. Returns the ports still in use then (none, normally), so
+ * the caller can say exactly what is left running.
+ */
+export async function waitForPortsFree(
+  ports: number[],
+  isFree: (port: number) => Promise<boolean> = isPortFree,
+  timeoutMs = 15_000,
+  intervalMs = 500
+): Promise<number[]> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const busy: number[] = [];
+    for (const port of ports) {
+      if (!(await isFree(port))) {
+        busy.push(port);
+      }
+    }
+    if (busy.length === 0 || Date.now() >= deadline) {
+      return busy;
+    }
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
 }
 
 /**

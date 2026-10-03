@@ -3,12 +3,16 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   browserArgs,
   browserCandidates,
+  DEBUGGER_PORT,
   findBrowser,
   findFreePort,
+  FIRST_API_PORT,
   FIRST_PORT,
   isPortFree,
   removeWhenFree,
+  stackFor,
   stopTreeCommand,
+  waitForPortsFree,
   waitForServer,
 } from './app-launcher';
 
@@ -150,6 +154,107 @@ describe('removeWhenFree', () => {
 
     expect(await result).toBe(false);
     expect(remove).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe('isPortFree, against a server on every address', () => {
+  // The Helpdesk API listens on all addresses, not just localhost; its port
+  // must still count as taken, or the launcher would report it free early.
+  it('reports the port as taken while that server runs', async () => {
+    const server = createServer();
+    await new Promise<void>((resolve) => server.listen(0, resolve));
+    const { port } = server.address() as AddressInfo;
+
+    expect(await isPortFree(port)).toBe(false);
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    expect(await isPortFree(port)).toBe(true);
+  });
+});
+
+describe('stackFor', () => {
+  it('runs the Helpdesk API first, then the app that forwards /api to it', () => {
+    expect(stackFor('helpdesk', { app: 4200, api: 3000 })).toEqual([
+      {
+        name: 'helpdesk-api',
+        command: 'yarn nx serve helpdesk-api',
+        env: { PORT: '3000' },
+        readyUrl: 'http://localhost:3000/api/health',
+        ports: [3000, DEBUGGER_PORT],
+      },
+      {
+        name: 'helpdesk',
+        command: 'yarn nx serve helpdesk --port 4200',
+        env: { HELPDESK_API_PORT: '3000' },
+        readyUrl: 'http://localhost:4200/',
+        ports: [4200],
+      },
+    ]);
+  });
+
+  it('passes on the ports it was given, not the defaults', () => {
+    const [api, app] = stackFor('helpdesk', { app: 4201, api: 3002 });
+
+    expect(api.env).toEqual({ PORT: '3002' });
+    expect(api.ports).toEqual([3002, DEBUGGER_PORT]);
+    expect(app.env).toEqual({ HELPDESK_API_PORT: '3002' });
+    expect(app.command).toBe('yarn nx serve helpdesk --port 4201');
+  });
+
+  it('runs any other app on its own', () => {
+    expect(stackFor('other-app', { app: 4200, api: 3000 })).toEqual([
+      {
+        name: 'other-app',
+        command: 'yarn nx serve other-app --port 4200',
+        env: {},
+        readyUrl: 'http://localhost:4200/',
+        ports: [4200],
+      },
+    ]);
+  });
+
+  it('starts the API port search at its default', () => {
+    expect(FIRST_API_PORT).toBe(3000);
+  });
+});
+
+describe('waitForPortsFree', () => {
+  it('returns no ports once every one is free', async () => {
+    vi.useFakeTimers();
+    // 3000 is still held for the first two checks, then released.
+    let apiChecks = 0;
+    const result = waitForPortsFree([4200, 3000], async (port) =>
+      port === 3000 ? ++apiChecks > 2 : true
+    );
+    await vi.advanceTimersByTimeAsync(2_000);
+
+    await expect(result).resolves.toEqual([]);
+    expect(apiChecks).toBe(3);
+  });
+
+  it('checks every port each round', async () => {
+    const isFree = vi.fn(async () => true);
+
+    await waitForPortsFree([4200, 3000, DEBUGGER_PORT], isFree);
+
+    expect(isFree.mock.calls.map(([port]) => port)).toEqual([
+      4200,
+      3000,
+      DEBUGGER_PORT,
+    ]);
+  });
+
+  it('returns the ports still in use when time runs out', async () => {
+    vi.useFakeTimers();
+    const result = waitForPortsFree(
+      [4200, 3000, DEBUGGER_PORT],
+      async (port) => port === 4200,
+      5_000,
+      500
+    );
+    await vi.advanceTimersByTimeAsync(6_000);
+
+    await expect(result).resolves.toEqual([3000, DEBUGGER_PORT]);
   });
 });
 

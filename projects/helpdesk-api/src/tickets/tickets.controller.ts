@@ -6,6 +6,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  ForbiddenException,
   Get,
   Param,
   Put,
@@ -43,18 +44,38 @@ export class TicketsController {
   }
 
   /**
-   * A supervisor gives a ticket to an agent on their team, or moves it
-   * from one to another: 200 with the ticket; 400 for a body without an
-   * agent; 404 for a ticket or agent not on their team; 409 for a
-   * finished ticket. Only supervisors.
+   * Every unassigned open ticket, most urgent first: the agent page's
+   * Unassigned, work an agent may take. Only agents.
+   */
+  @Get('unassigned')
+  @OnlyFor('agent')
+  unassigned(): Promise<TicketDto[]> {
+    return this.tickets.unassigned();
+  }
+
+  /**
+   * Gives a ticket to an agent: 200 with the ticket; 400 for a body
+   * without an agent. A supervisor gives it to an agent on their team, or
+   * moves it from one to another (404 for a ticket or agent not on their
+   * team). An agent takes an unassigned ticket for themselves only (403 for
+   * anyone else; 409 if someone has taken it). 409 for a finished ticket.
    */
   @Put(':ticketId/assignee')
-  @OnlyFor('supervisor')
+  @OnlyFor('supervisor', 'agent')
   assign(
     @SignedInUser() user: CurrentUser,
     @Param('ticketId') ticketId: string,
     @Body() body: unknown
   ): Promise<TicketDto> {
-    return this.tickets.assign(ticketId, readAssigneeId(body), user.id);
+    const assigneeId = readAssigneeId(body);
+    if (user.role === 'supervisor') {
+      return this.tickets.assign(ticketId, assigneeId, user.id);
+    }
+    if (assigneeId !== user.id) {
+      throw new ForbiddenException(
+        'Agents can only take tickets for themselves.'
+      );
+    }
+    return this.tickets.take(ticketId, user.id);
   }
 }

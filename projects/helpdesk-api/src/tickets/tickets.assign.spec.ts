@@ -223,4 +223,85 @@ describe('TicketsService.assign', { timeout: 30_000 }, () => {
       service.assign(ids.unassignedNew, 'sam.rivera', 'nina.patel')
     ).rejects.toMatchObject({ status: 404 });
   });
+
+  describe('unassigned', () => {
+    it('lists the unassigned open tickets only', async () => {
+      const subjects = (await service.unassigned()).map(
+        ({ subject }) => subject
+      );
+
+      // Not the finished one, nor those Sam or Omar hold.
+      expect(subjects.sort()).toEqual(['unassignedNew', 'unassignedPending']);
+    });
+  });
+
+  describe('take', () => {
+    /** Benny takes this ticket for himself. */
+    const take = (name: TicketName) => service.take(ids[name], 'benny.lind');
+
+    it('gives an agent an unassigned new ticket, and opens it', async () => {
+      const ticket = await take('unassignedNew');
+
+      expect(ticket.assignee?.id).toBe('benny.lind');
+      expect(ticket.status).toBe('open');
+      expect(await stored('unassignedNew')).toEqual(
+        expect.objectContaining({ assigneeId: 'benny.lind', status: 'open' })
+      );
+    });
+
+    it('keeps any other status as it is', async () => {
+      expect((await take('unassignedPending')).status).toBe('pending');
+    });
+
+    it('lets only the first of two agents have it', async () => {
+      await take('unassignedNew');
+
+      await expect(
+        service.take(ids.unassignedNew, 'sam.rivera')
+      ).rejects.toMatchObject({
+        status: 409,
+        message: 'Someone else has taken this ticket.',
+      });
+      expect((await stored('unassignedNew')).assigneeId).toBe('benny.lind');
+    });
+
+    it('leaves a ticket the agent holds already as theirs', async () => {
+      expect(
+        (await service.take(ids.heldBySam, 'sam.rivera')).assignee?.id
+      ).toBe('sam.rivera');
+    });
+
+    it.each([
+      [
+        'a ticket someone else holds',
+        'heldBySam',
+        409,
+        'Someone else has taken this ticket.',
+      ],
+      [
+        'a finished ticket',
+        'finished',
+        409,
+        "This ticket is finished, so it can't be taken.",
+      ],
+    ] as const)(
+      'refuses %s, changing nothing',
+      async (_, name, status, message) => {
+        const before = await stored(name);
+
+        await expect(take(name)).rejects.toMatchObject({ status, message });
+        expect(await stored(name)).toEqual(before);
+      }
+    );
+
+    it.each([
+      ['an id that is no ticket', '7d0f6c2e-4b1a-4c3e-9a51-2f8d6e0b1c34'],
+      ['an id that is not even a UUID', 'not-a-ticket'],
+    ])('answers 404 for %s', async (_, ticketId) => {
+      await expect(service.take(ticketId, 'benny.lind')).rejects.toMatchObject({
+        status: 404,
+        message: 'No such ticket.',
+      });
+    });
+  });
 });

@@ -9,7 +9,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, desc, eq, gte, inArray, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, isNull, or, sql } from 'drizzle-orm';
 import { DATABASE, type Database } from '../database/database.module';
 import { teams, tickets, users } from '../database/schema';
 import { MOST_URGENT_FIRST, selectTickets, toTicketDto } from './ticket-dto';
@@ -169,6 +169,65 @@ export class TicketsService {
         .update(tickets)
         .set({
           assigneeId,
+          status: ticket.status === 'new' ? 'open' : ticket.status,
+        })
+        .where(eq(tickets.id, ticketId));
+    });
+
+    const [row] = await selectTickets(this.database).where(
+      eq(tickets.id, ticketId)
+    );
+    return toTicketDto(row);
+  }
+
+  /** Every unassigned open ticket, most urgent first: work anyone may take. */
+  async unassigned(): Promise<TicketDto[]> {
+    const rows = await selectTickets(this.database)
+      .where(
+        and(
+          isNull(tickets.assigneeId),
+          inArray(tickets.status, [...OPEN_WORK_STATUSES])
+        )
+      )
+      .orderBy(...MOST_URGENT_FIRST);
+    return rows.map(toTicketDto);
+  }
+
+  /**
+   * An agent takes an unassigned open ticket for themselves; a `new` one
+   * becomes `open`. In one transaction with the ticket locked, so when two
+   * agents take it at once only the first gets it: the other gets 409. A
+   * ticket they hold already stays theirs. 404 for no such ticket, 409 for
+   * a finished one. Answers with the ticket.
+   */
+  async take(ticketId: string, agentId: string): Promise<TicketDto> {
+    if (!UUID.test(ticketId)) {
+      throw new NotFoundException('No such ticket.');
+    }
+    await this.database.transaction(async (tx) => {
+      const [ticket] = await tx
+        .select({ status: tickets.status, assigneeId: tickets.assigneeId })
+        .from(tickets)
+        .where(eq(tickets.id, ticketId))
+        .for('update');
+      if (ticket === undefined) {
+        throw new NotFoundException('No such ticket.');
+      }
+      if (!OPEN_WORK_STATUSES.includes(ticket.status)) {
+        throw new ConflictException(
+          "This ticket is finished, so it can't be taken."
+        );
+      }
+      if (ticket.assigneeId === agentId) {
+        return;
+      }
+      if (ticket.assigneeId !== null) {
+        throw new ConflictException('Someone else has taken this ticket.');
+      }
+      await tx
+        .update(tickets)
+        .set({
+          assigneeId: agentId,
           status: ticket.status === 'new' ? 'open' : ticket.status,
         })
         .where(eq(tickets.id, ticketId));

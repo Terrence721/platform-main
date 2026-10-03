@@ -7,5 +7,6 @@
 export * from './lib/auth';
 export * from './lib/page';
 export * from './lib/roles';
+export * from './lib/team';
 export * from './lib/ticket';
 export * from './lib/ticket-api';

@@ -7,13 +7,21 @@ import {
   browserCandidates,
   findBrowser,
   findFreePort,
+  FIRST_API_PORT,
+  FIRST_PORT,
+  isPortFree,
   removeWhenFree,
+  stackFor,
+  StackServer,
   stopTreeCommand,
+  waitForPortsFree,
   waitForServer,
 } from './app-launcher';
 
-// Starts an app's dev server, opens the app in a window of its own, and stops
-// the server (releasing its port) when that window is closed or on Ctrl+C.
+// Starts an app and everything it needs (for the Helpdesk: its API, then the
+// app), opens the app in a window of its own, and stops EVERYTHING together
+// when that window is closed, on Ctrl+C, or when any of its servers stops,
+// then checks that every port they held is free again.
 // Usage: npx tsx scripts/start-app.ts <app>   (e.g. `yarn start:helpdesk`)
 
 const app = process.argv[2] ?? '';
@@ -40,6 +48,13 @@ function stopTree(child: ChildProcess | undefined): void {
   spawnSync(command, args, { stdio: 'ignore' });
 }
 
+/** "4200", "4200 and 3000", "4200, 3000 and 9229". */
+function listPorts(ports: number[]): string {
+  return ports.length < 2
+    ? ports.join('')
+    : `${ports.slice(0, -1).join(', ')} and ${ports[ports.length - 1]}`;
+}
+
 async function main(): Promise<void> {
   const browserPath = findBrowser(
     browserCandidates(process.platform, process.env)
@@ -50,50 +65,93 @@ async function main(): Promise<void> {
     );
   }
 
-  const port = await findFreePort();
-  const url = `http://localhost:${port}/`;
+  const appPort = await findFreePort(FIRST_PORT);
+  const apiPort = await findFreePort(FIRST_API_PORT);
+  const stack = stackFor(app, { app: appPort, api: apiPort });
+  // Only ports free now are checked afterwards: one held by something else
+  // (e.g. a debugger from another project on 9229) is not ours to wait for.
+  const ours: number[] = [];
+  for (const port of stack.flatMap((server) => server.ports)) {
+    if (await isPortFree(port)) {
+      ours.push(port);
+    }
+  }
+
+  const url = stack[stack.length - 1].readyUrl;
   const profileDir = mkdtempSync(join(tmpdir(), `${app}-window-`));
-  // Set once the server answers; shutdown() can run before that.
+  const running: ChildProcess[] = [];
+  // Set once every server answers; shutdown() can run before that.
   let browser: ChildProcess | undefined = undefined;
   let stopping = false;
-
-  // The server runs in its own process group (detached outside Windows), so
-  // the whole tree can be stopped at once.
-  console.log(`Starting ${app} on ${url}`);
-  const server = spawn(`yarn nx serve ${app} --port ${port}`, {
-    cwd: repoRoot,
-    stdio: 'inherit',
-    shell: true,
-    detached: process.platform !== 'win32',
-  });
 
   const shutdown = async (reason: string, code: number): Promise<void> => {
     if (stopping) {
       return;
     }
     stopping = true;
-    console.log(`\n${reason}; stopping ${app}.`);
+    console.log(`\n${reason}; stopping everything.`);
     stopTree(browser);
     const removed = await removeWhenFree(profileDir, (dir) =>
       rmSync(dir, { recursive: true, force: true })
     );
-    stopTree(server);
+    // The app first, then what it depends on.
+    for (const child of [...running].reverse()) {
+      stopTree(child);
+    }
     if (!removed) {
       console.warn(`Could not delete the window's profile: ${profileDir}`);
     }
-    console.log(`Port ${port} is free.`);
+    const busy = await waitForPortsFree(ours);
+    if (busy.length === 0) {
+      console.log(`Everything stopped. Ports ${listPorts(ours)} are free.`);
+    } else {
+      console.warn(
+        `Still in use after stopping: port ${listPorts(busy)}. ` +
+          'Something is still running; check Task Manager for node.exe.'
+      );
+      code = code || 1;
+    }
     process.exit(code);
   };
 
-  server.once('exit', () => void shutdown('The dev server stopped', 1));
   process.once('SIGINT', () => void shutdown('Interrupted', 130));
   process.once('SIGTERM', () => void shutdown('Terminated', 143));
 
-  await waitForServer(url, isUp);
-  if (stopping) {
-    return;
+  // Each server runs in its own process group (detached outside Windows),
+  // so its whole tree can be stopped at once.
+  const start = (server: StackServer): ChildProcess => {
+    const child = spawn(server.command, {
+      cwd: repoRoot,
+      env: { ...process.env, ...server.env },
+      stdio: 'inherit',
+      shell: true,
+      detached: process.platform !== 'win32',
+    });
+    running.push(child);
+    child.once(
+      'exit',
+      () => void shutdown(`${server.name} stopped`, stopping ? 0 : 1)
+    );
+    return child;
+  };
+
+  for (const server of stack) {
+    console.log(`Starting ${server.name}: ${server.readyUrl}`);
+    start(server);
+    try {
+      await waitForServer(server.readyUrl, isUp);
+    } catch (error) {
+      // Never leave the servers already started running.
+      const why = error instanceof Error ? error.message : String(error);
+      await shutdown(`${server.name} did not start (${why})`, 1);
+      return;
+    }
+    if (stopping) {
+      return;
+    }
   }
-  console.log(`Opening ${url} in its own window; close it to stop ${app}.`);
+
+  console.log(`Opening ${url} in its own window; close it to stop everything.`);
   browser = spawn(browserPath, browserArgs(url, profileDir), {
     stdio: 'ignore',
   });

@@ -30,7 +30,8 @@ function sortValue(account: UserAccount, column: Column): string | number {
 }
 
 /**
- * A list of accounts as a table: user ID, name, role and status. Shows them
+ * A list of accounts as a table: user ID, name, role and status; the
+ * supervisor who leads the team reads "Supervisor · Lead". Shows them
  * in the order given until a column header is clicked; each click sorts by
  * that column, then reverses, then returns to the order given. Role sorts
  * in role order, not alphabetically; active accounts sort before inactive.
@@ -51,7 +52,12 @@ function sortValue(account: UserAccount, column: Column): string | number {
       <ng-container matColumnDef="role">
         <th mat-header-cell *matHeaderCellDef mat-sort-header>Role</th>
         <td mat-cell *matCellDef="let account">
-          <span class="role" [class]="account.role">{{ account.role }}</span>
+          <span class="role" [class]="account.role"
+            >{{ account.role }}
+            @if (account.leadsTeam) {
+              · lead
+            }
+          </span>
         </td>
       </ng-container>
       <ng-container matColumnDef="status">

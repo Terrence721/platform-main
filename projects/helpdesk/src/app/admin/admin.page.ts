@@ -3,13 +3,16 @@ import {
   Component,
   computed,
   inject,
+  Injector,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import type { UserAccount } from '@helpdesk/contract';
 import { Store } from '@ngrx/store';
 import { sessionFeature } from '../session/session.feature';
 import { AccountsTable } from './accounts-table';
+import type { CreateAccountData, TeamChoice } from './create-account.dialog';
 import { TeamAccountsStore } from './team-accounts.store';
 
 /** One team's accounts. */
@@ -40,14 +43,21 @@ export function groupByTeam(accounts: UserAccount[]): AccountGroup[] {
 /**
  * An admin's own page: Team accounts, each team's people in a sortable
  * table of its own, team leads (supervisors) in green and members (agents)
- * in blue. Admins belong to no team, so none is shown. Only admins get here (the route's
+ * in blue. Admins belong to no team, so none is shown. Create Account,
+ * beside the summary and at the bottom, opens a popup that adds someone
+ * straight into their team's table. Only admins get here (the route's
  * `canMatchRole('admin')`). The page provides `TeamAccountsStore`, which
- * loads the accounts when the page opens. Read only; adding and changing
- * accounts comes later (#905).
+ * loads the accounts when the page opens. Changing and deactivating
+ * accounts come later (#905).
  */
 @Component({
   selector: 'hd-admin-page',
-  imports: [MatButtonModule, MatProgressSpinnerModule, AccountsTable],
+  imports: [
+    MatButtonModule,
+    MatIconModule,
+    MatProgressSpinnerModule,
+    AccountsTable,
+  ],
   providers: [TeamAccountsStore],
   template: `
     <section class="column" aria-labelledby="admin-title">
@@ -69,9 +79,20 @@ export function groupByTeam(accounts: UserAccount[]): AccountGroup[] {
           </p>
         }
         @default {
-          <p class="summary">
-            {{ teamAccountCount() }} accounts in {{ groups().length }} teams
-          </p>
+          <div class="summary-row">
+            <p class="summary">
+              {{ teamAccountCount() }} accounts in {{ groups().length }} teams
+            </p>
+            <button
+              matButton="filled"
+              type="button"
+              class="create-top"
+              (click)="openCreateAccount()"
+            >
+              <mat-icon>person_add</mat-icon>
+              Create Account
+            </button>
+          </div>
           @for (group of groups(); track group.id) {
             <section class="team" [attr.aria-label]="group.name">
               <h2>
@@ -83,6 +104,17 @@ export function groupByTeam(accounts: UserAccount[]): AccountGroup[] {
               <hd-accounts-table [accounts]="group.accounts" />
             </section>
           }
+          <div class="bottom-actions">
+            <button
+              matButton="filled"
+              type="button"
+              class="create-bottom"
+              (click)="openCreateAccount()"
+            >
+              <mat-icon>person_add</mat-icon>
+              Create Account
+            </button>
+          </div>
         }
       }
     </section>
@@ -122,6 +154,16 @@ export function groupByTeam(accounts: UserAccount[]): AccountGroup[] {
     .count {
       font: var(--mat-sys-body-large);
     }
+    .summary-row,
+    .bottom-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem 1.5rem;
+    }
+    .bottom-actions {
+      margin-top: 2rem;
+    }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -138,4 +180,46 @@ export default class AdminPage {
   protected readonly teamAccountCount = computed(() =>
     this.groups().reduce((total, group) => total + group.accounts.length, 0)
   );
+  /** The teams a new account can join, each with who leads it now. */
+  protected readonly teamChoices = computed((): TeamChoice[] =>
+    this.groups().map(({ id, name, accounts }) => ({
+      id,
+      name,
+      leadName: accounts.find(({ leadsTeam }) => leadsTeam)?.name ?? null,
+    }))
+  );
+  private readonly injector = inject(Injector);
+
+  /**
+   * Opens the Create Account popup, with this page's injector so it
+   * creates through this page's store. The popup's and the snack bar's
+   * code load on the first click (dynamic `import()`), not with the page.
+   * Once created, a snack bar names the new account.
+   */
+  protected async openCreateAccount(): Promise<void> {
+    const [{ MatDialog }, { MatSnackBar }, { CreateAccountDialog }] =
+      await Promise.all([
+        import('@angular/material/dialog'),
+        import('@angular/material/snack-bar'),
+        import('./create-account.dialog'),
+      ]);
+    const data: CreateAccountData = { teams: this.teamChoices() };
+    this.injector
+      .get(MatDialog)
+      .open(CreateAccountDialog, {
+        data,
+        injector: this.injector,
+        width: '30rem',
+        maxWidth: 'calc(100vw - 2rem)',
+      })
+      .afterClosed()
+      // The new user ID once created; nothing when cancelled.
+      .subscribe((userId: unknown) => {
+        if (typeof userId === 'string') {
+          this.injector
+            .get(MatSnackBar)
+            .open(`Account ${userId} created`, undefined, { duration: 5000 });
+        }
+      });
+  }
 }

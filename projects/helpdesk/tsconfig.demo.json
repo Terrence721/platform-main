@@ -1,0 +1,61 @@
+// The in-browser demo's build (#942): the app's settings, plus three
+// imports pointed at browser stand-ins in src/demo, so the API's services
+// (from @helpdesk/server) run in the page: @nestjs/common, crypto and util.
+// `paths` here replaces the root tsconfig.json's instead of adding to them,
+// so it repeats them all; src/demo/tsconfig-demo.spec.ts fails if the two
+// ever differ.
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "paths": {
+      "@helpdesk/contract": ["./projects/helpdesk-contract/src/index.ts"],
+      "@helpdesk/server": ["./projects/helpdesk-server/src/index.ts"],
+      "@ngrx/component": ["./modules/component"],
+      "@ngrx/component-store": ["./modules/component-store"],
+      "@ngrx/component-store/schematics-core": [
+        "./modules/component-store/schematics-core"
+      ],
+      "@ngrx/component/schematics-core": [
+        "./modules/component/schematics-core"
+      ],
+      "@ngrx/data": ["./modules/data"],
+      "@ngrx/data/schematics-core": ["./modules/data/schematics-core"],
+      "@ngrx/effects": ["./modules/effects"],
+      "@ngrx/effects/schematics-core": ["./modules/effects/schematics-core"],
+      "@ngrx/effects/testing": ["./modules/effects/testing"],
+      "@ngrx/entity": ["./modules/entity"],
+      "@ngrx/entity/schematics-core": ["./modules/entity/schematics-core"],
+      "@ngrx/eslint-plugin": ["./modules/eslint-plugin/src"],
+      "@ngrx/operators": ["./modules/operators"],
+      "@ngrx/router-store": ["./modules/router-store"],
+      "@ngrx/router-store/data-persistence": [
+        "./modules/router-store/data-persistence"
+      ],
+      "@ngrx/router-store/schematics-core": [
+        "./modules/router-store/schematics-core"
+      ],
+      "@ngrx/schematics": ["./modules/schematics"],
+      "@ngrx/schematics-core/*": ["./modules/schematics-core/*"],
+      "@ngrx/schematics/schematics-core": [
+        "./modules/schematics/schematics-core"
+      ],
+      "@ngrx/signals": ["./modules/signals"],
+      "@ngrx/signals/entities": ["./modules/signals/entities"],
+      "@ngrx/signals/events": ["./modules/signals/events"],
+      "@ngrx/signals/resource": ["./modules/signals/resource"],
+      "@ngrx/signals/rxjs-interop": ["./modules/signals/rxjs-interop"],
+      "@ngrx/signals/schematics-core": ["./modules/signals/schematics-core"],
+      "@ngrx/signals/testing": ["./modules/signals/testing"],
+      "@ngrx/store": ["./modules/store"],
+      "@ngrx/store-devtools": ["./modules/store-devtools"],
+      "@ngrx/store-devtools/schematics-core": [
+        "./modules/store-devtools/schematics-core"
+      ],
+      "@ngrx/store/schematics-core": ["./modules/store/schematics-core"],
+      "@ngrx/store/testing": ["./modules/store/testing"],
+      "@nestjs/common": ["./projects/helpdesk/src/demo/nest-shim.ts"],
+      "crypto": ["./projects/helpdesk/src/demo/crypto-shim.ts"],
+      "util": ["./projects/helpdesk/src/demo/util-shim.ts"]
+    }
+  }
+}

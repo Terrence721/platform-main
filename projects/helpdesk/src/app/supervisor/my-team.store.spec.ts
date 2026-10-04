@@ -5,12 +5,13 @@ import {
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import type { TeamOverview, TicketDto } from '@helpdesk/contract';
+import { assigneeApi, statusApi } from '../tickets/ticket-api-paths';
 import {
   ASSIGN_UNAVAILABLE_MESSAGE,
-  assigneeApi,
   memberTicketsApi,
   MY_TEAM_API,
   MyTeamStore,
+  STATUS_UNAVAILABLE_MESSAGE,
 } from './my-team.store';
 
 const atlas: TeamOverview = {
@@ -285,6 +286,86 @@ describe('MyTeamStore', () => {
 
       put().flush(assigned);
       http.expectOne(MY_TEAM_API).flush(atlasAfter);
+    });
+  });
+
+  describe('changeStatus', () => {
+    const TICKET_ID = '7d0f6c2e-4b1a-4c3e-9a51-2f8d6e0b1c34';
+    const resolved = {
+      id: TICKET_ID,
+      ticketNumber: 1312,
+      status: 'resolved',
+    } as TicketDto;
+
+    /** A store with its team loaded and Sam chosen, as the page has it. */
+    function storeWithSam() {
+      const store = TestBed.inject(MyTeamStore);
+      http.expectOne(MY_TEAM_API).flush(atlas);
+      store.selectMember('sam.rivera');
+      http
+        .expectOne(memberTicketsApi('sam.rivera'))
+        .flush([{ ...resolved, status: 'open' }]);
+      return store;
+    }
+
+    const put = () =>
+      http.expectOne({ method: 'PUT', url: statusApi(TICKET_ID) });
+
+    it('starts with no change in progress', () => {
+      const store = storeWithSam();
+
+      expect(store.statusState()).toBe('idle');
+      expect(store.statusError()).toBeNull();
+    });
+
+    it("moves the member's ticket, then refreshes quietly", () => {
+      const store = storeWithSam();
+
+      store.changeStatus({ ticketId: TICKET_ID, status: 'resolved' });
+      expect(store.statusState()).toBe('saving');
+      const call = put();
+      expect(call.request.body).toEqual({ status: 'resolved' });
+      call.flush(resolved);
+      http.expectOne(MY_TEAM_API).flush(atlas);
+      http.expectOne(memberTicketsApi('sam.rivera')).flush([resolved]);
+
+      expect(store.loadState()).toBe('loaded');
+      expect(store.memberTickets()).toEqual([resolved]);
+      expect(store.statusState()).toBe('changed');
+      expect(store.lastChanged()).toEqual(resolved);
+    });
+
+    it("keeps the API's message for a move it refuses", () => {
+      const store = storeWithSam();
+
+      store.changeStatus({ ticketId: TICKET_ID, status: 'new' });
+      put().flush(
+        { message: "An open ticket can't become new." },
+        { status: 409, statusText: 'Conflict' }
+      );
+
+      expect(store.statusState()).toBe('failed');
+      expect(store.statusError()).toBe("An open ticket can't become new.");
+    });
+
+    it('says changing is unavailable when the API cannot explain', () => {
+      const store = storeWithSam();
+
+      store.changeStatus({ ticketId: TICKET_ID, status: 'resolved' });
+      put().error(new ProgressEvent('error'));
+
+      expect(store.statusError()).toBe(STATUS_UNAVAILABLE_MESSAGE);
+    });
+
+    it('ignores a second change while one is saving', () => {
+      const store = storeWithSam();
+
+      store.changeStatus({ ticketId: TICKET_ID, status: 'resolved' });
+      store.changeStatus({ ticketId: TICKET_ID, status: 'closed' });
+
+      put().flush(resolved);
+      http.expectOne(MY_TEAM_API).flush(atlas);
+      http.expectOne(memberTicketsApi('sam.rivera')).flush([resolved]);
     });
   });
 });

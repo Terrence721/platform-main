@@ -5,13 +5,12 @@ import {
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import type { TicketDto } from '@helpdesk/contract';
-import { assigneeApi } from '../supervisor/my-team.store';
+import { assigneeApi, statusApi } from '../tickets/ticket-api-paths';
 import {
   FINISHED_API,
   MY_TICKETS_API,
   MyTicketsStore,
   STATUS_UNAVAILABLE_MESSAGE,
-  statusApi,
   TAKE_UNAVAILABLE_MESSAGE,
   UNASSIGNED_API,
 } from './my-tickets.store';

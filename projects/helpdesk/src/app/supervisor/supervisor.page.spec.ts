@@ -15,7 +15,8 @@ import { of } from 'rxjs';
 import { initialSessionState } from '../session/session.feature';
 import { AssignTicketDialog } from './assign-ticket.dialog';
 import { MemberHistoryDialog } from './member-history.dialog';
-import { assigneeApi, memberTicketsApi, MY_TEAM_API } from './my-team.store';
+import { assigneeApi, statusApi } from '../tickets/ticket-api-paths';
+import { memberTicketsApi, MY_TEAM_API } from './my-team.store';
 import SupervisorPage from './supervisor.page';
 
 const chris: CurrentUser = {
@@ -483,6 +484,86 @@ describe('SupervisorPage', () => {
       await vi.waitFor(() => expect(dialog.open).toHaveBeenCalledOnce());
       // afterEach's verify() fails on any request left unanswered.
       expect(snackBar.open).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("changing a member's ticket status", () => {
+    /** A ticket Benny holds, with this status. */
+    const bennyTicket = (
+      ticketNumber: number,
+      status: TicketDto['status']
+    ) => ({
+      ...ticket(ticketNumber),
+      status,
+      assignee: { id: 'benny.lind', name: 'Benny Lind' },
+    });
+
+    afterEach(() =>
+      document
+        .querySelectorAll('.cdk-overlay-container')
+        .forEach((container) => container.replaceChildren())
+    );
+
+    /** Benny chosen, holding these tickets. */
+    async function withBenny(tickets: TicketDto[]) {
+      const view = render();
+      view.answer(atlas);
+      await view.chooseMember('Benny Lind (5 open · 3 overdue)');
+      view.http.expectOne(memberTicketsApi('benny.lind')).flush(tickets);
+      view.detectChanges();
+      return view;
+    }
+
+    /** The Change status buttons in Benny's table, by aria-label. */
+    const menuButtons = (page: HTMLElement) => [
+      ...page.querySelectorAll<HTMLButtonElement>(
+        'hd-ticket-table.member td.mat-column-statusMenu button'
+      ),
+    ];
+
+    it('offers Change status on every ticket but a closed one', async () => {
+      const { page } = await withBenny([
+        bennyTicket(1312, 'open'),
+        bennyTicket(1290, 'resolved'),
+        bennyTicket(1201, 'closed'),
+      ]);
+
+      expect(
+        menuButtons(page).map((button) => button.getAttribute('aria-label'))
+      ).toEqual(['Change status of #1312', 'Change status of #1290']);
+    });
+
+    it("resolves a member's ticket from its menu, then says so", async () => {
+      const view = await withBenny([bennyTicket(1312, 'open')]);
+
+      menuButtons(view.page)[0].click();
+      view.detectChanges();
+      [
+        ...document.querySelectorAll<HTMLButtonElement>(
+          '.mat-mdc-menu-panel button[mat-menu-item]'
+        ),
+      ]
+        .find((item) => item.textContent?.trim() === 'Resolved')
+        ?.click();
+
+      const call = view.http.expectOne({
+        method: 'PUT',
+        url: statusApi('ticket-1312'),
+      });
+      expect(call.request.body).toEqual({ status: 'resolved' });
+      call.flush(bennyTicket(1312, 'resolved'));
+      view.http.expectOne(MY_TEAM_API).flush(atlas);
+      view.http
+        .expectOne(memberTicketsApi('benny.lind'))
+        .flush([bennyTicket(1312, 'resolved')]);
+
+      await vi.waitFor(() =>
+        expect(snackBar.open).toHaveBeenCalledWith(
+          '#1312 is now Resolved',
+          undefined,
+          expect.objectContaining({ duration: 5000 })
+        )
+      );
     });
   });
 });

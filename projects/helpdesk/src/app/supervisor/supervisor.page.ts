@@ -18,6 +18,7 @@ import {
   type TicketStatus,
 } from '@helpdesk/contract';
 import { Store } from '@ngrx/store';
+import { STATUS_GUIDE } from '../landing/ticket-workflow.store';
 import { sessionFeature } from '../session/session.feature';
 import { TicketTable } from '../tickets/ticket-table';
 import type { AssignTicketData } from './assign-ticket.dialog';
@@ -31,7 +32,8 @@ const OPEN_WORK: readonly TicketStatus[] = ['new', 'open', 'pending'];
  * tickets at a time (chosen from the Team member list; assigned tickets
  * show nowhere else), plus the unassigned work nobody holds yet. The
  * supervisor assigns unassigned tickets and reassigns a member's open ones
- * through "Assign to…". Only supervisors get here (the route's
+ * through "Assign to…", and moves a member's tickets through the workflow
+ * with their Change status menu. Only supervisors get here (the route's
  * `canMatchRole('supervisor')`). The page provides `MyTeamStore`, which
  * loads the team when the page opens.
  */
@@ -130,6 +132,13 @@ const OPEN_WORK: readonly TicketStatus[] = ['new', 'open', 'pending'];
                       actionLabel="Reassign"
                       [canAct]="isOpenWork"
                       (action)="openAssign($event)"
+                      [statusMenu]="true"
+                      (statusChange)="
+                        store.changeStatus({
+                          ticketId: $event.ticket.id,
+                          status: $event.status,
+                        })
+                      "
                     />
                   }
                 }
@@ -289,6 +298,19 @@ export default class SupervisorPage {
           );
         } else if (state === 'failed') {
           void this.report(this.store.assignError() ?? '');
+        }
+      });
+    });
+    effect(() => {
+      const state = this.store.statusState();
+      untracked(() => {
+        const ticket = this.store.lastChanged();
+        if (state === 'changed' && ticket !== null) {
+          void this.report(
+            `${formatTicketNumber(ticket.ticketNumber)} is now ${STATUS_GUIDE[ticket.status].label}`
+          );
+        } else if (state === 'failed') {
+          void this.report(this.store.statusError() ?? '');
         }
       });
     });

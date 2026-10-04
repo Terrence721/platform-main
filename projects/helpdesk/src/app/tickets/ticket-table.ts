@@ -9,13 +9,16 @@ import {
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import {
   formatTicketNumber,
   TICKET_PRIORITIES,
+  TICKET_STATUS_TRANSITIONS,
   TICKET_STATUSES,
   type TicketDto,
+  type TicketStatus,
 } from '@helpdesk/contract';
 import { slaLabel } from '../landing/ticket-preview.store';
 import { STATUS_GUIDE } from '../landing/ticket-workflow.store';
@@ -31,6 +34,9 @@ const COLUMNS = [
 ] as const;
 
 type Column = (typeof COLUMNS)[number];
+
+/** The statuses of work that is done. */
+const FINISHED: readonly TicketStatus[] = ['resolved', 'closed'];
 
 /** A ticket as a row: what each cell shows, and what each column sorts by. */
 interface TicketRow {
@@ -52,13 +58,23 @@ interface TicketRow {
  * each click sorts by that column, then reverses, then returns to the
  * order given. Priority and status sort in their workflow order, not
  * alphabetically; Due sorts by due time, no SLA last. Time left is as of
- * when the tickets arrive. Given an `actionLabel` (such as "Assign"), each
+ * when the tickets arrive; a resolved or closed ticket reads "Finished"
+ * instead, as its due time no longer matters. Given an `actionLabel`
+ * (such as "Assign"), each
  * row that `canAct` allows ends with a button that emits its ticket
- * through `action`.
+ * through `action`. With `statusMenu`, each row also gets a Change status
+ * menu listing only the moves the workflow allows (none once closed); the
+ * choice comes out through `statusChange`.
  */
 @Component({
   selector: 'hd-ticket-table',
-  imports: [MatButtonModule, MatChipsModule, MatSortModule, MatTableModule],
+  imports: [
+    MatButtonModule,
+    MatChipsModule,
+    MatMenuModule,
+    MatSortModule,
+    MatTableModule,
+  ],
   template: `
     <table mat-table [dataSource]="dataSource" matSort>
       <ng-container matColumnDef="ticketNumber">
@@ -115,9 +131,41 @@ interface TicketRow {
           }
         </td>
       </ng-container>
+      <ng-container matColumnDef="statusMenu">
+        <th mat-header-cell *matHeaderCellDef>
+          <span class="cdk-visually-hidden">Change status</span>
+        </th>
+        <td mat-cell *matCellDef="let row">
+          @if (nextStatuses(row.ticket).length > 0) {
+            <button
+              matButton
+              type="button"
+              [attr.aria-label]="'Change status of ' + row.ticketNumber"
+              [matMenuTriggerFor]="statusChoices"
+              [matMenuTriggerData]="{ ticket: row.ticket }"
+            >
+              Change status
+            </button>
+          }
+        </td>
+      </ng-container>
       <tr mat-header-row *matHeaderRowDef="columns()"></tr>
       <tr mat-row *matRowDef="let row; columns: columns()"></tr>
     </table>
+    <!-- One menu for every row; it lists the moves the workflow allows. -->
+    <mat-menu #statusChoices="matMenu">
+      <ng-template matMenuContent let-ticket="ticket">
+        @for (status of nextStatuses(ticket); track status) {
+          <button
+            mat-menu-item
+            type="button"
+            (click)="statusChange.emit({ ticket, status })"
+          >
+            {{ statusLabel(status) }}
+          </button>
+        }
+      </ng-template>
+    </mat-menu>
   `,
   styles: `
     mat-chip {
@@ -145,10 +193,26 @@ export class TicketTable {
   readonly canAct = input<(ticket: TicketDto) => boolean>(() => true);
   /** The ticket whose action button was clicked. */
   readonly action = output<TicketDto>();
+  /** Whether each row gets a Change status menu. */
+  readonly statusMenu = input(false);
+  /** A ticket, and the status chosen for it from its menu. */
+  readonly statusChange = output<{ ticket: TicketDto; status: TicketStatus }>();
 
-  protected readonly columns = computed(() =>
-    this.actionLabel() === null ? [...COLUMNS] : [...COLUMNS, 'action']
-  );
+  protected readonly columns = computed(() => [
+    ...COLUMNS,
+    ...(this.actionLabel() === null ? [] : ['action']),
+    ...(this.statusMenu() ? ['statusMenu'] : []),
+  ]);
+
+  /** The statuses a ticket may move to next; none once closed. */
+  protected nextStatuses(ticket: TicketDto): readonly TicketStatus[] {
+    return TICKET_STATUS_TRANSITIONS[ticket.status];
+  }
+
+  /** How a status reads, such as "Pending". */
+  protected statusLabel(status: TicketStatus): string {
+    return STATUS_GUIDE[status].label;
+  }
   private readonly rows = computed(() => {
     const now = new Date();
     return this.tickets().map((ticket): TicketRow => ({
@@ -158,7 +222,10 @@ export class TicketTable {
       customer: ticket.requester.name,
       priority: ticket.priority,
       status: STATUS_GUIDE[ticket.status].label,
-      sla: slaLabel(ticket.slaDueAt, now),
+      // A finished ticket's due time no longer matters.
+      sla: FINISHED.includes(ticket.status)
+        ? { text: 'Finished', tone: 'none' }
+        : slaLabel(ticket.slaDueAt, now),
       sortBy: {
         ticketNumber: ticket.ticketNumber,
         subject: ticket.subject.toLowerCase(),

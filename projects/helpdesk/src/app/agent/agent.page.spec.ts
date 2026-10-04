@@ -10,7 +10,12 @@ import { provideMockStore } from '@ngrx/store/testing';
 import { initialSessionState } from '../session/session.feature';
 import { assigneeApi } from '../supervisor/my-team.store';
 import AgentPage from './agent.page';
-import { MY_TICKETS_API, UNASSIGNED_API } from './my-tickets.store';
+import {
+  FINISHED_API,
+  MY_TICKETS_API,
+  statusApi,
+  UNASSIGNED_API,
+} from './my-tickets.store';
 
 const NOW = new Date('2026-10-03T12:00:00.000Z');
 
@@ -59,10 +64,12 @@ describe('AgentPage', () => {
 
   afterEach(() => {
     const http = TestBed.inject(HttpTestingController);
-    // Tests about My tickets leave the Unassigned load unanswered.
-    for (const request of http.match(UNASSIGNED_API)) {
-      if (!request.cancelled) {
-        request.flush([]);
+    // Tests about one list leave the other lists' loads unanswered.
+    for (const url of [UNASSIGNED_API, FINISHED_API]) {
+      for (const request of http.match(url)) {
+        if (!request.cancelled) {
+          request.flush([]);
+        }
       }
     }
     http.verify();
@@ -148,11 +155,44 @@ describe('AgentPage', () => {
 
     expect(
       [...page.querySelectorAll('th')].map((cell) => cell.textContent?.trim())
-    ).toEqual(['#', 'Subject', 'Customer', 'Priority', 'Status', 'Due']);
+    ).toEqual([
+      '#',
+      'Subject',
+      'Customer',
+      'Priority',
+      'Status',
+      'Due',
+      // The status menu's column, named for screen readers only.
+      'Change status',
+    ]);
     expect(rows()).toEqual([
-      ['#1003', 'Overdue', 'Dana Whitfield', 'urgent', 'Open', 'Overdue 2h'],
-      ['#1006', 'Due soon', 'Dana Whitfield', 'normal', 'Pending', 'Due in 3h'],
-      ['#1001', 'No SLA', 'Dana Whitfield', 'normal', 'Open', 'No SLA'],
+      [
+        '#1003',
+        'Overdue',
+        'Dana Whitfield',
+        'urgent',
+        'Open',
+        'Overdue 2h',
+        'Change status',
+      ],
+      [
+        '#1006',
+        'Due soon',
+        'Dana Whitfield',
+        'normal',
+        'Pending',
+        'Due in 3h',
+        'Change status',
+      ],
+      [
+        '#1001',
+        'No SLA',
+        'Dana Whitfield',
+        'normal',
+        'Open',
+        'No SLA',
+        'Change status',
+      ],
     ]);
   });
 
@@ -222,7 +262,7 @@ describe('AgentPage', () => {
 
       expect(
         [...page.querySelectorAll('h2')].map((h) => h.textContent?.trim())
-      ).toEqual(['Unassigned (2)']);
+      ).toEqual(['Unassigned (2)', 'Done (24 h)']);
       expect(
         takeButtons(page).map((button) => button.getAttribute('aria-label'))
       ).toEqual(['Take it #1312', 'Take it #1290']);
@@ -294,6 +334,144 @@ describe('AgentPage', () => {
       await vi.waitFor(() =>
         expect(snackBar.open).toHaveBeenCalledWith(
           'Someone else has taken this ticket.',
+          undefined,
+          expect.objectContaining({ duration: 5000 })
+        )
+      );
+    });
+  });
+
+  describe('Done and status changes', () => {
+    /** Renders with these tickets in My tickets and these in Done. */
+    function renderWithDone(mine: TicketDto[], finished: TicketDto[]) {
+      const view = render();
+      view.answer(mine);
+      view.http.expectOne(UNASSIGNED_API).flush([]);
+      view.http.expectOne(FINISHED_API).flush(finished);
+      view.detectChanges();
+      return view;
+    }
+
+    /** Opens the Change status menu on a row of a table, and picks a status. */
+    async function choose(
+      view: ReturnType<typeof renderWithDone>,
+      table: 'mine' | 'done',
+      row: number,
+      label: string
+    ) {
+      const menuButtons = view.page.querySelectorAll<HTMLButtonElement>(
+        `hd-ticket-table.${table} td.mat-column-statusMenu button`
+      );
+      menuButtons[row].click();
+      view.detectChanges();
+      const choice = [
+        ...document.querySelectorAll<HTMLButtonElement>(
+          '.mat-mdc-menu-panel button[mat-menu-item]'
+        ),
+      ].find((item) => item.textContent?.trim() === label);
+      if (!choice) {
+        throw new Error(`No "${label}" in the menu`);
+      }
+      choice.click();
+      view.detectChanges();
+    }
+
+    const resolved = ticket(1290, 'Already resolved', null, {
+      status: 'resolved',
+    });
+
+    afterEach(() =>
+      document
+        .querySelectorAll('.cdk-overlay-container')
+        .forEach((container) => container.replaceChildren())
+    );
+
+    it('lists what the agent finished in the last 24 hours', () => {
+      const { page } = renderWithDone([], [resolved]);
+
+      expect(
+        [
+          ...page.querySelectorAll(
+            'hd-ticket-table.done td.mat-column-ticketNumber'
+          ),
+        ].map((cell) => cell.textContent?.trim())
+      ).toEqual(['#1290']);
+    });
+
+    it('says so when nothing was finished lately', () => {
+      const { page } = renderWithDone([], []);
+
+      expect(
+        [...page.querySelectorAll('.message')].map((m) => m.textContent?.trim())
+      ).toContain('Nothing finished in the last 24 hours.');
+    });
+
+    it('resolves a ticket from its menu, then says so', async () => {
+      const view = renderWithDone([ticket(1003, 'Overdue', null)], []);
+
+      await choose(view, 'mine', 0, 'Resolved');
+
+      const call = view.http.expectOne({
+        method: 'PUT',
+        url: statusApi('ticket-1003'),
+      });
+      expect(call.request.body).toEqual({ status: 'resolved' });
+      const done = {
+        ...ticket(1003, 'Overdue', null),
+        status: 'resolved' as const,
+      };
+      call.flush(done);
+      view.http.expectOne(MY_TICKETS_API).flush([]);
+      view.http.expectOne(FINISHED_API).flush([done]);
+
+      await vi.waitFor(() =>
+        expect(snackBar.open).toHaveBeenCalledWith(
+          '#1003 is now Resolved',
+          undefined,
+          expect.objectContaining({ duration: 5000 })
+        )
+      );
+    });
+
+    it('reopens a resolved ticket from Done', async () => {
+      const view = renderWithDone([], [resolved]);
+
+      await choose(view, 'done', 0, 'Open');
+
+      const call = view.http.expectOne({
+        method: 'PUT',
+        url: statusApi('ticket-1290'),
+      });
+      expect(call.request.body).toEqual({ status: 'open' });
+      call.flush({ ...resolved, status: 'open' });
+      view.http
+        .expectOne(MY_TICKETS_API)
+        .flush([{ ...resolved, status: 'open' }]);
+      view.http.expectOne(FINISHED_API).flush([]);
+
+      await vi.waitFor(() =>
+        expect(snackBar.open).toHaveBeenCalledWith(
+          '#1290 is now Open',
+          undefined,
+          expect.objectContaining({ duration: 5000 })
+        )
+      );
+    });
+
+    it('says why a change was refused', async () => {
+      const view = renderWithDone([ticket(1003, 'Overdue', null)], []);
+
+      await choose(view, 'mine', 0, 'Pending');
+      view.http
+        .expectOne({ method: 'PUT', url: statusApi('ticket-1003') })
+        .flush(
+          { message: 'No such ticket among yours.' },
+          { status: 404, statusText: 'Not Found' }
+        );
+
+      await vi.waitFor(() =>
+        expect(snackBar.open).toHaveBeenCalledWith(
+          'No such ticket among yours.',
           undefined,
           expect.objectContaining({ duration: 5000 })
         )

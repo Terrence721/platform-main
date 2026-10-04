@@ -8,18 +8,24 @@ import {
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { formatTicketNumber, type TicketDto } from '@helpdesk/contract';
+import {
+  formatTicketNumber,
+  type TicketDto,
+  type TicketStatus,
+} from '@helpdesk/contract';
 import { Store } from '@ngrx/store';
+import { STATUS_GUIDE } from '../landing/ticket-workflow.store';
 import { sessionFeature } from '../session/session.feature';
 import { TicketTable } from '../tickets/ticket-table';
 import { MyTicketsStore } from './my-tickets.store';
 
 /**
- * An agent's own page: My tickets, their open work, most urgent first;
- * then Unassigned, the work nobody holds, which they may take for
- * themselves ("Take it"). Only agents get here (the route's
- * `canMatchRole('agent')`). The page provides `MyTicketsStore`, which
- * loads both lists when the page opens.
+ * An agent's own page: My tickets, their open work, most urgent first,
+ * each with a Change status menu; then Unassigned, the work nobody holds,
+ * which they may take for themselves ("Take it"); then Done, what they
+ * finished in the last 24 hours, where a resolved ticket can be reopened.
+ * Only agents get here (the route's `canMatchRole('agent')`). The page
+ * provides `MyTicketsStore`, which loads all three when the page opens.
  */
 @Component({
   selector: 'hd-agent-page',
@@ -48,7 +54,12 @@ import { MyTicketsStore } from './my-tickets.store';
           @if (store.entities().length === 0) {
             <p class="message">Nothing is assigned to you right now.</p>
           } @else {
-            <hd-ticket-table class="mine" [tickets]="store.entities()" />
+            <hd-ticket-table
+              class="mine"
+              [tickets]="store.entities()"
+              [statusMenu]="true"
+              (statusChange)="changeStatus($event)"
+            />
           }
         }
       }
@@ -78,6 +89,36 @@ import { MyTicketsStore } from './my-tickets.store';
               [tickets]="store.unassigned()"
               actionLabel="Take it"
               (action)="take($event)"
+            />
+          }
+        }
+      }
+
+      <h2>Done (24 h)</h2>
+      @switch (store.finishedState()) {
+        @case ('loading') {
+          <mat-spinner
+            diameter="32"
+            aria-label="Loading your finished tickets"
+          />
+        }
+        @case ('failed') {
+          <p class="message" role="alert">
+            Your finished tickets couldn't be loaded.
+            <button matButton type="button" (click)="store.loadFinished()">
+              Try again
+            </button>
+          </p>
+        }
+        @default {
+          @if (store.finished().length === 0) {
+            <p class="message">Nothing finished in the last 24 hours.</p>
+          } @else {
+            <hd-ticket-table
+              class="done"
+              [tickets]="store.finished()"
+              [statusMenu]="true"
+              (statusChange)="changeStatus($event)"
             />
           }
         }
@@ -131,9 +172,20 @@ export default class AgentPage {
     }
   }
 
+  /** Moves one of the agent's tickets to the status chosen in its menu. */
+  protected changeStatus({
+    ticket,
+    status,
+  }: {
+    ticket: TicketDto;
+    status: TicketStatus;
+  }): void {
+    this.store.changeStatus({ ticketId: ticket.id, status });
+  }
+
   /**
-   * Says how taking a ticket went, in a snack bar. The snack bar's code is
-   * loaded when first needed.
+   * Says how taking a ticket or changing a status went, in a snack bar.
+   * The snack bar's code is loaded when first needed.
    */
   private async report(message: string): Promise<void> {
     const { MatSnackBar } = await import('@angular/material/snack-bar');
@@ -153,6 +205,19 @@ export default class AgentPage {
           );
         } else if (state === 'failed') {
           void this.report(this.store.takeError() ?? '');
+        }
+      });
+    });
+    effect(() => {
+      const state = this.store.statusState();
+      untracked(() => {
+        const ticket = this.store.lastChanged();
+        if (state === 'changed' && ticket !== null) {
+          void this.report(
+            `${formatTicketNumber(ticket.ticketNumber)} is now ${STATUS_GUIDE[ticket.status].label}`
+          );
+        } else if (state === 'failed') {
+          void this.report(this.store.statusError() ?? '');
         }
       });
     });

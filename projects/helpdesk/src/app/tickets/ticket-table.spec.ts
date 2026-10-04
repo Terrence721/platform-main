@@ -124,6 +124,23 @@ describe('TicketTable', () => {
     ]);
   });
 
+  it('says "Finished" for resolved and closed tickets, not how overdue they are', () => {
+    const { rows, classesIn } = render([
+      ticket(1312, '2026-08-01T12:00:00.000Z', { status: 'closed' }),
+      ticket(1290, '2026-10-01T12:00:00.000Z', { status: 'resolved' }),
+      ticket(1003, '2026-10-03T10:00:00.000Z'),
+    ]);
+
+    expect(rows().map((cells) => cells.at(-1))).toEqual([
+      'Finished',
+      'Finished',
+      'Overdue 2h',
+    ]);
+    expect(
+      classesIn('due').map((classes) => classes.contains('overdue'))
+    ).toEqual([false, false, true]);
+  });
+
   it('marks how each ticket stands against its SLA', () => {
     const { classesIn } = render([
       ticket(1001, '2026-10-03T11:00:00.000Z'), // an hour ago
@@ -226,6 +243,94 @@ describe('TicketTable', () => {
 
       // #1001 now leads.
       expect(actioned).toEqual([tickets[1]]);
+    });
+  });
+
+  describe('status menu', () => {
+    /** Renders with a Change status menu on each row. */
+    function renderWithMenu(tickets: TicketDto[]) {
+      const fixture = TestBed.createComponent(TicketTable);
+      fixture.componentRef.setInput('tickets', tickets);
+      fixture.componentRef.setInput('statusMenu', true);
+      const changes: { ticket: TicketDto; status: string }[] = [];
+      fixture.componentInstance.statusChange.subscribe((change) =>
+        changes.push(change)
+      );
+      fixture.detectChanges();
+      const table = fixture.nativeElement as HTMLElement;
+      const menuButtons = () => [
+        ...table.querySelectorAll<HTMLButtonElement>(
+          'td.mat-column-statusMenu button'
+        ),
+      ];
+      return {
+        changes,
+        menuButtons,
+        /** Opens a row's menu and lists its choices, from the overlay. */
+        openMenu: async (row: number) => {
+          menuButtons()[row].click();
+          fixture.detectChanges();
+          await fixture.whenStable();
+          return [
+            ...document.querySelectorAll<HTMLButtonElement>(
+              '.mat-mdc-menu-panel button[mat-menu-item]'
+            ),
+          ];
+        },
+      };
+    }
+
+    afterEach(() => {
+      // Close any menu left open, so the next test starts clean.
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      document
+        .querySelectorAll('.cdk-overlay-container')
+        .forEach((container) => container.replaceChildren());
+    });
+
+    it('has no menu unless asked', () => {
+      expect(render([ticket(1001, null)]).headers()).toHaveLength(6);
+    });
+
+    it.each([
+      ['new', ['Open', 'Closed']],
+      ['open', ['Pending', 'Resolved', 'Closed']],
+      ['pending', ['Open', 'Resolved', 'Closed']],
+      ['resolved', ['Open', 'Closed']],
+    ] as const)(
+      'offers a %s ticket only the moves the workflow allows',
+      async (status, labels) => {
+        const { openMenu } = renderWithMenu([ticket(1001, null, { status })]);
+
+        const choices = await openMenu(0);
+
+        expect(choices.map((choice) => choice.textContent?.trim())).toEqual(
+          labels
+        );
+      }
+    );
+
+    it('gives a closed ticket no menu', () => {
+      const { menuButtons } = renderWithMenu([
+        ticket(1001, null),
+        ticket(1002, null, { status: 'closed' }),
+      ]);
+
+      expect(
+        menuButtons().map((button) => button.getAttribute('aria-label'))
+      ).toEqual(['Change status of #1001']);
+    });
+
+    it('emits the ticket and the status chosen', async () => {
+      const tickets = [ticket(1001, null), ticket(1312, null)];
+      const { openMenu, changes } = renderWithMenu(tickets);
+
+      const choices = await openMenu(1);
+      choices
+        .find((choice) => choice.textContent?.trim() === 'Resolved')
+        ?.click();
+
+      expect(changes).toEqual([{ ticket: tickets[1], status: 'resolved' }]);
     });
   });
 

@@ -3,13 +3,15 @@ import { asc, count, eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
 import { fileURLToPath } from 'url';
-import type { Database } from '../database.module';
+import type { Database } from '../database-token';
 import { ticketMessages, tickets } from '../schema';
 import { minutesFrom, seedDatabase, SeedSummary, ticketRow } from './seed';
 import { SHOWCASE_TICKETS } from './story';
 
 const now = new Date('2026-10-03T12:00:00.000Z');
-const MIGRATIONS = fileURLToPath(new URL('../../../drizzle', import.meta.url));
+const MIGRATIONS = fileURLToPath(
+  new URL('../../../../drizzle', import.meta.url)
+);
 
 describe('minutesFrom', () => {
   it('moves forward, backward or not at all from now', () => {

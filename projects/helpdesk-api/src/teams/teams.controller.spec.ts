@@ -6,6 +6,7 @@ import type {
   TeamOverview,
   TicketDto,
 } from '@helpdesk/contract';
+import { TeamsService, TicketsService } from '@helpdesk/server';
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import cookieParser from 'cookie-parser';
@@ -13,9 +14,7 @@ import { AddressInfo } from 'net';
 import { SESSION_COOKIE } from '../auth/auth-config';
 import { AuthGuard } from '../auth/auth.guard';
 import { AuthService } from '../auth/auth.service';
-import { TicketsService } from '../tickets/tickets.service';
 import { historySince, TeamsController } from './teams.controller';
-import { TeamsService } from './teams.service';
 
 /** One user per role; each one's session token is their role's name. */
 const USERS: Record<Role, CurrentUser> = {

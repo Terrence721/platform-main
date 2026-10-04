@@ -1,3 +1,4 @@
+import { hashPassword } from '@helpdesk/server';
 import { JwtService } from '@nestjs/jwt';
 import type { Database } from '../database/database.module';
 import {
@@ -7,7 +8,6 @@ import {
   sessionCookieOptions,
 } from './auth-config';
 import { AuthService } from './auth.service';
-import { hashPassword } from './password';
 
 const PASSWORD = 'helpdesk-dev-only';
 

@@ -13,7 +13,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { and, asc, desc, eq, gte, inArray, isNull, or, sql } from 'drizzle-orm';
-import { DATABASE, type Database } from '../database/database.module';
+import { DATABASE, type Database } from '../database/database-token';
 import { teams, tickets, users } from '../database/schema';
 import { MOST_URGENT_FIRST, selectTickets, toTicketDto } from './ticket-dto';
 

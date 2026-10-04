@@ -10,6 +10,7 @@ import {
   PASSWORD_MIN_LENGTH,
   type UserAccount,
 } from '@helpdesk/contract';
+import { UsersService } from '@helpdesk/server';
 import {
   BadRequestException,
   Body,
@@ -18,7 +19,6 @@ import {
   Post,
 } from '@nestjs/common';
 import { OnlyFor } from '../auth/role.guard';
-import { UsersService } from './users.service';
 
 /**
  * The fields of a Create Account body, checked one by one; the first that

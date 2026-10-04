@@ -5,7 +5,7 @@ import type {
   TicketDto,
 } from '@helpdesk/contract';
 import { asc, eq, sql } from 'drizzle-orm';
-import type { Database } from '../database/database.module';
+import type { Database } from '../database/database-token';
 import { customers, queues, tickets, users } from '../database/schema';
 
 /**

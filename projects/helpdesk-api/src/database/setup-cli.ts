@@ -1,11 +1,10 @@
+import { DEFAULT_SEED_PASSWORD, seedDatabase, users } from '@helpdesk/server';
 import { count } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { dirname, join } from 'path';
 import { Pool } from 'pg';
 import { databaseUrl } from './database-url';
-import { users } from './schema';
-import { DEFAULT_SEED_PASSWORD, seedDatabase } from './seed/seed';
 
 // The Docker image's first step (`node setup.js && node main.js`): brings
 // the database at DATABASE_URL up to date before the API starts. Applies the

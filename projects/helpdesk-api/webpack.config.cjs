@@ -29,8 +29,15 @@ module.exports = {
         { entryName: 'setup', entryPath: './src/database/setup-cli.ts' },
       ],
       tsConfig: './tsconfig.app.json',
-      // The SQL migrations, applied when the container starts.
-      assets: [{ input: './drizzle', glob: '**/*', output: 'drizzle' }],
+      // The SQL migrations (kept with the schema in helpdesk-server), applied
+      // when the container starts.
+      assets: [
+        {
+          input: '../helpdesk-server/drizzle',
+          glob: '**/*',
+          output: 'drizzle',
+        },
+      ],
       optimization: false,
       outputHashing: 'none',
       generatePackageJson: true,

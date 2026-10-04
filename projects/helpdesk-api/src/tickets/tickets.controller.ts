@@ -12,6 +12,7 @@ import {
   type TicketMessage,
   type TicketStatus,
 } from '@helpdesk/contract';
+import { TicketMessagesService, TicketsService } from '@helpdesk/server';
 import {
   BadRequestException,
   Body,
@@ -24,8 +25,6 @@ import {
 } from '@nestjs/common';
 import { SignedInUser } from '../auth/auth.guard';
 import { OnlyFor } from '../auth/role.guard';
-import { TicketMessagesService } from './ticket-messages.service';
-import { TicketsService } from './tickets.service';
 
 /** The agent an Assign body names; anything else is refused with 400. */
 export function readAssigneeId(body: unknown): string {

@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
 import { fileURLToPath } from 'url';
-import type { Database } from '../database/database.module';
+import type { Database } from '../database/database-token';
 import {
   customers,
   queues,
@@ -16,7 +16,7 @@ import {
 import { TicketMessagesService } from './ticket-messages.service';
 
 /** The real migrations, so the tests run against the real schema. */
-const MIGRATIONS = fileURLToPath(new URL('../../drizzle', import.meta.url));
+const MIGRATIONS = fileURLToPath(new URL('../../../drizzle', import.meta.url));
 
 /** Atlas is Chris's team (Sam, Benny); Beacon is Nina's (Omar). */
 const PEOPLE: { id: string; role: Role; teamId: string | null }[] = [

@@ -9,11 +9,12 @@ if (existsSync('.env')) {
 }
 
 // drizzle-kit's settings for the Helpdesk API: where the tables are defined
-// and where generated migrations go (committed). Paths are relative to the
-// repo root, where the `yarn db:*` scripts run drizzle-kit.
+// and where generated migrations go (committed), both in the helpdesk-server
+// library. Paths are relative to the repo root, where the `yarn db:*`
+// scripts run drizzle-kit.
 export default defineConfig({
   dialect: 'postgresql',
-  schema: './projects/helpdesk-api/src/database/schema.ts',
-  out: './projects/helpdesk-api/drizzle',
+  schema: './projects/helpdesk-server/src/lib/database/schema.ts',
+  out: './projects/helpdesk-server/drizzle',
   dbCredentials: { url: databaseUrl() },
 });

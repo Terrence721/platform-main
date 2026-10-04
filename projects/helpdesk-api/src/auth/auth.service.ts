@@ -1,10 +1,9 @@
 import { CurrentUser, isUserId, PASSWORD_MAX_LENGTH } from '@helpdesk/contract';
+import { hashPassword, users, verifyPassword } from '@helpdesk/server';
 import { Inject, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { eq } from 'drizzle-orm';
 import { DATABASE, type Database } from '../database/database.module';
-import { users } from '../database/schema';
-import { hashPassword, verifyPassword } from './password';
 
 /** What a session token carries: the user ID (`sub`) and role. */
 interface SessionClaims {

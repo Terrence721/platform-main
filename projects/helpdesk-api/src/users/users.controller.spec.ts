@@ -4,6 +4,7 @@ import {
   USER_ID_TAKEN_MESSAGE,
   type UserAccount,
 } from '@helpdesk/contract';
+import { UsersService } from '@helpdesk/server';
 import {
   BadRequestException,
   ConflictException,
@@ -16,7 +17,6 @@ import { SESSION_COOKIE } from '../auth/auth-config';
 import { AuthGuard } from '../auth/auth.guard';
 import { AuthService } from '../auth/auth.service';
 import { readCreateAccount, UsersController } from './users.controller';
-import { UsersService } from './users.service';
 
 /** One user per role; each one's session token is their role's name. */
 const USERS: Record<Role, CurrentUser> = {

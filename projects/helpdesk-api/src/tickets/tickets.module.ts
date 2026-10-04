@@ -1,8 +1,7 @@
+import { TicketMessagesService, TicketsService } from '@helpdesk/server';
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
-import { TicketMessagesService } from './ticket-messages.service';
 import { TicketsController } from './tickets.controller';
-import { TicketsService } from './tickets.service';
 
 /**
  * Tickets for the people who work them (/api/tickets). AuthModule brings

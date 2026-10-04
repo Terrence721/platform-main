@@ -11,8 +11,13 @@
 FROM node:24-alpine AS build
 WORKDIR /repo
 RUN corepack enable
+# The package list first, then the install, then the source: Docker reuses
+# the install (the slow step) until package.json or yarn.lock changes, and
+# Yarn keeps its downloads in a cache that outlives each build.
+COPY package.json yarn.lock .yarnrc.yml ./
+RUN --mount=type=cache,target=/root/.yarn/berry/cache,sharing=locked \
+  yarn install --immutable
 COPY . .
-RUN yarn install --immutable
 # No Nx daemon or cloud cache inside a one-off build.
 ENV NX_DAEMON=false NX_NO_CLOUD=true
 RUN yarn nx build helpdesk-api --skip-nx-cache

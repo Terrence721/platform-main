@@ -3,9 +3,12 @@
 # and all, when the app window closes; `yarn db:reset` deletes it by hand.
 # Values come from .env (copy .env.example); the defaults below match it.
 #
-# The `full` profile adds the API as a container (projects/helpdesk-api/
-# Dockerfile): `docker compose --profile full up --build`. Without the
-# profile, Compose starts only the database, as `yarn start:helpdesk` needs.
+# The `full` profile runs the whole help desk in containers, with nothing
+# but Docker installed: `docker compose --profile full up --build`, then
+# open http://localhost:8088. It adds the API (projects/helpdesk-api/
+# Dockerfile) and the app behind nginx (projects/helpdesk/Dockerfile).
+# Without the profile, Compose starts only the database, as
+# `yarn start:helpdesk` needs.
 name: helpdesk
 
 services:
@@ -50,6 +53,20 @@ services:
       # localhost only, like the database. The same port as `nx serve`, so
       # run one or the other.
       - '127.0.0.1:3000:3000'
+
+  app:
+    profiles: [full]
+    build:
+      context: .
+      dockerfile: projects/helpdesk/Dockerfile
+    # nginx looks the API up by name when it starts, so the API comes first.
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      # localhost only. 8088, not 8080, which other local tools often hold;
+      # HELPDESK_APP_PORT in .env picks another.
+      - '127.0.0.1:${HELPDESK_APP_PORT:-8088}:8080'
 
 volumes:
   helpdesk-db:

@@ -8,6 +8,7 @@ import {
   findBrowser,
   findFreePort,
   FIRST_API_PORT,
+  FIRST_DOCKER_APP_PORT,
   FIRST_PORT,
   isPortFree,
   removeWhenFree,
@@ -263,6 +264,37 @@ describe('stackFor', () => {
     ]);
     expect([api.stopCommand, app.stopCommand]).toEqual([undefined, undefined]);
     expect(DEFAULT_DB_PORT).toBe(5435);
+  });
+
+  it('runs the whole Helpdesk in Docker as one service, from fresh data, opening the app', () => {
+    expect(
+      stackFor('helpdesk-docker', { app: 8088, api: 3000, db: 5435 })
+    ).toEqual([
+      {
+        name: 'helpdesk (Docker)',
+        command:
+          'docker compose --profile full down --volumes' +
+          ' && docker compose --profile full up --build --detach --wait',
+        env: { HELPDESK_APP_PORT: '8088' },
+        stopCommand: 'docker compose --profile full down --volumes',
+        pageUrl: 'http://localhost:8088/',
+        ports: [8088, FIRST_API_PORT, 5435],
+      },
+    ]);
+    expect(FIRST_DOCKER_APP_PORT).toBe(8088);
+  });
+
+  it('publishes the Docker app on the port it was given', () => {
+    const [helpdesk] = stackFor('helpdesk-docker', {
+      app: 8089,
+      api: 3000,
+      db: 5435,
+    });
+
+    expect(helpdesk.env).toEqual({ HELPDESK_APP_PORT: '8089' });
+    expect(helpdesk.pageUrl).toBe('http://localhost:8089/');
+    // A service: no URL to poll, only a page to open.
+    expect(helpdesk.readyUrl).toBeUndefined();
   });
 
   it('runs any other app on its own', () => {

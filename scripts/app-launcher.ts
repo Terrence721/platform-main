@@ -17,6 +17,13 @@ export const DEBUGGER_PORT = 9229;
 export const DEFAULT_DB_PORT = 5435;
 
 /**
+ * Where `yarn start:helpdesk:docker` publishes the app (compose.yaml,
+ * HELPDESK_APP_PORT); its search starts here. 8088, not 8080, which other
+ * local tools often hold.
+ */
+export const FIRST_DOCKER_APP_PORT = 8088;
+
+/**
  * One thing `yarn start:<app>` runs, and how to tell it is ready. Either a
  * long-running process (a dev server), ready once `readyUrl` answers and
  * stopped by ending its process tree; or a service (the database in
@@ -32,6 +39,11 @@ export interface StackServer {
   readyUrl?: string;
   /** A service: stops it (its `command` only starts it, then finishes). */
   stopCommand?: string;
+  /**
+   * The page the app window opens, when it is not `readyUrl`: a service
+   * that serves the app itself (the Helpdesk in Docker) has no `readyUrl`.
+   */
+  pageUrl?: string;
   /** Every port it holds, all free again once it has stopped. */
   ports: number[];
 }
@@ -39,13 +51,35 @@ export interface StackServer {
 /**
  * The servers `yarn start:<app>` runs, in start order. The Helpdesk runs its
  * database (Docker Compose), then its API, then the app, whose dev server
- * forwards /api to the API (see projects/helpdesk/proxy.conf.mjs); any
+ * forwards /api to the API (see projects/helpdesk/proxy.conf.mjs);
+ * `helpdesk-docker` runs all three as containers instead (compose.yaml's
+ * `full` profile), from images built from the source, on `ports.app`; any
  * other app runs on its own.
  */
 export function stackFor(
   app: string,
   ports: { app: number; api: number; db: number }
 ): StackServer[] {
+  if (app === 'helpdesk-docker') {
+    return [
+      {
+        name: 'helpdesk (Docker)',
+        // Builds both images (quick when only code changed) and starts the
+        // database, the API and the app; ready once all three are healthy.
+        // Every run starts from fresh seed data, as with `yarn
+        // start:helpdesk`: whatever an earlier run left is removed first.
+        command:
+          'docker compose --profile full down --volumes' +
+          ' && docker compose --profile full up --build --detach --wait',
+        env: { HELPDESK_APP_PORT: String(ports.app) },
+        // Closing the app deletes the containers and their data.
+        stopCommand: 'docker compose --profile full down --volumes',
+        pageUrl: `http://localhost:${ports.app}/`,
+        // compose.yaml publishes the API on 3000 and the database on db.
+        ports: [ports.app, FIRST_API_PORT, ports.db],
+      },
+    ];
+  }
   const appServer: StackServer = {
     name: app,
     command: `yarn nx serve ${app} --port ${ports.app}`,

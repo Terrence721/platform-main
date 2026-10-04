@@ -141,16 +141,16 @@ jobs:
         run: npx prettier --check .
 
   docker:
-    name: Docker image (helpdesk-api)
+    name: Docker images (helpdesk)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v5
 
-      # Builds the API image and starts it with its database, as
+      # Builds the API and app images and starts them with the database, as
       # `docker compose --profile full up` does on a machine; --wait returns
-      # once both report healthy (the API after migrating and seeding).
-      - name: Build and start the API with its database
+      # once all three report healthy (the API after migrating and seeding).
+      - name: Build and start the whole help desk
         run: docker compose --profile full up --build --detach --wait
 
       - name: Check the API answers and the seed signs in
@@ -161,9 +161,16 @@ jobs:
             --data '{"userId":"sam.rivera","password":"helpdesk-dev-only"}' \
             http://localhost:3000/api/auth/sign-in
 
-      - name: Show the API's log
+      # The app's page from nginx, and the API through nginx's /api
+      # forwarding, as the browser reaches it.
+      - name: Check the app loads and reaches the API
+        run: |
+          curl --fail --silent --output /dev/null http://localhost:8088/
+          curl --fail --silent http://localhost:8088/api/health
+
+      - name: Show the API's and the app's logs
         if: always()
-        run: docker compose --profile full logs api
+        run: docker compose --profile full logs api app
 
       - name: Stop and remove everything
         if: always()

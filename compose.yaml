@@ -2,6 +2,10 @@
 # starts it fresh on every run (migrated and seeded) and deletes it, data
 # and all, when the app window closes; `yarn db:reset` deletes it by hand.
 # Values come from .env (copy .env.example); the defaults below match it.
+#
+# The `full` profile adds the API as a container (projects/helpdesk-api/
+# Dockerfile): `docker compose --profile full up --build`. Without the
+# profile, Compose starts only the database, as `yarn start:helpdesk` needs.
 name: helpdesk
 
 services:
@@ -26,6 +30,26 @@ services:
       interval: 2s
       timeout: 3s
       retries: 30
+
+  api:
+    profiles: [full]
+    build:
+      context: .
+      dockerfile: projects/helpdesk-api/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # The database by its name on Compose's own network.
+      DATABASE_URL: postgres://${HELPDESK_DB_USER:-helpdesk}:${HELPDESK_DB_PASSWORD:-helpdesk-dev-only}@db:5432/${HELPDESK_DB_NAME:-helpdesk}
+      # Seeds an empty database on first start; restarts keep the data.
+      HELPDESK_SEED: 'true'
+      HELPDESK_SEED_PASSWORD: ${HELPDESK_SEED_PASSWORD:-helpdesk-dev-only}
+      HELPDESK_JWT_SECRET: ${HELPDESK_JWT_SECRET:-helpdesk-dev-only-jwt-secret}
+    ports:
+      # localhost only, like the database. The same port as `nx serve`, so
+      # run one or the other.
+      - '127.0.0.1:3000:3000'
 
 volumes:
   helpdesk-db:

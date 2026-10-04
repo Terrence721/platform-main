@@ -1,5 +1,23 @@
-node_modules
+# What `docker build .` leaves out of the build context. Patterns start at
+# the repo root, so nested folders need **/.
+
+# Installed packages: the image installs its own.
+**/node_modules
+.yarn/install-state.gz
 npm-debug.log
+
+# Build output and caches: the image builds from source.
+dist
+tmp
+coverage
+.nx
+.angular
+
+# Local settings and secrets: the container gets its settings from
+# compose.yaml or `docker run -e`.
+.env
+
+# Docker's own files, and git.
 Dockerfile*
 docker-compose*
 .dockerignore

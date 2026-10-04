@@ -1,5 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { ExpressAdapter } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
 import { existsSync } from 'fs';
 import { AppModule } from './app/app.module';
@@ -17,7 +18,9 @@ const DEFAULT_PORT = 3000;
 
 /** Starts the Helpdesk API on PORT (default 3000). */
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
+  // Express, named here rather than found by Nest at run time, so the build
+  // sees it and lists it in the package.json the Docker image installs from.
+  const app = await NestFactory.create(AppModule, new ExpressAdapter());
   app.setGlobalPrefix(GLOBAL_PREFIX);
   // Reads the session cookie into request.cookies for AuthGuard.
   app.use(cookieParser());

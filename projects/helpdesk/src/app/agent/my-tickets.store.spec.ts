@@ -7,8 +7,11 @@ import { TestBed } from '@angular/core/testing';
 import type { TicketDto } from '@helpdesk/contract';
 import { assigneeApi } from '../supervisor/my-team.store';
 import {
+  FINISHED_API,
   MY_TICKETS_API,
   MyTicketsStore,
+  STATUS_UNAVAILABLE_MESSAGE,
+  statusApi,
   TAKE_UNAVAILABLE_MESSAGE,
   UNASSIGNED_API,
 } from './my-tickets.store';
@@ -32,10 +35,12 @@ describe('MyTicketsStore', () => {
   });
 
   afterEach(() => {
-    // Tests about My tickets leave the Unassigned load unanswered.
-    for (const request of http.match(UNASSIGNED_API)) {
-      if (!request.cancelled) {
-        request.flush([]);
+    // Tests about one list leave the other lists' loads unanswered.
+    for (const url of [UNASSIGNED_API, FINISHED_API]) {
+      for (const request of http.match(url)) {
+        if (!request.cancelled) {
+          request.flush([]);
+        }
       }
     }
     http.verify();
@@ -197,6 +202,120 @@ describe('MyTicketsStore', () => {
       put().flush(taken);
       http.expectOne(MY_TICKETS_API).flush([taken]);
       http.expectOne(UNASSIGNED_API).flush([]);
+    });
+  });
+
+  describe('finished (Done)', () => {
+    it('loads the recently finished tickets too, as soon as it is created', () => {
+      const store = TestBed.inject(MyTicketsStore);
+      http.expectOne(MY_TICKETS_API).flush([]);
+
+      expect(store.finishedState()).toBe('loading');
+      http.expectOne(FINISHED_API).flush([ticket(1290)]);
+
+      expect(store.finishedState()).toBe('loaded');
+      expect(store.finished().map(({ ticketNumber }) => ticketNumber)).toEqual([
+        1290,
+      ]);
+    });
+
+    it('says loading them failed', () => {
+      const store = TestBed.inject(MyTicketsStore);
+      http.expectOne(MY_TICKETS_API).flush([]);
+
+      http
+        .expectOne(FINISHED_API)
+        .flush(null, { status: 500, statusText: 'Server Error' });
+
+      expect(store.finishedState()).toBe('failed');
+    });
+  });
+
+  describe('changeStatus', () => {
+    const resolved = {
+      ...ticket(1003),
+      status: 'resolved',
+    } as TicketDto;
+
+    /** A store with all three lists loaded, as the page has them. */
+    function loadedStore() {
+      const store = TestBed.inject(MyTicketsStore);
+      http.expectOne(MY_TICKETS_API).flush([ticket(1003), ticket(1006)]);
+      http.expectOne(UNASSIGNED_API).flush([]);
+      http.expectOne(FINISHED_API).flush([]);
+      return store;
+    }
+
+    const put = () =>
+      http.expectOne({ method: 'PUT', url: statusApi('ticket-1003') });
+
+    it('starts with no change in progress', () => {
+      const store = loadedStore();
+
+      expect(store.statusState()).toBe('idle');
+      expect(store.statusError()).toBeNull();
+    });
+
+    it('sends the status, saving until the API answers', () => {
+      const store = loadedStore();
+
+      store.changeStatus({ ticketId: 'ticket-1003', status: 'resolved' });
+
+      expect(store.statusState()).toBe('saving');
+      const call = put();
+      expect(call.request.body).toEqual({ status: 'resolved' });
+      call.flush(resolved);
+      http.expectOne(MY_TICKETS_API).flush([ticket(1006)]);
+      http.expectOne(FINISHED_API).flush([resolved]);
+    });
+
+    it('moves a resolved ticket into Done, quietly, with no spinner', () => {
+      const store = loadedStore();
+
+      store.changeStatus({ ticketId: 'ticket-1003', status: 'resolved' });
+      put().flush(resolved);
+      http.expectOne(MY_TICKETS_API).flush([ticket(1006)]);
+      http.expectOne(FINISHED_API).flush([resolved]);
+
+      expect(store.loadState()).toBe('loaded');
+      expect(numbers(store)).toEqual([1006]);
+      expect(store.finished()).toEqual([resolved]);
+      expect(store.statusState()).toBe('changed');
+      expect(store.lastChanged()).toEqual(resolved);
+    });
+
+    it("keeps the API's message for a move the workflow refuses", () => {
+      const store = loadedStore();
+
+      store.changeStatus({ ticketId: 'ticket-1003', status: 'new' });
+      put().flush(
+        { message: "An open ticket can't become new." },
+        { status: 409, statusText: 'Conflict' }
+      );
+
+      expect(store.statusState()).toBe('failed');
+      expect(store.statusError()).toBe("An open ticket can't become new.");
+      expect(numbers(store)).toEqual([1003, 1006]);
+    });
+
+    it('says changing is unavailable when the API cannot explain', () => {
+      const store = loadedStore();
+
+      store.changeStatus({ ticketId: 'ticket-1003', status: 'resolved' });
+      put().error(new ProgressEvent('error'));
+
+      expect(store.statusError()).toBe(STATUS_UNAVAILABLE_MESSAGE);
+    });
+
+    it('ignores a second change while one is saving', () => {
+      const store = loadedStore();
+
+      store.changeStatus({ ticketId: 'ticket-1003', status: 'resolved' });
+      store.changeStatus({ ticketId: 'ticket-1003', status: 'closed' });
+
+      put().flush(resolved);
+      http.expectOne(MY_TICKETS_API).flush([]);
+      http.expectOne(FINISHED_API).flush([resolved]);
     });
   });
 });

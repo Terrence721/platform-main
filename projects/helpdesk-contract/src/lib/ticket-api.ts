@@ -84,6 +84,18 @@ export interface AssignTicketRequest {
   assigneeId: string;
 }
 
+/**
+ * Moves a ticket to another status, as the workflow allows
+ * (`canTransition`). The agent who holds the ticket, or their team's
+ * supervisor, may do it; a closed ticket stays closed.
+ */
+export interface ChangeStatusRequest {
+  status: TicketStatus;
+}
+
+/** How long a finished ticket stays in an agent's Done list. */
+export const RECENTLY_FINISHED_HOURS = 24;
+
 /** The fields a ticket list can be sorted by. */
 export const TICKET_SORT_FIELDS = [
   'ticketNumber',

@@ -11,7 +11,11 @@ import { AddressInfo } from 'net';
 import { SESSION_COOKIE } from '../auth/auth-config';
 import { AuthGuard } from '../auth/auth.guard';
 import { AuthService } from '../auth/auth.service';
-import { readAssigneeId, TicketsController } from './tickets.controller';
+import {
+  readAssigneeId,
+  readStatus,
+  TicketsController,
+} from './tickets.controller';
 import { TicketsService } from './tickets.service';
 
 /** One user per role; each one's session token is their role's name. */
@@ -48,6 +52,23 @@ const overdue = {
   subject: 'Cannot sign in after the password reset',
 } as TicketDto;
 
+describe('readStatus', () => {
+  it('reads the status a body names', () => {
+    expect(readStatus({ status: 'resolved' })).toBe('resolved');
+  });
+
+  it.each([
+    ['no body', null],
+    ['no status', {}],
+    ['an unknown status', { status: 'done' }],
+  ])('refuses %s with 400', (_, body) => {
+    expect(() => readStatus(body)).toThrow(BadRequestException);
+    expect(() => readStatus(body)).toThrow(
+      'Choose new, open, pending, resolved or closed.'
+    );
+  });
+});
+
 describe('readAssigneeId', () => {
   it('reads the agent a body names', () => {
     expect(readAssigneeId({ assigneeId: 'benny.lind' })).toBe('benny.lind');
@@ -72,6 +93,8 @@ describe('/api/tickets', () => {
     assign: vi.fn(async (): Promise<TicketDto> => overdue),
     unassigned: vi.fn(async () => [overdue]),
     take: vi.fn(async (): Promise<TicketDto> => overdue),
+    recentlyFinished: vi.fn(async () => [overdue]),
+    changeStatus: vi.fn(async (): Promise<TicketDto> => overdue),
   };
   let app: INestApplication;
   let base: string;
@@ -263,6 +286,95 @@ describe('/api/tickets', () => {
     ] as const)('turns away %s', async (_, role, status) => {
       expect((await unassigned(role)).status).toBe(status);
       expect(tickets.unassigned).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('GET mine/finished', () => {
+    const finished = (role: Role | null) =>
+      fetch(`${base}/mine/finished`, {
+        headers: role === null ? {} : { cookie: `${SESSION_COOKIE}=${role}` },
+      });
+
+    it('answers an agent with their own finished tickets', async () => {
+      const response = await finished('agent');
+
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual([overdue]);
+      expect(tickets.recentlyFinished).toHaveBeenCalledExactlyOnceWith(
+        'sam.rivera'
+      );
+    });
+
+    it.each([
+      ['a supervisor', 'supervisor', 403],
+      ['an admin', 'admin', 403],
+      ['a signed-out request', null, 401],
+    ] as const)('turns away %s', async (_, role, status) => {
+      expect((await finished(role)).status).toBe(status);
+      expect(tickets.recentlyFinished).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('PUT :ticketId/status', () => {
+    /** PUT a Change status body for the overdue ticket. */
+    const changeStatus = (
+      role: Role | null,
+      body: unknown = { status: 'resolved' }
+    ) =>
+      fetch(`${base}/${overdue.id}/status`, {
+        method: 'PUT',
+        headers: {
+          'content-type': 'application/json',
+          ...(role === null ? {} : { cookie: `${SESSION_COOKIE}=${role}` }),
+        },
+        body: JSON.stringify(body),
+      });
+
+    it.each([
+      ['an agent', 'agent', 'sam.rivera'],
+      ['a supervisor', 'supervisor', 'chris.taylor'],
+    ] as const)(
+      'changes the status for %s, as that user',
+      async (_, role, id) => {
+        const response = await changeStatus(role);
+
+        expect(response.status).toBe(200);
+        expect(await response.json()).toEqual(overdue);
+        expect(tickets.changeStatus).toHaveBeenCalledExactlyOnceWith(
+          overdue.id,
+          'resolved',
+          expect.objectContaining({ id, role })
+        );
+      }
+    );
+
+    it('answers a body without a status with 400, changing nothing', async () => {
+      const response = await changeStatus('agent', { status: 'done' });
+
+      expect(response.status).toBe(400);
+      expect(tickets.changeStatus).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      [new NotFoundException('No such ticket among yours.'), 404],
+      [new ConflictException("A closed ticket can't change."), 409],
+    ])("passes on the service's %s", async (error, status) => {
+      tickets.changeStatus.mockRejectedValueOnce(error);
+
+      const response = await changeStatus('agent');
+
+      expect(response.status).toBe(status);
+      expect(await response.json()).toEqual(
+        expect.objectContaining({ message: error.message })
+      );
+    });
+
+    it.each([
+      ['an admin', 'admin', 403],
+      ['a signed-out request', null, 401],
+    ] as const)('turns away %s, changing nothing', async (_, role, status) => {
+      expect((await changeStatus(role)).status).toBe(status);
+      expect(tickets.changeStatus).not.toHaveBeenCalled();
     });
   });
 });

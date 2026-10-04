@@ -1,7 +1,10 @@
-import type {
-  HistorySummary,
-  TicketDto,
-  TicketStatus,
+import {
+  canTransition,
+  type CurrentUser,
+  type HistorySummary,
+  RECENTLY_FINISHED_HOURS,
+  type TicketDto,
+  type TicketStatus,
 } from '@helpdesk/contract';
 import {
   ConflictException,
@@ -237,5 +240,84 @@ export class TicketsService {
       eq(tickets.id, ticketId)
     );
     return toTicketDto(row);
+  }
+
+  /**
+   * Moves a ticket to another status, as the workflow allows. Only the
+   * agent who holds it, or the supervisor who leads that agent's team, may
+   * (404 for anyone else, and for an unassigned ticket: the same answer as
+   * for no ticket at all). 409 for a move the workflow does not allow,
+   * including to the status it has. In one transaction with the ticket
+   * locked. Answers with the ticket.
+   */
+  async changeStatus(
+    ticketId: string,
+    to: TicketStatus,
+    by: CurrentUser
+  ): Promise<TicketDto> {
+    if (!UUID.test(ticketId)) {
+      throw new NotFoundException('No such ticket among yours.');
+    }
+    await this.database.transaction(async (tx) => {
+      const [ticket] = await tx
+        .select({
+          status: tickets.status,
+          assigneeId: tickets.assigneeId,
+          leadId: teams.supervisorId,
+        })
+        .from(tickets)
+        .leftJoin(users, eq(tickets.assigneeId, users.id))
+        .leftJoin(teams, eq(users.teamId, teams.id))
+        .where(eq(tickets.id, ticketId))
+        .for('update', { of: tickets });
+      const mayChange =
+        ticket !== undefined &&
+        ticket.assigneeId !== null &&
+        (ticket.assigneeId === by.id ||
+          (by.role === 'supervisor' && ticket.leadId === by.id));
+      if (!mayChange) {
+        throw new NotFoundException('No such ticket among yours.');
+      }
+      if (!canTransition(ticket.status, to)) {
+        throw new ConflictException(
+          ticket.status === 'closed'
+            ? "A closed ticket can't change."
+            : `${/^[aeiou]/.test(ticket.status) ? 'An' : 'A'} ${ticket.status} ticket can't become ${to}.`
+        );
+      }
+      await tx
+        .update(tickets)
+        .set({ status: to })
+        .where(eq(tickets.id, ticketId));
+    });
+
+    const [row] = await selectTickets(this.database).where(
+      eq(tickets.id, ticketId)
+    );
+    return toTicketDto(row);
+  }
+
+  /**
+   * An agent's tickets that became resolved or closed lately (changed
+   * within `RECENTLY_FINISHED_HOURS` of `now`), most recently changed
+   * first: their Done list.
+   */
+  async recentlyFinished(
+    agentId: string,
+    now = new Date()
+  ): Promise<TicketDto[]> {
+    const since = new Date(
+      now.getTime() - RECENTLY_FINISHED_HOURS * 60 * 60 * 1000
+    );
+    const rows = await selectTickets(this.database)
+      .where(
+        and(
+          eq(tickets.assigneeId, agentId),
+          inArray(tickets.status, ['resolved', 'closed']),
+          gte(tickets.updatedAt, since)
+        )
+      )
+      .orderBy(desc(tickets.updatedAt), asc(tickets.ticketNumber));
+    return rows.map(toTicketDto);
   }
 }

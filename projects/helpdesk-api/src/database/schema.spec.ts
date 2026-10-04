@@ -1,6 +1,8 @@
 import {
   ROLES,
   TICKET_DESCRIPTION_MAX_LENGTH,
+  TICKET_MESSAGE_KINDS,
+  TICKET_MESSAGE_MAX_LENGTH,
   TICKET_PRIORITIES,
   TICKET_STATUSES,
   TICKET_SUBJECT_MAX_LENGTH,
@@ -11,6 +13,8 @@ import { getTableConfig, PgColumn, PgTable } from 'drizzle-orm/pg-core';
 import {
   roleEnum,
   teams,
+  ticketMessageKindEnum,
+  ticketMessages,
   ticketPriorityEnum,
   tickets,
   ticketStatusEnum,
@@ -43,6 +47,10 @@ describe('schema: the values the contract allows', () => {
   it('stores exactly the contract ticket priorities', () => {
     expect(ticketPriorityEnum.enumValues).toEqual(TICKET_PRIORITIES);
   });
+
+  it('stores exactly the contract message kinds', () => {
+    expect(ticketMessageKindEnum.enumValues).toEqual(TICKET_MESSAGE_KINDS);
+  });
 });
 
 describe('schema: the limits the contract sets', () => {
@@ -53,12 +61,21 @@ describe('schema: the limits the contract sets', () => {
     expect(lengthOf(description)).toBe(TICKET_DESCRIPTION_MAX_LENGTH);
   });
 
+  it('limits a message body as the contract does', () => {
+    expect(lengthOf(getTableColumns(ticketMessages).body)).toBe(
+      TICKET_MESSAGE_MAX_LENGTH
+    );
+  });
+
   it('fits every user ID column to the contract user ID', () => {
     expect(lengthOf(getTableColumns(users).id)).toBe(USER_ID_MAX_LENGTH);
     expect(lengthOf(getTableColumns(tickets).assigneeId)).toBe(
       USER_ID_MAX_LENGTH
     );
     expect(lengthOf(getTableColumns(teams).supervisorId)).toBe(
+      USER_ID_MAX_LENGTH
+    );
+    expect(lengthOf(getTableColumns(ticketMessages).authorId)).toBe(
       USER_ID_MAX_LENGTH
     );
   });
@@ -86,5 +103,20 @@ describe('schema: how the tables connect', () => {
 
     expect(ticketNumber.generatedIdentity?.type).toBe('always');
     expect(ticketNumber.isUnique).toBe(true);
+  });
+
+  it("keeps a conversation with its ticket, and every message's author", () => {
+    expect(referencesOf(ticketMessages)).toEqual({
+      ticket_id: 'tickets',
+      author_id: 'users',
+    });
+    const onDelete = Object.fromEntries(
+      getTableConfig(ticketMessages).foreignKeys.map((key) => [
+        key.reference().columns[0].name,
+        key.onDelete,
+      ])
+    );
+    expect(onDelete).toEqual({ ticket_id: 'cascade', author_id: 'no action' });
+    expect(getTableColumns(ticketMessages).authorId.notNull).toBe(true);
   });
 });

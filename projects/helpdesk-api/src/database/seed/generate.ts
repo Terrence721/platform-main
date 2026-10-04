@@ -9,6 +9,7 @@ import {
   NAMED_USERS,
   QUEUES,
   SeedCustomer,
+  SeedMessage,
   SeedQueue,
   SeedTeam,
   SeedTicket,
@@ -207,6 +208,104 @@ const TAGS: Record<string, readonly string[]> = {
   security: ['access', 'audit', 'phishing', '2fa'],
 };
 
+/** What agents write back to customers, per queue. */
+const REPLIES: Record<string, readonly string[]> = {
+  accounts: [
+    'I have unlocked your account; please try signing in again and let me know how it goes.',
+    'Could you confirm the email address on the account, so I can make the change safely?',
+  ],
+  billing: [
+    'I have checked your billing history and asked our billing team to correct it.',
+    'A corrected invoice is on its way; you should have it within one business day.',
+  ],
+  product: [
+    'Thanks for the details. I can reproduce this and have passed it to our product team.',
+    'This is on our roadmap; I have added your vote and will update you when it ships.',
+  ],
+  technical: [
+    'Could you send the time it last happened and any error message you saw?',
+    'Our engineers found the cause, and a fix is being deployed today.',
+  ],
+  onboarding: [
+    'Happy to help. I have sent you a short guide; shall we book a call to go through it?',
+    'I have set that up for you; your team will see it the next time they sign in.',
+  ],
+  security: [
+    'Thank you for flagging this. We have checked and secured the account as a precaution.',
+    'I have shared our security documents with you through a secure link.',
+  ],
+};
+
+/** What agents note for each other on a ticket. */
+const NOTES: readonly string[] = [
+  'Waiting on the customer before doing anything else.',
+  'Asked engineering to take a look and linked this ticket for them.',
+  'Known issue: same cause as a few other tickets this week.',
+  'The customer also called; same question as in the ticket.',
+  'Checked the logs; nothing unusual on our side.',
+];
+
+/** What a team's supervisor notes on their agents' tickets. */
+const SUPERVISOR_NOTES: readonly string[] = [
+  'Please keep the customer updated at least once a day on this one.',
+  'This is a key account; let me know if it needs escalating.',
+  'Good handling so far; close it once the customer confirms.',
+];
+
+/**
+ * Up to three messages on a ticket someone is working: mostly the
+ * assignee's replies, some notes, now and then one from their supervisor.
+ * Each falls between the ticket's creation and its last update.
+ */
+function messagesFor(
+  faker: Faker,
+  ticket: SeedTicket,
+  supervisorOf: ReadonlyMap<string, string>
+): SeedMessage[] {
+  const { assigneeId, createdMinutesAgo, updatedMinutesAgo } = ticket;
+  if (
+    assigneeId === null ||
+    ticket.status === 'new' ||
+    createdMinutesAgo <= updatedMinutesAgo
+  ) {
+    return [];
+  }
+  const howMany = faker.helpers.weightedArrayElement([
+    { value: 0, weight: 20 },
+    { value: 1, weight: 40 },
+    { value: 2, weight: 25 },
+    { value: 3, weight: 15 },
+  ]);
+  const times = Array.from({ length: howMany }, () =>
+    faker.number.int({ min: updatedMinutesAgo, max: createdMinutesAgo - 1 })
+  ).sort((a, b) => b - a); // Oldest first.
+
+  return times.map((minutesAgo): SeedMessage => {
+    if (faker.number.float() < 0.7) {
+      return {
+        kind: 'reply',
+        body: faker.helpers.arrayElement(REPLIES[ticket.queueId]),
+        authorId: assigneeId,
+        minutesAgo,
+      };
+    }
+    const supervisorId = supervisorOf.get(assigneeId);
+    return supervisorId !== undefined && faker.number.float() < 0.25
+      ? {
+          kind: 'note',
+          body: faker.helpers.arrayElement(SUPERVISOR_NOTES),
+          authorId: supervisorId,
+          minutesAgo,
+        }
+      : {
+          kind: 'note',
+          body: faker.helpers.arrayElement(NOTES),
+          authorId: assigneeId,
+          minutesAgo,
+        };
+  });
+}
+
 /** A unique, valid user ID from a name: `first.last`, then `first.last2`… */
 function userIdFor(first: string, last: string, taken: Set<string>): string {
   const clean = (part: string) => part.toLowerCase().replace(/[^a-z]/g, '');
@@ -336,7 +435,20 @@ export function generateSeed(options: Partial<SeedOptions> = {}): SeedData {
         faker.number.float() < 0.05 ? null : SLA_MINUTES[priority] - ageMinutes,
       createdMinutesAgo: ageMinutes,
       updatedMinutesAgo: faker.number.int({ min: 0, max: ageMinutes }),
+      messages: [],
     });
+  }
+
+  // Conversations, in a pass of their own so the tickets above stay the
+  // same as before they were added. The showcase tickets bring their own.
+  const supervisorOf = new Map(
+    agents.flatMap((agent) => {
+      const team = TEAMS.find(({ id }) => id === agent.teamId);
+      return team ? [[agent.id, team.supervisorId] as const] : [];
+    })
+  );
+  for (const ticket of tickets.slice(SHOWCASE_TICKETS.length)) {
+    ticket.messages = messagesFor(faker, ticket, supervisorOf);
   }
 
   return { queues: QUEUES, teams: TEAMS, users, customers, tickets };

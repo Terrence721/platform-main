@@ -1,4 +1,9 @@
-import type { Role, TicketPriority, TicketStatus } from '@helpdesk/contract';
+import type {
+  Role,
+  TicketMessageKind,
+  TicketPriority,
+  TicketStatus,
+} from '@helpdesk/contract';
 
 // The hand-written part of the seed: the people and tickets that tell the
 // Helpdesk's story, the same on every run. generate.ts adds the volume
@@ -30,6 +35,18 @@ export interface SeedCustomer {
   email: string;
 }
 
+/**
+ * A reply or internal note on a ticket, written by staff. It falls between
+ * the ticket's creation and its last update.
+ */
+export interface SeedMessage {
+  kind: TicketMessageKind;
+  body: string;
+  /** The user ID of the staff member who wrote it. */
+  authorId: string;
+  minutesAgo: number;
+}
+
 /** A ticket whose times are minutes from "now", so it stays current. */
 export interface SeedTicket {
   subject: string;
@@ -44,6 +61,8 @@ export interface SeedTicket {
   slaDueInMinutes: number | null;
   createdMinutesAgo: number;
   updatedMinutesAgo: number;
+  /** The conversation after the description, oldest first. */
+  messages: SeedMessage[];
 }
 
 export const QUEUES: readonly SeedQueue[] = [
@@ -121,6 +140,20 @@ export const SHOWCASE_TICKETS: readonly SeedTicket[] = [
     slaDueInMinutes: -25,
     createdMinutesAgo: 5 * HOUR,
     updatedMinutesAgo: 40,
+    messages: [
+      {
+        kind: 'reply',
+        body: 'Sorry about that, Ada. Which browser are you signing in with, and does a private window behave the same?',
+        authorId: SHOWCASE_AGENT,
+        minutesAgo: 4 * HOUR,
+      },
+      {
+        kind: 'note',
+        body: 'Checked the auth logs: the reset kept the old password hash. Escalating to the accounts team.',
+        authorId: SHOWCASE_AGENT,
+        minutesAgo: 40,
+      },
+    ],
   },
   {
     subject: 'Refund for a double charge',
@@ -134,6 +167,26 @@ export const SHOWCASE_TICKETS: readonly SeedTicket[] = [
     slaDueInMinutes: 2 * HOUR,
     createdMinutesAgo: 26 * HOUR,
     updatedMinutesAgo: 3 * HOUR,
+    messages: [
+      {
+        kind: 'reply',
+        body: 'I can see both charges. I have asked billing to refund the second one; it can take up to five business days.',
+        authorId: SHOWCASE_AGENT,
+        minutesAgo: 25 * HOUR,
+      },
+      {
+        kind: 'note',
+        body: 'Refund requested in the billing system for the duplicate October charge.',
+        authorId: SHOWCASE_AGENT,
+        minutesAgo: 24 * HOUR,
+      },
+      {
+        kind: 'reply',
+        body: 'The refund has gone through on our side. Could you let me know once it shows on your statement?',
+        authorId: SHOWCASE_AGENT,
+        minutesAgo: 3 * HOUR,
+      },
+    ],
   },
   {
     subject: 'Export to CSV leaves out the last row',
@@ -147,6 +200,20 @@ export const SHOWCASE_TICKETS: readonly SeedTicket[] = [
     slaDueInMinutes: 28 * HOUR,
     createdMinutesAgo: 2 * DAY,
     updatedMinutesAgo: 6 * HOUR,
+    messages: [
+      {
+        kind: 'reply',
+        body: 'Thanks, Alan. I can reproduce it whenever a filter is on, and I have passed it to our product team.',
+        authorId: SHOWCASE_AGENT,
+        minutesAgo: 46 * HOUR,
+      },
+      {
+        kind: 'note',
+        body: 'Product confirmed the bug; the fix is planned for the next release. Please keep Alan updated.',
+        authorId: 'chris.taylor',
+        minutesAgo: 6 * HOUR,
+      },
+    ],
   },
   {
     subject: 'How do I add a second admin?',
@@ -160,5 +227,13 @@ export const SHOWCASE_TICKETS: readonly SeedTicket[] = [
     slaDueInMinutes: 3 * DAY,
     createdMinutesAgo: 4 * DAY,
     updatedMinutesAgo: DAY,
+    messages: [
+      {
+        kind: 'reply',
+        body: 'Any admin can do this under Settings, Team, Invite, choosing the Admin role. Does that work for you?',
+        authorId: SHOWCASE_AGENT,
+        minutesAgo: DAY,
+      },
+    ],
   },
 ];

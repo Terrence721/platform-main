@@ -20,8 +20,9 @@ async function main(): Promise<void> {
     const summary = await seedDatabase(drizzle(pool), { password });
     console.log(
       `Seeded ${summary.users} users, ${summary.teams} teams, ` +
-        `${summary.queues} queues, ${summary.customers} customers and ` +
-        `${summary.tickets} tickets in ${(summary.milliseconds / 1000).toFixed(1)}s.`
+        `${summary.queues} queues, ${summary.customers} customers, ` +
+        `${summary.tickets} tickets and ${summary.messages} messages ` +
+        `in ${(summary.milliseconds / 1000).toFixed(1)}s.`
     );
     console.log(
       `Sign in as any of them with the password "${password}", e.g. ` +

@@ -1,6 +1,7 @@
 import {
   isUserId,
   TICKET_DESCRIPTION_MAX_LENGTH,
+  TICKET_MESSAGE_MAX_LENGTH,
   TICKET_SUBJECT_MAX_LENGTH,
 } from '@helpdesk/contract';
 import { AGENTS_PER_TEAM, generateSeed, SEED_DEFAULTS } from './generate';
@@ -94,6 +95,58 @@ describe('generateSeed', () => {
     expect(data.tickets.slice(0, SHOWCASE_TICKETS.length)).toEqual(
       SHOWCASE_TICKETS
     );
+  });
+
+  it('writes conversations only on tickets someone is working', () => {
+    const idle = data.tickets.filter(
+      (ticket) => ticket.status === 'new' || ticket.assigneeId === null
+    );
+    const messages = data.tickets.flatMap((ticket) => ticket.messages);
+
+    expect(idle.filter((ticket) => ticket.messages.length > 0)).toEqual([]);
+    expect(messages.length).toBeGreaterThan(0);
+    expect(new Set(messages.map((message) => message.kind))).toEqual(
+      new Set(['reply', 'note'])
+    );
+  });
+
+  it('times each message inside its ticket, oldest first', () => {
+    for (const ticket of data.tickets) {
+      const times = ticket.messages.map((message) => message.minutesAgo);
+
+      for (const minutesAgo of times) {
+        expect(minutesAgo).toBeGreaterThanOrEqual(ticket.updatedMinutesAgo);
+        expect(minutesAgo).toBeLessThan(ticket.createdMinutesAgo);
+      }
+      expect(times).toEqual([...times].sort((a, b) => b - a));
+    }
+  });
+
+  it("lets only the assignee or their team's supervisor write, and supervisors only note", () => {
+    const supervisorOf = new Map(
+      data.users.map((user) => [
+        user.id,
+        TEAMS.find((team) => team.id === user.teamId)?.supervisorId,
+      ])
+    );
+
+    for (const { assigneeId, messages } of data.tickets) {
+      for (const { authorId, kind } of messages) {
+        if (authorId !== assigneeId) {
+          expect(assigneeId).not.toBeNull();
+          expect(authorId).toBe(supervisorOf.get(assigneeId ?? ''));
+          expect(kind).toBe('note');
+        }
+      }
+    }
+  });
+
+  it('keeps every message within the contract limit', () => {
+    for (const { messages } of data.tickets) {
+      for (const { body } of messages) {
+        expect(body.length).toBeLessThanOrEqual(TICKET_MESSAGE_MAX_LENGTH);
+      }
+    }
   });
 
   it('includes every status and priority', () => {

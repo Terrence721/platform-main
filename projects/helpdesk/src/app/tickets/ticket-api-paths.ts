@@ -7,3 +7,8 @@ export function assigneeApi(ticketId: string): string {
 export function statusApi(ticketId: string): string {
   return `/api/tickets/${encodeURIComponent(ticketId)}/status`;
 }
+
+/** Where a ticket's replies and internal notes are read and added. */
+export function messagesApi(ticketId: string): string {
+  return `/api/tickets/${encodeURIComponent(ticketId)}/messages`;
+}

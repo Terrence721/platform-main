@@ -64,7 +64,8 @@ interface TicketRow {
  * row that `canAct` allows ends with a button that emits its ticket
  * through `action`. With `statusMenu`, each row also gets a Change status
  * menu listing only the moves the workflow allows (none once closed); the
- * choice comes out through `statusChange`.
+ * choice comes out through `statusChange`. With `subjectLinks`, each
+ * subject is a link whose ticket comes out through `open`.
  */
 @Component({
   selector: 'hd-ticket-table',
@@ -90,7 +91,22 @@ interface TicketRow {
       </ng-container>
       <ng-container matColumnDef="subject">
         <th mat-header-cell *matHeaderCellDef mat-sort-header>Subject</th>
-        <td mat-cell *matCellDef="let row">{{ row.subject }}</td>
+        <td mat-cell *matCellDef="let row">
+          @if (subjectLinks()) {
+            <button
+              class="subject-link"
+              type="button"
+              [attr.aria-label]="
+                'Open ' + row.ticketNumber + ', ' + row.subject
+              "
+              (click)="open.emit(row.ticket)"
+            >
+              {{ row.subject }}
+            </button>
+          } @else {
+            {{ row.subject }}
+          }
+        </td>
       </ng-container>
       <ng-container matColumnDef="customer">
         <th mat-header-cell *matHeaderCellDef mat-sort-header>Customer</th>
@@ -181,6 +197,17 @@ interface TicketRow {
       color: var(--mat-sys-error);
       font-weight: 500;
     }
+    /* A button that reads as a link: it opens the ticket. */
+    .subject-link {
+      padding: 0;
+      border: 0;
+      background: none;
+      font: inherit;
+      text-align: start;
+      color: var(--mat-sys-primary);
+      text-decoration: underline;
+      cursor: pointer;
+    }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -197,6 +224,10 @@ export class TicketTable {
   readonly statusMenu = input(false);
   /** A ticket, and the status chosen for it from its menu. */
   readonly statusChange = output<{ ticket: TicketDto; status: TicketStatus }>();
+  /** Whether each subject is a link that opens its ticket. */
+  readonly subjectLinks = input(false);
+  /** The ticket whose subject was clicked. */
+  readonly open = output<TicketDto>();
 
   protected readonly columns = computed(() => [
     ...COLUMNS,

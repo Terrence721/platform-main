@@ -246,6 +246,56 @@ describe('TicketTable', () => {
     });
   });
 
+  describe('subject links', () => {
+    /** Renders with each subject as a link, keeping what was opened. */
+    function renderWithLinks(tickets: TicketDto[]) {
+      const fixture = TestBed.createComponent(TicketTable);
+      fixture.componentRef.setInput('tickets', tickets);
+      fixture.componentRef.setInput('subjectLinks', true);
+      const opened: TicketDto[] = [];
+      fixture.componentInstance.open.subscribe((chosen) => opened.push(chosen));
+      fixture.detectChanges();
+      const links = [
+        ...(
+          fixture.nativeElement as HTMLElement
+        ).querySelectorAll<HTMLButtonElement>(
+          'td.mat-column-subject button.subject-link'
+        ),
+      ];
+      return { opened, links };
+    }
+
+    it('opens the ticket whose subject is clicked', () => {
+      const tickets = [ticket(1001, null), ticket(1002, null)];
+      const { opened, links } = renderWithLinks(tickets);
+
+      links[1].click();
+
+      expect(opened).toEqual([tickets[1]]);
+    });
+
+    it('names the ticket each link opens', () => {
+      const { links } = renderWithLinks([ticket(1001, null)]);
+
+      expect(links[0].getAttribute('aria-label')).toBe(
+        'Open #1001, Subject 1001'
+      );
+      expect(links[0].textContent?.trim()).toBe('Subject 1001');
+    });
+
+    it('keeps subjects as plain text without them', () => {
+      const fixture = TestBed.createComponent(TicketTable);
+      fixture.componentRef.setInput('tickets', [ticket(1001, null)]);
+      fixture.detectChanges();
+      const cell = (fixture.nativeElement as HTMLElement).querySelector(
+        'td.mat-column-subject'
+      );
+
+      expect(cell?.querySelector('button')).toBeNull();
+      expect(cell?.textContent?.trim()).toBe('Subject 1001');
+    });
+  });
+
   describe('status menu', () => {
     /** Renders with a Change status menu on each row. */
     function renderWithMenu(tickets: TicketDto[]) {

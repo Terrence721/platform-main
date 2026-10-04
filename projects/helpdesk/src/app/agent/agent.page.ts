@@ -16,6 +16,7 @@ import {
 import { Store } from '@ngrx/store';
 import { STATUS_GUIDE } from '../landing/ticket-workflow.store';
 import { sessionFeature } from '../session/session.feature';
+import { openTicket } from '../tickets/open-ticket';
 import { TicketTable } from '../tickets/ticket-table';
 import { MyTicketsStore } from './my-tickets.store';
 
@@ -24,7 +25,8 @@ import { MyTicketsStore } from './my-tickets.store';
  * each with a Change status menu; then Unassigned, the work nobody holds,
  * which they may take for themselves ("Take it"); then Done, what they
  * finished in the last 24 hours, where a resolved ticket can be reopened.
- * Only agents get here (the route's `canMatchRole('agent')`). The page
+ * A subject in My tickets or Done opens that ticket's details and
+ * conversation, to reply or add an internal note. Only agents get here (the route's `canMatchRole('agent')`). The page
  * provides `MyTicketsStore`, which loads all three when the page opens.
  */
 @Component({
@@ -59,6 +61,8 @@ import { MyTicketsStore } from './my-tickets.store';
               [tickets]="store.entities()"
               [statusMenu]="true"
               (statusChange)="changeStatus($event)"
+              [subjectLinks]="true"
+              (open)="open($event)"
             />
           }
         }
@@ -119,6 +123,8 @@ import { MyTicketsStore } from './my-tickets.store';
               [tickets]="store.finished()"
               [statusMenu]="true"
               (statusChange)="changeStatus($event)"
+              [subjectLinks]="true"
+              (open)="open($event)"
             />
           }
         }
@@ -181,6 +187,11 @@ export default class AgentPage {
     status: TicketStatus;
   }): void {
     this.store.changeStatus({ ticketId: ticket.id, status });
+  }
+
+  /** Opens one of the agent's tickets: its details and conversation. */
+  protected open(ticket: TicketDto): void {
+    void openTicket(this.injector, ticket);
   }
 
   /**

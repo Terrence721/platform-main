@@ -20,6 +20,7 @@ import {
 import { Store } from '@ngrx/store';
 import { STATUS_GUIDE } from '../landing/ticket-workflow.store';
 import { sessionFeature } from '../session/session.feature';
+import { openTicket } from '../tickets/open-ticket';
 import { TicketTable } from '../tickets/ticket-table';
 import type { AssignTicketData } from './assign-ticket.dialog';
 import { MyTeamStore } from './my-team.store';
@@ -33,9 +34,11 @@ const OPEN_WORK: readonly TicketStatus[] = ['new', 'open', 'pending'];
  * show nowhere else), plus the unassigned work nobody holds yet. The
  * supervisor assigns unassigned tickets and reassigns a member's open ones
  * through "Assign to…", and moves a member's tickets through the workflow
- * with their Change status menu. Only supervisors get here (the route's
- * `canMatchRole('supervisor')`). The page provides `MyTeamStore`, which
- * loads the team when the page opens.
+ * with their Change status menu. A member's ticket subject opens that
+ * ticket's details and conversation, to reply or add an internal note.
+ * Only supervisors get here (the route's `canMatchRole('supervisor')`).
+ * The page provides `MyTeamStore`, which loads the team when the page
+ * opens.
  */
 @Component({
   selector: 'hd-supervisor-page',
@@ -139,6 +142,8 @@ const OPEN_WORK: readonly TicketStatus[] = ['new', 'open', 'pending'];
                           status: $event.status,
                         })
                       "
+                      [subjectLinks]="true"
+                      (open)="open($event)"
                     />
                   }
                 }
@@ -233,6 +238,11 @@ export default class SupervisorPage {
       width: '60rem',
       maxWidth: 'calc(100vw - 2rem)',
     });
+  }
+
+  /** Opens a team member's ticket: its details and conversation. */
+  protected open(ticket: TicketDto): void {
+    void openTicket(this.injector, ticket);
   }
 
   /** Whether a ticket still needs work, so it can be (re)assigned. */

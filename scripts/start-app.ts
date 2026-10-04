@@ -9,6 +9,7 @@ import {
   findBrowser,
   findFreePort,
   FIRST_API_PORT,
+  FIRST_DOCKER_APP_PORT,
   FIRST_PORT,
   isPortFree,
   removeWhenFree,
@@ -23,7 +24,8 @@ import {
 // app), opens the app in a window of its own, and stops EVERYTHING together
 // when that window is closed, on Ctrl+C, or when any of its servers stops,
 // then checks that every port they held is free again.
-// Usage: npx tsx scripts/start-app.ts <app>   (e.g. `yarn start:helpdesk`)
+// Usage: npx tsx scripts/start-app.ts <app>   (e.g. `yarn start:helpdesk`;
+// `helpdesk-docker`, as `yarn start:helpdesk:docker`, runs it in Docker)
 
 const app = process.argv[2] ?? '';
 if (!/^[a-z0-9-]+$/.test(app)) {
@@ -73,7 +75,13 @@ async function main(): Promise<void> {
     );
   }
 
-  const appPort = await findFreePort(FIRST_PORT);
+  // In Docker the app is published from 8088 (or HELPDESK_APP_PORT in .env)
+  // on; the dev server's search starts at 4200.
+  const appPort = await findFreePort(
+    app === 'helpdesk-docker'
+      ? Number(process.env['HELPDESK_APP_PORT'] ?? FIRST_DOCKER_APP_PORT)
+      : FIRST_PORT
+  );
   const apiPort = await findFreePort(FIRST_API_PORT);
   const dbPort = Number(process.env['HELPDESK_DB_PORT'] ?? DEFAULT_DB_PORT);
   const stack = stackFor(app, { app: appPort, api: apiPort, db: dbPort });
@@ -112,7 +120,8 @@ async function main(): Promise<void> {
   }
 
   // The window opens on the last server's page: the app.
-  const url = stack[stack.length - 1].readyUrl;
+  const last = stack[stack.length - 1];
+  const url = last.pageUrl ?? last.readyUrl;
   if (url === undefined) {
     throw new Error(`${app} has no page to open.`);
   }

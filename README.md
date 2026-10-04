@@ -85,7 +85,7 @@ projects/
                            PostgreSQL and sign-in to come), see #303
 ```
 
-All 13 modules are added, and the per-module code review audit is complete ([#32](https://github.com/Terrence721/platform-main/issues/32), closed 2026-09-30): all 270 source files reviewed, each with its own issue and PR. `store` — 3 real bugs found and fixed; `entity` and `effects` — none; `router-store` — 7 real bugs fixed across 12/12 files; `store-devtools` — 6 real bugs plus 1 minor cleanup across 11/11 files; `component-store` — 1 real gap across 4/4 files; `component` — 1 real bug plus 2 barrel-export gaps across 10/10 files; `operators` — 2 barrel-export gaps across 4/4 files; `schematics-core` — 9 real bugs, 2 test-coverage gaps and 13 barrel-export gaps across 16/16 files; `signals` — 14 defects across 11 of 18 files, including the most severe of the audit (a state property named `set`/`update`/`asReadonly` silently and permanently broke `patchState`); `schematics` — 25/25 files, including standalone-app failures, generated code that did not compile, and weak tests; `data` — 42 of 61 files needed fixes; `eslint-plugin` — 38 of 55 files needed fixes (an aliased `Store` import silently turned off 14 rules; the rules now also cover functional effects, standalone providers and stores held in variables). Every finding is in [`docs/code-review.md`](docs/code-review.md). After the audit, the `migrations/` folders were reviewed the same way ([#106](https://github.com/Terrence721/platform-main/issues/106), 31 files, 27 fixed) and every module gained type-level tests of its public API ([#162](https://github.com/Terrence721/platform-main/issues/162), 11 type defects and 3 runtime bugs fixed). Now in progress: the Helpdesk app ([#303](https://github.com/Terrence721/platform-main/issues/303)), which also brings containerization ([#20](https://github.com/Terrence721/platform-main/issues/20)); see `todo.md`'s "Still to do" table for the rest.
+All 13 modules are added, and the per-module code review audit is complete ([#32](https://github.com/Terrence721/platform-main/issues/32), closed 2026-09-30): all 270 source files reviewed, each with its own issue and PR. `store` — 3 real bugs found and fixed; `entity` and `effects` — none; `router-store` — 7 real bugs fixed across 12/12 files; `store-devtools` — 6 real bugs plus 1 minor cleanup across 11/11 files; `component-store` — 1 real gap across 4/4 files; `component` — 1 real bug plus 2 barrel-export gaps across 10/10 files; `operators` — 2 barrel-export gaps across 4/4 files; `schematics-core` — 9 real bugs, 2 test-coverage gaps and 13 barrel-export gaps across 16/16 files; `signals` — 14 defects across 11 of 18 files, including the most severe of the audit (a state property named `set`/`update`/`asReadonly` silently and permanently broke `patchState`); `schematics` — 25/25 files, including standalone-app failures, generated code that did not compile, and weak tests; `data` — 42 of 61 files needed fixes; `eslint-plugin` — 38 of 55 files needed fixes (an aliased `Store` import silently turned off 14 rules; the rules now also cover functional effects, standalone providers and stores held in variables). Every finding is in [`docs/code-review.md`](docs/code-review.md). After the audit, the `migrations/` folders were reviewed the same way ([#106](https://github.com/Terrence721/platform-main/issues/106), 31 files, 27 fixed) and every module gained type-level tests of its public API ([#162](https://github.com/Terrence721/platform-main/issues/162), 11 type defects and 3 runtime bugs fixed). Now in progress: the Helpdesk app ([#303](https://github.com/Terrence721/platform-main/issues/303)), which runs anywhere with Docker ([#20](https://github.com/Terrence721/platform-main/issues/20)); see `todo.md`'s "Still to do" table for the rest.
 
 ## 🖥 Getting Started
 
@@ -101,13 +101,22 @@ yarn test    # Vitest across all projects
 yarn build   # ng-packagr build across all projects
 ```
 
-To run the Helpdesk app:
+To run the Helpdesk app on any machine, with only Docker installed:
 
 ```shell
-yarn start:helpdesk   # dev server + the app in its own window; closing it stops the server
+docker compose --profile full up --build   # database + API + app, then open http://localhost:8088
+docker compose --profile full down --volumes   # stop it and delete its data
 ```
 
-It picks the next free port when 4200 is taken, and closing the window (or Ctrl+C) stops the dev server and releases its port. `yarn nx serve helpdesk` still works for a normal browser tab.
+On a machine with this repo's tools installed, `yarn start:helpdesk:docker` does the same and opens the app in its own window; closing it stops everything. The first build takes a few minutes; later ones reuse the installed packages. Sign in as `alex.morgan` (admin), `chris.taylor` (supervisor) or `sam.rivera` (agent), password `helpdesk-dev-only`.
+
+To work on it, with instant reload:
+
+```shell
+yarn start:helpdesk   # database, API and app; the app opens in its own window, and closing it stops everything
+```
+
+It picks the next free port when 4200 is taken. `yarn nx serve helpdesk` still works for a normal browser tab.
 
 The full-suite [HTML test report](https://terrence721.github.io/platform-main/) is deployed to GitHub Pages on every push to `main` (grows as more modules and test cases are added) — or see the [at-a-glance summary](https://terrence721.github.io/platform-main/summary.html) for just the pass/fail/slow breakdown. To generate either locally instead, run `yarn build && yarn test:report && yarn test:summary`, then `yarn test:report:view` to serve and open them.
 

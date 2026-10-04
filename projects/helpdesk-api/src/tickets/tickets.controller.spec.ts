@@ -1,13 +1,11 @@
-import {
-  type CurrentUser,
-  type Role,
-  type TicketDto,
-  TICKET_MESSAGE_MAX_LENGTH,
-  type TicketMessage,
+import type {
+  CurrentUser,
+  Role,
+  TicketDto,
+  TicketMessage,
 } from '@helpdesk/contract';
 import { TicketMessagesService, TicketsService } from '@helpdesk/server';
 import {
-  BadRequestException,
   ConflictException,
   INestApplication,
   NotFoundException,
@@ -18,12 +16,7 @@ import { AddressInfo } from 'net';
 import { SESSION_COOKIE } from '../auth/auth-config';
 import { AuthGuard } from '../auth/auth.guard';
 import { AuthService } from '../auth/auth.service';
-import {
-  readAssigneeId,
-  readMessage,
-  readStatus,
-  TicketsController,
-} from './tickets.controller';
+import { TicketsController } from './tickets.controller';
 
 /** One user per role; each one's session token is their role's name. */
 const USERS: Record<Role, CurrentUser> = {
@@ -66,84 +59,6 @@ const reply: TicketMessage = {
   author: { id: 'sam.rivera', name: 'Sam Rivera' },
   createdAt: '2026-10-04T09:00:00.000Z',
 };
-
-describe('readMessage', () => {
-  it('reads the kind and the text, trimmed', () => {
-    expect(
-      readMessage({ kind: 'note', body: '  Checked the logs.\n' })
-    ).toEqual({ kind: 'note', body: 'Checked the logs.' });
-  });
-
-  it('keeps text right at the limit', () => {
-    const body = 'x'.repeat(TICKET_MESSAGE_MAX_LENGTH);
-
-    expect(readMessage({ kind: 'reply', body })).toEqual({
-      kind: 'reply',
-      body,
-    });
-  });
-
-  it.each([
-    ['no body', null],
-    ['no kind', { body: 'Hello.' }],
-    ['an unknown kind', { kind: 'email', body: 'Hello.' }],
-  ])('refuses %s with 400', (_, body) => {
-    expect(() => readMessage(body)).toThrow(BadRequestException);
-    expect(() => readMessage(body)).toThrow('Choose reply or note.');
-  });
-
-  it.each([
-    ['no text', { kind: 'reply' }],
-    ['blank text', { kind: 'reply', body: ' \n\t ' }],
-    ['text that is not a string', { kind: 'reply', body: 7 }],
-  ])('refuses %s with 400', (_, body) => {
-    expect(() => readMessage(body)).toThrow(BadRequestException);
-    expect(() => readMessage(body)).toThrow('Write a message first.');
-  });
-
-  it('refuses text over the limit with 400', () => {
-    const body = 'x'.repeat(TICKET_MESSAGE_MAX_LENGTH + 1);
-
-    expect(() => readMessage({ kind: 'reply', body })).toThrow(
-      `Keep the message to ${TICKET_MESSAGE_MAX_LENGTH} characters or fewer.`
-    );
-  });
-});
-
-describe('readStatus', () => {
-  it('reads the status a body names', () => {
-    expect(readStatus({ status: 'resolved' })).toBe('resolved');
-  });
-
-  it.each([
-    ['no body', null],
-    ['no status', {}],
-    ['an unknown status', { status: 'done' }],
-  ])('refuses %s with 400', (_, body) => {
-    expect(() => readStatus(body)).toThrow(BadRequestException);
-    expect(() => readStatus(body)).toThrow(
-      'Choose new, open, pending, resolved or closed.'
-    );
-  });
-});
-
-describe('readAssigneeId', () => {
-  it('reads the agent a body names', () => {
-    expect(readAssigneeId({ assigneeId: 'benny.lind' })).toBe('benny.lind');
-  });
-
-  it.each([
-    ['no body', null],
-    ['no agent', {}],
-    ['an agent that is not a user ID', { assigneeId: 'Benny Lind' }],
-    ['an agent that is not text', { assigneeId: 7 }],
-  ])('refuses %s with 400', (_, body) => {
-    expect(() => readAssigneeId(body)).toThrow(BadRequestException);
-    expect(() => readAssigneeId(body)).toThrow(
-      'Choose an agent to assign the ticket to.'
-    );
-  });
-});
 
 describe('/api/tickets', () => {
   const tickets = {

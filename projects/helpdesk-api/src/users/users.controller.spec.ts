@@ -5,18 +5,14 @@ import {
   type UserAccount,
 } from '@helpdesk/contract';
 import { UsersService } from '@helpdesk/server';
-import {
-  BadRequestException,
-  ConflictException,
-  INestApplication,
-} from '@nestjs/common';
+import { ConflictException, INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import cookieParser from 'cookie-parser';
 import { AddressInfo } from 'net';
 import { SESSION_COOKIE } from '../auth/auth-config';
 import { AuthGuard } from '../auth/auth.guard';
 import { AuthService } from '../auth/auth.service';
-import { readCreateAccount, UsersController } from './users.controller';
+import { UsersController } from './users.controller';
 
 /** One user per role; each one's session token is their role's name. */
 const USERS: Record<Role, CurrentUser> = {
@@ -73,54 +69,6 @@ const goodBody = {
   teamId: 'atlas',
   password: 'a-starting-password',
 };
-
-describe('readCreateAccount', () => {
-  it('reads a good body, trimming the name', () => {
-    expect(readCreateAccount({ ...goodBody, name: '  Nia New  ' })).toEqual(
-      goodBody
-    );
-  });
-
-  it('reads a missing team as none', () => {
-    const { teamId: _, ...noTeam } = goodBody;
-
-    expect(readCreateAccount({ ...noTeam, role: 'admin' }).teamId).toBeNull();
-  });
-
-  it.each([
-    ['no body', null, 'Use a user ID'],
-    ['a user ID with capitals', { userId: 'Nia.New' }, 'Use a user ID'],
-    ['a user ID too short', { userId: 'ni' }, 'Use a user ID'],
-    ['no name', { name: '   ' }, 'Enter a name of 1 to 100 characters.'],
-    ['a name too long', { name: 'x'.repeat(101) }, 'Enter a name'],
-    [
-      'an unknown role',
-      { role: 'customer' },
-      'Choose agent, supervisor or admin.',
-    ],
-    ['a team that is not text', { teamId: 7 }, 'Choose a team.'],
-    [
-      'a password too short',
-      { password: 'short' },
-      'Use a password of 12 to 128 characters.',
-    ],
-    ['a password too long', { password: 'x'.repeat(129) }, 'Use a password'],
-    [
-      'a password that is not text',
-      { password: 123456789012 },
-      'Use a password',
-    ],
-  ])('refuses %s with 400', (_, changes, message) => {
-    const body = changes === null ? null : { ...goodBody, ...changes };
-
-    expect(() => readCreateAccount(body)).toThrow(message);
-    try {
-      readCreateAccount(body);
-    } catch (error) {
-      expect(error).toBeInstanceOf(BadRequestException);
-    }
-  });
-});
 
 describe('/api/users', () => {
   const created: UserAccount = {

@@ -8,20 +8,10 @@ import type {
   TeamOverview,
   TicketDto,
 } from '@helpdesk/contract';
-import { TeamsService, TicketsService } from '@helpdesk/server';
+import { historySince, TeamsService, TicketsService } from '@helpdesk/server';
 import { Controller, Get, NotFoundException, Param } from '@nestjs/common';
 import { SignedInUser } from '../auth/auth.guard';
 import { OnlyFor } from '../auth/role.guard';
-
-/** How far back a team member's history goes. */
-export const HISTORY_MONTHS = 3;
-
-/** The start of a history ending `now`: the same moment, months earlier. */
-export function historySince(now: Date): Date {
-  const since = new Date(now);
-  since.setUTCMonth(since.getUTCMonth() - HISTORY_MONTHS);
-  return since;
-}
 
 /** Teams, for the supervisors who lead them (/api/teams). */
 @Controller('teams')

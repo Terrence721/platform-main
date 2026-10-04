@@ -1,4 +1,10 @@
-import type { CurrentUser, Role, TicketDto } from '@helpdesk/contract';
+import {
+  type CurrentUser,
+  type Role,
+  type TicketDto,
+  TICKET_MESSAGE_MAX_LENGTH,
+  type TicketMessage,
+} from '@helpdesk/contract';
 import {
   BadRequestException,
   ConflictException,
@@ -11,8 +17,10 @@ import { AddressInfo } from 'net';
 import { SESSION_COOKIE } from '../auth/auth-config';
 import { AuthGuard } from '../auth/auth.guard';
 import { AuthService } from '../auth/auth.service';
+import { TicketMessagesService } from './ticket-messages.service';
 import {
   readAssigneeId,
+  readMessage,
   readStatus,
   TicketsController,
 } from './tickets.controller';
@@ -51,6 +59,57 @@ const overdue = {
   ticketNumber: 1001,
   subject: 'Cannot sign in after the password reset',
 } as TicketDto;
+
+const reply: TicketMessage = {
+  id: '3b9e2a41-6c0d-4f7e-8a12-5d4c3b2a1f00',
+  kind: 'reply',
+  body: 'Which browser are you using?',
+  author: { id: 'sam.rivera', name: 'Sam Rivera' },
+  createdAt: '2026-10-04T09:00:00.000Z',
+};
+
+describe('readMessage', () => {
+  it('reads the kind and the text, trimmed', () => {
+    expect(
+      readMessage({ kind: 'note', body: '  Checked the logs.\n' })
+    ).toEqual({ kind: 'note', body: 'Checked the logs.' });
+  });
+
+  it('keeps text right at the limit', () => {
+    const body = 'x'.repeat(TICKET_MESSAGE_MAX_LENGTH);
+
+    expect(readMessage({ kind: 'reply', body })).toEqual({
+      kind: 'reply',
+      body,
+    });
+  });
+
+  it.each([
+    ['no body', null],
+    ['no kind', { body: 'Hello.' }],
+    ['an unknown kind', { kind: 'email', body: 'Hello.' }],
+  ])('refuses %s with 400', (_, body) => {
+    expect(() => readMessage(body)).toThrow(BadRequestException);
+    expect(() => readMessage(body)).toThrow('Choose reply or note.');
+  });
+
+  it.each([
+    ['no text', { kind: 'reply' }],
+    ['blank text', { kind: 'reply', body: ' \n\t ' }],
+    ['text that is not a string', { kind: 'reply', body: 7 }],
+  ])('refuses %s with 400', (_, body) => {
+    expect(() => readMessage(body)).toThrow(BadRequestException);
+    expect(() => readMessage(body)).toThrow('Write a message first.');
+  });
+
+  it('refuses text over the limit with 400', () => {
+    const body = 'x'.repeat(TICKET_MESSAGE_MAX_LENGTH + 1);
+
+    expect(() => readMessage({ kind: 'reply', body })).toThrow(
+      `Keep the message to ${TICKET_MESSAGE_MAX_LENGTH} characters or fewer.`
+    );
+  });
+});
 
 describe('readStatus', () => {
   it('reads the status a body names', () => {
@@ -96,6 +155,10 @@ describe('/api/tickets', () => {
     recentlyFinished: vi.fn(async () => [overdue]),
     changeStatus: vi.fn(async (): Promise<TicketDto> => overdue),
   };
+  const messages = {
+    conversation: vi.fn(async () => [reply]),
+    add: vi.fn(async (): Promise<TicketMessage> => reply),
+  };
   let app: INestApplication;
   let base: string;
 
@@ -107,6 +170,7 @@ describe('/api/tickets', () => {
         AuthGuard,
         { provide: AuthService, useValue: fakeAuth },
         { provide: TicketsService, useValue: tickets },
+        { provide: TicketMessagesService, useValue: messages },
       ],
     }).compile();
     app = moduleRef.createNestApplication({ logger: false });
@@ -375,6 +439,118 @@ describe('/api/tickets', () => {
     ] as const)('turns away %s, changing nothing', async (_, role, status) => {
       expect((await changeStatus(role)).status).toBe(status);
       expect(tickets.changeStatus).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('GET :ticketId/messages', () => {
+    /** GET the overdue ticket's conversation, as `role` or signed out. */
+    const conversation = (role: Role | null) =>
+      fetch(`${base}/${overdue.id}/messages`, {
+        headers: role === null ? {} : { cookie: `${SESSION_COOKIE}=${role}` },
+      });
+
+    it.each([
+      ['an agent', 'agent', 'sam.rivera'],
+      ['a supervisor', 'supervisor', 'chris.taylor'],
+    ] as const)(
+      'answers %s with the conversation, read as that user',
+      async (_, role, id) => {
+        const response = await conversation(role);
+
+        expect(response.status).toBe(200);
+        expect(await response.json()).toEqual([reply]);
+        expect(messages.conversation).toHaveBeenCalledExactlyOnceWith(
+          overdue.id,
+          expect.objectContaining({ id, role })
+        );
+      }
+    );
+
+    it("passes on the service's 404", async () => {
+      messages.conversation.mockRejectedValueOnce(
+        new NotFoundException('No such ticket among yours.')
+      );
+
+      const response = await conversation('agent');
+
+      expect(response.status).toBe(404);
+      expect(await response.json()).toEqual(
+        expect.objectContaining({ message: 'No such ticket among yours.' })
+      );
+    });
+
+    it.each([
+      ['an admin', 'admin', 403],
+      ['a signed-out request', null, 401],
+    ] as const)('turns away %s, reading nothing', async (_, role, status) => {
+      expect((await conversation(role)).status).toBe(status);
+      expect(messages.conversation).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('POST :ticketId/messages', () => {
+    /** POST a message body to the overdue ticket. */
+    const addMessage = (
+      role: Role | null,
+      body: unknown = { kind: 'reply', body: ' Which browser are you using? ' }
+    ) =>
+      fetch(`${base}/${overdue.id}/messages`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          ...(role === null ? {} : { cookie: `${SESSION_COOKIE}=${role}` }),
+        },
+        body: JSON.stringify(body),
+      });
+
+    it.each([
+      ['an agent', 'agent', 'sam.rivera'],
+      ['a supervisor', 'supervisor', 'chris.taylor'],
+    ] as const)(
+      'adds the message for %s, trimmed, as that user (201)',
+      async (_, role, id) => {
+        const response = await addMessage(role);
+
+        expect(response.status).toBe(201);
+        expect(await response.json()).toEqual(reply);
+        expect(messages.add).toHaveBeenCalledExactlyOnceWith(
+          overdue.id,
+          { kind: 'reply', body: 'Which browser are you using?' },
+          expect.objectContaining({ id, role })
+        );
+      }
+    );
+
+    it('answers a body without text with 400, adding nothing', async () => {
+      const response = await addMessage('agent', { kind: 'note', body: '' });
+
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual(
+        expect.objectContaining({ message: 'Write a message first.' })
+      );
+      expect(messages.add).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      [new NotFoundException('No such ticket among yours.'), 404],
+      [new ConflictException("A closed ticket can't change."), 409],
+    ])("passes on the service's %s", async (error, status) => {
+      messages.add.mockRejectedValueOnce(error);
+
+      const response = await addMessage('agent');
+
+      expect(response.status).toBe(status);
+      expect(await response.json()).toEqual(
+        expect.objectContaining({ message: error.message })
+      );
+    });
+
+    it.each([
+      ['an admin', 'admin', 403],
+      ['a signed-out request', null, 401],
+    ] as const)('turns away %s, adding nothing', async (_, role, status) => {
+      expect((await addMessage(role)).status).toBe(status);
+      expect(messages.add).not.toHaveBeenCalled();
     });
   });
 });

@@ -2,10 +2,14 @@
 // at run time (emitDecoratorMetadata), and an interface has no run-time
 // value to record.
 import {
+  type AddTicketMessageRequest,
   type CurrentUser,
+  isTicketMessageKind,
   isTicketStatus,
   isUserId,
   type TicketDto,
+  TICKET_MESSAGE_MAX_LENGTH,
+  type TicketMessage,
   type TicketStatus,
 } from '@helpdesk/contract';
 import {
@@ -15,10 +19,12 @@ import {
   ForbiddenException,
   Get,
   Param,
+  Post,
   Put,
 } from '@nestjs/common';
 import { SignedInUser } from '../auth/auth.guard';
 import { OnlyFor } from '../auth/role.guard';
+import { TicketMessagesService } from './ticket-messages.service';
 import { TicketsService } from './tickets.service';
 
 /** The agent an Assign body names; anything else is refused with 400. */
@@ -47,10 +53,37 @@ export function readStatus(body: unknown): TicketStatus {
   return status;
 }
 
+/**
+ * The reply or note a message body holds, its text trimmed; a missing
+ * kind, or text that is empty or too long, is refused with 400.
+ */
+export function readMessage(body: unknown): AddTicketMessageRequest {
+  const { kind, body: text } =
+    typeof body === 'object' && body !== null
+      ? (body as { kind?: unknown; body?: unknown })
+      : {};
+  if (!isTicketMessageKind(kind)) {
+    throw new BadRequestException('Choose reply or note.');
+  }
+  const trimmed = typeof text === 'string' ? text.trim() : '';
+  if (trimmed === '') {
+    throw new BadRequestException('Write a message first.');
+  }
+  if (trimmed.length > TICKET_MESSAGE_MAX_LENGTH) {
+    throw new BadRequestException(
+      `Keep the message to ${TICKET_MESSAGE_MAX_LENGTH} characters or fewer.`
+    );
+  }
+  return { kind, body: trimmed };
+}
+
 /** Tickets, for the people who work them (/api/tickets). */
 @Controller('tickets')
 export class TicketsController {
-  constructor(private readonly tickets: TicketsService) {}
+  constructor(
+    private readonly tickets: TicketsService,
+    private readonly messages: TicketMessagesService
+  ) {}
 
   /**
    * The agent's own open work, most urgent first: the agent page's My
@@ -123,5 +156,32 @@ export class TicketsController {
     @Body() body: unknown
   ): Promise<TicketDto> {
     return this.tickets.changeStatus(ticketId, readStatus(body), user);
+  }
+
+  /**
+   * A ticket's replies and internal notes, oldest first: 404 for a ticket
+   * that is not the agent's own (or, for a supervisor, their team's).
+   */
+  @Get(':ticketId/messages')
+  @OnlyFor('agent', 'supervisor')
+  conversation(
+    @SignedInUser() user: CurrentUser,
+    @Param('ticketId') ticketId: string
+  ): Promise<TicketMessage[]> {
+    return this.messages.conversation(ticketId, user);
+  }
+
+  /**
+   * Adds a reply or an internal note: 201 with the message; 400 for a body
+   * without a kind or text; 404 as for reading; 409 for a closed ticket.
+   */
+  @Post(':ticketId/messages')
+  @OnlyFor('agent', 'supervisor')
+  addMessage(
+    @SignedInUser() user: CurrentUser,
+    @Param('ticketId') ticketId: string,
+    @Body() body: unknown
+  ): Promise<TicketMessage> {
+    return this.messages.add(ticketId, readMessage(body), user);
   }
 }

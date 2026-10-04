@@ -1,8 +1,15 @@
+import { PGlite } from '@electric-sql/pglite';
+import { asc, count, eq } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/pglite';
+import { migrate } from 'drizzle-orm/pglite/migrator';
+import { fileURLToPath } from 'url';
 import type { Database } from '../database.module';
-import { minutesFrom, seedDatabase, ticketRow } from './seed';
+import { ticketMessages, tickets } from '../schema';
+import { minutesFrom, seedDatabase, SeedSummary, ticketRow } from './seed';
 import { SHOWCASE_TICKETS } from './story';
 
 const now = new Date('2026-10-03T12:00:00.000Z');
+const MIGRATIONS = fileURLToPath(new URL('../../../drizzle', import.meta.url));
 
 describe('minutesFrom', () => {
   it('moves forward, backward or not at all from now', () => {
@@ -73,5 +80,60 @@ describe('seedDatabase', () => {
     );
     expect(database.transaction).not.toHaveBeenCalled();
     expect(database.insert).not.toHaveBeenCalled();
+  });
+});
+
+describe('seedDatabase into a fresh database', { timeout: 60_000 }, () => {
+  let client: PGlite;
+  let database: ReturnType<typeof drizzle>;
+  let summary: SeedSummary;
+
+  // One small seed for both tests, as they only read it.
+  beforeAll(async () => {
+    client = new PGlite();
+    database = drizzle(client);
+    await migrate(database, { migrationsFolder: MIGRATIONS });
+    summary = await seedDatabase(database as unknown as Database, {
+      now,
+      customers: 10,
+      tickets: 30,
+    });
+  });
+
+  afterAll(() => client.close());
+
+  it('stores every generated message, and counts them in the summary', async () => {
+    const [{ stored }] = await database
+      .select({ stored: count() })
+      .from(ticketMessages);
+
+    expect(summary.messages).toBeGreaterThan(0);
+    expect(stored).toBe(summary.messages);
+  });
+
+  it('keeps each conversation with its own ticket, at its own times', async () => {
+    const [ada] = await database
+      .select({ id: tickets.id })
+      .from(tickets)
+      .where(eq(tickets.ticketNumber, 1001));
+    const messages = await database
+      .select({
+        kind: ticketMessages.kind,
+        body: ticketMessages.body,
+        authorId: ticketMessages.authorId,
+        createdAt: ticketMessages.createdAt,
+      })
+      .from(ticketMessages)
+      .where(eq(ticketMessages.ticketId, ada.id))
+      .orderBy(asc(ticketMessages.createdAt));
+
+    expect(messages).toEqual(
+      SHOWCASE_TICKETS[0].messages.map((message) => ({
+        kind: message.kind,
+        body: message.body,
+        authorId: message.authorId,
+        createdAt: minutesFrom(now, -message.minutesAgo),
+      }))
+    );
   });
 });

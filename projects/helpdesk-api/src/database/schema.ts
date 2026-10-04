@@ -1,6 +1,8 @@
 import {
   ROLES,
   TICKET_DESCRIPTION_MAX_LENGTH,
+  TICKET_MESSAGE_KINDS,
+  TICKET_MESSAGE_MAX_LENGTH,
   TICKET_PRIORITIES,
   TICKET_STATUSES,
   TICKET_SUBJECT_MAX_LENGTH,
@@ -28,6 +30,10 @@ import {
 export const roleEnum = pgEnum('role', ROLES);
 export const ticketStatusEnum = pgEnum('ticket_status', TICKET_STATUSES);
 export const ticketPriorityEnum = pgEnum('ticket_priority', TICKET_PRIORITIES);
+export const ticketMessageKindEnum = pgEnum(
+  'ticket_message_kind',
+  TICKET_MESSAGE_KINDS
+);
 
 /** Created when the row is added; `updatedAt` also moves on every update. */
 const timestamps = {
@@ -131,5 +137,36 @@ export const tickets = pgTable(
     index('tickets_queue_idx').on(table.queueId),
     index('tickets_sla_due_at_idx').on(table.slaDueAt),
     index('tickets_updated_at_idx').on(table.updatedAt),
+  ]
+);
+
+/**
+ * A ticket's conversation: replies to the customer and internal notes for
+ * staff. Messages are never edited, so there is no `updatedAt`.
+ */
+export const ticketMessages = pgTable(
+  'ticket_messages',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** Deleting a ticket deletes its conversation. */
+    ticketId: uuid('ticket_id')
+      .notNull()
+      .references(() => tickets.id, { onDelete: 'cascade' }),
+    /** Accounts are deactivated, not deleted, so authors are kept. */
+    authorId: varchar('author_id', { length: USER_ID_MAX_LENGTH })
+      .notNull()
+      .references(() => users.id),
+    kind: ticketMessageKindEnum('kind').notNull(),
+    body: varchar('body', { length: TICKET_MESSAGE_MAX_LENGTH }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    // One ticket's conversation, oldest first.
+    index('ticket_messages_ticket_created_idx').on(
+      table.ticketId,
+      table.createdAt
+    ),
   ]
 );

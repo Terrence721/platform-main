@@ -1,7 +1,14 @@
 import { count, eq } from 'drizzle-orm';
 import { hashPassword } from '../../auth/password';
 import type { Database } from '../database.module';
-import { customers, queues, teams, tickets, users } from '../schema';
+import {
+  customers,
+  queues,
+  teams,
+  ticketMessages,
+  tickets,
+  users,
+} from '../schema';
 import { generateSeed, SeedData, SeedOptions } from './generate';
 import type { SeedTicket, SeedUser } from './story';
 
@@ -18,6 +25,8 @@ export interface SeedSummary {
   queues: number;
   customers: number;
   tickets: number;
+  /** Replies and internal notes, across all tickets. */
+  messages: number;
   /** A couple of user IDs per role, to sign in with. */
   examples: Record<SeedUser['role'], string[]>;
   milliseconds: number;
@@ -124,11 +133,33 @@ export async function seedDatabase(
       inserted.forEach(({ id, email }) => customerIds.set(email, id));
     }
 
-    // In order, so the showcase tickets get the first numbers.
+    // In order, so the showcase tickets get the first numbers; the numbers
+    // then match each inserted row back to its seed ticket.
+    const ticketIds: string[] = [];
     for (const batch of inBatches(
       data.tickets.map((ticket) => ticketRow(ticket, now, customerIds))
     )) {
-      await tx.insert(tickets).values(batch);
+      const inserted = await tx
+        .insert(tickets)
+        .values(batch)
+        .returning({ id: tickets.id, ticketNumber: tickets.ticketNumber });
+      inserted
+        .sort((a, b) => a.ticketNumber - b.ticketNumber)
+        .forEach(({ id }) => ticketIds.push(id));
+    }
+
+    for (const batch of inBatches(
+      data.tickets.flatMap((ticket, index) =>
+        ticket.messages.map((message) => ({
+          ticketId: ticketIds[index],
+          authorId: message.authorId,
+          kind: message.kind,
+          body: message.body,
+          createdAt: minutesFrom(now, -message.minutesAgo),
+        }))
+      )
+    )) {
+      await tx.insert(ticketMessages).values(batch);
     }
   });
 
@@ -143,6 +174,10 @@ export async function seedDatabase(
     queues: data.queues.length,
     customers: data.customers.length,
     tickets: data.tickets.length,
+    messages: data.tickets.reduce(
+      (total, ticket) => total + ticket.messages.length,
+      0
+    ),
     examples: {
       admin: idsOf('admin'),
       supervisor: idsOf('supervisor'),

@@ -4,11 +4,13 @@ import {
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import type { CurrentUser, TicketDto } from '@helpdesk/contract';
 import { provideMockStore } from '@ngrx/store/testing';
 import { initialSessionState } from '../session/session.feature';
+import { assigneeApi } from '../supervisor/my-team.store';
 import AgentPage from './agent.page';
-import { MY_TICKETS_API } from './my-tickets.store';
+import { MY_TICKETS_API, UNASSIGNED_API } from './my-tickets.store';
 
 const NOW = new Date('2026-10-03T12:00:00.000Z');
 
@@ -52,12 +54,23 @@ describe('AgentPage', () => {
     vi.useFakeTimers({ now: NOW, toFake: ['Date'] });
   });
 
+  /** Stands in for Material's snack bar, to see what it says. */
+  const snackBar = { open: vi.fn() };
+
   afterEach(() => {
-    TestBed.inject(HttpTestingController).verify();
+    const http = TestBed.inject(HttpTestingController);
+    // Tests about My tickets leave the Unassigned load unanswered.
+    for (const request of http.match(UNASSIGNED_API)) {
+      if (!request.cancelled) {
+        request.flush([]);
+      }
+    }
+    http.verify();
     vi.useRealTimers();
   });
 
   function render() {
+    snackBar.open.mockClear();
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
@@ -67,6 +80,7 @@ describe('AgentPage', () => {
             session: { ...initialSessionState, user: sam, checked: true },
           },
         }),
+        { provide: MatSnackBar, useValue: snackBar },
       ],
     });
     const fixture = TestBed.createComponent(AgentPage);
@@ -113,7 +127,10 @@ describe('AgentPage', () => {
     );
 
     answer([]);
-    expect(page.querySelector('mat-spinner')).toBeNull();
+    // Unassigned may still be loading; My tickets' own spinner has gone.
+    expect(
+      page.querySelector('mat-spinner[aria-label="Loading your tickets"]')
+    ).toBeNull();
   });
 
   it('lists the tickets in the order the API sends them', () => {
@@ -174,5 +191,113 @@ describe('AgentPage', () => {
     detectChanges();
     expect(page.querySelector('mat-spinner')).not.toBeNull();
     http.expectOne(MY_TICKETS_API).flush([]);
+  });
+
+  describe('Unassigned', () => {
+    /** A ticket nobody holds. */
+    const unassignedTicket = (ticketNumber: number) =>
+      ticket(ticketNumber, `Subject ${ticketNumber}`, null, { assignee: null });
+
+    /** Renders with My tickets empty and these unassigned tickets. */
+    function renderWithUnassigned(unassigned: TicketDto[]) {
+      const view = render();
+      view.answer([]);
+      view.http.expectOne(UNASSIGNED_API).flush(unassigned);
+      view.detectChanges();
+      return view;
+    }
+
+    /** The Take it buttons, in order. */
+    const takeButtons = (page: HTMLElement) => [
+      ...page.querySelectorAll<HTMLButtonElement>(
+        'hd-ticket-table.unassigned td.mat-column-action button'
+      ),
+    ];
+
+    it('lists the unassigned tickets with a count, each with Take it', () => {
+      const { page } = renderWithUnassigned([
+        unassignedTicket(1312),
+        unassignedTicket(1290),
+      ]);
+
+      expect(
+        [...page.querySelectorAll('h2')].map((h) => h.textContent?.trim())
+      ).toEqual(['Unassigned (2)']);
+      expect(
+        takeButtons(page).map((button) => button.getAttribute('aria-label'))
+      ).toEqual(['Take it #1312', 'Take it #1290']);
+    });
+
+    it('says so when nothing is waiting', () => {
+      const { page } = renderWithUnassigned([]);
+
+      expect(
+        [...page.querySelectorAll('.message')].map((m) => m.textContent?.trim())
+      ).toEqual([
+        'Nothing is assigned to you right now.',
+        'Nothing is waiting to be picked up.',
+      ]);
+    });
+
+    it('says when they could not be loaded, and tries again', () => {
+      const view = render();
+      view.answer([]);
+      view.http
+        .expectOne(UNASSIGNED_API)
+        .flush(null, { status: 500, statusText: 'Error' });
+      view.detectChanges();
+
+      const message = [...view.page.querySelectorAll('.message')].find((m) =>
+        m.textContent?.includes("The unassigned tickets couldn't be loaded.")
+      );
+      expect(message?.getAttribute('role')).toBe('alert');
+      message?.querySelector('button')?.click();
+      view.http.expectOne(UNASSIGNED_API).flush([]);
+    });
+
+    it('takes a ticket for the signed-in agent, then says it is theirs', async () => {
+      const { page, http } = renderWithUnassigned([unassignedTicket(1312)]);
+
+      takeButtons(page)[0].click();
+
+      const call = http.expectOne({
+        method: 'PUT',
+        url: assigneeApi('ticket-1312'),
+      });
+      expect(call.request.body).toEqual({ assigneeId: 'sam.rivera' });
+      call.flush(ticket(1312, 'Subject 1312', null));
+      http
+        .expectOne(MY_TICKETS_API)
+        .flush([ticket(1312, 'Subject 1312', null)]);
+      http.expectOne(UNASSIGNED_API).flush([]);
+
+      await vi.waitFor(() =>
+        expect(snackBar.open).toHaveBeenCalledWith(
+          '#1312 is yours',
+          undefined,
+          expect.objectContaining({ duration: 5000 })
+        )
+      );
+    });
+
+    it('says when someone took it first', async () => {
+      const { page, http } = renderWithUnassigned([unassignedTicket(1312)]);
+
+      takeButtons(page)[0].click();
+      http
+        .expectOne({ method: 'PUT', url: assigneeApi('ticket-1312') })
+        .flush(
+          { message: 'Someone else has taken this ticket.' },
+          { status: 409, statusText: 'Conflict' }
+        );
+
+      await vi.waitFor(() =>
+        expect(snackBar.open).toHaveBeenCalledWith(
+          'Someone else has taken this ticket.',
+          undefined,
+          expect.objectContaining({ duration: 5000 })
+        )
+      );
+    });
   });
 });

@@ -70,6 +70,8 @@ describe('/api/tickets', () => {
   const tickets = {
     assignedTo: vi.fn(async () => [overdue]),
     assign: vi.fn(async (): Promise<TicketDto> => overdue),
+    unassigned: vi.fn(async () => [overdue]),
+    take: vi.fn(async (): Promise<TicketDto> => overdue),
   };
   let app: INestApplication;
   let base: string;
@@ -189,12 +191,78 @@ describe('/api/tickets', () => {
     });
 
     it.each([
-      ['an agent', 'agent', 403],
       ['an admin', 'admin', 403],
       ['a signed-out request', null, 401],
     ] as const)('turns away %s, assigning nothing', async (_, role, status) => {
       expect((await assign(role)).status).toBe(status);
       expect(tickets.assign).not.toHaveBeenCalled();
+      expect(tickets.take).not.toHaveBeenCalled();
+    });
+
+    describe('as an agent', () => {
+      it('takes the ticket for the agent themselves', async () => {
+        const response = await assign('agent', { assigneeId: 'sam.rivera' });
+
+        expect(response.status).toBe(200);
+        expect(await response.json()).toEqual(overdue);
+        expect(tickets.take).toHaveBeenCalledExactlyOnceWith(
+          overdue.id,
+          'sam.rivera'
+        );
+        expect(tickets.assign).not.toHaveBeenCalled();
+      });
+
+      it('refuses to give the ticket to anyone else, with 403', async () => {
+        const response = await assign('agent', { assigneeId: 'benny.lind' });
+
+        expect(response.status).toBe(403);
+        expect(await response.json()).toEqual(
+          expect.objectContaining({
+            message: 'Agents can only take tickets for themselves.',
+          })
+        );
+        expect(tickets.take).not.toHaveBeenCalled();
+      });
+
+      it("passes on the service's 409 when someone took it first", async () => {
+        tickets.take.mockRejectedValueOnce(
+          new ConflictException('Someone else has taken this ticket.')
+        );
+
+        const response = await assign('agent', { assigneeId: 'sam.rivera' });
+
+        expect(response.status).toBe(409);
+        expect(await response.json()).toEqual(
+          expect.objectContaining({
+            message: 'Someone else has taken this ticket.',
+          })
+        );
+      });
+    });
+  });
+
+  describe('GET unassigned', () => {
+    /** GET /unassigned, signed in as `role`, or signed out. */
+    const unassigned = (role: Role | null) =>
+      fetch(`${base}/unassigned`, {
+        headers: role === null ? {} : { cookie: `${SESSION_COOKIE}=${role}` },
+      });
+
+    it('answers an agent with the unassigned tickets', async () => {
+      const response = await unassigned('agent');
+
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual([overdue]);
+      expect(tickets.unassigned).toHaveBeenCalledOnce();
+    });
+
+    it.each([
+      ['a supervisor', 'supervisor', 403],
+      ['an admin', 'admin', 403],
+      ['a signed-out request', null, 401],
+    ] as const)('turns away %s', async (_, role, status) => {
+      expect((await unassigned(role)).status).toBe(status);
+      expect(tickets.unassigned).not.toHaveBeenCalled();
     });
   });
 });

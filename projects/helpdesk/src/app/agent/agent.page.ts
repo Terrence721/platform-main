@@ -1,15 +1,25 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  effect,
+  inject,
+  Injector,
+  untracked,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { formatTicketNumber, type TicketDto } from '@helpdesk/contract';
 import { Store } from '@ngrx/store';
 import { sessionFeature } from '../session/session.feature';
 import { TicketTable } from '../tickets/ticket-table';
 import { MyTicketsStore } from './my-tickets.store';
 
 /**
- * An agent's own page: My tickets, their open work, most urgent first.
- * Only agents get here (the route's `canMatchRole('agent')`). The page
- * provides `MyTicketsStore`, which loads the tickets when the page opens.
+ * An agent's own page: My tickets, their open work, most urgent first;
+ * then Unassigned, the work nobody holds, which they may take for
+ * themselves ("Take it"). Only agents get here (the route's
+ * `canMatchRole('agent')`). The page provides `MyTicketsStore`, which
+ * loads both lists when the page opens.
  */
 @Component({
   selector: 'hd-agent-page',
@@ -38,7 +48,37 @@ import { MyTicketsStore } from './my-tickets.store';
           @if (store.entities().length === 0) {
             <p class="message">Nothing is assigned to you right now.</p>
           } @else {
-            <hd-ticket-table [tickets]="store.entities()" />
+            <hd-ticket-table class="mine" [tickets]="store.entities()" />
+          }
+        }
+      }
+
+      <h2>Unassigned ({{ store.unassigned().length }})</h2>
+      @switch (store.unassignedState()) {
+        @case ('loading') {
+          <mat-spinner
+            diameter="32"
+            aria-label="Loading the unassigned tickets"
+          />
+        }
+        @case ('failed') {
+          <p class="message" role="alert">
+            The unassigned tickets couldn't be loaded.
+            <button matButton type="button" (click)="store.loadUnassigned()">
+              Try again
+            </button>
+          </p>
+        }
+        @default {
+          @if (store.unassigned().length === 0) {
+            <p class="message">Nothing is waiting to be picked up.</p>
+          } @else {
+            <hd-ticket-table
+              class="unassigned"
+              [tickets]="store.unassigned()"
+              actionLabel="Take it"
+              (action)="take($event)"
+            />
           }
         }
       }
@@ -61,6 +101,10 @@ import { MyTicketsStore } from './my-tickets.store';
       margin: 0.5rem 0 0;
       font: var(--mat-sys-headline-large);
     }
+    h2 {
+      margin: 2.5rem 0 0.75rem;
+      font: var(--mat-sys-title-large);
+    }
     .greeting {
       margin: 0.5rem 0 2rem;
       font: var(--mat-sys-body-large);
@@ -77,4 +121,40 @@ export default class AgentPage {
   protected readonly user = inject(Store).selectSignal(
     sessionFeature.selectUser
   );
+  private readonly injector = inject(Injector);
+
+  /** The signed-in agent takes this ticket for themselves. */
+  protected take(ticket: TicketDto): void {
+    const user = this.user();
+    if (user !== null) {
+      this.store.take({ ticketId: ticket.id, agentId: user.id });
+    }
+  }
+
+  /**
+   * Says how taking a ticket went, in a snack bar. The snack bar's code is
+   * loaded when first needed.
+   */
+  private async report(message: string): Promise<void> {
+    const { MatSnackBar } = await import('@angular/material/snack-bar');
+    this.injector.get(MatSnackBar).open(message, undefined, {
+      duration: 5000,
+    });
+  }
+
+  constructor() {
+    effect(() => {
+      const state = this.store.takeState();
+      untracked(() => {
+        const ticket = this.store.lastTaken();
+        if (state === 'taken' && ticket !== null) {
+          void this.report(
+            `${formatTicketNumber(ticket.ticketNumber)} is yours`
+          );
+        } else if (state === 'failed') {
+          void this.report(this.store.takeError() ?? '');
+        }
+      });
+    });
+  }
 }

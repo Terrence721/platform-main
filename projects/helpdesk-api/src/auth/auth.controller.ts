@@ -6,6 +6,7 @@ import {
   SIGN_IN_FAILED_MESSAGE,
   type SignInResponse,
 } from '@helpdesk/contract';
+import { readSignIn } from '@helpdesk/server';
 import {
   Body,
   Controller,
@@ -24,21 +25,6 @@ import { AuthService } from './auth.service';
 interface CookieResponse {
   cookie(name: string, value: string, options: object): void;
   clearCookie(name: string, options: object): void;
-}
-
-/**
- * The fields of a sign-in body, as strings; anything else becomes an empty
- * string, which then fails like a wrong password (same answer, same time).
- */
-function readSignIn(body: unknown): { userId: string; password: string } {
-  const fields = (typeof body === 'object' && body !== null ? body : {}) as {
-    userId?: unknown;
-    password?: unknown;
-  };
-  return {
-    userId: typeof fields.userId === 'string' ? fields.userId : '',
-    password: typeof fields.password === 'string' ? fields.password : '',
-  };
 }
 
 /** /api/auth: signing in and out, and who is signed in. */

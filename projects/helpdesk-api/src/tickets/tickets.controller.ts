@@ -1,20 +1,15 @@
 // Types only: decorated methods record their parameter and return types
 // at run time (emitDecoratorMetadata), and an interface has no run-time
 // value to record.
+import type { CurrentUser, TicketDto, TicketMessage } from '@helpdesk/contract';
 import {
-  type AddTicketMessageRequest,
-  type CurrentUser,
-  isTicketMessageKind,
-  isTicketStatus,
-  isUserId,
-  type TicketDto,
-  TICKET_MESSAGE_MAX_LENGTH,
-  type TicketMessage,
-  type TicketStatus,
-} from '@helpdesk/contract';
-import { TicketMessagesService, TicketsService } from '@helpdesk/server';
+  readAssigneeId,
+  readMessage,
+  readStatus,
+  TicketMessagesService,
+  TicketsService,
+} from '@helpdesk/server';
 import {
-  BadRequestException,
   Body,
   Controller,
   ForbiddenException,
@@ -25,56 +20,6 @@ import {
 } from '@nestjs/common';
 import { SignedInUser } from '../auth/auth.guard';
 import { OnlyFor } from '../auth/role.guard';
-
-/** The agent an Assign body names; anything else is refused with 400. */
-export function readAssigneeId(body: unknown): string {
-  const assigneeId =
-    typeof body === 'object' && body !== null
-      ? (body as { assigneeId?: unknown }).assigneeId
-      : undefined;
-  if (!isUserId(assigneeId)) {
-    throw new BadRequestException('Choose an agent to assign the ticket to.');
-  }
-  return assigneeId;
-}
-
-/** The status a Change status body names; anything else is refused with 400. */
-export function readStatus(body: unknown): TicketStatus {
-  const status =
-    typeof body === 'object' && body !== null
-      ? (body as { status?: unknown }).status
-      : undefined;
-  if (!isTicketStatus(status)) {
-    throw new BadRequestException(
-      'Choose new, open, pending, resolved or closed.'
-    );
-  }
-  return status;
-}
-
-/**
- * The reply or note a message body holds, its text trimmed; a missing
- * kind, or text that is empty or too long, is refused with 400.
- */
-export function readMessage(body: unknown): AddTicketMessageRequest {
-  const { kind, body: text } =
-    typeof body === 'object' && body !== null
-      ? (body as { kind?: unknown; body?: unknown })
-      : {};
-  if (!isTicketMessageKind(kind)) {
-    throw new BadRequestException('Choose reply or note.');
-  }
-  const trimmed = typeof text === 'string' ? text.trim() : '';
-  if (trimmed === '') {
-    throw new BadRequestException('Write a message first.');
-  }
-  if (trimmed.length > TICKET_MESSAGE_MAX_LENGTH) {
-    throw new BadRequestException(
-      `Keep the message to ${TICKET_MESSAGE_MAX_LENGTH} characters or fewer.`
-    );
-  }
-  return { kind, body: trimmed };
-}
 
 /** Tickets, for the people who work them (/api/tickets). */
 @Controller('tickets')

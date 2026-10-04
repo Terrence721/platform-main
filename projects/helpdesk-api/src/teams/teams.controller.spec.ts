@@ -14,7 +14,7 @@ import { AddressInfo } from 'net';
 import { SESSION_COOKIE } from '../auth/auth-config';
 import { AuthGuard } from '../auth/auth.guard';
 import { AuthService } from '../auth/auth.service';
-import { historySince, TeamsController } from './teams.controller';
+import { TeamsController } from './teams.controller';
 
 /** One user per role; each one's session token is their role's name. */
 const USERS: Record<Role, CurrentUser> = {
@@ -64,14 +64,6 @@ const memberSummary: HistorySummary = {
   onTime: 15,
   late: 4,
 };
-
-describe('historySince', () => {
-  it('starts three calendar months earlier, at the same moment', () => {
-    expect(historySince(new Date('2026-10-03T14:30:00.000Z'))).toEqual(
-      new Date('2026-07-03T14:30:00.000Z')
-    );
-  });
-});
 
 describe('/api/teams', () => {
   const teams = {

@@ -1,11 +1,15 @@
+import { HttpBackend } from '@angular/common/http';
+import { mergeApplicationConfig } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { AppComponent } from './app/app.component';
 import { appConfig } from './app/app.config';
+import type { DemoApi } from './demo/demo-api';
+import { DEMO_API, DemoBackend } from './demo/demo-backend';
 
 // The in-browser demo's entry point (#942), used instead of main.ts by the
-// `demo` build configuration. It starts the same app, and starts the demo's
-// database in the page beside it. For now the database only reports that it
-// is ready; answering the app's /api calls from it comes next.
+// `demo` build configuration. It starts the same app, and beside it the
+// demo's database and API in the page; the app's requests to /api are
+// answered by them instead of a server (DemoBackend).
 
 /** Reads a file of the migrations the demo build copies into migrations/. */
 async function readMigration(path: string): Promise<string> {
@@ -16,20 +20,33 @@ async function readMigration(path: string): Promise<string> {
   return response.text();
 }
 
-// Loaded on its own (dynamic import()), so PGlite and the seed are not part
-// of the app's first download.
-void import('./demo/demo-database')
-  .then(({ startDemoDatabase }) => startDemoDatabase(readMigration))
-  .then(({ summary }) =>
-    console.info(
-      `Demo database ready: ${summary.users} users, ${summary.tickets} ` +
-        `tickets, ${summary.messages} messages.`
-    )
-  )
-  .catch((error: unknown) =>
-    console.error('The demo database could not start.', error)
+/**
+ * The demo's API, once its database is migrated and seeded. Loaded on its
+ * own (dynamic import()), so PGlite, the seed and the API's services are
+ * not part of the app's first download; requests wait for it.
+ */
+const demoApi: Promise<DemoApi> = Promise.all([
+  import('./demo/demo-database'),
+  import('./demo/demo-api'),
+]).then(async ([{ startDemoDatabase }, { DemoApi }]) => {
+  const { database, summary } = await startDemoDatabase(readMigration);
+  console.info(
+    `Demo database ready: ${summary.users} users, ${summary.tickets} ` +
+      `tickets, ${summary.messages} messages.`
   );
-
-bootstrapApplication(AppComponent, appConfig).catch((error: unknown) =>
-  console.error(error)
+  return new DemoApi(database);
+});
+demoApi.catch((error: unknown) =>
+  console.error('The demo could not start.', error)
 );
+
+bootstrapApplication(
+  AppComponent,
+  mergeApplicationConfig(appConfig, {
+    // After the app's own providers, so the demo's backend is the one used.
+    providers: [
+      { provide: HttpBackend, useClass: DemoBackend },
+      { provide: DEMO_API, useValue: demoApi },
+    ],
+  })
+).catch((error: unknown) => console.error(error));

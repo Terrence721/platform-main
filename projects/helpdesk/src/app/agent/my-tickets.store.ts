@@ -1,4 +1,4 @@
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { inject } from '@angular/core';
 import type {
   AssignTicketRequest,
@@ -17,6 +17,7 @@ import {
 import { setAllEntities, withEntities } from '@ngrx/signals/entities';
 import { rxMethod } from '@ngrx/signals/rxjs-interop';
 import { exhaustMap, forkJoin, pipe, switchMap, tap } from 'rxjs';
+import { apiErrorMessage } from '../tickets/api-error-message';
 import { assigneeApi, statusApi } from '../tickets/ticket-api-paths';
 
 /** Where the agent's own tickets come from, through the dev server's proxy. */
@@ -43,21 +44,6 @@ export type TakeState = 'idle' | 'saving' | 'taken' | 'failed';
 
 /** Where a status change is up to; `idle` until one is sent. */
 export type StatusState = 'idle' | 'saving' | 'changed' | 'failed';
-
-/**
- * The API's own message for a refusal it explains (400, 403, 404, 409), or
- * `fallback` when it cannot (the API down, say).
- */
-function apiErrorMessage(error: unknown, fallback: string): string {
-  if (
-    error instanceof HttpErrorResponse &&
-    [400, 403, 404, 409].includes(error.status) &&
-    typeof error.error?.message === 'string'
-  ) {
-    return error.error.message;
-  }
-  return fallback;
-}
 
 /**
  * The signed-in agent's open work, for the agent page's My tickets; the

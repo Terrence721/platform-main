@@ -17,6 +17,7 @@ import {
 } from '@ngrx/signals';
 import { rxMethod } from '@ngrx/signals/rxjs-interop';
 import { EMPTY, exhaustMap, forkJoin, of, pipe, switchMap, tap } from 'rxjs';
+import { apiErrorMessage } from '../tickets/api-error-message';
 import { assigneeApi, statusApi } from '../tickets/ticket-api-paths';
 
 /** Where the supervisor's team comes from, through the dev server's proxy. */
@@ -65,21 +66,6 @@ interface MyTeamState {
   statusError: string | null;
   /** The ticket whose status last changed, for the page to confirm. */
   lastChanged: TicketDto | null;
-}
-
-/**
- * The API's own message for a refusal it explains (400, 404, 409), or
- * `fallback` when it cannot (the API down, say).
- */
-function apiErrorMessage(error: unknown, fallback: string): string {
-  if (
-    error instanceof HttpErrorResponse &&
-    [400, 404, 409].includes(error.status) &&
-    typeof error.error?.message === 'string'
-  ) {
-    return error.error.message;
-  }
-  return fallback;
 }
 
 /**

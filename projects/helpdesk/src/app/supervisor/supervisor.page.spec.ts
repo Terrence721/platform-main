@@ -13,6 +13,7 @@ import type { CurrentUser, TeamOverview, TicketDto } from '@helpdesk/contract';
 import { provideMockStore } from '@ngrx/store/testing';
 import { of } from 'rxjs';
 import { initialSessionState } from '../session/session.feature';
+import { TicketConversationDialog } from '../tickets/ticket-conversation.dialog';
 import { AssignTicketDialog } from './assign-ticket.dialog';
 import { MemberHistoryDialog } from './member-history.dialog';
 import { assigneeApi, statusApi } from '../tickets/ticket-api-paths';
@@ -563,6 +564,57 @@ describe('SupervisorPage', () => {
           undefined,
           expect.objectContaining({ duration: 5000 })
         )
+      );
+    });
+  });
+
+  describe("opening a member's ticket", () => {
+    const heldByBenny = {
+      ...ticket(1312),
+      assignee: { id: 'benny.lind', name: 'Benny Lind' },
+    };
+
+    /** Benny chosen, holding one ticket. */
+    async function withBenny() {
+      const view = render();
+      view.answer(atlas);
+      await view.chooseMember('Benny Lind (5 open · 3 overdue)');
+      view.http.expectOne(memberTicketsApi('benny.lind')).flush([heldByBenny]);
+      view.detectChanges();
+      return view;
+    }
+
+    afterEach(() =>
+      document
+        .querySelectorAll('.cdk-overlay-container')
+        .forEach((container) => container.replaceChildren())
+    );
+
+    it('opens a ticket from the member list, with its details and conversation', async () => {
+      const { page } = await withBenny();
+
+      page
+        .querySelector<HTMLButtonElement>(
+          'hd-ticket-table.member button.subject-link'
+        )
+        ?.click();
+
+      await vi.waitFor(() =>
+        expect(dialog.open).toHaveBeenCalledExactlyOnceWith(
+          TicketConversationDialog,
+          expect.objectContaining({ data: { ticket: heldByBenny } })
+        )
+      );
+    });
+
+    it('keeps Unassigned subjects as plain text', async () => {
+      const { page, texts } = await withBenny();
+
+      expect(
+        page.querySelectorAll('hd-ticket-table.unassigned button.subject-link')
+      ).toHaveLength(0);
+      expect(texts('hd-ticket-table.unassigned td.mat-column-subject')).toEqual(
+        ['Subject 1009', 'Subject 1008']
       );
     });
   });

@@ -4,11 +4,13 @@ import {
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import type { CurrentUser, TicketDto } from '@helpdesk/contract';
 import { provideMockStore } from '@ngrx/store/testing';
 import { initialSessionState } from '../session/session.feature';
 import { assigneeApi, statusApi } from '../tickets/ticket-api-paths';
+import { TicketConversationDialog } from '../tickets/ticket-conversation.dialog';
 import AgentPage from './agent.page';
 import {
   FINISHED_API,
@@ -60,6 +62,8 @@ describe('AgentPage', () => {
 
   /** Stands in for Material's snack bar, to see what it says. */
   const snackBar = { open: vi.fn() };
+  /** Stands in for Material's dialogs, to see which popup opens. */
+  const dialog = { open: vi.fn() };
 
   afterEach(() => {
     const http = TestBed.inject(HttpTestingController);
@@ -77,6 +81,7 @@ describe('AgentPage', () => {
 
   function render() {
     snackBar.open.mockClear();
+    dialog.open.mockClear();
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
@@ -87,6 +92,7 @@ describe('AgentPage', () => {
           },
         }),
         { provide: MatSnackBar, useValue: snackBar },
+        { provide: MatDialog, useValue: dialog },
       ],
     });
     const fixture = TestBed.createComponent(AgentPage);
@@ -475,6 +481,63 @@ describe('AgentPage', () => {
           expect.objectContaining({ duration: 5000 })
         )
       );
+    });
+  });
+
+  describe('opening a ticket', () => {
+    const mine = ticket(1003, 'Cannot sign in', null);
+    const finished = ticket(1290, 'Already resolved', null, {
+      status: 'resolved',
+    });
+    const waiting = ticket(1312, 'Waiting for someone', null, {
+      assignee: null,
+    });
+
+    /** Renders with one ticket in each of My tickets, Unassigned and Done. */
+    function renderWithAll() {
+      const view = render();
+      view.answer([mine]);
+      view.http.expectOne(UNASSIGNED_API).flush([waiting]);
+      view.http.expectOne(FINISHED_API).flush([finished]);
+      view.detectChanges();
+      return view;
+    }
+
+    /** The subject links in one of the page's tables. */
+    const links = (page: HTMLElement, table: string) => [
+      ...page.querySelectorAll<HTMLButtonElement>(
+        `hd-ticket-table.${table} button.subject-link`
+      ),
+    ];
+
+    it.each([
+      ['My tickets', 'mine', mine],
+      ['Done', 'done', finished],
+    ] as const)(
+      'opens a ticket from %s, with its details and conversation',
+      async (_, table, shown) => {
+        const { page } = renderWithAll();
+
+        links(page, table)[0].click();
+
+        await vi.waitFor(() =>
+          expect(dialog.open).toHaveBeenCalledExactlyOnceWith(
+            TicketConversationDialog,
+            expect.objectContaining({ data: { ticket: shown } })
+          )
+        );
+      }
+    );
+
+    it('keeps Unassigned subjects as plain text', () => {
+      const { page } = renderWithAll();
+
+      expect(links(page, 'unassigned')).toEqual([]);
+      expect(
+        page
+          .querySelector('hd-ticket-table.unassigned td.mat-column-subject')
+          ?.textContent?.trim()
+      ).toBe('Waiting for someone');
     });
   });
 });

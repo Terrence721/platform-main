@@ -49,6 +49,42 @@
           "extractLicenses": false,
           "sourceMap": true,
           "namedChunks": true
+        },
+        "demo": {
+          "budgets": [
+            {
+              "type": "initial",
+              "maximumWarning": "575kb",
+              "maximumError": "1mb"
+            },
+            {
+              "type": "anyComponentStyle",
+              "maximumWarning": "2kb",
+              "maximumError": "4kb"
+            }
+          ],
+          "outputHashing": "all",
+          "outputPath": "dist/projects/helpdesk-demo",
+          "browser": "projects/helpdesk/src/main.demo.ts",
+          "tsConfig": "projects/helpdesk/tsconfig.demo.json",
+          "assets": [
+            "projects/helpdesk/src/favicon.ico",
+            {
+              "glob": "**/*",
+              "input": "projects/helpdesk/src/assets",
+              "output": "assets"
+            },
+            {
+              "glob": "**/*",
+              "input": "projects/helpdesk-server/drizzle",
+              "output": "migrations"
+            },
+            {
+              "glob": "{pglite.wasm,pglite.data,initdb.wasm}",
+              "input": "node_modules/@electric-sql/pglite/dist",
+              "output": "."
+            }
+          ]
         }
       },
       "defaultConfiguration": "production"

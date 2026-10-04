@@ -1,8 +1,8 @@
+import { DEFAULT_SEED_PASSWORD, seedDatabase } from '@helpdesk/server';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { existsSync } from 'fs';
 import { Pool } from 'pg';
 import { databaseUrl } from '../database-url';
-import { DEFAULT_SEED_PASSWORD, seedDatabase } from './seed';
 
 // `yarn db:seed`: fills the empty, migrated database with the seed data and
 // says how to sign in. Run from the repo root (yarn start:helpdesk runs it

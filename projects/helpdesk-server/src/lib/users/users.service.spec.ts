@@ -9,12 +9,12 @@ import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
 import { fileURLToPath } from 'url';
 import { verifyPassword } from '../auth/password';
-import type { Database } from '../database/database.module';
+import type { Database } from '../database/database-token';
 import { teams, users } from '../database/schema';
 import { UsersService } from './users.service';
 
 /** The real migrations, so the tests run against the real schema. */
-const MIGRATIONS = fileURLToPath(new URL('../../drizzle', import.meta.url));
+const MIGRATIONS = fileURLToPath(new URL('../../../drizzle', import.meta.url));
 
 /** Everyone, in no particular order: the service sorts them. */
 const PEOPLE: {

@@ -1,0 +1,13 @@
+{
+  "name": "helpdesk-server",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "projects/helpdesk-server/src",
+  "tags": [],
+  "targets": {
+    "test": {
+      "executor": "@analogjs/vitest-angular:test",
+      "outputs": ["{workspaceRoot}/coverage/projects/helpdesk-server"]
+    }
+  }
+}

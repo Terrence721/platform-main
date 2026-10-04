@@ -13,7 +13,7 @@
     "**/*.js",
     "**/*.js.map",
     "**/*.min.js",
-    "projects/helpdesk-api/drizzle/**"
+    "projects/helpdesk-server/drizzle/**"
   ],
   "words": [
     "AAQBAJ",

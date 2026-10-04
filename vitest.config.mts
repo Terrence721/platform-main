@@ -80,9 +80,10 @@ const projectsFolder: Record<
 > = {
   helpdesk: {},
   'helpdesk-contract': {},
-  // A server: its tests run in Node, not the simulated browser (jsdom) the
-  // Angular projects use.
+  // A server and its logic: their tests run in Node, not the simulated
+  // browser (jsdom) the Angular projects use.
   'helpdesk-api': { environment: 'node' },
+  'helpdesk-server': { environment: 'node' },
 };
 
 /** Every project under modules/ and projects/, with the folder it is rooted at. */

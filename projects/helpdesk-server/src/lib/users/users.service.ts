@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { asc, eq, sql } from 'drizzle-orm';
 import { hashPassword } from '../auth/password';
-import { DATABASE, type Database } from '../database/database.module';
+import { DATABASE, type Database } from '../database/database-token';
 import { teams, users } from '../database/schema';
 
 /** Reads and creates Helpdesk accounts, for admins. */

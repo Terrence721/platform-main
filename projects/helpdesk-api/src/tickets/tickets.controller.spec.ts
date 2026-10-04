@@ -5,6 +5,7 @@ import {
   TICKET_MESSAGE_MAX_LENGTH,
   type TicketMessage,
 } from '@helpdesk/contract';
+import { TicketMessagesService, TicketsService } from '@helpdesk/server';
 import {
   BadRequestException,
   ConflictException,
@@ -17,14 +18,12 @@ import { AddressInfo } from 'net';
 import { SESSION_COOKIE } from '../auth/auth-config';
 import { AuthGuard } from '../auth/auth.guard';
 import { AuthService } from '../auth/auth.service';
-import { TicketMessagesService } from './ticket-messages.service';
 import {
   readAssigneeId,
   readMessage,
   readStatus,
   TicketsController,
 } from './tickets.controller';
-import { TicketsService } from './tickets.service';
 
 /** One user per role; each one's session token is their role's name. */
 const USERS: Record<Role, CurrentUser> = {

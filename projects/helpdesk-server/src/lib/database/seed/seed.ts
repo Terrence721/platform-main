@@ -1,6 +1,6 @@
 import { count, eq } from 'drizzle-orm';
 import { hashPassword } from '../../auth/password';
-import type { Database } from '../database.module';
+import type { Database } from '../database-token';
 import {
   customers,
   queues,

@@ -11,7 +11,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { asc, eq } from 'drizzle-orm';
-import { DATABASE, type Database } from '../database/database.module';
+import { DATABASE, type Database } from '../database/database-token';
 import { teams, ticketMessages, tickets, users } from '../database/schema';
 
 /** A ticket's id is a UUID; anything else names no ticket. */

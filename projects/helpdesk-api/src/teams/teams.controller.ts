@@ -8,11 +8,10 @@ import type {
   TeamOverview,
   TicketDto,
 } from '@helpdesk/contract';
+import { TeamsService, TicketsService } from '@helpdesk/server';
 import { Controller, Get, NotFoundException, Param } from '@nestjs/common';
 import { SignedInUser } from '../auth/auth.guard';
 import { OnlyFor } from '../auth/role.guard';
-import { TicketsService } from '../tickets/tickets.service';
-import { TeamsService } from './teams.service';
 
 /** How far back a team member's history goes. */
 export const HISTORY_MONTHS = 3;

@@ -3,12 +3,12 @@ import type { TicketStatus } from '@helpdesk/contract';
 import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
 import { fileURLToPath } from 'url';
-import type { Database } from '../database/database.module';
+import type { Database } from '../database/database-token';
 import { customers, queues, tickets, users } from '../database/schema';
 import { TicketsService } from './tickets.service';
 
 /** The real migrations, so the tests run against the real schema. */
-const MIGRATIONS = fileURLToPath(new URL('../../drizzle', import.meta.url));
+const MIGRATIONS = fileURLToPath(new URL('../../../drizzle', import.meta.url));
 
 /**
  * Sam's, Benny's and Helen's tickets, inserted in this order, so they get

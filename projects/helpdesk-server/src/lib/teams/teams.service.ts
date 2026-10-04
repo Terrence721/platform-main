@@ -5,7 +5,7 @@ import type {
 } from '@helpdesk/contract';
 import { Inject, Injectable } from '@nestjs/common';
 import { and, asc, count, eq, inArray, isNull, lt, sql } from 'drizzle-orm';
-import { DATABASE, type Database } from '../database/database.module';
+import { DATABASE, type Database } from '../database/database-token';
 import { teams, tickets, users } from '../database/schema';
 import {
   MOST_URGENT_FIRST,

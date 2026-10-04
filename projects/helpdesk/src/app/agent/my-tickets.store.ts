@@ -17,7 +17,7 @@ import {
 import { setAllEntities, withEntities } from '@ngrx/signals/entities';
 import { rxMethod } from '@ngrx/signals/rxjs-interop';
 import { exhaustMap, forkJoin, pipe, switchMap, tap } from 'rxjs';
-import { assigneeApi } from '../supervisor/my-team.store';
+import { assigneeApi, statusApi } from '../tickets/ticket-api-paths';
 
 /** Where the agent's own tickets come from, through the dev server's proxy. */
 export const MY_TICKETS_API = '/api/tickets/mine';
@@ -27,11 +27,6 @@ export const UNASSIGNED_API = '/api/tickets/unassigned';
 
 /** Where the agent's recently finished tickets come from. */
 export const FINISHED_API = '/api/tickets/mine/finished';
-
-/** Where a ticket's status is set. */
-export function statusApi(ticketId: string): string {
-  return `/api/tickets/${encodeURIComponent(ticketId)}/status`;
-}
 
 /** When taking a ticket fails for a reason the API did not explain. */
 export const TAKE_UNAVAILABLE_MESSAGE =

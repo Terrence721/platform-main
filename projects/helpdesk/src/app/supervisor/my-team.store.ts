@@ -2,8 +2,10 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
 import type {
   AssignTicketRequest,
+  ChangeStatusRequest,
   TeamOverview,
   TicketDto,
+  TicketStatus,
 } from '@helpdesk/contract';
 import { tapResponse } from '@ngrx/operators';
 import {
@@ -15,6 +17,7 @@ import {
 } from '@ngrx/signals';
 import { rxMethod } from '@ngrx/signals/rxjs-interop';
 import { EMPTY, exhaustMap, forkJoin, of, pipe, switchMap, tap } from 'rxjs';
+import { assigneeApi, statusApi } from '../tickets/ticket-api-paths';
 
 /** Where the supervisor's team comes from, through the dev server's proxy. */
 export const MY_TEAM_API = '/api/teams/mine';
@@ -24,14 +27,13 @@ export function memberTicketsApi(userId: string): string {
   return `${MY_TEAM_API}/members/${encodeURIComponent(userId)}/tickets`;
 }
 
-/** Where a ticket's assignee is set. */
-export function assigneeApi(ticketId: string): string {
-  return `/api/tickets/${encodeURIComponent(ticketId)}/assignee`;
-}
-
 /** When assigning fails for a reason the API did not explain. */
 export const ASSIGN_UNAVAILABLE_MESSAGE =
   "Assigning isn't available right now. Please try again.";
+
+/** When changing a status fails for a reason the API did not explain. */
+export const STATUS_UNAVAILABLE_MESSAGE =
+  "Changing the status isn't available right now. Please try again.";
 
 /** `no-team`: the API found no team this supervisor leads (404). */
 export type MyTeamLoadState = 'loading' | 'loaded' | 'no-team' | 'failed';
@@ -41,6 +43,9 @@ export type MemberTicketsState = 'idle' | 'loading' | 'loaded' | 'failed';
 
 /** Where an assignment is up to; `idle` until one is sent. */
 export type AssignState = 'idle' | 'saving' | 'assigned' | 'failed';
+
+/** Where a status change is up to; `idle` until one is sent. */
+export type StatusState = 'idle' | 'saving' | 'changed' | 'failed';
 
 interface MyTeamState {
   team: TeamOverview | null;
@@ -55,10 +60,18 @@ interface MyTeamState {
   assignError: string | null;
   /** The ticket the last assignment gave out, for the page to confirm. */
   lastAssigned: TicketDto | null;
+  statusState: StatusState;
+  /** Why the last status change failed; `null` otherwise. */
+  statusError: string | null;
+  /** The ticket whose status last changed, for the page to confirm. */
+  lastChanged: TicketDto | null;
 }
 
-/** The API's message for a refused assignment (400, 404, 409), or a general one. */
-function assignErrorMessage(error: unknown): string {
+/**
+ * The API's own message for a refusal it explains (400, 404, 409), or
+ * `fallback` when it cannot (the API down, say).
+ */
+function apiErrorMessage(error: unknown, fallback: string): string {
   if (
     error instanceof HttpErrorResponse &&
     [400, 404, 409].includes(error.status) &&
@@ -66,7 +79,7 @@ function assignErrorMessage(error: unknown): string {
   ) {
     return error.error.message;
   }
-  return ASSIGN_UNAVAILABLE_MESSAGE;
+  return fallback;
 }
 
 /**
@@ -85,6 +98,9 @@ export const MyTeamStore = signalStore(
     assignState: 'idle',
     assignError: null,
     lastAssigned: null,
+    statusState: 'idle',
+    statusError: null,
+    lastChanged: null,
   }),
   withMethods((store, http = inject(HttpClient)) => ({
     /** Loads the team again; a newer load replaces one still running. */
@@ -140,49 +156,93 @@ export const MyTeamStore = signalStore(
       )
     ),
   })),
-  withMethods((store, http = inject(HttpClient)) => ({
+  withMethods((store, http = inject(HttpClient)) => {
     /**
-     * Gives a ticket to an agent on the team (assigning or reassigning).
-     * Once done, the team (Unassigned, each member's counts) and the
-     * chosen member's tickets are fetched again and swapped in quietly,
-     * with no spinner. A second assignment while one is saving is ignored.
+     * After a ticket changed: the team (Unassigned, each member's counts)
+     * and the chosen member's tickets, fetched again, with the ticket.
      */
-    assign: rxMethod<{ ticketId: string; agentId: string }>(
-      pipe(
-        exhaustMap(({ ticketId, agentId }) => {
-          patchState(store, { assignState: 'saving', assignError: null });
-          const body: AssignTicketRequest = { assigneeId: agentId };
-          return http.put<TicketDto>(assigneeApi(ticketId), body).pipe(
-            switchMap((ticket) => {
-              const memberId = store.selectedMemberId();
-              return forkJoin({
-                ticket: of(ticket),
-                team: http.get<TeamOverview>(MY_TEAM_API),
-                memberTickets:
-                  memberId === null
-                    ? of(store.memberTickets())
-                    : http.get<TicketDto[]>(memberTicketsApi(memberId)),
-              });
-            }),
-            tapResponse({
-              next: ({ ticket, team, memberTickets }) =>
-                patchState(store, {
-                  team,
-                  memberTickets,
-                  assignState: 'assigned',
-                  lastAssigned: ticket,
-                }),
-              error: (error: unknown) =>
-                patchState(store, {
-                  assignState: 'failed',
-                  assignError: assignErrorMessage(error),
-                }),
-            })
-          );
-        })
-      )
-    ),
-  })),
+    const refreshAfter = (ticket: TicketDto) => {
+      const memberId = store.selectedMemberId();
+      return forkJoin({
+        ticket: of(ticket),
+        team: http.get<TeamOverview>(MY_TEAM_API),
+        memberTickets:
+          memberId === null
+            ? of(store.memberTickets())
+            : http.get<TicketDto[]>(memberTicketsApi(memberId)),
+      });
+    };
+    return {
+      /**
+       * Gives a ticket to an agent on the team (assigning or reassigning).
+       * Once done, the team (Unassigned, each member's counts) and the
+       * chosen member's tickets are fetched again and swapped in quietly,
+       * with no spinner. A second assignment while one is saving is ignored.
+       */
+      assign: rxMethod<{ ticketId: string; agentId: string }>(
+        pipe(
+          exhaustMap(({ ticketId, agentId }) => {
+            patchState(store, { assignState: 'saving', assignError: null });
+            const body: AssignTicketRequest = { assigneeId: agentId };
+            return http.put<TicketDto>(assigneeApi(ticketId), body).pipe(
+              switchMap(refreshAfter),
+              tapResponse({
+                next: ({ ticket, team, memberTickets }) =>
+                  patchState(store, {
+                    team,
+                    memberTickets,
+                    assignState: 'assigned',
+                    lastAssigned: ticket,
+                  }),
+                error: (error: unknown) =>
+                  patchState(store, {
+                    assignState: 'failed',
+                    assignError: apiErrorMessage(
+                      error,
+                      ASSIGN_UNAVAILABLE_MESSAGE
+                    ),
+                  }),
+              })
+            );
+          })
+        )
+      ),
+      /**
+       * Moves a team member's ticket to another status, as the workflow
+       * allows. Once done, the team and the chosen member's tickets are
+       * fetched again and swapped in quietly, as after assigning. A second
+       * change while one is saving is ignored.
+       */
+      changeStatus: rxMethod<{ ticketId: string; status: TicketStatus }>(
+        pipe(
+          exhaustMap(({ ticketId, status }) => {
+            patchState(store, { statusState: 'saving', statusError: null });
+            const body: ChangeStatusRequest = { status };
+            return http.put<TicketDto>(statusApi(ticketId), body).pipe(
+              switchMap(refreshAfter),
+              tapResponse({
+                next: ({ ticket, team, memberTickets }) =>
+                  patchState(store, {
+                    team,
+                    memberTickets,
+                    statusState: 'changed',
+                    lastChanged: ticket,
+                  }),
+                error: (error: unknown) =>
+                  patchState(store, {
+                    statusState: 'failed',
+                    statusError: apiErrorMessage(
+                      error,
+                      STATUS_UNAVAILABLE_MESSAGE
+                    ),
+                  }),
+              })
+            );
+          })
+        )
+      ),
+    };
+  }),
   withHooks({
     onInit: (store) => store.load(),
   })

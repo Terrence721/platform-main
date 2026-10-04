@@ -8,12 +8,11 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import type { CurrentUser, TicketDto } from '@helpdesk/contract';
 import { provideMockStore } from '@ngrx/store/testing';
 import { initialSessionState } from '../session/session.feature';
-import { assigneeApi } from '../supervisor/my-team.store';
+import { assigneeApi, statusApi } from '../tickets/ticket-api-paths';
 import AgentPage from './agent.page';
 import {
   FINISHED_API,
   MY_TICKETS_API,
-  statusApi,
   UNASSIGNED_API,
 } from './my-tickets.store';
 

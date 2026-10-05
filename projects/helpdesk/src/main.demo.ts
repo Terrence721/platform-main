@@ -1,10 +1,15 @@
 import { HttpBackend } from '@angular/common/http';
-import { mergeApplicationConfig } from '@angular/core';
+import {
+  type ApplicationRef,
+  createComponent,
+  mergeApplicationConfig,
+} from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { AppComponent } from './app/app.component';
 import { appConfig } from './app/app.config';
 import type { DemoApi } from './demo/demo-api';
 import { DEMO_API, DemoBackend } from './demo/demo-backend';
+import { DemoBanner } from './demo/demo-banner';
 
 // The in-browser demo's entry point (#942), used instead of main.ts by the
 // `demo` build configuration. It starts the same app, and beside it the
@@ -40,6 +45,28 @@ demoApi.catch((error: unknown) =>
   console.error('The demo could not start.', error)
 );
 
+/**
+ * Adds the demo's banner along the bottom of the page, outside the app,
+ * and keeps the page's end clear of it as its height changes (it wraps on
+ * narrow screens).
+ */
+function addBanner(app: ApplicationRef): void {
+  const host = document.createElement('hd-demo-banner');
+  document.body.append(host);
+  const banner = createComponent(DemoBanner, {
+    environmentInjector: app.injector,
+    hostElement: host,
+  });
+  app.attachView(banner.hostView);
+  banner.changeDetectorRef.detectChanges();
+  const bar = host.firstElementChild;
+  if (bar) {
+    new ResizeObserver(() => {
+      document.body.style.paddingBottom = `${bar.clientHeight}px`;
+    }).observe(bar);
+  }
+}
+
 bootstrapApplication(
   AppComponent,
   mergeApplicationConfig(appConfig, {
@@ -49,4 +76,6 @@ bootstrapApplication(
       { provide: DEMO_API, useValue: demoApi },
     ],
   })
-).catch((error: unknown) => console.error(error));
+)
+  .then(addBanner)
+  .catch((error: unknown) => console.error(error));

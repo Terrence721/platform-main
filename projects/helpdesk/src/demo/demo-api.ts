@@ -14,6 +14,8 @@ import {
   readSignIn,
   readStatus,
   readUpdateAccount,
+  ReportsService,
+  scopeFor,
   TeamsService,
   TicketMessagesService,
   TicketsService,
@@ -78,6 +80,7 @@ export class DemoApi {
   private readonly messages: TicketMessagesService;
   private readonly teams: TeamsService;
   private readonly accounts: UsersService;
+  private readonly reports: ReportsService;
   /** Who is signed in; `null` until someone signs in. */
   private signedIn: string | null = null;
   /**
@@ -96,6 +99,7 @@ export class DemoApi {
     this.messages = new TicketMessagesService(database);
     this.teams = new TeamsService(database);
     this.accounts = new UsersService(database);
+    this.reports = new ReportsService(database);
     this.routes = this.defineRoutes();
   }
 
@@ -260,6 +264,13 @@ export class DemoApi {
         access: ['admin'],
         run: ({ user, params: [userId], body }) =>
           this.accounts.update(userId, readUpdateAccount(body), user.id),
+      },
+      // ReportsController
+      {
+        method: 'GET',
+        path: /^\/api\/reports$/,
+        access: ['supervisor', 'admin'],
+        run: ({ user }) => this.reports.report(scopeFor(user), this.now()),
       },
     ];
   }

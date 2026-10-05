@@ -7,13 +7,12 @@ import {
   timestamp,
 } from 'drizzle-orm/pg-core';
 
-// The Power BI report's view of the help desk (#965): a `reporting` schema
-// of read-only views over the tables in ./schema, which the report reads
-// instead of the tables themselves. Only what the report needs, and nothing
-// private: no password hashes, no message text, no customers. Statuses,
-// priorities, roles and message kinds are text, not PostgreSQL enums, so
-// any reporting tool reads them. Times keep their time zone, as in the
-// tables.
+// The Reports popup's view of the help desk (#967): a `reporting` schema
+// of read-only views over the tables in ./schema, which ReportsService
+// reads instead of the tables themselves. Only what the reports need, and
+// nothing private: no password hashes, no message text, no customers.
+// Statuses, priorities, roles and message kinds are text, not PostgreSQL
+// enums. Times keep their time zone, as in the tables.
 
 export const reporting = pgSchema('reporting');
 

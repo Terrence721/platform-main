@@ -8,13 +8,16 @@ if (existsSync('.env')) {
   process.loadEnvFile('.env');
 }
 
-// drizzle-kit's settings for the Helpdesk API: where the tables are defined
-// and where generated migrations go (committed), both in the helpdesk-server
-// library. Paths are relative to the repo root, where the `yarn db:*`
-// scripts run drizzle-kit.
+// drizzle-kit's settings for the Helpdesk API: where the tables (and the
+// Power BI report's views) are defined and where generated migrations go
+// (committed), all in the helpdesk-server library. Paths are relative to
+// the repo root, where the `yarn db:*` scripts run drizzle-kit.
 export default defineConfig({
   dialect: 'postgresql',
-  schema: './projects/helpdesk-server/src/lib/database/schema.ts',
+  schema: [
+    './projects/helpdesk-server/src/lib/database/schema.ts',
+    './projects/helpdesk-server/src/lib/database/reporting.ts',
+  ],
   out: './projects/helpdesk-server/drizzle',
   dbCredentials: { url: databaseUrl() },
 });

@@ -4,7 +4,13 @@ import {
   TICKET_MESSAGE_MAX_LENGTH,
   TICKET_SUBJECT_MAX_LENGTH,
 } from '@helpdesk/contract';
-import { AGENTS_PER_TEAM, generateSeed, SEED_DEFAULTS } from './generate';
+import {
+  AGENTS_PER_TEAM,
+  generateSeed,
+  OPEN_WORK_MAX_AGE_OF_SLA,
+  SEED_DEFAULTS,
+  SLA_MINUTES,
+} from './generate';
 import { SHOWCASE_TICKETS, TEAMS } from './story';
 
 describe('generateSeed', () => {
@@ -147,6 +153,51 @@ describe('generateSeed', () => {
         expect(body.length).toBeLessThanOrEqual(TICKET_MESSAGE_MAX_LENGTH);
       }
     }
+  });
+
+  describe('open work (new, open, pending) looks like a team keeping up', () => {
+    const openWork = data.tickets.filter(({ status }) =>
+      ['new', 'open', 'pending'].includes(status)
+    );
+    const withSla = openWork.filter(
+      (ticket): ticket is typeof ticket & { slaDueInMinutes: number } =>
+        ticket.slaDueInMinutes !== null
+    );
+
+    it('was raised within about its SLA, never months ago', () => {
+      for (const { priority, createdMinutesAgo } of openWork) {
+        expect(createdMinutesAgo).toBeLessThanOrEqual(
+          SLA_MINUTES[priority] * OPEN_WORK_MAX_AGE_OF_SLA + 10
+        );
+      }
+    });
+
+    it('is mostly on time', () => {
+      const onTime = withSla.filter(
+        ({ slaDueInMinutes }) => slaDueInMinutes >= 0
+      );
+
+      expect(onTime.length / withSla.length).toBeGreaterThanOrEqual(0.7);
+    });
+
+    it('is late, when it is, by at most a quarter of its SLA', () => {
+      for (const { priority, slaDueInMinutes } of withSla) {
+        expect(-slaDueInMinutes).toBeLessThanOrEqual(
+          SLA_MINUTES[priority] * (OPEN_WORK_MAX_AGE_OF_SLA - 1) + 10
+        );
+      }
+    });
+
+    it('leaves every ticket older than two weeks finished', () => {
+      const old = data.tickets.filter(
+        ({ createdMinutesAgo }) => createdMinutesAgo > 14 * 24 * 60
+      );
+
+      expect(old.length).toBeGreaterThan(0);
+      expect(
+        old.filter(({ status }) => !['resolved', 'closed'].includes(status))
+      ).toEqual([]);
+    });
   });
 
   it('includes every status and priority', () => {

@@ -55,12 +55,22 @@ const DAY = 24 * HOUR;
 const HISTORY_DAYS = 182;
 
 /** How long each priority may take before its SLA is missed, in minutes. */
-const SLA_MINUTES: Record<TicketPriority, number> = {
+export const SLA_MINUTES: Record<TicketPriority, number> = {
   urgent: 4 * HOUR,
   high: DAY,
   normal: 3 * DAY,
   low: 7 * DAY,
 };
+
+/**
+ * How old open work (new, open, pending) may be, as a share of its SLA. Up
+ * to 1.25 × the SLA: about four in five are still on time, and the rest are
+ * late by at most a quarter of their SLA, as on a team keeping up.
+ */
+export const OPEN_WORK_MAX_AGE_OF_SLA = 1.25;
+
+/** The statuses that still need work. */
+const OPEN_WORK: readonly TicketStatus[] = ['new', 'open', 'pending'];
 
 /** Domains reserved for examples (RFC 2606), so no real inbox is used. */
 const EMAIL_DOMAINS = ['example.com', 'example.org', 'example.net'];
@@ -321,7 +331,10 @@ function userIdFor(first: string, last: string, taken: Set<string>): string {
   return id;
 }
 
-/** Status by how old the ticket is: recent ones are still being worked. */
+/**
+ * Status by how old the ticket is: recent ones are still being worked;
+ * anything older than two weeks is finished (resolved or closed).
+ */
 function statusFor(faker: Faker, ageMinutes: number): TicketStatus {
   const weights: [TicketStatus, number][] =
     ageMinutes < 2 * DAY
@@ -339,10 +352,8 @@ function statusFor(faker: Faker, ageMinutes: number): TicketStatus {
             ['closed', 15],
           ]
         : [
-            ['open', 3],
-            ['pending', 2],
             ['resolved', 20],
-            ['closed', 75],
+            ['closed', 80],
           ];
   return faker.helpers.weightedArrayElement(
     weights.map(([value, weight]) => ({ value, weight }))
@@ -413,6 +424,17 @@ export function generateSeed(options: Partial<SeedOptions> = {}): SeedData {
       { value: 'high', weight: 22 },
       { value: 'urgent', weight: 8 },
     ]);
+    // Open work is recent: raised within about its SLA, so most of it is
+    // on time and the late ones are only just late. Finished tickets keep
+    // the age drawn above, over the whole history.
+    const createdMinutesAgo = OPEN_WORK.includes(status)
+      ? 10 +
+        Math.floor(
+          SLA_MINUTES[priority] *
+            OPEN_WORK_MAX_AGE_OF_SLA *
+            faker.number.float()
+        )
+      : ageMinutes;
     // New tickets wait for someone to take them; a few others do too.
     const unassigned = status === 'new' || faker.number.float() < 0.05;
     const assigneeId = unassigned
@@ -432,9 +454,11 @@ export function generateSeed(options: Partial<SeedOptions> = {}): SeedData {
       tags: faker.helpers.arrayElements(TAGS[queue.id], { min: 0, max: 2 }),
       // Due a priority's SLA after it was raised; a few have no SLA.
       slaDueInMinutes:
-        faker.number.float() < 0.05 ? null : SLA_MINUTES[priority] - ageMinutes,
-      createdMinutesAgo: ageMinutes,
-      updatedMinutesAgo: faker.number.int({ min: 0, max: ageMinutes }),
+        faker.number.float() < 0.05
+          ? null
+          : SLA_MINUTES[priority] - createdMinutesAgo,
+      createdMinutesAgo,
+      updatedMinutesAgo: faker.number.int({ min: 0, max: createdMinutesAgo }),
       messages: [],
     });
   }

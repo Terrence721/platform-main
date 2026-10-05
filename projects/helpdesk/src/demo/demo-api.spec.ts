@@ -273,5 +273,39 @@ describe('DemoApi', { timeout: 60_000 }, () => {
         await call('POST', '/api/users', { userId: 'Nia New' })
       ).toMatchObject({ status: 400, body: { error: 'Bad Request' } });
     });
+
+    it("deactivates an account: its open tickets go back, and it can't sign in", async () => {
+      await signIn('alex.morgan');
+
+      const changed = await call('PUT', '/api/users/sam.rivera', {
+        role: 'agent',
+        teamId: 'atlas',
+        active: false,
+      });
+
+      expect(changed).toMatchObject({
+        status: 200,
+        body: { account: { id: 'sam.rivera', active: false } },
+      });
+      expect(
+        (changed.body as { releasedTickets: number }).releasedTickets
+      ).toBeGreaterThan(0);
+      expect((await signIn('sam.rivera')).status).toBe(401);
+    });
+
+    it("refuses the admin's own account (409)", async () => {
+      await signIn('alex.morgan');
+
+      expect(
+        await call('PUT', '/api/users/alex.morgan', {
+          role: 'agent',
+          teamId: 'atlas',
+          active: true,
+        })
+      ).toMatchObject({
+        status: 409,
+        body: { message: "You can't change your own account." },
+      });
+    });
   });
 });

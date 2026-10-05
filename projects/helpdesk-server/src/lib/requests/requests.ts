@@ -10,6 +10,7 @@ import {
   PASSWORD_MIN_LENGTH,
   TICKET_MESSAGE_MAX_LENGTH,
   type TicketStatus,
+  type UpdateAccountRequest,
 } from '@helpdesk/contract';
 import { BadRequestException } from '@nestjs/common';
 
@@ -128,6 +129,30 @@ export function readCreateAccount(body: unknown): CreateAccountRequest {
     );
   }
   return { userId: fields.userId, name, role: fields.role, teamId, password };
+}
+
+/**
+ * The fields of an Edit account body, checked one by one; the first that
+ * is wrong is refused with 400. Team rules (whether this role needs a
+ * team) are the service's, as for Create Account.
+ */
+export function readUpdateAccount(body: unknown): UpdateAccountRequest {
+  const fields = (typeof body === 'object' && body !== null ? body : {}) as {
+    role?: unknown;
+    teamId?: unknown;
+    active?: unknown;
+  };
+  if (!isRole(fields.role)) {
+    throw new BadRequestException('Choose agent, supervisor or admin.');
+  }
+  const teamId = fields.teamId ?? null;
+  if (teamId !== null && typeof teamId !== 'string') {
+    throw new BadRequestException('Choose a team.');
+  }
+  if (typeof fields.active !== 'boolean') {
+    throw new BadRequestException('Say whether the account is active.');
+  }
+  return { role: fields.role, teamId, active: fields.active };
 }
 
 /** How far back a team member's history goes. */

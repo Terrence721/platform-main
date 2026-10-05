@@ -4,11 +4,17 @@ import {
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import type { CreateAccountRequest, UserAccount } from '@helpdesk/contract';
 import {
+  type CreateAccountRequest,
+  OWN_ACCOUNT_MESSAGE,
+  type UserAccount,
+} from '@helpdesk/contract';
+import {
+  type AccountUpdate,
   CREATE_UNAVAILABLE_MESSAGE,
   TEAM_ACCOUNTS_API,
   TeamAccountsStore,
+  UPDATE_UNAVAILABLE_MESSAGE,
 } from './team-accounts.store';
 
 /** An account with just what these tests look at. */
@@ -34,6 +40,15 @@ describe('TeamAccountsStore', () => {
   /** The user IDs the store holds, in its order. */
   const ids = (store: InstanceType<typeof TeamAccountsStore>) =>
     store.entities().map(({ id }) => id);
+
+  /** A store with these accounts loaded, as the page has it. */
+  function loadedStore(...accountIds: string[]) {
+    const store = TestBed.inject(TeamAccountsStore);
+    http
+      .expectOne({ method: 'GET', url: TEAM_ACCOUNTS_API })
+      .flush(accountIds.map(account));
+    return store;
+  }
 
   it('starts loading the accounts as soon as it is created', () => {
     const store = TestBed.inject(TeamAccountsStore);
@@ -84,15 +99,6 @@ describe('TeamAccountsStore', () => {
       teamId: 'atlas',
       password: 'a-starting-password',
     };
-
-    /** A store with these accounts loaded, as the page has it. */
-    function loadedStore(...accountIds: string[]) {
-      const store = TestBed.inject(TeamAccountsStore);
-      http
-        .expectOne({ method: 'GET', url: TEAM_ACCOUNTS_API })
-        .flush(accountIds.map(account));
-      return store;
-    }
 
     const post = () =>
       http.expectOne({ method: 'POST', url: TEAM_ACCOUNTS_API });
@@ -169,6 +175,127 @@ describe('TeamAccountsStore', () => {
 
       expect(store.createState()).toBe('idle');
       expect(store.createError()).toBeNull();
+    });
+  });
+
+  describe('update', () => {
+    const edit: AccountUpdate = {
+      userId: 'sam.rivera',
+      request: { role: 'agent', teamId: 'atlas', active: false },
+    };
+    const deactivated = { ...account('sam.rivera'), active: false };
+
+    const put = () =>
+      http.expectOne({
+        method: 'PUT',
+        url: `${TEAM_ACCOUNTS_API}/sam.rivera`,
+      });
+    const reload = () =>
+      http.expectOne({ method: 'GET', url: TEAM_ACCOUNTS_API });
+
+    it('starts with no edit in progress', () => {
+      const store = loadedStore();
+
+      expect(store.updateState()).toBe('idle');
+      expect(store.updateError()).toBeNull();
+      expect(store.updated()).toBeNull();
+    });
+
+    it('sends the request to the account, saving until the API answers', () => {
+      const store = loadedStore('sam.rivera');
+
+      store.update(edit);
+
+      expect(store.updateState()).toBe('saving');
+      const call = put();
+      expect(call.request.body).toEqual(edit.request);
+      call.flush({ account: deactivated, releasedTickets: 0 });
+      reload().flush([deactivated]);
+    });
+
+    it('changes the account in place, then reloads quietly', () => {
+      const store = loadedStore('alex.morgan', 'sam.rivera');
+
+      store.update(edit);
+      put().flush({ account: deactivated, releasedTickets: 3 });
+
+      expect(store.updateState()).toBe('saved');
+      expect(store.updated()).toEqual({
+        account: deactivated,
+        releasedTickets: 3,
+      });
+      expect(store.entities()).toEqual([account('alex.morgan'), deactivated]);
+      // An edit can change who else leads a team: the list loads again,
+      // with no loading state for the page to show.
+      const call = reload();
+      expect(store.loadState()).toBe('loaded');
+      call.flush([account('alex.morgan'), deactivated, account('nia.new')]);
+      expect(ids(store)).toEqual(['alex.morgan', 'sam.rivera', 'nia.new']);
+    });
+
+    it('keeps the edited account when the reload fails', () => {
+      const store = loadedStore('sam.rivera');
+
+      store.update(edit);
+      put().flush({ account: deactivated, releasedTickets: 0 });
+      reload().flush(null, { status: 500, statusText: 'Server Error' });
+
+      expect(store.loadState()).toBe('loaded');
+      expect(store.updateState()).toBe('saved');
+      expect(store.entities()).toEqual([deactivated]);
+    });
+
+    it.each([
+      ['a wrong field (400)', 400, 'Choose a team.'],
+      ['no such account (404)', 404, 'No such account.'],
+      ["the admin's own account (409)", 409, OWN_ACCOUNT_MESSAGE],
+    ])(
+      "keeps the API's message for %s, changing nothing",
+      (_, status, message) => {
+        const store = loadedStore('sam.rivera');
+
+        store.update(edit);
+        put().flush({ message }, { status, statusText: 'Error' });
+
+        expect(store.updateState()).toBe('failed');
+        expect(store.updateError()).toBe(message);
+        expect(store.entities()).toEqual([account('sam.rivera')]);
+      }
+    );
+
+    it('says saving is unavailable when the API cannot explain', () => {
+      const store = loadedStore('sam.rivera');
+
+      store.update(edit);
+      put().flush(
+        { message: 'Internal server error' },
+        { status: 500, statusText: 'Server Error' }
+      );
+
+      expect(store.updateError()).toBe(UPDATE_UNAVAILABLE_MESSAGE);
+    });
+
+    it('ignores a second send while the first is saving', () => {
+      const store = loadedStore('sam.rivera');
+
+      store.update(edit);
+      store.update(edit);
+
+      put().flush({ account: deactivated, releasedTickets: 0 });
+      reload().flush([deactivated]);
+    });
+
+    it('resets for a new form', () => {
+      const store = loadedStore('sam.rivera');
+      store.update(edit);
+      put().flush({ account: deactivated, releasedTickets: 2 });
+      reload().flush([deactivated]);
+
+      store.resetUpdate();
+
+      expect(store.updateState()).toBe('idle');
+      expect(store.updateError()).toBeNull();
+      expect(store.updated()).toBeNull();
     });
   });
 });

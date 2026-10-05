@@ -10,9 +10,10 @@ import type { CurrentUser, UserAccount } from '@helpdesk/contract';
 import { provideMockStore } from '@ngrx/store/testing';
 import { of } from 'rxjs';
 import { initialSessionState } from '../session/session.feature';
-import AdminPage, { groupByTeam } from './admin.page';
+import AdminPage, { groupByTeam, savedMessage } from './admin.page';
 import { CreateAccountDialog } from './create-account.dialog';
-import { TEAM_ACCOUNTS_API } from './team-accounts.store';
+import { EditAccountDialog } from './edit-account.dialog';
+import { TEAM_ACCOUNTS_API, TeamAccountsStore } from './team-accounts.store';
 
 const alex: CurrentUser = {
   id: 'alex.morgan',
@@ -86,9 +87,22 @@ describe('groupByTeam', () => {
   });
 });
 
+describe('savedMessage', () => {
+  it.each([
+    [0, 'Saved Sam Rivera.'],
+    [1, 'Saved Sam Rivera. 1 open ticket returned to Unassigned.'],
+    [3, 'Saved Sam Rivera. 3 open tickets returned to Unassigned.'],
+  ])('with %i tickets handed back: %s', (released, message) => {
+    expect(savedMessage('Sam Rivera', released)).toBe(message);
+  });
+});
+
 describe('AdminPage', () => {
-  /** What the Create Account popup closes with: a user ID, or nothing. */
-  let closedWith: string | undefined;
+  /**
+   * What the popup closes with: Create Account's new user ID, Edit
+   * account's true once saved, or nothing when cancelled.
+   */
+  let closedWith: string | boolean | undefined;
   /** Stand-ins for Material's dialog and snack bar, to see what they do. */
   const dialog = {
     open: vi.fn(() => ({ afterClosed: () => of(closedWith) })),
@@ -120,6 +134,13 @@ describe('AdminPage', () => {
     return {
       page,
       http,
+      /** The page's own store (it provides one). */
+      store: () => fixture.debugElement.injector.get(TeamAccountsStore),
+      /** Clicks the Edit button on this account's row. */
+      edit: (name: string) =>
+        page
+          .querySelector<HTMLButtonElement>(`[aria-label="Edit ${name}"]`)
+          ?.click(),
       text: (selector: string) =>
         page.querySelector(selector)?.textContent?.trim(),
       /** Answers the page's request for the accounts, then renders. */
@@ -179,8 +200,20 @@ describe('AdminPage', () => {
 
     expect(sections()).toEqual([
       ['Atlas · 2 accounts', ['chris.taylor', 'sam.rivera']],
-      ['Beacon · 1 accounts', ['dee.parted']],
+      ['Beacon · 1 accounts · No lead', ['dee.parted']],
     ]);
+  });
+
+  it('says No lead only beside a team without one', () => {
+    const { page, answer } = render();
+
+    answer(ACCOUNTS);
+
+    expect(
+      [...page.querySelectorAll('section.team')].map((section) =>
+        section.querySelector('.no-lead')?.textContent?.trim()
+      )
+    ).toEqual([undefined, '· No lead']);
   });
 
   it('shows no admins: they are on no team', () => {
@@ -270,6 +303,78 @@ describe('AdminPage', () => {
       answer(ACCOUNTS);
 
       page.querySelector<HTMLButtonElement>('.summary-row button')?.click();
+
+      await vi.waitFor(() => expect(dialog.open).toHaveBeenCalledOnce());
+      expect(snackBar.open).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Edit account', () => {
+    it('gives every account on a team an Edit button', () => {
+      const { page, answer } = render();
+      answer(ACCOUNTS);
+
+      expect(
+        [...page.querySelectorAll('td.mat-column-edit button')].map((button) =>
+          button.getAttribute('aria-label')
+        )
+      ).toEqual(['Edit Chris Taylor', 'Edit Sam Rivera', 'Edit Dee Parted']);
+    });
+
+    it('opens the popup with the account, the teams and who leads each', async () => {
+      const { answer, edit } = render();
+      answer(ACCOUNTS);
+
+      edit('Sam Rivera');
+
+      // The popup's code loads on the first click.
+      await vi.waitFor(() => expect(dialog.open).toHaveBeenCalledOnce());
+      expect(dialog.open).toHaveBeenCalledWith(
+        EditAccountDialog,
+        expect.objectContaining({
+          data: {
+            account: ACCOUNTS[3],
+            teams: [
+              { id: 'atlas', name: 'Atlas', leadName: 'Chris Taylor' },
+              { id: 'beacon', name: 'Beacon', leadName: null },
+            ],
+          },
+        })
+      );
+    });
+
+    it('confirms a saved edit, with the tickets handed back', async () => {
+      const { answer, edit, http, store } = render();
+      answer(ACCOUNTS);
+      // The popup saves through the page's store; here the test does.
+      store().update({
+        userId: 'sam.rivera',
+        request: { role: 'agent', teamId: 'atlas', active: false },
+      });
+      http
+        .expectOne({ method: 'PUT', url: `${TEAM_ACCOUNTS_API}/sam.rivera` })
+        .flush({
+          account: { ...ACCOUNTS[3], active: false },
+          releasedTickets: 3,
+        });
+      http.expectOne({ method: 'GET', url: TEAM_ACCOUNTS_API }).flush(ACCOUNTS);
+      closedWith = true;
+
+      edit('Sam Rivera');
+
+      await vi.waitFor(() => expect(snackBar.open).toHaveBeenCalledOnce());
+      expect(snackBar.open).toHaveBeenCalledWith(
+        'Saved Sam Rivera. 3 open tickets returned to Unassigned.',
+        undefined,
+        expect.objectContaining({ duration: 5000 })
+      );
+    });
+
+    it('says nothing when the popup is cancelled', async () => {
+      const { answer, edit } = render();
+      answer(ACCOUNTS);
+
+      edit('Sam Rivera');
 
       await vi.waitFor(() => expect(dialog.open).toHaveBeenCalledOnce());
       expect(snackBar.open).not.toHaveBeenCalled();

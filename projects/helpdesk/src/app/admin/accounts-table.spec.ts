@@ -43,17 +43,27 @@ const ACCOUNTS: UserAccount[] = [
 ];
 
 describe('AccountsTable', () => {
-  function render(accounts: UserAccount[] = ACCOUNTS) {
+  function render(
+    accounts: UserAccount[] = ACCOUNTS,
+    signedInId: string | null = null
+  ) {
     const fixture = TestBed.createComponent(AccountsTable);
     fixture.componentRef.setInput('accounts', accounts);
+    fixture.componentRef.setInput('signedInId', signedInId);
     fixture.detectChanges();
     const table = fixture.nativeElement as HTMLElement;
     return {
       table,
-      /** Each row's cells, as text, with runs of spaces as one. */
+      fixture,
+      /** The Edit buttons' labels, top to bottom. */
+      editLabels: () =>
+        [...table.querySelectorAll('td.mat-column-edit button')].map((button) =>
+          button.getAttribute('aria-label')
+        ),
+      /** Each row's cells but Edit, as text, with runs of spaces as one. */
       rows: () =>
         [...table.querySelectorAll('tr.mat-mdc-row')].map((row) =>
-          [...row.querySelectorAll('td')].map((cell) =>
+          [...row.querySelectorAll('td:not(.mat-column-edit)')].map((cell) =>
             cell.textContent?.replace(/\s+/g, ' ').trim()
           )
         ),
@@ -74,12 +84,13 @@ describe('AccountsTable', () => {
     };
   }
 
-  it('has a column for user ID, name, role and status', () => {
+  it('has a column for user ID, name, role, status and Edit', () => {
+    // Edit's header is for screen readers only (cdk-visually-hidden).
     expect(
       [...render().table.querySelectorAll('th')].map((cell) =>
         cell.textContent?.trim()
       )
-    ).toEqual(['User ID', 'Name', 'Role', 'Status']);
+    ).toEqual(['User ID', 'Name', 'Role', 'Status', 'Edit']);
   });
 
   it('shows the accounts in the order given', () => {
@@ -124,6 +135,58 @@ describe('AccountsTable', () => {
         cell.classList.contains('inactive')
       )
     ).toEqual([false, false, true, false]);
+  });
+
+  describe('Edit', () => {
+    it('gives each row an Edit button named for its account', () => {
+      expect(render().editLabels()).toEqual([
+        'Edit Benny Lind',
+        'Edit Chris Taylor',
+        'Edit Dee Parted',
+        'Edit Sam Rivera',
+      ]);
+    });
+
+    it('says which account was clicked', () => {
+      const { table, fixture } = render();
+      const edited: UserAccount[] = [];
+      fixture.componentInstance.edit.subscribe((account) =>
+        edited.push(account)
+      );
+
+      table
+        .querySelector<HTMLButtonElement>('[aria-label="Edit Sam Rivera"]')
+        ?.click();
+
+      expect(edited).toEqual([ACCOUNTS[3]]);
+    });
+
+    it("leaves out the signed-in admin's own row", () => {
+      const admin: UserAccount = {
+        id: 'alex.morgan',
+        name: 'Alex Morgan',
+        role: 'admin',
+        team: null,
+        leadsTeam: false,
+        active: true,
+      };
+
+      expect(render([admin, ACCOUNTS[0]], 'alex.morgan').editLabels()).toEqual([
+        'Edit Benny Lind',
+      ]);
+    });
+
+    it('cannot be sorted by', async () => {
+      const sort = await TestbedHarnessEnvironment.loader(
+        render().fixture
+      ).getHarness(MatSortHarness);
+
+      expect(
+        await Promise.all(
+          (await sort.getSortHeaders()).map((header) => header.getLabel())
+        )
+      ).toEqual(['User ID', 'Name', 'Role', 'Status']);
+    });
   });
 
   describe('sorting', () => {

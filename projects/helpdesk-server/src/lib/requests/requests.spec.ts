@@ -7,6 +7,7 @@ import {
   readMessage,
   readSignIn,
   readStatus,
+  readUpdateAccount,
 } from './requests';
 
 describe('readSignIn', () => {
@@ -159,6 +160,43 @@ describe('readCreateAccount', () => {
     } catch (error) {
       expect(error).toBeInstanceOf(BadRequestException);
     }
+  });
+});
+
+describe('readUpdateAccount', () => {
+  it('reads the role, the team and whether the account is active', () => {
+    expect(
+      readUpdateAccount({ role: 'supervisor', teamId: 'atlas', active: false })
+    ).toEqual({ role: 'supervisor', teamId: 'atlas', active: false });
+  });
+
+  it('reads a missing team as none', () => {
+    expect(
+      readUpdateAccount({ role: 'admin', active: true }).teamId
+    ).toBeNull();
+  });
+
+  it.each([
+    ['no body', null, 'Choose agent, supervisor or admin.'],
+    ['an unknown role', { role: 'owner', active: true }, 'Choose agent'],
+    [
+      'a team that is not text',
+      { role: 'agent', teamId: 7, active: true },
+      'Choose a team.',
+    ],
+    [
+      'no active flag',
+      { role: 'agent', teamId: 'atlas' },
+      'Say whether the account is active.',
+    ],
+    [
+      'an active flag that is not true or false',
+      { role: 'agent', teamId: 'atlas', active: 'yes' },
+      'Say whether the account is active.',
+    ],
+  ])('refuses %s with 400', (_, body, message) => {
+    expect(() => readUpdateAccount(body)).toThrow(BadRequestException);
+    expect(() => readUpdateAccount(body)).toThrow(message);
   });
 });
 

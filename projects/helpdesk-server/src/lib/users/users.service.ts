@@ -1,5 +1,9 @@
 import {
   type CreateAccountRequest,
+  LAST_ADMIN_MESSAGE,
+  OWN_ACCOUNT_MESSAGE,
+  type UpdateAccountRequest,
+  type UpdateAccountResponse,
   type UserAccount,
   USER_ID_TAKEN_MESSAGE,
 } from '@helpdesk/contract';
@@ -8,13 +12,15 @@ import {
   ConflictException,
   Inject,
   Injectable,
+  NotFoundException,
 } from '@nestjs/common';
-import { asc, eq, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, ne, sql } from 'drizzle-orm';
 import { hashPassword } from '../auth/password';
 import { DATABASE, type Database } from '../database/database-token';
-import { teams, users } from '../database/schema';
+import { teams, tickets, users } from '../database/schema';
+import { OPEN_WORK_STATUSES } from '../tickets/tickets.service';
 
-/** Reads and creates Helpdesk accounts, for admins. */
+/** Reads, creates and changes Helpdesk accounts, for admins. */
 @Injectable()
 export class UsersService {
   constructor(@Inject(DATABASE) private readonly database: Database) {}
@@ -26,19 +32,10 @@ export class UsersService {
    * team as `null` for anyone without one (admins).
    */
   list(): Promise<UserAccount[]> {
-    return this.database
-      .select({
-        id: users.id,
-        name: users.name,
-        role: users.role,
-        team: { id: teams.id, name: teams.name },
-        // Someone with no team leads none: null = false.
-        leadsTeam: sql<boolean>`coalesce(${teams.supervisorId} = ${users.id}, false)`,
-        active: users.active,
-      })
-      .from(users)
-      .leftJoin(teams, eq(users.teamId, teams.id))
-      .orderBy(asc(users.name), asc(users.id));
+    return selectAccounts(this.database).orderBy(
+      asc(users.name),
+      asc(users.id)
+    );
   }
 
   /**
@@ -98,4 +95,151 @@ export class UsersService {
       };
     });
   }
+
+  /**
+   * Changes an account's role, team and whether it can sign in, all in one
+   * transaction with the account locked, so a refusal changes nothing.
+   *
+   * - 404 for no such account; 409 for the admin's own account, or for a
+   *   change that would leave no active admin; the team rules are Create
+   *   Account's (400).
+   * - Someone who stops working a team's tickets (deactivated, moved to
+   *   another team, or made an admin) hands their open tickets (new, open,
+   *   pending) back to that team's Unassigned; finished tickets keep their
+   *   assignee, for the history.
+   * - A lead who is deactivated, stops being a supervisor or moves team
+   *   leaves that team with no lead; an active supervisor newly on a team,
+   *   or newly a supervisor there, becomes its lead (as in Create Account).
+   */
+  async update(
+    userId: string,
+    request: UpdateAccountRequest,
+    adminId: string
+  ): Promise<UpdateAccountResponse> {
+    const { role, teamId, active } = request;
+    if (userId === adminId) {
+      throw new ConflictException(OWN_ACCOUNT_MESSAGE);
+    }
+    if (role === 'admin' && teamId !== null) {
+      throw new BadRequestException('An admin belongs to no team.');
+    }
+    if (role !== 'admin' && teamId === null) {
+      throw new BadRequestException('Choose a team.');
+    }
+
+    return this.database.transaction(async (tx) => {
+      const [before] = await tx
+        .select({
+          role: users.role,
+          teamId: users.teamId,
+          active: users.active,
+        })
+        .from(users)
+        .where(eq(users.id, userId))
+        .for('update');
+      if (before === undefined) {
+        throw new NotFoundException('No such account.');
+      }
+      if (teamId !== null) {
+        const [team] = await tx
+          .select({ id: teams.id })
+          .from(teams)
+          .where(eq(teams.id, teamId));
+        if (team === undefined) {
+          throw new BadRequestException('That team does not exist.');
+        }
+      }
+
+      // An active admin who stops being one needs another active admin
+      // left. The others are locked too, so two admins removing each other
+      // at once cannot both succeed.
+      const stopsBeingAdmin =
+        before.role === 'admin' &&
+        before.active &&
+        (role !== 'admin' || !active);
+      if (stopsBeingAdmin) {
+        const otherAdmins = await tx
+          .select({ id: users.id })
+          .from(users)
+          .where(
+            and(
+              eq(users.role, 'admin'),
+              eq(users.active, true),
+              ne(users.id, userId)
+            )
+          )
+          .for('update');
+        if (otherAdmins.length === 0) {
+          throw new ConflictException(LAST_ADMIN_MESSAGE);
+        }
+      }
+
+      await tx
+        .update(users)
+        .set({ role, teamId, active })
+        .where(eq(users.id, userId));
+
+      // Open work goes back to the old team's Unassigned when its holder
+      // stops working that team's tickets.
+      const leavesTeamWork =
+        !active || role === 'admin' || teamId !== before.teamId;
+      const released = leavesTeamWork
+        ? await tx
+            .update(tickets)
+            .set({ assigneeId: null })
+            .where(
+              and(
+                eq(tickets.assigneeId, userId),
+                inArray(tickets.status, [...OPEN_WORK_STATUSES])
+              )
+            )
+            .returning({ id: tickets.id })
+        : [];
+
+      // The team lead.
+      const stillLeads =
+        active && role === 'supervisor' && teamId === before.teamId;
+      if (!stillLeads) {
+        await tx
+          .update(teams)
+          .set({ supervisorId: null })
+          .where(eq(teams.supervisorId, userId));
+      }
+      const becomesLead =
+        active &&
+        role === 'supervisor' &&
+        teamId !== null &&
+        (before.role !== 'supervisor' || teamId !== before.teamId);
+      if (becomesLead) {
+        await tx
+          .update(teams)
+          .set({ supervisorId: userId })
+          .where(eq(teams.id, teamId));
+      }
+
+      const [account] = await selectAccounts(tx).where(eq(users.id, userId));
+      return { account, releasedTickets: released.length };
+    });
+  }
+}
+
+/**
+ * Accounts as the admin page shows them: user ID, name, role, team,
+ * whether they lead it, and whether they are active. Only these columns
+ * are read, so a password hash never leaves the database. Drizzle gives
+ * the left-joined team as `null` for anyone without one (admins).
+ */
+function selectAccounts(database: Pick<Database, 'select'>) {
+  return database
+    .select({
+      id: users.id,
+      name: users.name,
+      role: users.role,
+      team: { id: teams.id, name: teams.name },
+      // Someone with no team leads none: null = false.
+      leadsTeam: sql<boolean>`coalesce(${teams.supervisorId} = ${users.id}, false)`,
+      active: users.active,
+    })
+    .from(users)
+    .leftJoin(teams, eq(users.teamId, teams.id));
 }

@@ -13,6 +13,7 @@ import {
   readMessage,
   readSignIn,
   readStatus,
+  readUpdateAccount,
   TeamsService,
   TicketMessagesService,
   TicketsService,
@@ -252,6 +253,13 @@ export class DemoApi {
           this.passwords.set(account.id, request.password);
           return account;
         },
+      },
+      {
+        method: 'PUT',
+        path: new RegExp(`^/api/users/${ID}$`),
+        access: ['admin'],
+        run: ({ user, params: [userId], body }) =>
+          this.accounts.update(userId, readUpdateAccount(body), user.id),
       },
     ];
   }

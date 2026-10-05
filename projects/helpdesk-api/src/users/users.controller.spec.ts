@@ -1,11 +1,18 @@
 import {
   type CurrentUser,
+  LAST_ADMIN_MESSAGE,
+  OWN_ACCOUNT_MESSAGE,
   type Role,
+  type UpdateAccountResponse,
   USER_ID_TAKEN_MESSAGE,
   type UserAccount,
 } from '@helpdesk/contract';
 import { UsersService } from '@helpdesk/server';
-import { ConflictException, INestApplication } from '@nestjs/common';
+import {
+  ConflictException,
+  INestApplication,
+  NotFoundException,
+} from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import cookieParser from 'cookie-parser';
 import { AddressInfo } from 'net';
@@ -82,6 +89,10 @@ describe('/api/users', () => {
   const users = {
     list: vi.fn(async () => accounts),
     create: vi.fn(async (): Promise<UserAccount> => created),
+    update: vi.fn(async (): Promise<UpdateAccountResponse> => ({
+      account: { ...accounts[1], active: false },
+      releasedTickets: 3,
+    })),
   };
   let app: INestApplication;
   let base: string;
@@ -192,6 +203,72 @@ describe('/api/users', () => {
     ] as const)('turns away %s, creating nothing', async (_, role, status) => {
       expect((await create(role)).status).toBe(status);
       expect(users.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('PUT :userId', () => {
+    const editBody = { role: 'agent', teamId: 'atlas', active: false };
+
+    /** PUT /api/users/sam.rivera with this body, as `role` or signed out. */
+    const edit = (role: Role | null, body: unknown = editBody) =>
+      fetch(`${base}/sam.rivera`, {
+        method: 'PUT',
+        headers: {
+          'content-type': 'application/json',
+          ...(role === null ? {} : { cookie: `${SESSION_COOKIE}=${role}` }),
+        },
+        body: JSON.stringify(body),
+      });
+
+    it('changes the account for an admin, as that admin: 200 with the account and what was handed back', async () => {
+      const response = await edit('admin');
+
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({
+        account: { ...accounts[1], active: false },
+        releasedTickets: 3,
+      });
+      expect(users.update).toHaveBeenCalledExactlyOnceWith(
+        'sam.rivera',
+        editBody,
+        'alex.morgan'
+      );
+    });
+
+    it('answers a wrong field with 400 and its message, changing nothing', async () => {
+      const response = await edit('admin', { role: 'agent', teamId: 'atlas' });
+
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual(
+        expect.objectContaining({
+          message: 'Say whether the account is active.',
+        })
+      );
+      expect(users.update).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      [new ConflictException(OWN_ACCOUNT_MESSAGE), 409],
+      [new ConflictException(LAST_ADMIN_MESSAGE), 409],
+      [new NotFoundException('No such account.'), 404],
+    ])("passes on the service's %s", async (error, status) => {
+      users.update.mockRejectedValueOnce(error);
+
+      const response = await edit('admin');
+
+      expect(response.status).toBe(status);
+      expect(await response.json()).toEqual(
+        expect.objectContaining({ message: error.message })
+      );
+    });
+
+    it.each([
+      ['an agent', 'agent', 403],
+      ['a supervisor', 'supervisor', 403],
+      ['a signed-out request', null, 401],
+    ] as const)('turns away %s, changing nothing', async (_, role, status) => {
+      expect((await edit(role)).status).toBe(status);
+      expect(users.update).not.toHaveBeenCalled();
     });
   });
 });

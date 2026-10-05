@@ -49,3 +49,31 @@ export interface CreateAccountRequest {
   /** The starting password; the server stores only its hash. */
   password: string;
 }
+
+/**
+ * Changes an account (`PUT /api/users/:userId`, admins only): its role,
+ * its team, and whether it can sign in. The same team rules as Create
+ * Account apply. Someone who stops working a team's tickets (deactivated,
+ * moved to another team, or made an admin) hands their open tickets back
+ * to that team's Unassigned; a lead who stops leading leaves the team with
+ * no lead; someone made a supervisor of a team becomes its lead.
+ */
+export interface UpdateAccountRequest {
+  role: Role;
+  /** The team's id; `null` for an admin. */
+  teamId: string | null;
+  active: boolean;
+}
+
+/** The account after a change, and how many open tickets it handed back. */
+export interface UpdateAccountResponse {
+  account: UserAccount;
+  /** Open tickets that went back to the team's Unassigned list. */
+  releasedTickets: number;
+}
+
+/** The answer when an admin tries to change their own account. */
+export const OWN_ACCOUNT_MESSAGE = "You can't change your own account.";
+
+/** The answer when a change would leave no active admin. */
+export const LAST_ADMIN_MESSAGE = 'There must always be an active admin.';

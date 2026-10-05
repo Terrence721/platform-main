@@ -47,8 +47,8 @@ export interface DemoResponse {
   body: unknown;
 }
 
-/** Who may call a route: anyone signed in, or these roles only. */
-type Access = 'signed-in' | readonly Role[];
+/** Who may call a route: these roles only (as the controller's @OnlyFor). */
+type Access = readonly Role[];
 
 interface Route {
   method: string;
@@ -109,6 +109,13 @@ export class DemoApi {
         this.signedIn = null;
         return { status: 204, body: null };
       }
+      // Who is signed in: the user, or null for nobody (still a 200, as in
+      // the API's AuthController).
+      if (request.method === 'GET' && path === '/api/auth/me') {
+        const user =
+          this.signedIn === null ? null : await this.activeUser(this.signedIn);
+        return { status: 200, body: { user } };
+      }
       for (const route of this.routes) {
         const match = route.method === request.method && route.path.exec(path);
         if (match) {
@@ -133,13 +140,6 @@ export class DemoApi {
     const supervisor = ['supervisor'] as const;
     const agentOrSupervisor = ['agent', 'supervisor'] as const;
     return [
-      // AuthController
-      {
-        method: 'GET',
-        path: /^\/api\/auth\/me$/,
-        access: 'signed-in',
-        run: ({ user }) => ({ user }),
-      },
       // TicketsController
       {
         method: 'GET',
@@ -283,7 +283,7 @@ export class DemoApi {
     if (user === null) {
       throw new UnauthorizedException();
     }
-    if (access !== 'signed-in' && !access.includes(user.role)) {
+    if (!access.includes(user.role)) {
       throw new ForbiddenException();
     }
     return user;

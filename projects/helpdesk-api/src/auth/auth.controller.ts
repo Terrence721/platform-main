@@ -2,7 +2,7 @@
 // at run time (emitDecoratorMetadata), and an interface has no run-time
 // value to record.
 import {
-  type CurrentUser,
+  type SessionResponse,
   SIGN_IN_FAILED_MESSAGE,
   type SignInResponse,
 } from '@helpdesk/contract';
@@ -13,12 +13,12 @@ import {
   Get,
   HttpCode,
   Post,
+  Req,
   Res,
   UnauthorizedException,
-  UseGuards,
 } from '@nestjs/common';
 import { SESSION_COOKIE, sessionCookieOptions } from './auth-config';
-import { AuthGuard, SignedInUser } from './auth.guard';
+import type { SessionRequest } from './auth.guard';
 import { AuthService } from './auth.service';
 
 /** The part of Express's response the session cookie needs. */
@@ -48,11 +48,17 @@ export class AuthController {
     return { user: result.user };
   }
 
-  /** Who is signed in; 401 without a valid session. */
+  /**
+   * Who is signed in: the user, or `null` without a valid session (none,
+   * expired, or an inactive account). Always 200, so the app's question on
+   * start-up ("is anyone signed in?") never logs a failed request; every
+   * other endpoint still answers 401 when signed out.
+   */
   @Get('me')
-  @UseGuards(AuthGuard)
-  me(@SignedInUser() user: CurrentUser): SignInResponse {
-    return { user };
+  async me(@Req() request: SessionRequest): Promise<SessionResponse> {
+    return {
+      user: await this.auth.currentUser(request.cookies?.[SESSION_COOKIE]),
+    };
   }
 
   /** Signs out: the browser drops the session cookie. */

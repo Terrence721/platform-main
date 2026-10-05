@@ -4,7 +4,6 @@ import { Test } from '@nestjs/testing';
 import cookieParser from 'cookie-parser';
 import { AddressInfo } from 'net';
 import { AuthController } from './auth.controller';
-import { AuthGuard } from './auth.guard';
 import { AuthService } from './auth.service';
 
 const sam: CurrentUser = {
@@ -31,7 +30,7 @@ describe('/api/auth', () => {
   beforeEach(async () => {
     const moduleRef = await Test.createTestingModule({
       controllers: [AuthController],
-      providers: [AuthGuard, { provide: AuthService, useValue: fakeAuth }],
+      providers: [{ provide: AuthService, useValue: fakeAuth }],
     }).compile();
     app = moduleRef.createNestApplication({ logger: false });
     // As main.ts sets the app up.
@@ -117,15 +116,18 @@ describe('/api/auth', () => {
       expect(await response.json()).toEqual({ user: sam });
     });
 
+    // "Nobody" is an ordinary answer, so a first visit logs no failed
+    // request; the guarded endpoints still answer 401 (their own specs).
     it.each([
       ['no cookie', undefined],
       ['a session nobody has', 'helpdesk_session=forged'],
-    ])('answers 401 with %s', async (_, cookie) => {
+    ])('answers 200 with no user for %s', async (_, cookie) => {
       const response = await fetch(`${base}/me`, {
         headers: cookie ? { cookie } : {},
       });
 
-      expect(response.status).toBe(401);
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ user: null });
     });
   });
 

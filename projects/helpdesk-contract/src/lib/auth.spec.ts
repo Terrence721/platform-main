@@ -4,6 +4,7 @@ import {
   PASSWORD_MAX_LENGTH,
   PASSWORD_MIN_LENGTH,
   SESSION_HOURS,
+  SessionResponse,
   SIGN_IN_FAILED_MESSAGE,
   SignInRequest,
   SignInResponse,
@@ -73,6 +74,12 @@ describe('the signed-in user', () => {
 
   it('comes back from a sign-in, without the session itself', () => {
     expectTypeOf<SignInResponse>().toEqualTypeOf<{ user: CurrentUser }>();
+  });
+
+  it('is asked for as a session, which may be nobody (null)', () => {
+    expectTypeOf<SessionResponse>().toEqualTypeOf<{
+      user: CurrentUser | null;
+    }>();
   });
 });
 

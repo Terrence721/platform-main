@@ -71,6 +71,16 @@ describe('session effects', () => {
       ]);
     });
 
+    it('finds no session when the API says nobody is signed in', () => {
+      const dispatched = run(restoreSession);
+      actions$.next({ type: ROOT_EFFECTS_INIT });
+
+      http.expectOne('/api/auth/me').flush({ user: null });
+
+      expect(dispatched).toEqual([SessionApiActions.noSession()]);
+    });
+
+    // An API from before "nobody" became a 200 answers 401 instead.
     it('finds no session on 401', () => {
       const dispatched = run(restoreSession);
       actions$.next({ type: ROOT_EFFECTS_INIT });

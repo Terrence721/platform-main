@@ -39,6 +39,16 @@ export interface SignInResponse {
   user: CurrentUser;
 }
 
+/**
+ * Who is signed in (`GET /api/auth/me`): the user, or `null` when nobody
+ * is (no session, or one that expired or whose account is inactive).
+ * "Nobody" is an ordinary answer, not an error, so a first visit does not
+ * log a failed request.
+ */
+export interface SessionResponse {
+  user: CurrentUser | null;
+}
+
 /** The one answer for any failed sign-in, so user IDs cannot be guessed. */
 export const SIGN_IN_FAILED_MESSAGE = 'User ID or password is incorrect.';
 

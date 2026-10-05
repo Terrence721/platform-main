@@ -42,8 +42,15 @@ describe('DemoApi', { timeout: 60_000 }, () => {
     call('POST', '/api/auth/sign-in', { userId, password });
 
   describe('signing in and out', () => {
-    it('answers 401 for who is signed in, before anyone is', async () => {
+    it('answers "nobody" (200) for who is signed in, before anyone is', async () => {
       expect(await call('GET', '/api/auth/me')).toEqual({
+        status: 200,
+        body: { user: null },
+      });
+    });
+
+    it('still answers 401 for a route that needs someone signed in', async () => {
+      expect(await call('GET', '/api/tickets/mine')).toEqual({
         status: 401,
         body: { statusCode: 401, message: 'Unauthorized' },
       });
@@ -84,7 +91,10 @@ describe('DemoApi', { timeout: 60_000 }, () => {
         status: 204,
         body: null,
       });
-      expect((await call('GET', '/api/auth/me')).status).toBe(401);
+      expect(await call('GET', '/api/auth/me')).toEqual({
+        status: 200,
+        body: { user: null },
+      });
     });
   });
 

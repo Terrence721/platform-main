@@ -2,6 +2,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import {
+  type SessionResponse,
   SIGN_IN_FAILED_MESSAGE,
   type SignInResponse,
 } from '@helpdesk/contract';
@@ -24,15 +25,22 @@ export const AUTH_API = '/api/auth';
 export const SIGN_IN_UNAVAILABLE_MESSAGE =
   "Signing in isn't available right now. Please try again.";
 
-/** On start-up, asks the API whether the browser still has a session. */
+/**
+ * On start-up, asks the API whether the browser still has a session: a
+ * user restores it; nobody (`user: null`), or an API that cannot be
+ * reached, means there is none.
+ */
 export const restoreSession = createEffect(
   (actions$ = inject(Actions), http = inject(HttpClient)) => {
     return actions$.pipe(
       ofType(ROOT_EFFECTS_INIT),
       exhaustMap(() =>
-        http.get<SignInResponse>(`${AUTH_API}/me`).pipe(
+        http.get<SessionResponse>(`${AUTH_API}/me`).pipe(
           mapResponse({
-            next: ({ user }) => SessionApiActions.sessionRestored({ user }),
+            next: ({ user }) =>
+              user === null
+                ? SessionApiActions.noSession()
+                : SessionApiActions.sessionRestored({ user }),
             error: () => SessionApiActions.noSession(),
           })
         )

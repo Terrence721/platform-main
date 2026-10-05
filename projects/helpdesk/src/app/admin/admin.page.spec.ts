@@ -12,6 +12,7 @@ import { of } from 'rxjs';
 import { initialSessionState } from '../session/session.feature';
 import AdminPage, { groupByTeam, savedMessage } from './admin.page';
 import { CreateAccountDialog } from './create-account.dialog';
+import { ReportsDialog } from '../reports/reports.dialog';
 import { EditAccountDialog } from './edit-account.dialog';
 import { TEAM_ACCOUNTS_API, TeamAccountsStore } from './team-accounts.store';
 
@@ -306,6 +307,26 @@ describe('AdminPage', () => {
 
       await vi.waitFor(() => expect(dialog.open).toHaveBeenCalledOnce());
       expect(snackBar.open).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Reports', () => {
+    it('offers Reports beside Create Account, which opens the Reports popup', async () => {
+      const { page, answer } = render();
+      answer(ACCOUNTS);
+
+      const button = page.querySelector<HTMLButtonElement>(
+        '.summary-row button.reports'
+      );
+      expect(button?.textContent).toContain('Reports');
+      button?.click();
+
+      // The popup's code loads on the first click.
+      await vi.waitFor(() => expect(dialog.open).toHaveBeenCalledOnce());
+      expect(dialog.open).toHaveBeenCalledWith(
+        ReportsDialog,
+        expect.objectContaining({ width: '72rem' })
+      );
     });
   });
 

@@ -9,7 +9,7 @@ if (existsSync('.env')) {
 }
 
 // drizzle-kit's settings for the Helpdesk API: where the tables (and the
-// Power BI report's views) are defined and where generated migrations go
+// Reports popup's views) are defined and where generated migrations go
 // (committed), all in the helpdesk-server library. Paths are relative to
 // the repo root, where the `yarn db:*` scripts run drizzle-kit.
 export default defineConfig({

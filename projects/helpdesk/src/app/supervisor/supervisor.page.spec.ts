@@ -12,6 +12,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import type { CurrentUser, TeamOverview, TicketDto } from '@helpdesk/contract';
 import { provideMockStore } from '@ngrx/store/testing';
 import { of } from 'rxjs';
+import { ReportsDialog } from '../reports/reports.dialog';
 import { initialSessionState } from '../session/session.feature';
 import { TicketConversationDialog } from '../tickets/ticket-conversation.dialog';
 import { AssignTicketDialog } from './assign-ticket.dialog';
@@ -174,6 +175,36 @@ describe('SupervisorPage', () => {
 
     answer(atlas);
     expect(page.querySelector('mat-spinner')).toBeNull();
+  });
+
+  describe('Reports', () => {
+    /** The Reports button beside the title, if there is one. */
+    const reportsButton = (page: HTMLElement) =>
+      [...page.querySelectorAll<HTMLButtonElement>('.title-row button')].find(
+        (button) => button.textContent?.includes('Reports')
+      );
+
+    it('offers Reports beside the title, which opens the Reports popup', async () => {
+      const { page, answer } = render();
+      answer(atlas);
+
+      reportsButton(page)?.click();
+
+      // The popup's code loads on the first click.
+      await vi.waitFor(() => expect(dialog.open).toHaveBeenCalledOnce());
+      expect(dialog.open).toHaveBeenCalledWith(
+        ReportsDialog,
+        expect.objectContaining({ width: '72rem' })
+      );
+    });
+
+    it('offers no Reports to a supervisor who leads no team', () => {
+      const { page, answer } = render();
+
+      answer(null, 404);
+
+      expect(reportsButton(page)).toBeUndefined();
+    });
   });
 
   describe('Team member list', () => {

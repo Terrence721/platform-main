@@ -10,6 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import type { UserAccount } from '@helpdesk/contract';
 import { Store } from '@ngrx/store';
+import { openReports } from '../reports/open-reports';
 import { sessionFeature } from '../session/session.feature';
 import { AccountsTable } from './accounts-table';
 import type { CreateAccountData, TeamChoice } from './create-account.dialog';
@@ -48,7 +49,8 @@ export function groupByTeam(accounts: UserAccount[]): AccountGroup[] {
  * beside the summary and at the bottom, opens a popup that adds someone
  * straight into their team's table. Each row's Edit (not on the admin's
  * own) opens a popup that changes the account's role and team or
- * deactivates it. A team without a lead says so. Only admins get here
+ * deactivates it. A team without a lead says so. Reports, beside Create
+ * Account, opens every team's charts. Only admins get here
  * (the route's `canMatchRole('admin')`). The page provides
  * `TeamAccountsStore`, which loads the accounts when the page opens.
  */
@@ -93,6 +95,15 @@ export function groupByTeam(accounts: UserAccount[]): AccountGroup[] {
             >
               <mat-icon>person_add</mat-icon>
               Create Account
+            </button>
+            <button
+              matButton="tonal"
+              type="button"
+              class="reports"
+              (click)="openReports()"
+            >
+              <mat-icon>insights</mat-icon>
+              Reports
             </button>
           </div>
           @for (group of groups(); track group.id) {
@@ -235,6 +246,11 @@ export default class AdminPage {
             .open(`Account ${userId} created`, undefined, { duration: 5000 });
         }
       });
+  }
+
+  /** Opens the Reports popup: every team's and the unassigned work. */
+  protected openReports(): void {
+    void openReports(this.injector);
   }
 
   /** Whether one of the team's accounts leads it. */

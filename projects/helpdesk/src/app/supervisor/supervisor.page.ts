@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import {
@@ -19,6 +20,7 @@ import {
 } from '@helpdesk/contract';
 import { Store } from '@ngrx/store';
 import { STATUS_GUIDE } from '../landing/ticket-workflow.store';
+import { openReports } from '../reports/open-reports';
 import { sessionFeature } from '../session/session.feature';
 import { openTicket } from '../tickets/open-ticket';
 import { TicketTable } from '../tickets/ticket-table';
@@ -36,6 +38,7 @@ const OPEN_WORK: readonly TicketStatus[] = ['new', 'open', 'pending'];
  * through "Assign to…", and moves a member's tickets through the workflow
  * with their Change status menu. A member's ticket subject opens that
  * ticket's details and conversation, to reply or add an internal note.
+ * Reports, beside the title, opens the team's charts.
  * Only supervisors get here (the route's `canMatchRole('supervisor')`).
  * The page provides `MyTeamStore`, which loads the team when the page
  * opens.
@@ -45,6 +48,7 @@ const OPEN_WORK: readonly TicketStatus[] = ['new', 'open', 'pending'];
   imports: [
     MatButtonModule,
     MatFormFieldModule,
+    MatIconModule,
     MatProgressSpinnerModule,
     MatSelectModule,
     TicketTable,
@@ -53,7 +57,15 @@ const OPEN_WORK: readonly TicketStatus[] = ['new', 'open', 'pending'];
   template: `
     <section class="column" aria-labelledby="supervisor-title">
       <p class="eyebrow">Supervisor</p>
-      <h1 id="supervisor-title">My team</h1>
+      <div class="title-row">
+        <h1 id="supervisor-title">My team</h1>
+        @if (store.loadState() !== 'no-team') {
+          <button matButton="tonal" type="button" (click)="openReports()">
+            <mat-icon>insights</mat-icon>
+            Reports
+          </button>
+        }
+      </div>
       @if (user(); as user) {
         <p class="greeting">Signed in as {{ user.name }}</p>
       }
@@ -183,6 +195,13 @@ const OPEN_WORK: readonly TicketStatus[] = ['new', 'open', 'pending'];
       margin: 0.5rem 0 0;
       font: var(--mat-sys-headline-large);
     }
+    .title-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem 1.5rem;
+    }
     h2 {
       margin: 2.5rem 0 0.75rem;
       font: var(--mat-sys-title-large);
@@ -238,6 +257,11 @@ export default class SupervisorPage {
       width: '60rem',
       maxWidth: 'calc(100vw - 2rem)',
     });
+  }
+
+  /** Opens the Reports popup: the team's and the unassigned work. */
+  protected openReports(): void {
+    void openReports(this.injector);
   }
 
   /** Opens a team member's ticket: its details and conversation. */

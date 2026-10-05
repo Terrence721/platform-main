@@ -13,6 +13,7 @@ import { Store } from '@ngrx/store';
 import { sessionFeature } from '../session/session.feature';
 import { AccountsTable } from './accounts-table';
 import type { CreateAccountData, TeamChoice } from './create-account.dialog';
+import type { EditAccountData } from './edit-account.dialog';
 import { TeamAccountsStore } from './team-accounts.store';
 
 /** One team's accounts. */
@@ -45,10 +46,11 @@ export function groupByTeam(accounts: UserAccount[]): AccountGroup[] {
  * table of its own, team leads (supervisors) in green and members (agents)
  * in blue. Admins belong to no team, so none is shown. Create Account,
  * beside the summary and at the bottom, opens a popup that adds someone
- * straight into their team's table. Only admins get here (the route's
- * `canMatchRole('admin')`). The page provides `TeamAccountsStore`, which
- * loads the accounts when the page opens. Changing and deactivating
- * accounts come later (#905).
+ * straight into their team's table. Each row's Edit (not on the admin's
+ * own) opens a popup that changes the account's role and team or
+ * deactivates it. A team without a lead says so. Only admins get here
+ * (the route's `canMatchRole('admin')`). The page provides
+ * `TeamAccountsStore`, which loads the accounts when the page opens.
  */
 @Component({
   selector: 'hd-admin-page',
@@ -100,8 +102,16 @@ export function groupByTeam(accounts: UserAccount[]): AccountGroup[] {
                 <span class="count"
                   >· {{ group.accounts.length }} accounts</span
                 >
+                @if (!hasLead(group)) {
+                  <!-- The space inside: Angular drops the one between. -->
+                  <span class="no-lead">&nbsp;· No lead</span>
+                }
               </h2>
-              <hd-accounts-table [accounts]="group.accounts" />
+              <hd-accounts-table
+                [accounts]="group.accounts"
+                [signedInId]="user()?.id ?? null"
+                (edit)="openEditAccount($event)"
+              />
             </section>
           }
           <div class="bottom-actions">
@@ -151,8 +161,12 @@ export function groupByTeam(accounts: UserAccount[]): AccountGroup[] {
     .count {
       color: var(--mat-sys-on-surface-variant);
     }
-    .count {
+    .count,
+    .no-lead {
       font: var(--mat-sys-body-large);
+    }
+    .no-lead {
+      color: var(--mat-sys-error);
     }
     .summary-row,
     .bottom-actions {
@@ -222,4 +236,59 @@ export default class AdminPage {
         }
       });
   }
+
+  /** Whether one of the team's accounts leads it. */
+  protected hasLead(group: AccountGroup): boolean {
+    return group.accounts.some(({ leadsTeam }) => leadsTeam);
+  }
+
+  /**
+   * Opens the Edit account popup for one account, with this page's
+   * injector so it saves through this page's store; its code loads on the
+   * first click, as Create Account's does. Once saved, a snack bar names
+   * the account and how many open tickets went back to Unassigned.
+   */
+  protected async openEditAccount(account: UserAccount): Promise<void> {
+    const [{ MatDialog }, { MatSnackBar }, { EditAccountDialog }] =
+      await Promise.all([
+        import('@angular/material/dialog'),
+        import('@angular/material/snack-bar'),
+        import('./edit-account.dialog'),
+      ]);
+    const data: EditAccountData = { account, teams: this.teamChoices() };
+    this.injector
+      .get(MatDialog)
+      .open(EditAccountDialog, {
+        data,
+        injector: this.injector,
+        width: '30rem',
+        maxWidth: 'calc(100vw - 2rem)',
+      })
+      .afterClosed()
+      // true once saved; nothing when cancelled.
+      .subscribe((saved: unknown) => {
+        const updated = this.store.updated();
+        if (saved === true && updated !== null) {
+          this.injector
+            .get(MatSnackBar)
+            .open(
+              savedMessage(account.name, updated.releasedTickets),
+              undefined,
+              {
+                duration: 5000,
+              }
+            );
+        }
+      });
+  }
+}
+
+/** The snack bar after an edit: whose, and any tickets handed back. */
+export function savedMessage(name: string, releasedTickets: number): string {
+  if (releasedTickets === 0) {
+    return `Saved ${name}.`;
+  }
+  const tickets =
+    releasedTickets === 1 ? '1 open ticket' : `${releasedTickets} open tickets`;
+  return `Saved ${name}. ${tickets} returned to Unassigned.`;
 }

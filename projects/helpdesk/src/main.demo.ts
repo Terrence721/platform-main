@@ -10,6 +10,7 @@ import { appConfig } from './app/app.config';
 import type { DemoApi } from './demo/demo-api';
 import { DEMO_API, DemoBackend } from './demo/demo-backend';
 import { DemoBanner } from './demo/demo-banner';
+import { restoreRoute } from './demo/restore-route';
 
 // The in-browser demo's entry point (#942), used instead of main.ts by the
 // `demo` build configuration. It starts the same app, and beside it the
@@ -66,6 +67,10 @@ function addBanner(app: ApplicationRef): void {
     }).observe(bar);
   }
 }
+
+// After a reload on GitHub Pages, put the page back before the router
+// reads the address (see restore-route.ts and 404.html).
+restoreRoute();
 
 bootstrapApplication(
   AppComponent,

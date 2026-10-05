@@ -2,6 +2,7 @@
 // PGlite runs WebAssembly that the simulated browser (jsdom) the app's
 // other specs use cannot load; the real browser and Node both can.
 import {
+  type ReportsResponse,
   SIGN_IN_FAILED_MESSAGE,
   type TeamOverview,
   type TicketDto,
@@ -187,6 +188,7 @@ describe('DemoApi', { timeout: 60_000 }, () => {
         body: { statusCode: 403, message: 'Forbidden' },
       });
       expect((await call('GET', '/api/teams/mine')).status).toBe(403);
+      expect((await call('GET', '/api/reports')).status).toBe(403);
     });
 
     it('answers 404 for a route the API does not have', async () => {
@@ -227,6 +229,18 @@ describe('DemoApi', { timeout: 60_000 }, () => {
       });
     });
 
+    it("reports on the supervisor's own team, and the unassigned work", async () => {
+      const { status, body } = await call('GET', '/api/reports');
+      const report = body as ReportsResponse;
+
+      expect(status).toBe(200);
+      expect(report).toMatchObject({
+        asOf: NOW.toISOString(),
+        scope: { teamId: 'atlas' },
+      });
+      expect(report.teams.map(({ teamId }) => teamId)).toEqual(['atlas', null]);
+    });
+
     it('answers 404 for an agent on another team, as for no one', async () => {
       const others = (await call('GET', '/api/teams/mine'))
         .body as TeamOverview;
@@ -250,6 +264,30 @@ describe('DemoApi', { timeout: 60_000 }, () => {
 
       expect(status).toBe(200);
       expect((body as UserAccount[]).length).toBe(48);
+    });
+
+    it('reports on every team, the open work adding up across them', async () => {
+      const { status, body } = await call('GET', '/api/reports');
+      const report = body as ReportsResponse;
+      const openInRows = report.teams.reduce(
+        (total, { openByPriority }) =>
+          total + Object.values(openByPriority).reduce((a, b) => a + b, 0),
+        0
+      );
+
+      expect(status).toBe(200);
+      expect(report.scope).toBe('all');
+      expect(report.teams.map(({ name }) => name)).toEqual([
+        'Team Atlas',
+        'Team Beacon',
+        'Team Comet',
+        'Team Delta',
+        'Unassigned',
+      ]);
+      expect(openInRows).toBeGreaterThan(0);
+      expect(
+        Object.values(report.openByStatus).reduce((a, b) => a + b, 0)
+      ).toBe(openInRows);
     });
 
     it('creates an account (201) that then signs in with its own password', async () => {

@@ -7,6 +7,7 @@
 export * from './lib/account';
 export * from './lib/auth';
 export * from './lib/page';
+export * from './lib/reports';
 export * from './lib/roles';
 export * from './lib/team';
 export * from './lib/ticket';

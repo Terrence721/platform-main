@@ -1,0 +1,44 @@
+<!doctype html>
+<!--
+  GitHub Pages' "page not found" for the whole platform-main site, which the
+  Pages workflow copies to the site's root. The site serves only real files,
+  so reloading a page of the Helpdesk demo (#942), such as
+  /platform-main/helpdesk/agent, lands here: it goes back to the demo with
+  the page in ?route=, and the demo opens that page (main.demo.ts). Any other
+  missing page gets a plain "not found".
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Page not found</title>
+    <script>
+      (function () {
+        var demo = '/platform-main/helpdesk/';
+        var path = location.pathname;
+        if (path.indexOf(demo) === 0) {
+          var route =
+            '/' + path.slice(demo.length) + location.search + location.hash;
+          location.replace(demo + '?route=' + encodeURIComponent(route));
+        }
+      })();
+    </script>
+    <style>
+      body {
+        margin: 0;
+        padding: 3rem 1rem;
+        font-family: system-ui, sans-serif;
+        text-align: center;
+        color: #1b1b1f;
+        background: #fdfbff;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Page not found</h1>
+    <p>
+      There is nothing at this address.
+      <a href="/platform-main/">Go to the platform-main site</a>.
+    </p>
+  </body>
+</html>

@@ -56,6 +56,20 @@ jobs:
           mkdir -p test-results/diagrams
           cp docs/diagrams/*.html test-results/diagrams/
 
+      # The Helpdesk's in-browser demo (#942), served at /platform-main/helpdesk/:
+      # the app with its database and API running in the visitor's browser.
+      - name: Build the Helpdesk demo
+        run: yarn nx build helpdesk -c demo --base-href /platform-main/helpdesk/
+
+      # 404.html is the whole site's "not found" page: a reload on a demo page
+      # (Pages serves only real files) goes back to the demo, which opens that
+      # page; anything else gets a plain "not found".
+      - name: Copy the Helpdesk demo
+        run: |
+          mkdir -p test-results/helpdesk
+          cp -r dist/projects/helpdesk-demo/browser/. test-results/helpdesk/
+          cp projects/helpdesk/src/demo/404.html test-results/404.html
+
       - name: Upload report artifact
         uses: actions/upload-pages-artifact@v3
         with:

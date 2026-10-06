@@ -43,6 +43,35 @@ yarn start:helpdesk
 
 Starts the dev server and opens the app in a window of its own, using a separate Edge (or Chrome) profile so it runs as its own browser process. Closing that window, or Ctrl+C, stops the dev server's whole process tree and releases its port, so no server is left running from an earlier session. If port 4200 is taken it uses the next free one. `yarn nx serve helpdesk` still starts the server on its own, for a normal browser tab; stop it with Ctrl+C. The launcher's logic is `scripts/app-launcher.ts`, tested by `yarn test:scripts`.
 
+## End-to-end tests (Helpdesk)
+
+`projects/helpdesk-e2e` tests the whole help desk in Chromium with Playwright, against the real app, API and PostgreSQL that `docker compose --profile full up` runs. The specs cover signing in as each role, one journey per role (an agent, a supervisor, an admin), and live updates in two browsers at once (`live-updates.spec.ts`). CI's `Docker images (helpdesk)` job runs them against the stack it builds, and keeps the report as an artifact when one fails.
+
+```shell
+yarn e2e:helpdesk
+```
+
+Installs Chromium if it's missing, starts a fresh stack (its own seeded database), runs every spec, and removes the stack again, data included. The stack's start-up is `src/stack.ts`, Playwright's global setup. It refuses to start when a help desk already answers on port 8088, so a test never runs against old data by mistake. To test a stack that's already running, set `E2E_BASE_URL=http://localhost:8088`: the tests then use it as it is, and nothing is started or removed.
+
+**From VS Code:** the Playwright extension (recommended in `.vscode/extensions.json`) lists the specs in the Testing view. Clicking ▶ doesn't start the stack by itself, so:
+
+1. In the Playwright panel, under Setup, click **Run global setup**, and wait for it to finish: a minute or two once the images are built, longer the first time. `docker ps` then shows the three `helpdesk-` containers as healthy.
+2. Run any test or file with ▶, as often as you like. The stack stays up between runs.
+3. Click **Run global teardown** when you're done.
+
+**Show browser** shows the tests clicking through the app, and **Show trace viewer** steps through a run action by action. Don't run `yarn e2e:helpdesk` while the panel's stack is up: the two runs would share one database and trip over each other.
+
+**Writing a spec:** the specs share one database and run one at a time, in any order, so each keeps to its own team:
+
+| Spec                   | Team               |
+| ---------------------- | ------------------ |
+| `agent.spec.ts`        | Beacon             |
+| `supervisor.spec.ts`   | Comet              |
+| `admin.spec.ts`        | Delta              |
+| `live-updates.spec.ts` | Atlas (Chris, Sam) |
+
+Pick tickets from what's on screen, never by a fixed number, and get agents from the API (`/api/teams/mine`): the seed generates every agent's name except Sam's. Shared helpers (signing in, a ticket's row, a snack bar) are in `src/support.ts`.
+
 ## Dependency ranges
 
 Each module declares its own dependency and peer-dependency ranges. `yarn check:versions` (also run in CI) checks that a package declared by several modules uses the same range in all of them, and that the version this repo develops against (the root `package.json`) falls inside every module's range. A range that has to differ can be listed, and pinned, in `scripts/check-version-ranges.ts`; none does today.

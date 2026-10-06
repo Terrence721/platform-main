@@ -118,6 +118,14 @@ yarn start:helpdesk   # database, API and app; the app opens in its own window, 
 
 It picks the next free port when 4200 is taken. `yarn nx serve helpdesk` still works for a normal browser tab.
 
+To test it end to end, in a real browser against the real API and database:
+
+```shell
+yarn e2e:helpdesk   # starts a fresh stack in Docker, runs the Playwright tests in Chromium, then removes it
+```
+
+The tests sign in as each role, walk through each role's work, and check live updates in two browsers at once. CI runs them on every pull request. To test a stack that's already running, set `E2E_BASE_URL=http://localhost:8088` and the tests use it as it is. [CONTRIBUTING.md](./CONTRIBUTING.md#end-to-end-tests-helpdesk) covers running them from VS Code.
+
 The full-suite [HTML test report](https://terrence721.github.io/platform-main/) is deployed to GitHub Pages on every push to `main` (grows as more modules and test cases are added) — or see the [at-a-glance summary](https://terrence721.github.io/platform-main/summary.html) for just the pass/fail/slow breakdown. To generate either locally instead, run `yarn build && yarn test:report && yarn test:summary`, then `yarn test:report:view` to serve and open them.
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for more, including the commit-message convention this repo's history follows.

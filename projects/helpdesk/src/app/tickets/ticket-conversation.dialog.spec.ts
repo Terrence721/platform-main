@@ -6,11 +6,11 @@ import {
 import { TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import type { TicketDto, TicketMessage } from '@helpdesk/contract';
-import { NEVER } from 'rxjs';
+import { NEVER, Subject } from 'rxjs';
 import { provideMockStore } from '@ngrx/store/testing';
-import { LiveUpdates } from '../live/live-updates';
+import { type LiveUpdate, LiveUpdates } from '../live/live-updates';
 import { initialSessionState } from '../session/session.feature';
-import { messagesApi } from './ticket-api-paths';
+import { messagesApi, ticketApi } from './ticket-api-paths';
 import { TicketConversationDialog } from './ticket-conversation.dialog';
 
 const sam = { id: 'sam.rivera', name: 'Sam Rivera' };
@@ -59,14 +59,17 @@ describe('TicketConversationDialog', () => {
 
   /** Opens the popup for `shown`, answering its load with `messages`. */
   function render(shown: TicketDto = ticket, messages = [reply, note]) {
+    /** The live updates the popup hears, sent by the test. */
+    const live = new Subject<LiveUpdate>();
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: MAT_DIALOG_DATA, useValue: { ticket: shown } },
         { provide: MatDialogRef, useValue: { close: vi.fn() } },
-        // Live updates are the store's spec's concern: none here.
-        { provide: LiveUpdates, useValue: { updates: NEVER } },
+        // The store's spec covers what each update does; here, only what
+        // the popup shows for one.
+        { provide: LiveUpdates, useValue: { updates: live } },
         // Sam has the popup open.
         provideMockStore({
           initialState: {
@@ -98,6 +101,7 @@ describe('TicketConversationDialog', () => {
     return {
       dialog,
       http,
+      live,
       text,
       button,
       /** Types into the message box, as a person would. */
@@ -224,6 +228,78 @@ describe('TicketConversationDialog', () => {
     );
     expect(box()).toBeNull();
     expect(button('Reply')).toBeUndefined();
+  });
+
+  describe('while open, as the ticket changes elsewhere (#982)', () => {
+    /** Someone changes the ticket; the popup reads it again. */
+    function changed(
+      { live, http, detectChanges }: ReturnType<typeof render>,
+      answer: (request: ReturnType<typeof http.expectOne>) => void
+    ) {
+      live.next({
+        kind: 'event',
+        event: { type: 'ticket', ticketId: ticket.id },
+      });
+      answer(http.expectOne({ method: 'GET', url: ticketApi(ticket.id) }));
+      detectChanges();
+    }
+    const detail = (dialog: HTMLElement, term: string) =>
+      [...dialog.querySelectorAll('.details > div')]
+        .find((item) => item.querySelector('dt')?.textContent?.trim() === term)
+        ?.querySelector('dd')
+        ?.textContent?.trim();
+
+    it('updates the details in place', () => {
+      const popup = render();
+
+      changed(popup, (request) =>
+        request.flush({
+          ...ticket,
+          status: 'resolved',
+          assignee: { id: 'benny.lind', name: 'Benny Lind' },
+        })
+      );
+
+      expect(detail(popup.dialog, 'Status')).toBe('Resolved');
+      expect(detail(popup.dialog, 'Assigned to')).toBe('Benny Lind');
+      expect(detail(popup.dialog, 'Due')).toBe('Finished');
+      // Still Sam's to work on: the box stays.
+      expect(popup.box()).not.toBeNull();
+    });
+
+    it('takes the box away once the ticket is closed', () => {
+      const popup = render();
+
+      changed(popup, (request) =>
+        request.flush({ ...ticket, status: 'closed' })
+      );
+
+      expect(detail(popup.dialog, 'Status')).toBe('Closed');
+      expect(popup.box()).toBeNull();
+      expect(popup.text('.message')).toBe(
+        'This ticket is closed, so nothing more can be added.'
+      );
+    });
+
+    it('says so, in place of the box, once the ticket is no longer theirs', () => {
+      const popup = render();
+
+      changed(popup, (request) =>
+        request.flush(
+          { message: 'No such ticket among yours.' },
+          { status: 404, statusText: 'Not Found' }
+        )
+      );
+
+      expect(popup.box()).toBeNull();
+      expect(popup.button('Reply')).toBeUndefined();
+      expect(popup.text('.message')).toBe(
+        'This ticket is no longer assigned to you.'
+      );
+      // What was shown stays, to read.
+      expect(detail(popup.dialog, 'Assigned to')).toBe('Sam Rivera');
+      expect(popup.dialog.querySelectorAll('.conversation li')).toHaveLength(3);
+    });
   });
 
   it('says when the conversation could not be loaded, and tries again', () => {

@@ -10,7 +10,7 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
+import { MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -22,18 +22,17 @@ import {
 } from '@helpdesk/contract';
 import { slaLabel } from '../landing/ticket-preview.store';
 import { STATUS_GUIDE } from '../landing/ticket-workflow.store';
-import {
-  type TicketConversationData,
-  TicketConversationStore,
-} from './ticket-conversation.store';
+import { TicketConversationStore } from './ticket-conversation.store';
 
 /**
  * One ticket, opened from its subject: its details, then its conversation
  * (the customer's description first, then each reply and internal note,
  * oldest first; notes tinted, as only staff see them), then a box to write
  * a Reply or an Internal note. A closed ticket is final, so it shows the
- * conversation without the box. Opened with the ticket as its data; closes
- * with the button or Esc.
+ * conversation without the box. While open, the details follow the
+ * ticket's changes (#982): closed elsewhere, the box goes; reassigned
+ * away from the person, it says so instead. Opened with the ticket as its
+ * data; closes with the button or Esc.
  */
 @Component({
   selector: 'hd-ticket-conversation-dialog',
@@ -50,7 +49,7 @@ import {
   providers: [TicketConversationStore],
   template: `
     <div class="title-row">
-      <h2 mat-dialog-title>{{ ticketNumber }} {{ ticket.subject }}</h2>
+      <h2 mat-dialog-title>{{ ticketNumber() }} {{ ticket().subject }}</h2>
       <button matIconButton mat-dialog-close aria-label="Close">
         <mat-icon>close</mat-icon>
       </button>
@@ -59,23 +58,25 @@ import {
       <dl class="details">
         <div>
           <dt>Customer</dt>
-          <dd>{{ ticket.requester.name }} · {{ ticket.requester.email }}</dd>
+          <dd>
+            {{ ticket().requester.name }} · {{ ticket().requester.email }}
+          </dd>
         </div>
         <div>
           <dt>Status</dt>
-          <dd>{{ status }}</dd>
+          <dd>{{ status() }}</dd>
         </div>
         <div>
           <dt>Priority</dt>
-          <dd class="priority">{{ ticket.priority }}</dd>
+          <dd class="priority">{{ ticket().priority }}</dd>
         </div>
         <div>
           <dt>Assigned to</dt>
-          <dd>{{ ticket.assignee?.name ?? 'Nobody' }}</dd>
+          <dd>{{ ticket().assignee?.name ?? 'Nobody' }}</dd>
         </div>
         <div>
           <dt>Due</dt>
-          <dd [class]="due.tone">{{ due.text }}</dd>
+          <dd [class]="due().tone">{{ due().text }}</dd>
         </div>
       </dl>
 
@@ -83,10 +84,10 @@ import {
       <ol class="conversation">
         <li class="customer">
           <p class="meta">
-            <strong>{{ ticket.requester.name }}</strong> · customer ·
-            {{ ticket.createdAt | date: 'd MMM, HH:mm' }}
+            <strong>{{ ticket().requester.name }}</strong> · customer ·
+            {{ ticket().createdAt | date: 'd MMM, HH:mm' }}
           </p>
-          <p class="body">{{ ticket.description }}</p>
+          <p class="body">{{ ticket().description }}</p>
         </li>
         @for (message of store.messages(); track message.id) {
           <li [class]="message.kind">
@@ -95,7 +96,7 @@ import {
               {{
                 message.kind === 'note'
                   ? 'Internal note'
-                  : 'Reply to ' + ticket.requester.name
+                  : 'Reply to ' + ticket().requester.name
               }}
               · {{ message.createdAt | date: 'd MMM, HH:mm' }}
             </p>
@@ -117,8 +118,12 @@ import {
         }
       }
 
-      @if (ticket.status === 'closed') {
-        <p class="message">
+      @if (store.access() === 'gone') {
+        <p class="message" role="status">
+          This ticket is no longer assigned to you.
+        </p>
+      } @else if (ticket().status === 'closed') {
+        <p class="message" role="status">
           This ticket is closed, so nothing more can be added.
         </p>
       } @else {
@@ -227,18 +232,25 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TicketConversationDialog {
-  protected readonly ticket =
-    inject<TicketConversationData>(MAT_DIALOG_DATA).ticket;
   protected readonly store = inject(TicketConversationStore);
+  /** The ticket as last read: it follows changes while open (#982). */
+  protected readonly ticket = this.store.ticket;
   protected readonly maxLength = TICKET_MESSAGE_MAX_LENGTH;
-  protected readonly ticketNumber = formatTicketNumber(
-    this.ticket.ticketNumber
+  protected readonly ticketNumber = computed(() =>
+    formatTicketNumber(this.ticket().ticketNumber)
   );
-  protected readonly status = STATUS_GUIDE[this.ticket.status].label;
-  /** As of when the popup opened; a finished ticket's due time is past. */
-  protected readonly due = ['resolved', 'closed'].includes(this.ticket.status)
-    ? { text: 'Finished', tone: 'none' }
-    : slaLabel(this.ticket.slaDueAt, new Date());
+  protected readonly status = computed(
+    () => STATUS_GUIDE[this.ticket().status].label
+  );
+  /**
+   * As of when the ticket was last read; a finished ticket's due time is
+   * past.
+   */
+  protected readonly due = computed(() =>
+    ['resolved', 'closed'].includes(this.ticket().status)
+      ? { text: 'Finished', tone: 'none' }
+      : slaLabel(this.ticket().slaDueAt, new Date())
+  );
 
   /** What is being written. */
   protected readonly draft = new FormControl('', { nonNullable: true });

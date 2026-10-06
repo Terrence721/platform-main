@@ -11,16 +11,24 @@ import { provideMockStore } from '@ngrx/store/testing';
 import { type LiveUpdate, LiveUpdates } from '../live/live-updates';
 import { initialSessionState } from '../session/session.feature';
 import { Sounds } from '../sound/sounds';
-import { messagesApi } from './ticket-api-paths';
+import { messagesApi, ticketApi } from './ticket-api-paths';
 import {
   SEND_FAILED_MESSAGE,
   TicketConversationStore,
 } from './ticket-conversation.store';
 
-const ticket = { id: 'ticket-1001', ticketNumber: 1001 } as TicketDto;
-const API = messagesApi(ticket.id);
-
 const sam = { id: 'sam.rivera', name: 'Sam Rivera' };
+
+/** The ticket as the popup opened it: open, Sam's. */
+const ticket = {
+  id: 'ticket-1001',
+  ticketNumber: 1001,
+  status: 'open',
+  assignee: sam,
+} as TicketDto;
+const API = messagesApi(ticket.id);
+/** Where the ticket itself is read again. */
+const TICKET_API = ticketApi(ticket.id);
 
 const reply: TicketMessage = {
   id: 'message-1',
@@ -202,6 +210,8 @@ describe('TicketConversationStore', () => {
       live.next({ kind: 'reconnected' });
 
       http.expectOne({ method: 'GET', url: API }).flush([reply]);
+      // The ticket's details too (see "the ticket's details").
+      http.expectOne(TICKET_API).flush(ticket);
     });
 
     it('leaves it alone for another ticket, or a ticket change', () => {
@@ -214,6 +224,8 @@ describe('TicketConversationStore', () => {
       });
 
       http.expectNone(API);
+      // A ticket change reads the ticket, not its conversation.
+      http.expectOne(TICKET_API).flush(ticket);
     });
 
     it('keeps what is shown when fetching it again fails', () => {
@@ -264,8 +276,103 @@ describe('TicketConversationStore', () => {
 
         live.next({ kind: 'reconnected' });
         http.expectOne(API).flush([reply]);
+        http.expectOne(TICKET_API).flush(ticket);
 
         expect(sounds.play).not.toHaveBeenCalled();
+      });
+    });
+
+    describe("the ticket's details", () => {
+      const changeOn = (ticketId: string): LiveUpdate => ({
+        kind: 'event',
+        event: { type: 'ticket', ticketId },
+      });
+      /** The ticket after Chris resolved it. */
+      const resolved: TicketDto = { ...ticket, status: 'resolved' };
+
+      it('starts as the ticket the popup opened, Sam working on it', () => {
+        loaded();
+
+        expect(store.ticket()).toBe(ticket);
+        expect(store.access()).toBe('yours');
+      });
+
+      it('reads the ticket again when it changes, and swaps it in quietly', () => {
+        loaded();
+
+        live.next(changeOn(ticket.id));
+        http.expectOne({ method: 'GET', url: TICKET_API }).flush(resolved);
+
+        expect(store.ticket()).toEqual(resolved);
+        expect(store.access()).toBe('yours');
+        // The conversation is left as it is.
+        http.expectNone(API);
+        expect(store.loadState()).toBe('loaded');
+        expect(store.messages()).toEqual([reply]);
+      });
+
+      it('reads it again when the stream comes back after a break', () => {
+        loaded();
+
+        live.next({ kind: 'reconnected' });
+        http.expectOne(API).flush([reply]);
+        http.expectOne(TICKET_API).flush(resolved);
+
+        expect(store.ticket()).toEqual(resolved);
+      });
+
+      it('leaves it alone for a change to another ticket, or a message', () => {
+        loaded();
+
+        live.next(changeOn('ticket-2002'));
+        live.next({
+          kind: 'event',
+          event: { type: 'message', ticketId: ticket.id },
+        });
+        http.expectOne(API).flush([reply]);
+
+        http.expectNone(TICKET_API);
+        expect(store.ticket()).toBe(ticket);
+      });
+
+      it("marks it no longer Sam's on a 404, keeping the details shown", () => {
+        loaded();
+
+        live.next(changeOn(ticket.id));
+        http
+          .expectOne(TICKET_API)
+          .flush(
+            { message: 'No such ticket among yours.' },
+            { status: 404, statusText: 'Not Found' }
+          );
+
+        expect(store.access()).toBe('gone');
+        expect(store.ticket()).toBe(ticket);
+      });
+
+      it('keeps everything as it was when reading it fails another way', () => {
+        loaded();
+
+        live.next(changeOn(ticket.id));
+        http
+          .expectOne(TICKET_API)
+          .flush(null, { status: 500, statusText: 'Server Error' });
+
+        expect(store.access()).toBe('yours');
+        expect(store.ticket()).toBe(ticket);
+      });
+
+      it("is Sam's again when a later read finds it his (given back)", () => {
+        loaded();
+        live.next(changeOn(ticket.id));
+        http
+          .expectOne(TICKET_API)
+          .flush(null, { status: 404, statusText: 'Not Found' });
+
+        live.next(changeOn(ticket.id));
+        http.expectOne(TICKET_API).flush(ticket);
+
+        expect(store.access()).toBe('yours');
       });
     });
   });

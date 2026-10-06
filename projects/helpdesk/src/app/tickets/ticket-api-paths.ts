@@ -1,3 +1,8 @@
+/** Where one ticket is read, as it is now (#982). */
+export function ticketApi(ticketId: string): string {
+  return `/api/tickets/${encodeURIComponent(ticketId)}`;
+}
+
 /** Where a ticket's assignee is set (assigning, reassigning, taking). */
 export function assigneeApi(ticketId: string): string {
   return `/api/tickets/${encodeURIComponent(ticketId)}/assignee`;

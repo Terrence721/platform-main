@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { MAT_DIALOG_DATA } from '@angular/material/dialog';
 import type {
@@ -21,7 +21,7 @@ import { LiveUpdates } from '../live/live-updates';
 import { sessionFeature } from '../session/session.feature';
 import { Sounds } from '../sound/sounds';
 import { apiErrorMessage } from './api-error-message';
-import { messagesApi } from './ticket-api-paths';
+import { messagesApi, ticketApi } from './ticket-api-paths';
 
 /** What the ticket popup is opened with. */
 export interface TicketConversationData {
@@ -35,19 +35,30 @@ export const SEND_FAILED_MESSAGE = "Your message couldn't be sent.";
 export type SendState = 'idle' | 'sending' | 'sent' | 'failed';
 
 /**
- * The ticket popup's own data: the ticket's replies and internal notes,
+ * Whether the person may still work on the ticket: `yours` (they hold it,
+ * or lead the team of the agent who does) until the API says it no longer
+ * is (`gone`: reassigned to someone they don't lead).
+ */
+export type TicketAccess = 'yours' | 'gone';
+
+/**
+ * The ticket popup's own data: the ticket, its replies and internal notes,
  * loaded when the popup opens (so each opening starts fresh), and sending
  * a new one. A sent message is added at the end, as the newest. While the
  * popup is open, someone else's reply or note on the ticket appears too
- * (live updates, #950).
+ * (live updates, #950), and the ticket's details follow its changes
+ * (#982).
  */
 export const TicketConversationStore = signalStore(
-  withState({
+  withState(() => ({
+    /** The ticket as last read: the popup's data, until it changes. */
+    ticket: inject<TicketConversationData>(MAT_DIALOG_DATA).ticket,
+    access: 'yours' as TicketAccess,
     messages: [] as TicketMessage[],
     loadState: 'loading' as 'loading' | 'loaded' | 'failed',
     sendState: 'idle' as SendState,
     sendError: null as string | null,
-  }),
+  })),
   withMethods(
     (
       store,
@@ -132,6 +143,33 @@ export const TicketConversationStore = signalStore(
           )
         )
       ),
+
+      /**
+       * Reads the ticket again and swaps in its details quietly: for a live
+       * update (#982), when it changed (its status, who holds it). A 404
+       * means the person may no longer work on it (`gone`); any other
+       * failure keeps what is shown. A newer read replaces one running.
+       */
+      refreshTicket: rxMethod<void>(
+        pipe(
+          switchMap(() =>
+            http.get<TicketDto>(ticketApi(ticket.id)).pipe(
+              tapResponse({
+                next: (latest) =>
+                  patchState(store, { ticket: latest, access: 'yours' }),
+                error: (error) => {
+                  if (
+                    error instanceof HttpErrorResponse &&
+                    error.status === 404
+                  ) {
+                    patchState(store, { access: 'gone' });
+                  }
+                },
+              })
+            )
+          )
+        )
+      ),
     })
   ),
   withHooks({
@@ -148,6 +186,18 @@ export const TicketConversationStore = signalStore(
             (update) =>
               update.kind === 'reconnected' ||
               (update.event.type === 'message' &&
+                update.event.ticketId === ticket.id)
+          ),
+          map(() => undefined)
+        )
+      );
+      // A change to this ticket, or the stream back after a break.
+      store.refreshTicket(
+        live.updates.pipe(
+          filter(
+            (update) =>
+              update.kind === 'reconnected' ||
+              (update.event.type === 'ticket' &&
                 update.event.ticketId === ticket.id)
           ),
           map(() => undefined)

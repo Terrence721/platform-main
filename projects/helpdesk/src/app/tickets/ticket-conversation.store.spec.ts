@@ -7,7 +7,10 @@ import { TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA } from '@angular/material/dialog';
 import type { TicketDto, TicketMessage } from '@helpdesk/contract';
 import { Subject } from 'rxjs';
+import { provideMockStore } from '@ngrx/store/testing';
 import { type LiveUpdate, LiveUpdates } from '../live/live-updates';
+import { initialSessionState } from '../session/session.feature';
+import { Sounds } from '../sound/sounds';
 import { messagesApi } from './ticket-api-paths';
 import {
   SEND_FAILED_MESSAGE,
@@ -40,15 +43,29 @@ describe('TicketConversationStore', () => {
   let http: HttpTestingController;
   /** The live updates the store hears, sent by the test. */
   let live: Subject<LiveUpdate>;
+  /** A stand-in for the sounds, to hear which play. */
+  const sounds = { play: vi.fn() };
 
   beforeEach(() => {
     live = new Subject<LiveUpdate>();
+    sounds.play.mockClear();
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: MAT_DIALOG_DATA, useValue: { ticket } },
         { provide: LiveUpdates, useValue: { updates: live } },
+        { provide: Sounds, useValue: sounds },
+        // Sam has the popup open.
+        provideMockStore({
+          initialState: {
+            session: {
+              ...initialSessionState,
+              user: { ...sam, role: 'agent', teamId: 'atlas' },
+              checked: true,
+            },
+          },
+        }),
         TicketConversationStore,
       ],
     });
@@ -209,6 +226,47 @@ describe('TicketConversationStore', () => {
 
       expect(store.loadState()).toBe('loaded');
       expect(store.messages()).toEqual([reply]);
+    });
+
+    describe('the arrival sound', () => {
+      /** A note from Chris, Sam's supervisor. */
+      const fromChris: TicketMessage = {
+        id: 'message-3',
+        kind: 'note',
+        body: 'Please call them back today.',
+        author: { id: 'chris.taylor', name: 'Chris Taylor' },
+        createdAt: '2026-10-04T11:00:00.000Z',
+      };
+
+      it('dings when someone else writes on the ticket', () => {
+        loaded();
+
+        live.next(messageOn(ticket.id));
+        http.expectOne(API).flush([reply, fromChris]);
+
+        expect(sounds.play).toHaveBeenCalledExactlyOnceWith('arrival');
+      });
+
+      it("is quiet for Sam's own message, even if its event comes first", () => {
+        loaded();
+
+        store.send({ kind: 'note', body: note.body });
+        // The event for Sam's note arrives before his send finishes.
+        live.next(messageOn(ticket.id));
+        http.expectOne({ method: 'GET', url: API }).flush([reply, note]);
+        http.expectOne({ method: 'POST', url: API }).flush(note);
+
+        expect(sounds.play).not.toHaveBeenCalled();
+      });
+
+      it('is quiet when nothing new was written', () => {
+        loaded();
+
+        live.next({ kind: 'reconnected' });
+        http.expectOne(API).flush([reply]);
+
+        expect(sounds.play).not.toHaveBeenCalled();
+      });
     });
   });
 });

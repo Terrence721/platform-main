@@ -7,7 +7,9 @@ import { TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import type { TicketDto, TicketMessage } from '@helpdesk/contract';
 import { NEVER } from 'rxjs';
+import { provideMockStore } from '@ngrx/store/testing';
 import { LiveUpdates } from '../live/live-updates';
+import { initialSessionState } from '../session/session.feature';
 import { messagesApi } from './ticket-api-paths';
 import { TicketConversationDialog } from './ticket-conversation.dialog';
 
@@ -65,6 +67,16 @@ describe('TicketConversationDialog', () => {
         { provide: MatDialogRef, useValue: { close: vi.fn() } },
         // Live updates are the store's spec's concern: none here.
         { provide: LiveUpdates, useValue: { updates: NEVER } },
+        // Sam has the popup open.
+        provideMockStore({
+          initialState: {
+            session: {
+              ...initialSessionState,
+              user: { ...sam, role: 'agent', teamId: 'atlas' },
+              checked: true,
+            },
+          },
+        }),
       ],
     });
     const fixture = TestBed.createComponent(TicketConversationDialog);
@@ -223,6 +235,16 @@ describe('TicketConversationDialog', () => {
         { provide: MatDialogRef, useValue: { close: vi.fn() } },
         // Live updates are the store's spec's concern: none here.
         { provide: LiveUpdates, useValue: { updates: NEVER } },
+        // Sam has the popup open.
+        provideMockStore({
+          initialState: {
+            session: {
+              ...initialSessionState,
+              user: { ...sam, role: 'agent', teamId: 'atlas' },
+              checked: true,
+            },
+          },
+        }),
       ],
     });
     const fixture = TestBed.createComponent(TicketConversationDialog);

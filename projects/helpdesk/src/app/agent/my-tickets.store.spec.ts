@@ -7,6 +7,7 @@ import { TestBed } from '@angular/core/testing';
 import type { TicketDto } from '@helpdesk/contract';
 import { Subject } from 'rxjs';
 import { type LiveUpdate, LiveUpdates } from '../live/live-updates';
+import { Sounds } from '../sound/sounds';
 import { assigneeApi, statusApi } from '../tickets/ticket-api-paths';
 import {
   FINISHED_API,
@@ -25,15 +26,19 @@ describe('MyTicketsStore', () => {
   let http: HttpTestingController;
   /** The live updates the store hears, sent by the test. */
   let live: Subject<LiveUpdate>;
+  /** A stand-in for the sounds, to hear which play. */
+  const sounds = { play: vi.fn() };
 
   beforeEach(() => {
     live = new Subject<LiveUpdate>();
+    sounds.play.mockClear();
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
         MyTicketsStore,
         { provide: LiveUpdates, useValue: { updates: live } },
+        { provide: Sounds, useValue: sounds },
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -389,6 +394,58 @@ describe('MyTicketsStore', () => {
       expect(store.loadState()).toBe('loaded');
       expect(numbers(store)).toEqual([1001]);
       expect(store.unassigned()).toEqual([ticket(1005)]);
+    });
+
+    describe('the arrival sound', () => {
+      /** Answers a refresh with these as My tickets. */
+      function refreshWith(...mine: TicketDto[]) {
+        http.expectOne(MY_TICKETS_API).flush(mine);
+        http.expectOne(UNASSIGNED_API).flush([]);
+        http.expectOne(FINISHED_API).flush([]);
+      }
+
+      it('dings when someone else gives the agent a ticket', () => {
+        loaded();
+
+        live.next(aTicketChanged);
+        refreshWith(ticket(1001), ticket(1005));
+
+        expect(sounds.play).toHaveBeenCalledExactlyOnceWith('arrival');
+      });
+
+      it('is quiet when no ticket came: one went, or one changed', () => {
+        loaded();
+
+        live.next(aTicketChanged);
+        refreshWith();
+
+        expect(sounds.play).not.toHaveBeenCalled();
+      });
+
+      it('is quiet for the ticket the agent is taking, even if its event comes first', () => {
+        const store = loaded();
+
+        store.take({ ticketId: 'ticket-1005', agentId: 'sam.rivera' });
+        // The live event for the take arrives before the take finishes.
+        live.next(aTicketChanged);
+        refreshWith(ticket(1001), ticket(1005));
+
+        expect(sounds.play).not.toHaveBeenCalled();
+        http
+          .expectOne({ method: 'PUT', url: assigneeApi('ticket-1005') })
+          .flush(ticket(1005));
+        http.expectOne(MY_TICKETS_API).flush([ticket(1001), ticket(1005)]);
+        http.expectOne(UNASSIGNED_API).flush([]);
+      });
+
+      it('dings once for a ticket that came during a break in the stream', () => {
+        loaded();
+
+        live.next({ kind: 'reconnected' });
+        refreshWith(ticket(1001), ticket(1005), ticket(1006));
+
+        expect(sounds.play).toHaveBeenCalledExactlyOnceWith('arrival');
+      });
     });
   });
 });

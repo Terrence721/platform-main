@@ -21,6 +21,7 @@ import {
 import { Store } from '@ngrx/store';
 import { STATUS_GUIDE } from '../landing/ticket-workflow.store';
 import { openReports } from '../reports/open-reports';
+import { isFinished, Sounds } from '../sound/sounds';
 import { sessionFeature } from '../session/session.feature';
 import { openTicket } from '../tickets/open-ticket';
 import { TicketTable } from '../tickets/ticket-table';
@@ -237,6 +238,8 @@ export default class SupervisorPage {
     sessionFeature.selectUser
   );
   private readonly injector = inject(Injector);
+  /** A chime when assigning or finishing a ticket works; a low tone if not. */
+  private readonly sounds = inject(Sounds);
   /** The team member chosen in the list, for their name. */
   protected readonly selectedMember = computed(() => {
     const id = this.store.selectedMemberId();
@@ -334,10 +337,12 @@ export default class SupervisorPage {
       untracked(() => {
         const ticket = this.store.lastAssigned();
         if (state === 'assigned' && ticket?.assignee) {
+          this.sounds.play('success');
           void this.report(
             `${formatTicketNumber(ticket.ticketNumber)} assigned to ${ticket.assignee.name}`
           );
         } else if (state === 'failed') {
+          this.sounds.play('error');
           void this.report(this.store.assignError() ?? '');
         }
       });
@@ -347,10 +352,14 @@ export default class SupervisorPage {
       untracked(() => {
         const ticket = this.store.lastChanged();
         if (state === 'changed' && ticket !== null) {
+          if (isFinished(ticket.status)) {
+            this.sounds.play('success');
+          }
           void this.report(
             `${formatTicketNumber(ticket.ticketNumber)} is now ${STATUS_GUIDE[ticket.status].label}`
           );
         } else if (state === 'failed') {
+          this.sounds.play('error');
           void this.report(this.store.statusError() ?? '');
         }
       });

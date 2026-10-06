@@ -25,6 +25,7 @@ import {
   leaveAfterSignOut,
   restoreSession,
   signIn,
+  signInSounds,
   signOut,
 } from './session/session.effects';
 import { sessionFeature } from './session/session.feature';
@@ -60,6 +61,7 @@ export const appConfig: ApplicationConfig = {
     provideEffects(appEffects, {
       restoreSession,
       signIn,
+      signInSounds,
       goHomeAfterSignIn,
       signOut,
       leaveAfterSignOut,

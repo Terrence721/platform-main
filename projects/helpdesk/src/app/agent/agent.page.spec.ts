@@ -9,6 +9,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import type { CurrentUser, TicketDto } from '@helpdesk/contract';
 import { provideMockStore } from '@ngrx/store/testing';
 import { initialSessionState } from '../session/session.feature';
+import { Sounds } from '../sound/sounds';
 import { assigneeApi, statusApi } from '../tickets/ticket-api-paths';
 import { TicketConversationDialog } from '../tickets/ticket-conversation.dialog';
 import AgentPage from './agent.page';
@@ -64,6 +65,8 @@ describe('AgentPage', () => {
   const snackBar = { open: vi.fn() };
   /** Stands in for Material's dialogs, to see which popup opens. */
   const dialog = { open: vi.fn() };
+  /** Stands in for the sounds, to hear which play. */
+  const sounds = { play: vi.fn() };
 
   afterEach(() => {
     const http = TestBed.inject(HttpTestingController);
@@ -82,6 +85,7 @@ describe('AgentPage', () => {
   function render() {
     snackBar.open.mockClear();
     dialog.open.mockClear();
+    sounds.play.mockClear();
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
@@ -93,6 +97,7 @@ describe('AgentPage', () => {
         }),
         { provide: MatSnackBar, useValue: snackBar },
         { provide: MatDialog, useValue: dialog },
+        { provide: Sounds, useValue: sounds },
       ],
     });
     const fixture = TestBed.createComponent(AgentPage);
@@ -323,6 +328,7 @@ describe('AgentPage', () => {
           expect.objectContaining({ duration: 5000 })
         )
       );
+      expect(sounds.play).toHaveBeenCalledExactlyOnceWith('success');
     });
 
     it('says when someone took it first', async () => {
@@ -343,6 +349,7 @@ describe('AgentPage', () => {
           expect.objectContaining({ duration: 5000 })
         )
       );
+      expect(sounds.play).toHaveBeenCalledExactlyOnceWith('error');
     });
   });
 
@@ -436,6 +443,8 @@ describe('AgentPage', () => {
           expect.objectContaining({ duration: 5000 })
         )
       );
+      // Finishing the work: a chime.
+      expect(sounds.play).toHaveBeenCalledExactlyOnceWith('success');
     });
 
     it('reopens a resolved ticket from Done', async () => {
@@ -461,6 +470,8 @@ describe('AgentPage', () => {
           expect.objectContaining({ duration: 5000 })
         )
       );
+      // Reopening doesn't finish anything: no chime.
+      expect(sounds.play).not.toHaveBeenCalled();
     });
 
     it('says why a change was refused', async () => {
@@ -481,6 +492,7 @@ describe('AgentPage', () => {
           expect.objectContaining({ duration: 5000 })
         )
       );
+      expect(sounds.play).toHaveBeenCalledExactlyOnceWith('error');
     });
   });
 

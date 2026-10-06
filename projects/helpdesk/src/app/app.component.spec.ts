@@ -9,6 +9,7 @@ import { PageSection, selectCurrentSection } from './router.selectors';
 import { ToolbarActions } from './session/session.actions';
 import { initialSessionState, SessionState } from './session/session.feature';
 import { SignInLauncher } from './sign-in/sign-in-launcher';
+import { SOUND_STORAGE, Sounds } from './sound/sounds';
 
 const sam: CurrentUser = {
   id: 'sam.rivera',
@@ -36,6 +37,8 @@ describe('AppComponent', () => {
           initialState: { session: { ...initialSessionState, ...session } },
         }),
         { provide: SignInLauncher, useValue: launcher },
+        // Not the browser's storage: each test starts with sound on.
+        { provide: SOUND_STORAGE, useValue: null },
       ],
     });
     const store = TestBed.inject(MockStore);
@@ -139,15 +142,48 @@ describe('AppComponent', () => {
       );
     });
 
-    it('offers Sign out instead of Sign in and the landing sections', async () => {
+    it('offers the sound toggle and Sign out instead of Sign in and the landing sections', async () => {
       const { shell, loader } = signedIn();
 
       const buttons = await loader.getAllHarnesses(MatButtonHarness);
       expect(await Promise.all(buttons.map((b) => b.getText()))).toEqual([
+        'volume_up',
         'logout Sign out',
       ]);
-      expect(await buttons[0].getAppearance()).toBe('outlined');
+      expect(await buttons[1].getAppearance()).toBe('outlined');
       expect(shell.querySelector('mat-toolbar nav')).toBeNull();
+    });
+
+    describe('sound toggle', () => {
+      const toggle = (shell: HTMLElement) =>
+        shell.querySelector<HTMLButtonElement>(
+          'button.sound-toggle'
+        ) as HTMLButtonElement;
+
+      it('says sound is on, and offers to mute it', () => {
+        const button = toggle(signedIn().shell);
+
+        expect(button.getAttribute('aria-label')).toBe('Mute sounds');
+        expect(button.getAttribute('aria-pressed')).toBe('false');
+        expect(button.textContent?.trim()).toBe('volume_up');
+      });
+
+      it('mutes the sounds, then turns them back on', async () => {
+        const { shell, loader } = signedIn();
+        const sounds = TestBed.inject(Sounds);
+        const harness = await loader.getHarness(
+          MatButtonHarness.with({ selector: '.sound-toggle' })
+        );
+
+        await harness.click();
+        expect(sounds.muted()).toBe(true);
+        expect(toggle(shell).getAttribute('aria-label')).toBe('Turn sounds on');
+        expect(toggle(shell).getAttribute('aria-pressed')).toBe('true');
+        expect(toggle(shell).textContent?.trim()).toBe('volume_off');
+
+        await harness.click();
+        expect(sounds.muted()).toBe(false);
+      });
     });
 
     it('signs out from the toolbar', async () => {

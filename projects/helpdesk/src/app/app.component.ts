@@ -9,12 +9,14 @@ import { PAGE_SECTIONS, selectCurrentSection } from './router.selectors';
 import { ToolbarActions } from './session/session.actions';
 import { sessionFeature } from './session/session.feature';
 import { SignInLauncher } from './sign-in/sign-in-launcher';
+import { Sounds } from './sound/sounds';
 
 /**
  * The app shell: the toolbar and the routed page below it. Pages lay out
  * their own content, so the shell adds no padding around them. Signed out,
  * the toolbar offers the landing page's sections and Sign in; signed in, it
- * shows who is signed in and Sign out. Until the start-up session check
+ * shows who is signed in, a speaker that mutes the help desk's sounds (or
+ * turns them back on), and Sign out. Until the start-up session check
  * answers, it shows neither, so a reload does not flash Sign in.
  */
 @Component({
@@ -50,6 +52,20 @@ import { SignInLauncher } from './sign-in/sign-in-launcher';
               <span class="who">
                 {{ user.name }} · <span class="role">{{ user.role }}</span>
               </span>
+              <button
+                matIconButton
+                type="button"
+                class="sound-toggle"
+                [attr.aria-label]="
+                  sounds.muted() ? 'Turn sounds on' : 'Mute sounds'
+                "
+                [attr.aria-pressed]="sounds.muted()"
+                (click)="sounds.setMuted(!sounds.muted())"
+              >
+                <mat-icon>{{
+                  sounds.muted() ? 'volume_off' : 'volume_up'
+                }}</mat-icon>
+              </button>
               <button matButton="outlined" type="button" (click)="signOut()">
                 <mat-icon>logout</mat-icon>
                 Sign out
@@ -178,6 +194,8 @@ import { SignInLauncher } from './sign-in/sign-in-launcher';
 export class AppComponent {
   private readonly store = inject(Store);
   protected readonly signIn = inject(SignInLauncher);
+  /** The help desk's sounds, which the toolbar's speaker mutes (#941). */
+  protected readonly sounds = inject(Sounds);
   protected readonly sections = PAGE_SECTIONS;
   /** The landing section the URL points at, from the router state. */
   protected readonly currentSection$ = this.store.select(selectCurrentSection);

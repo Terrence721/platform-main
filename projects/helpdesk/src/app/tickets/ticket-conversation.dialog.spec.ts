@@ -296,8 +296,10 @@ describe('TicketConversationDialog', () => {
       expect(popup.text('.message')).toBe(
         'This ticket is no longer assigned to you.'
       );
-      // What was shown stays, to read.
-      expect(detail(popup.dialog, 'Assigned to')).toBe('Sam Rivera');
+      // Not Sam any more, and who it is now isn't Sam's to see.
+      expect(detail(popup.dialog, 'Assigned to')).toBe('Someone else');
+      // The rest stays, to read.
+      expect(detail(popup.dialog, 'Status')).toBe('Open');
       expect(popup.dialog.querySelectorAll('.conversation li')).toHaveLength(3);
     });
   });

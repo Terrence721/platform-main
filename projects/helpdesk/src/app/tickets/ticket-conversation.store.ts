@@ -15,7 +15,8 @@ import {
   withState,
 } from '@ngrx/signals';
 import { rxMethod } from '@ngrx/signals/rxjs-interop';
-import { exhaustMap, pipe, switchMap, tap } from 'rxjs';
+import { exhaustMap, filter, map, pipe, switchMap, tap } from 'rxjs';
+import { LiveUpdates } from '../live/live-updates';
 import { apiErrorMessage } from './api-error-message';
 import { messagesApi } from './ticket-api-paths';
 
@@ -33,7 +34,9 @@ export type SendState = 'idle' | 'sending' | 'sent' | 'failed';
 /**
  * The ticket popup's own data: the ticket's replies and internal notes,
  * loaded when the popup opens (so each opening starts fresh), and sending
- * a new one. A sent message is added at the end, as the newest.
+ * a new one. A sent message is added at the end, as the newest. While the
+ * popup is open, someone else's reply or note on the ticket appears too
+ * (live updates, #950).
  */
 export const TicketConversationStore = signalStore(
   withState({
@@ -92,9 +95,47 @@ export const TicketConversationStore = signalStore(
           })
         )
       ),
+
+      /**
+       * Fetches the conversation again and swaps it in quietly, with no
+       * spinner: for a live update (#950), when someone else wrote on this
+       * ticket. The whole list is replaced, so a message this popup sent
+       * itself is never there twice. A failed refresh keeps what is shown.
+       */
+      refresh: rxMethod<void>(
+        pipe(
+          switchMap(() =>
+            http.get<TicketMessage[]>(messagesApi(ticket.id)).pipe(
+              tapResponse({
+                next: (messages) =>
+                  patchState(store, { messages, loadState: 'loaded' }),
+                error: () => undefined,
+              })
+            )
+          )
+        )
+      ),
     })
   ),
   withHooks({
-    onInit: (store) => store.load(),
+    onInit: (
+      store,
+      live = inject(LiveUpdates),
+      { ticket } = inject<TicketConversationData>(MAT_DIALOG_DATA)
+    ) => {
+      store.load();
+      // A reply or note on this ticket, or the stream back after a break.
+      store.refresh(
+        live.updates.pipe(
+          filter(
+            (update) =>
+              update.kind === 'reconnected' ||
+              (update.event.type === 'message' &&
+                update.event.ticketId === ticket.id)
+          ),
+          map(() => undefined)
+        )
+      );
+    },
   })
 );

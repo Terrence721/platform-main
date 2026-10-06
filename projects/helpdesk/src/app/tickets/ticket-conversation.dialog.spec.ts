@@ -6,6 +6,8 @@ import {
 import { TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import type { TicketDto, TicketMessage } from '@helpdesk/contract';
+import { NEVER } from 'rxjs';
+import { LiveUpdates } from '../live/live-updates';
 import { messagesApi } from './ticket-api-paths';
 import { TicketConversationDialog } from './ticket-conversation.dialog';
 
@@ -61,6 +63,8 @@ describe('TicketConversationDialog', () => {
         provideHttpClientTesting(),
         { provide: MAT_DIALOG_DATA, useValue: { ticket: shown } },
         { provide: MatDialogRef, useValue: { close: vi.fn() } },
+        // Live updates are the store's spec's concern: none here.
+        { provide: LiveUpdates, useValue: { updates: NEVER } },
       ],
     });
     const fixture = TestBed.createComponent(TicketConversationDialog);
@@ -217,6 +221,8 @@ describe('TicketConversationDialog', () => {
         provideHttpClientTesting(),
         { provide: MAT_DIALOG_DATA, useValue: { ticket } },
         { provide: MatDialogRef, useValue: { close: vi.fn() } },
+        // Live updates are the store's spec's concern: none here.
+        { provide: LiveUpdates, useValue: { updates: NEVER } },
       ],
     });
     const fixture = TestBed.createComponent(TicketConversationDialog);

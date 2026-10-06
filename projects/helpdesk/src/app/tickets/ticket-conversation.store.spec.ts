@@ -6,6 +6,8 @@ import {
 import { TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA } from '@angular/material/dialog';
 import type { TicketDto, TicketMessage } from '@helpdesk/contract';
+import { Subject } from 'rxjs';
+import { type LiveUpdate, LiveUpdates } from '../live/live-updates';
 import { messagesApi } from './ticket-api-paths';
 import {
   SEND_FAILED_MESSAGE,
@@ -36,13 +38,17 @@ const note: TicketMessage = {
 describe('TicketConversationStore', () => {
   let store: InstanceType<typeof TicketConversationStore>;
   let http: HttpTestingController;
+  /** The live updates the store hears, sent by the test. */
+  let live: Subject<LiveUpdate>;
 
   beforeEach(() => {
+    live = new Subject<LiveUpdate>();
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: MAT_DIALOG_DATA, useValue: { ticket } },
+        { provide: LiveUpdates, useValue: { updates: live } },
         TicketConversationStore,
       ],
     });
@@ -139,6 +145,70 @@ describe('TicketConversationStore', () => {
       expect(store.sendState()).toBe('sending');
       expect(store.sendError()).toBeNull();
       http.expectOne({ method: 'POST', url: API }).flush(reply);
+    });
+  });
+
+  describe('live updates', () => {
+    /** The store with the conversation loaded, as the popup has it. */
+    const loaded = () =>
+      http.expectOne({ method: 'GET', url: API }).flush([reply]);
+
+    const messageOn = (ticketId: string): LiveUpdate => ({
+      kind: 'event',
+      event: { type: 'message', ticketId },
+    });
+
+    it('fetches the conversation again, quietly, when someone writes on this ticket', () => {
+      loaded();
+
+      live.next(messageOn(ticket.id));
+
+      expect(store.loadState()).toBe('loaded');
+      http.expectOne({ method: 'GET', url: API }).flush([reply, note]);
+      expect(store.messages()).toEqual([reply, note]);
+    });
+
+    it('never shows its own message twice when the event for it arrives', () => {
+      loaded();
+      store.send({ kind: 'note', body: note.body });
+      http.expectOne({ method: 'POST', url: API }).flush(note);
+
+      live.next(messageOn(ticket.id));
+      http.expectOne({ method: 'GET', url: API }).flush([reply, note]);
+
+      expect(store.messages()).toEqual([reply, note]);
+    });
+
+    it('fetches it again when the stream comes back after a break', () => {
+      loaded();
+
+      live.next({ kind: 'reconnected' });
+
+      http.expectOne({ method: 'GET', url: API }).flush([reply]);
+    });
+
+    it('leaves it alone for another ticket, or a ticket change', () => {
+      loaded();
+
+      live.next(messageOn('ticket-2002'));
+      live.next({
+        kind: 'event',
+        event: { type: 'ticket', ticketId: ticket.id },
+      });
+
+      http.expectNone(API);
+    });
+
+    it('keeps what is shown when fetching it again fails', () => {
+      loaded();
+
+      live.next(messageOn(ticket.id));
+      http
+        .expectOne(API)
+        .flush(null, { status: 500, statusText: 'Server Error' });
+
+      expect(store.loadState()).toBe('loaded');
+      expect(store.messages()).toEqual([reply]);
     });
   });
 });

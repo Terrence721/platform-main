@@ -20,7 +20,8 @@ import {
   withEntities,
 } from '@ngrx/signals/entities';
 import { rxMethod } from '@ngrx/signals/rxjs-interop';
-import { exhaustMap, pipe, switchMap, tap } from 'rxjs';
+import { exhaustMap, filter, map, pipe, switchMap, tap } from 'rxjs';
+import { LiveUpdates } from '../live/live-updates';
 
 /** Where the accounts come from, through the dev server's proxy. */
 export const TEAM_ACCOUNTS_API = '/api/users';
@@ -72,7 +73,8 @@ function refusalMessage(error: unknown, fallback: string): string {
 /**
  * Every Helpdesk account, for the admin page's Team accounts, kept by name
  * (the API's order); and creating new ones. Provided by the page, so it
- * lives only while the page is open; it loads when created.
+ * lives only while the page is open; it loads when created, and again,
+ * quietly, whenever a live update says an account changed (#950).
  */
 export const TeamAccountsStore = signalStore(
   withEntities<UserAccount>(),
@@ -194,8 +196,41 @@ export const TeamAccountsStore = signalStore(
         updated: null,
       });
     },
+    /**
+     * Fetches the accounts again and swaps them in quietly, with no
+     * spinner: for a live update (#950), when another admin created or
+     * changed one. A newer refresh replaces one still running; a failed
+     * one keeps the tables as they are.
+     */
+    refresh: rxMethod<void>(
+      pipe(
+        switchMap(() =>
+          http.get<UserAccount[]>(TEAM_ACCOUNTS_API).pipe(
+            tapResponse({
+              next: (accounts) =>
+                patchState(store, setAllEntities(accounts), {
+                  loadState: 'loaded',
+                }),
+              error: () => undefined,
+            })
+          )
+        )
+      )
+    ),
   })),
   withHooks({
-    onInit: (store) => store.load(),
+    onInit: (store, live = inject(LiveUpdates)) => {
+      store.load();
+      // An account created or changed, or the stream back after a break.
+      store.refresh(
+        live.updates.pipe(
+          filter(
+            (update) =>
+              update.kind === 'reconnected' || update.event.type === 'accounts'
+          ),
+          map(() => undefined)
+        )
+      );
+    },
   })
 );

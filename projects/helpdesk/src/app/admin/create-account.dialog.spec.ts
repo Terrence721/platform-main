@@ -15,6 +15,8 @@ import {
   CreateAccountData,
   CreateAccountDialog,
 } from './create-account.dialog';
+import { NEVER } from 'rxjs';
+import { LiveUpdates } from '../live/live-updates';
 import { TEAM_ACCOUNTS_API, TeamAccountsStore } from './team-accounts.store';
 
 const DATA: CreateAccountData = {
@@ -48,6 +50,8 @@ describe('CreateAccountDialog', () => {
         TeamAccountsStore,
         { provide: MAT_DIALOG_DATA, useValue: DATA },
         { provide: MatDialogRef, useValue: dialogRef },
+        // Live updates are the store's spec's concern: none here.
+        { provide: LiveUpdates, useValue: { updates: NEVER } },
       ],
     });
     const http = TestBed.inject(HttpTestingController);

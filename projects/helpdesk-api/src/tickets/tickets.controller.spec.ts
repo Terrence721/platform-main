@@ -68,6 +68,7 @@ describe('/api/tickets', () => {
     take: vi.fn(async (): Promise<TicketDto> => overdue),
     recentlyFinished: vi.fn(async () => [overdue]),
     changeStatus: vi.fn(async (): Promise<TicketDto> => overdue),
+    one: vi.fn(async (): Promise<TicketDto> => overdue),
   };
   const messages = {
     conversation: vi.fn(async () => [reply]),
@@ -291,6 +292,63 @@ describe('/api/tickets', () => {
       expect((await finished(role)).status).toBe(status);
       expect(tickets.recentlyFinished).not.toHaveBeenCalled();
     });
+  });
+
+  describe('GET :ticketId', () => {
+    /** GET the overdue ticket, as `role` or signed out. */
+    const one = (role: Role | null) =>
+      fetch(`${base}/${overdue.id}`, {
+        headers: role === null ? {} : { cookie: `${SESSION_COOKIE}=${role}` },
+      });
+
+    it.each([
+      ['an agent', 'agent', 'sam.rivera'],
+      ['a supervisor', 'supervisor', 'chris.taylor'],
+    ] as const)(
+      'answers %s with the ticket, read as that user',
+      async (_, role, id) => {
+        const response = await one(role);
+
+        expect(response.status).toBe(200);
+        expect(await response.json()).toEqual(overdue);
+        expect(tickets.one).toHaveBeenCalledExactlyOnceWith(
+          overdue.id,
+          expect.objectContaining({ id, role })
+        );
+      }
+    );
+
+    it("passes on the service's 404", async () => {
+      tickets.one.mockRejectedValueOnce(
+        new NotFoundException('No such ticket among yours.')
+      );
+
+      const response = await one('agent');
+
+      expect(response.status).toBe(404);
+      expect(await response.json()).toEqual(
+        expect.objectContaining({ message: 'No such ticket among yours.' })
+      );
+    });
+
+    it.each([
+      ['an admin', 'admin', 403],
+      ['a signed-out request', null, 401],
+    ] as const)('turns away %s, reading nothing', async (_, role, status) => {
+      expect((await one(role)).status).toBe(status);
+      expect(tickets.one).not.toHaveBeenCalled();
+    });
+
+    it.each(['mine', 'unassigned'])(
+      'leaves GET %s to its own route',
+      async (path) => {
+        await fetch(`${base}/${path}`, {
+          headers: { cookie: `${SESSION_COOKIE}=agent` },
+        });
+
+        expect(tickets.one).not.toHaveBeenCalled();
+      }
+    );
   });
 
   describe('PUT :ticketId/status', () => {

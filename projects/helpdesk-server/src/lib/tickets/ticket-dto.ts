@@ -29,9 +29,10 @@ export const TICKET_COLUMNS = {
 
 /**
  * Starts a ticket query: `TICKET_COLUMNS` with the joins they need. Add a
- * `where` and an `orderBy`; each row fits `toTicketDto`.
+ * `where` and an `orderBy`; each row fits `toTicketDto`. Takes the
+ * database or a transaction on it.
  */
-export function selectTickets(database: Database) {
+export function selectTickets(database: Pick<Database, 'select'>) {
   return database
     .select(TICKET_COLUMNS)
     .from(tickets)

@@ -18,10 +18,8 @@ import { DATABASE, type Database } from '../database/database-token';
 import { teams, tickets, users } from '../database/schema';
 import { LiveEvents } from '../live/live-events';
 import { ticketAudience } from '../live/ticket-audience';
+import { lockWorkable, UUID } from './ticket-access';
 import { MOST_URGENT_FIRST, selectTickets, toTicketDto } from './ticket-dto';
-
-/** A ticket's id is a UUID; anything else names no ticket. */
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * The statuses that still need someone's work. Resolved and closed tickets
@@ -277,46 +275,39 @@ export class TicketsService {
   }
 
   /**
+   * One ticket, for the agent who holds it or the supervisor who leads that
+   * agent's team: the ticket popup's details, fetched again when the ticket
+   * changes (#982). 404 for anyone else, and for an unassigned ticket: the
+   * same answer as for no ticket at all (`lockWorkable`).
+   */
+  async one(ticketId: string, by: CurrentUser): Promise<TicketDto> {
+    return this.database.transaction(async (tx) => {
+      await lockWorkable(tx, ticketId, by, 'share');
+      const [row] = await selectTickets(tx).where(eq(tickets.id, ticketId));
+      return toTicketDto(row);
+    });
+  }
+
+  /**
    * Moves a ticket to another status, as the workflow allows. Only the
    * agent who holds it, or the supervisor who leads that agent's team, may
    * (404 for anyone else, and for an unassigned ticket: the same answer as
-   * for no ticket at all). 409 for a move the workflow does not allow,
-   * including to the status it has. In one transaction with the ticket
-   * locked. Answers with the ticket.
+   * for no ticket at all; `lockWorkable`). 409 for a move the workflow
+   * does not allow, including to the status it has. In one transaction
+   * with the ticket locked. Answers with the ticket.
    */
   async changeStatus(
     ticketId: string,
     to: TicketStatus,
     by: CurrentUser
   ): Promise<TicketDto> {
-    if (!UUID.test(ticketId)) {
-      throw new NotFoundException('No such ticket among yours.');
-    }
     await this.database.transaction(async (tx) => {
-      const [ticket] = await tx
-        .select({
-          status: tickets.status,
-          assigneeId: tickets.assigneeId,
-          leadId: teams.supervisorId,
-        })
-        .from(tickets)
-        .leftJoin(users, eq(tickets.assigneeId, users.id))
-        .leftJoin(teams, eq(users.teamId, teams.id))
-        .where(eq(tickets.id, ticketId))
-        .for('update', { of: tickets });
-      const mayChange =
-        ticket !== undefined &&
-        ticket.assigneeId !== null &&
-        (ticket.assigneeId === by.id ||
-          (by.role === 'supervisor' && ticket.leadId === by.id));
-      if (!mayChange) {
-        throw new NotFoundException('No such ticket among yours.');
-      }
-      if (!canTransition(ticket.status, to)) {
+      const status = await lockWorkable(tx, ticketId, by, 'update');
+      if (!canTransition(status, to)) {
         throw new ConflictException(
-          ticket.status === 'closed'
+          status === 'closed'
             ? "A closed ticket can't change."
-            : `${/^[aeiou]/.test(ticket.status) ? 'An' : 'A'} ${ticket.status} ticket can't become ${to}.`
+            : `${/^[aeiou]/.test(status) ? 'An' : 'A'} ${status} ticket can't become ${to}.`
         );
       }
       await tx

@@ -2,28 +2,19 @@ import type {
   AddTicketMessageRequest,
   CurrentUser,
   TicketMessage,
-  TicketStatus,
 } from '@helpdesk/contract';
 import {
   ConflictException,
   Inject,
   Injectable,
-  NotFoundException,
   Optional,
 } from '@nestjs/common';
 import { asc, eq } from 'drizzle-orm';
 import { DATABASE, type Database } from '../database/database-token';
-import { teams, ticketMessages, tickets, users } from '../database/schema';
+import { ticketMessages, tickets, users } from '../database/schema';
 import { LiveEvents } from '../live/live-events';
 import { ticketAudience } from '../live/ticket-audience';
-
-/** A ticket's id is a UUID; anything else names no ticket. */
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-/** The same answer for no ticket and for one the user may not work on. */
-const NOT_YOURS = 'No such ticket among yours.';
-
-type Transaction = Parameters<Parameters<Database['transaction']>[0]>[0];
+import { lockWorkable } from './ticket-access';
 
 /** A message's columns, with its author's name. */
 const MESSAGE_COLUMNS = {
@@ -58,7 +49,7 @@ export class TicketMessagesService {
     by: CurrentUser
   ): Promise<TicketMessage[]> {
     return this.database.transaction(async (tx) => {
-      await this.reachable(tx, ticketId, by, 'share');
+      await lockWorkable(tx, ticketId, by, 'share');
       const rows = await tx
         .select(MESSAGE_COLUMNS)
         .from(ticketMessages)
@@ -81,7 +72,7 @@ export class TicketMessagesService {
     by: CurrentUser
   ): Promise<TicketMessage> {
     const message = await this.database.transaction(async (tx) => {
-      const status = await this.reachable(tx, ticketId, by, 'update');
+      const status = await lockWorkable(tx, ticketId, by, 'update');
       if (status === 'closed') {
         throw new ConflictException("A closed ticket can't change.");
       }
@@ -108,43 +99,6 @@ export class TicketMessagesService {
       });
     }
     return message;
-  }
-
-  /**
-   * Locks the ticket for the rest of the transaction (`share` to read,
-   * `update` to write) and answers with its status, if `by` may work on it:
-   * they hold it, or they lead the team of the agent who does. Otherwise
-   * 404.
-   */
-  private async reachable(
-    tx: Transaction,
-    ticketId: string,
-    by: CurrentUser,
-    lock: 'share' | 'update'
-  ): Promise<TicketStatus> {
-    if (!UUID.test(ticketId)) {
-      throw new NotFoundException(NOT_YOURS);
-    }
-    const [ticket] = await tx
-      .select({
-        status: tickets.status,
-        assigneeId: tickets.assigneeId,
-        leadId: teams.supervisorId,
-      })
-      .from(tickets)
-      .leftJoin(users, eq(tickets.assigneeId, users.id))
-      .leftJoin(teams, eq(users.teamId, teams.id))
-      .where(eq(tickets.id, ticketId))
-      .for(lock, { of: tickets });
-    const mayWork =
-      ticket !== undefined &&
-      ticket.assigneeId !== null &&
-      (ticket.assigneeId === by.id ||
-        (by.role === 'supervisor' && ticket.leadId === by.id));
-    if (!mayWork) {
-      throw new NotFoundException(NOT_YOURS);
-    }
-    return ticket.status;
   }
 }
 

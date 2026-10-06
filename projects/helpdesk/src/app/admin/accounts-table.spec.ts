@@ -114,6 +114,21 @@ describe('AccountsTable', () => {
     ]);
   });
 
+  it('gives an admin their own pill (purple, in the styles)', () => {
+    const admin: UserAccount = {
+      id: 'alex.morgan',
+      name: 'Alex Morgan',
+      role: 'admin',
+      team: null,
+      leadsTeam: false,
+      active: true,
+    };
+
+    expect(render([admin]).table.querySelector('span.role')?.className).toBe(
+      'role admin'
+    );
+  });
+
   it("marks the team's lead, and not a supervisor who was replaced", () => {
     const replaced: UserAccount = {
       ...ACCOUNTS[1],

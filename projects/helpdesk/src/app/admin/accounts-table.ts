@@ -99,8 +99,8 @@ function sortValue(account: UserAccount, column: Column): string | number {
     </table>
   `,
   styles: `
-    /* The role as a pill: team leads green, members blue. light-dark()
-       keeps each readable in the light and the dark theme. */
+    /* The role as a pill: team leads green, members blue, admins purple.
+       light-dark() keeps each readable in the light and the dark theme. */
     .role {
       display: inline-block;
       padding: 0.125rem 0.625rem;
@@ -115,6 +115,10 @@ function sortValue(account: UserAccount, column: Column): string | number {
     .agent {
       color: light-dark(#0d47a1, #90caf9);
       background: light-dark(#e3f2fd, #10294a);
+    }
+    .admin {
+      color: light-dark(#4a148c, #ce93d8);
+      background: light-dark(#f3e5f5, #2e1a35);
     }
     .inactive {
       color: var(--mat-sys-on-surface-variant);

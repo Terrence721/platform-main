@@ -10,7 +10,7 @@ import type { CurrentUser, UserAccount } from '@helpdesk/contract';
 import { provideMockStore } from '@ngrx/store/testing';
 import { of } from 'rxjs';
 import { initialSessionState } from '../session/session.feature';
-import AdminPage, { groupByTeam, savedMessage } from './admin.page';
+import AdminPage, { groupByTeam, plural, savedMessage } from './admin.page';
 import { CreateAccountDialog } from './create-account.dialog';
 import { ReportsDialog } from '../reports/reports.dialog';
 import { EditAccountDialog } from './edit-account.dialog';
@@ -85,6 +85,16 @@ describe('groupByTeam', () => {
 
   it('has no groups when nobody is on a team', () => {
     expect(groupByTeam([ACCOUNTS[0]])).toEqual([]);
+  });
+});
+
+describe('plural', () => {
+  it.each([
+    [0, 'admin', '0 admins'],
+    [1, 'admin', '1 admin'],
+    [4, 'account', '4 accounts'],
+  ])('says %i %s as "%s"', (count, noun, said) => {
+    expect(plural(count, noun)).toBe(said);
   });
 });
 
@@ -184,13 +194,13 @@ describe('AdminPage', () => {
     expect(page.querySelector('mat-spinner')).toBeNull();
   });
 
-  it('counts the accounts on teams, and the teams', () => {
+  it('counts the accounts on teams, the teams, and the admins', () => {
     const { text, answer } = render();
 
     answer(ACCOUNTS);
 
     expect(text('.summary')?.replace(/\s+/g, ' ')).toBe(
-      '3 accounts in 2 teams'
+      '3 accounts in 2 teams, and 1 admin'
     );
   });
 
@@ -201,7 +211,7 @@ describe('AdminPage', () => {
 
     expect(sections()).toEqual([
       ['Atlas · 2 accounts', ['chris.taylor', 'sam.rivera']],
-      ['Beacon · 1 accounts · No lead', ['dee.parted']],
+      ['Beacon · 1 account · No lead', ['dee.parted']],
     ]);
   });
 
@@ -217,13 +227,70 @@ describe('AdminPage', () => {
     ).toEqual([undefined, '· No lead']);
   });
 
-  it('shows no admins: they are on no team', () => {
-    const { page, answer } = render();
+  describe('Admins', () => {
+    /** Another admin, so the signed-in one is not the only one. */
+    const priya: UserAccount = {
+      id: 'priya.shah',
+      name: 'Priya Shah',
+      role: 'admin',
+      team: null,
+      leadsTeam: false,
+      active: true,
+    };
+    const admins = (page: HTMLElement) => page.querySelector('section.admins');
 
-    answer(ACCOUNTS);
+    it('lists the admins in their own section, after the teams', () => {
+      const { page, answer } = render();
 
-    expect(page.textContent).not.toContain('alex.morgan');
-    expect(page.textContent).not.toContain('No team');
+      answer([...ACCOUNTS, priya]);
+
+      const section = admins(page);
+      expect(
+        section?.querySelector('h2')?.textContent?.replace(/\s+/g, ' ').trim()
+      ).toBe('Admins · 2 accounts');
+      expect(
+        [...(section?.querySelectorAll('td.mat-column-id') ?? [])].map((cell) =>
+          cell.textContent?.trim()
+        )
+      ).toEqual(['alex.morgan', 'priya.shah']);
+      // After the last team's table.
+      const tables = page.querySelectorAll('section.team');
+      expect(
+        tables[tables.length - 1].compareDocumentPosition(section as Node) &
+          Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy();
+    });
+
+    it("offers Edit on another admin's row, not on your own", async () => {
+      const { page, answer } = render();
+      answer([...ACCOUNTS, priya]);
+
+      const labels = [
+        ...(admins(page)?.querySelectorAll('td.mat-column-edit button') ?? []),
+      ].map((button) => button.getAttribute('aria-label'));
+      expect(labels).toEqual(['Edit Priya Shah']);
+
+      (
+        admins(page)?.querySelector(
+          '[aria-label="Edit Priya Shah"]'
+        ) as HTMLButtonElement
+      ).click();
+      await vi.waitFor(() => expect(dialog.open).toHaveBeenCalledOnce());
+      expect(dialog.open).toHaveBeenCalledWith(
+        EditAccountDialog,
+        expect.objectContaining({
+          data: expect.objectContaining({ account: priya }),
+        })
+      );
+    });
+
+    it('has no Admins section when the list has no admins', () => {
+      const { page, answer } = render();
+
+      answer(ACCOUNTS.filter(({ role }) => role !== 'admin'));
+
+      expect(admins(page)).toBeNull();
+    });
   });
 
   it('says when the accounts could not be loaded, and tries again', () => {

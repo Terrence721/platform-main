@@ -24,6 +24,11 @@ export interface AccountGroup {
   accounts: UserAccount[];
 }
 
+/** A count and its noun, singular for one: "1 account", "4 accounts". */
+export function plural(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? '' : 's'}`;
+}
+
 /**
  * Groups accounts by team, teams by name. Each group keeps the accounts'
  * order (by name). Accounts with no team (admins) are left out: this page
@@ -45,13 +50,14 @@ export function groupByTeam(accounts: UserAccount[]): AccountGroup[] {
 /**
  * An admin's own page: Team accounts, each team's people in a sortable
  * table of its own, team leads (supervisors) in green and members (agents)
- * in blue. Admins belong to no team, so none is shown. Create Account,
- * beside the summary and at the bottom, opens a popup that adds someone
- * straight into their team's table. Each row's Edit (not on the admin's
- * own) opens a popup that changes the account's role and team or
- * deactivates it. A team without a lead says so. Reports, beside Create
- * Account, opens every team's charts. Only admins get here
- * (the route's `canMatchRole('admin')`). The page provides
+ * in blue; then the admins, who belong to no team, in a section of their
+ * own (#975), so an account made admin can still be found and changed
+ * back. Create Account, beside the summary and at the bottom, opens a
+ * popup that adds someone straight into their team's table. Each row's
+ * Edit (not on the admin's own) opens a popup that changes the account's
+ * role and team or deactivates it. A team without a lead says so.
+ * Reports, beside Create Account, opens every team's charts. Only admins
+ * get here (the route's `canMatchRole('admin')`). The page provides
  * `TeamAccountsStore`, which loads the accounts when the page opens.
  */
 @Component({
@@ -85,7 +91,9 @@ export function groupByTeam(accounts: UserAccount[]): AccountGroup[] {
         @default {
           <div class="summary-row">
             <p class="summary">
-              {{ teamAccountCount() }} accounts in {{ groups().length }} teams
+              {{ plural(teamAccountCount(), 'account') }} in
+              {{ plural(groups().length, 'team') }}, and
+              {{ plural(admins().length, 'admin') }}
             </p>
             <button
               matButton="filled"
@@ -111,7 +119,7 @@ export function groupByTeam(accounts: UserAccount[]): AccountGroup[] {
               <h2>
                 {{ group.name }}
                 <span class="count"
-                  >· {{ group.accounts.length }} accounts</span
+                  >· {{ plural(group.accounts.length, 'account') }}</span
                 >
                 @if (!hasLead(group)) {
                   <!-- The space inside: Angular drops the one between. -->
@@ -120,6 +128,22 @@ export function groupByTeam(accounts: UserAccount[]): AccountGroup[] {
               </h2>
               <hd-accounts-table
                 [accounts]="group.accounts"
+                [signedInId]="user()?.id ?? null"
+                (edit)="openEditAccount($event)"
+              />
+            </section>
+          }
+          @if (admins().length > 0) {
+            <!-- Admins are on no team: their own section, after the teams. -->
+            <section class="admins" aria-label="Admins">
+              <h2>
+                Admins
+                <span class="count"
+                  >· {{ plural(admins().length, 'account') }}</span
+                >
+              </h2>
+              <hd-accounts-table
+                [accounts]="admins()"
                 [signedInId]="user()?.id ?? null"
                 (edit)="openEditAccount($event)"
               />
@@ -201,6 +225,10 @@ export default class AdminPage {
   protected readonly groups = computed(() =>
     groupByTeam(this.store.entities())
   );
+  /** The admins, by name: on no team, so in a section of their own. */
+  protected readonly admins = computed(() =>
+    this.store.entities().filter(({ role }) => role === 'admin')
+  );
   /** How many accounts the teams hold between them. */
   protected readonly teamAccountCount = computed(() =>
     this.groups().reduce((total, group) => total + group.accounts.length, 0)
@@ -213,6 +241,7 @@ export default class AdminPage {
       leadName: accounts.find(({ leadsTeam }) => leadsTeam)?.name ?? null,
     }))
   );
+  protected readonly plural = plural;
   private readonly injector = inject(Injector);
 
   /**

@@ -2,7 +2,7 @@
 
 # Architecture Decisions
 
-Last updated: October 2, 2026
+Last updated: October 6, 2026
 
 This document records the architectural decisions made in this repo that deviate from the real ngrx/platform source — not a general description of how NgRx works. For what was added verbatim vs. redesigned, and why, see the [README](../README.md#-why-this-matters). For the phase-by-phase build log, see [todo.md](../todo.md).
 

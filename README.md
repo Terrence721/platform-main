@@ -9,7 +9,7 @@
 [![CodeQL](https://github.com/Terrence721/platform-main/actions/workflows/codeql.yml/badge.svg)](https://github.com/Terrence721/platform-main/actions/workflows/codeql.yml)
 [![security](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Terrence721/Terrence721/main/badges/platform-main.json)](https://github.com/Terrence721/platform-main/security)
 
-Last updated: October 2, 2026
+Last updated: October 6, 2026
 
 This repository is a personal demonstration workspace: real, MIT-licensed NgRx source added module by module, with specific pieces **redesigned by choice** — not copied verbatim — where the goal is to show a defensible, different architectural call instead of reproducing an existing one.
 
@@ -24,7 +24,7 @@ This repo is **not affiliated with, and not published by, the upstream [@ngrx/pl
 - **[`docs/case-study.md`](docs/case-study.md)** — problem, constraints, tradeoffs, and results, for anyone scanning this repo as a portfolio piece rather than reading it as documentation.
 - **[How It Fits Together](docs/how-it-fits-together.md)** — the big picture in one diagram: the 13 modules, the Helpdesk app built on them, how it runs (dev server or Docker), the in-browser demo, and the path from a pull request to the live site
 - **[Module Dependency Graph](https://terrence721.github.io/platform-main/diagrams/module-dependency-graph.html)** — the 13 modules and their 3 real dependency tiers, read from every `peerDependencies` field
-- **[Nx Project Graph](docs/diagrams/nx-project-graph.png)** — Nx's own graph of the 13 modules and the Helpdesk app (`nx graph`), including the implicit edges to `schematics` that order the builds
+- **[Nx Project Graph](docs/diagrams/nx-project-graph.png)** — Nx's own graph of the 13 modules and the 5 Helpdesk projects (`nx graph`), including the implicit edges to `schematics` that order the builds
 - **[Composition Over Inheritance](https://terrence721.github.io/platform-main/diagrams/composition-over-inheritance.html)** — before/after for all 6 classes redesigned off RxJS inheritance, and what each change actually cost
 - **[Code-Review Audit Pipeline](https://terrence721.github.io/platform-main/diagrams/code-review-audit-pipeline.html)** — the per-file table → issue → PR → merge process, plus live per-module status
 - **[Effects Runtime Data Flow](https://terrence721.github.io/platform-main/diagrams/effects-runtime-data-flow.html)** — the startup ordering `EffectsRootModule` depends on, and why getting it wrong would fail silently

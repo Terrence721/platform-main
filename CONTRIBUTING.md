@@ -146,8 +146,12 @@ The module or app affected, matching its folder under `modules/` or `projects/`:
 - **store**
 - **store-devtools**
 - **helpdesk** (`projects/helpdesk`)
+- **helpdesk-api** (`projects/helpdesk-api`)
+- **helpdesk-contract** (`projects/helpdesk-contract`)
+- **helpdesk-e2e** (`projects/helpdesk-e2e`)
+- **helpdesk-server** (`projects/helpdesk-server`)
 
-Changes that span the repo use a scope naming the area instead, such as `deps` for dependency updates, `lint`, `ci` or `todo`.
+Changes that span the repo use a scope naming the area instead, such as `deps` for dependency updates, `scripts` for the repo's tooling scripts, `lint`, `ci` or `todo`.
 
 ### Subject and body
 

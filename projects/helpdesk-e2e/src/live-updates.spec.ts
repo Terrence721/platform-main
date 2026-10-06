@@ -87,10 +87,10 @@ async function openTicket(table: Locator, ticketNumber: string) {
   return popup;
 }
 
-/** Sam's open tickets that can still be resolved (open or pending). */
-async function samsOpenWork(sam: Page) {
+/** An agent's open tickets that can still be resolved (open or pending). */
+async function openWorkOf(agent: Page) {
   const tickets = (await (
-    await sam.request.get('/api/tickets/mine')
+    await agent.request.get('/api/tickets/mine')
   ).json()) as TicketDto[];
   return tickets.filter(({ status }) => ['open', 'pending'].includes(status));
 }
@@ -134,9 +134,9 @@ test.describe('live updates, in two browsers', () => {
   });
 
   test("Chris's note reaches Sam's open popup, with the arrival tone", async () => {
-    const [ticket] = await samsOpenWork(sam);
+    const [ticket] = await openWorkOf(sam);
     const ticketNumber = `#${ticket.ticketNumber}`;
-    const samsPopup = await openTicket(
+    const agentPopup = await openTicket(
       sam.locator('hd-ticket-table.mine'),
       ticketNumber
     );
@@ -153,12 +153,12 @@ test.describe('live updates, in two browsers', () => {
       .getByRole('button', { name: 'Internal note', exact: true })
       .click();
 
-    await expect(samsPopup.getByText(note)).toBeVisible();
+    await expect(agentPopup.getByText(note)).toBeVisible();
     await expect.poll(() => tonesOf(sam)).toContain(ARRIVAL_HZ);
   });
 
   test("Sam's open popup follows the ticket: resolved, then given away", async () => {
-    const [first, second] = await samsOpenWork(sam);
+    const [first, second] = await openWorkOf(sam);
     const mine = sam.locator('hd-ticket-table.mine');
 
     await test.step('Chris resolves it: the popup says Resolved', async () => {

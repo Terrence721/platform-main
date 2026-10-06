@@ -428,7 +428,7 @@
 
 <div class="hero">
   <div class="wrap">
-    <p class="eyebrow">Portfolio Manifest — Updated 2026-10-02</p>
+    <p class="eyebrow">Portfolio Manifest — Updated 2026-10-06</p>
     <h1 class="name">Terrence&nbsp;Daniels</h1>
     <p class="role">Principal Frontend Engineer</p>
     <p class="thesis">
@@ -466,22 +466,23 @@
   <div class="wrap">
     <div class="manifest-row">
       <div class="manifest-cell">
-        <span class="v">1,089</span><span class="k">commits</span>
+        <span class="v">1,253</span><span class="k">commits</span>
       </div>
       <div class="manifest-cell">
-        <span class="v">7,046</span><span class="k">Vitest tests</span>
+        <span class="v">9,188 + 11</span
+        ><span class="k">Vitest + e2e tests</span>
       </div>
       <div class="manifest-cell">
         <span class="v">13/13</span><span class="k">modules ported</span>
       </div>
       <div class="manifest-cell">
-        <span class="v">270/270</span><span class="k">files code-reviewed</span>
+        <span class="v">270/270</span><span class="k">files reviewed</span>
       </div>
       <div class="manifest-cell">
         <span class="v">0</span><span class="k">lint errors</span>
       </div>
       <div class="manifest-cell">
-        <span class="v">10</span><span class="k">CodeQL findings fixed</span>
+        <span class="v">10</span><span class="k">CodeQL fixes</span>
       </div>
       <div class="manifest-cell">
         <span class="v">18×</span><span class="k">real perf fix</span>
@@ -690,11 +691,15 @@
     </p>
     <div class="twocol">
       <div class="card">
-        <h3>7,046 tests, 0 lint errors</h3>
+        <h3>9,188 tests, 0 lint errors</h3>
         <p>
           Across all 13 modules and the Helpdesk app, real assertions against
           real behavior — not snapshot tests, not compilation-only checks
-          passing for the wrong reason.
+          passing for the wrong reason. On top of them, 11 Playwright tests
+          drive the Helpdesk in a real browser against the real API and
+          database: signing in as each role, a day's work for each role, and
+          live updates reaching a second browser. They run on every pull
+          request.
         </p>
       </div>
       <div class="card">
@@ -757,11 +762,14 @@
         href="https://github.com/Terrence721/platform-main/issues/162"
         >#162</a
       >), which found 11 declared types that did not match the code, plus 3
-      runtime bugs. Next is a real app, not a demo: a help desk that uses every
-      module, with a NestJS API, PostgreSQL and sign-in (<a
-        href="https://github.com/Terrence721/platform-main/issues/303"
+      runtime bugs. Then came a real app, not a demo: a help desk that uses
+      every module, with a NestJS API, PostgreSQL, sign-in with roles and live
+      updates (<a href="https://github.com/Terrence721/platform-main/issues/303"
         >#303</a
-      >).
+      >), tested end to end with Playwright on every pull request. You can
+      <a href="https://terrence721.github.io/platform-main/helpdesk/"
+        >try it in your browser</a
+      >, with no server.
     </p>
   </section>
 

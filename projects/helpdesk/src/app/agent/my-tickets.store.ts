@@ -18,6 +18,7 @@ import { setAllEntities, withEntities } from '@ngrx/signals/entities';
 import { rxMethod } from '@ngrx/signals/rxjs-interop';
 import { exhaustMap, filter, forkJoin, map, pipe, switchMap, tap } from 'rxjs';
 import { LiveUpdates } from '../live/live-updates';
+import { Sounds } from '../sound/sounds';
 import { apiErrorMessage } from '../tickets/api-error-message';
 import { assigneeApi, statusApi } from '../tickets/ticket-api-paths';
 
@@ -65,6 +66,8 @@ export const MyTicketsStore = signalStore(
     finished: [] as TicketDto[],
     finishedState: 'loading' as MyTicketsLoadState,
     takeState: 'idle' as TakeState,
+    /** The ticket being taken, until the take ends; `null` otherwise. */
+    takingId: null as string | null,
     /** Why the last take failed; `null` otherwise. */
     takeError: null as string | null,
     /** The ticket last taken, for the page to confirm. */
@@ -75,7 +78,7 @@ export const MyTicketsStore = signalStore(
     /** The ticket whose status last changed, for the page to confirm. */
     lastChanged: null as TicketDto | null,
   }),
-  withMethods((store, http = inject(HttpClient)) => ({
+  withMethods((store, http = inject(HttpClient), sounds = inject(Sounds)) => ({
     /** Loads the tickets again; a newer load replaces one still running. */
     load: rxMethod<void>(
       pipe(
@@ -117,7 +120,11 @@ export const MyTicketsStore = signalStore(
     take: rxMethod<{ ticketId: string; agentId: string }>(
       pipe(
         exhaustMap(({ ticketId, agentId }) => {
-          patchState(store, { takeState: 'saving', takeError: null });
+          patchState(store, {
+            takeState: 'saving',
+            takeError: null,
+            takingId: ticketId,
+          });
           const body: AssignTicketRequest = { assigneeId: agentId };
           return http.put<TicketDto>(assigneeApi(ticketId), body).pipe(
             switchMap((ticket) =>
@@ -133,11 +140,13 @@ export const MyTicketsStore = signalStore(
                   unassigned,
                   takeState: 'taken',
                   lastTaken: ticket,
+                  takingId: null,
                 }),
               error: (error: unknown) =>
                 patchState(store, {
                   takeState: 'failed',
                   takeError: apiErrorMessage(error, TAKE_UNAVAILABLE_MESSAGE),
+                  takingId: null,
                 }),
             })
           );
@@ -213,14 +222,28 @@ export const MyTicketsStore = signalStore(
             finished: http.get<TicketDto[]>(FINISHED_API),
           }).pipe(
             tapResponse({
-              next: ({ mine, unassigned, finished }) =>
+              next: ({ mine, unassigned, finished }) => {
+                // Someone else gave the agent a ticket: one that is theirs
+                // now and wasn't, and isn't one they are taking themselves
+                // (its event can come before their own request finishes).
+                const held = new Set(store.ids());
+                const arrived = mine.some(
+                  ({ id }) =>
+                    !held.has(id) &&
+                    id !== store.takingId() &&
+                    id !== store.lastTaken()?.id
+                );
+                if (arrived && store.loadState() === 'loaded') {
+                  sounds.play('arrival');
+                }
                 patchState(store, setAllEntities(mine), {
                   unassigned,
                   finished,
                   loadState: 'loaded',
                   unassignedState: 'loaded',
                   finishedState: 'loaded',
-                }),
+                });
+              },
               error: () => undefined,
             })
           )

@@ -16,7 +16,10 @@ import {
 } from '@ngrx/signals';
 import { rxMethod } from '@ngrx/signals/rxjs-interop';
 import { exhaustMap, filter, map, pipe, switchMap, tap } from 'rxjs';
+import { Store } from '@ngrx/store';
 import { LiveUpdates } from '../live/live-updates';
+import { sessionFeature } from '../session/session.feature';
+import { Sounds } from '../sound/sounds';
 import { apiErrorMessage } from './api-error-message';
 import { messagesApi } from './ticket-api-paths';
 
@@ -49,7 +52,9 @@ export const TicketConversationStore = signalStore(
     (
       store,
       http = inject(HttpClient),
-      { ticket } = inject<TicketConversationData>(MAT_DIALOG_DATA)
+      { ticket } = inject<TicketConversationData>(MAT_DIALOG_DATA),
+      sounds = inject(Sounds),
+      user = inject(Store).selectSignal(sessionFeature.selectUser)
     ) => ({
       /** Loads the conversation again; a newer load replaces one running. */
       load: rxMethod<void>(
@@ -107,8 +112,20 @@ export const TicketConversationStore = signalStore(
           switchMap(() =>
             http.get<TicketMessage[]>(messagesApi(ticket.id)).pipe(
               tapResponse({
-                next: (messages) =>
-                  patchState(store, { messages, loadState: 'loaded' }),
+                next: (messages) => {
+                  // Someone else wrote on the ticket: a message that wasn't
+                  // shown and isn't this person's own (its event can come
+                  // before their own send finishes).
+                  const shown = new Set(store.messages().map(({ id }) => id));
+                  const me = user()?.id;
+                  const arrived = messages.some(
+                    ({ id, author }) => !shown.has(id) && author.id !== me
+                  );
+                  if (arrived && store.loadState() === 'loaded') {
+                    sounds.play('arrival');
+                  }
+                  patchState(store, { messages, loadState: 'loaded' });
+                },
                 error: () => undefined,
               })
             )

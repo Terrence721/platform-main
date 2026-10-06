@@ -147,6 +147,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      # Node and the dependencies, for the end-to-end tests (#986) once the
+      # stack is up.
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: '.node-version'
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
       # Builds the API and app images and starts them with the database, as
       # `docker compose --profile full up` does on a machine; --wait returns
       # once all three report healthy (the API after migrating and seeding).
@@ -167,6 +181,25 @@ jobs:
         run: |
           curl --fail --silent --output /dev/null http://localhost:8088/
           curl --fail --silent http://localhost:8088/api/health
+
+      # The end-to-end tests (#986) in Chromium, against this stack as it is
+      # (E2E_BASE_URL: their setup leaves it to this job). Only Chromium,
+      # with the system libraries it needs.
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Run the end-to-end tests
+        run: yarn nx e2e helpdesk-e2e
+        env:
+          E2E_BASE_URL: http://localhost:8088
+
+      - name: Keep the end-to-end report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: helpdesk-e2e-report
+          path: dist/.playwright/projects/helpdesk-e2e/
+          retention-days: 14
 
       - name: Show the API's and the app's logs
         if: always()

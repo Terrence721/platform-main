@@ -15,6 +15,7 @@ import {
 import { mapResponse } from '@ngrx/operators';
 import { catchError, exhaustMap, map, of, tap } from 'rxjs';
 import { SignInDialogActions } from '../sign-in/sign-in.actions';
+import { Sounds } from '../sound/sounds';
 import { SessionApiActions, ToolbarActions } from './session.actions';
 import { HOME_PAGES } from './session.feature';
 
@@ -77,6 +78,25 @@ export const signIn = createEffect(
     );
   },
   { functional: true }
+);
+
+/**
+ * A chime when signing in works, a low tone when it is refused (#941); the
+ * popup says what happened too. Signing in is the click browsers want
+ * before any sound, so this is the first one a visit can play.
+ */
+export const signInSounds = createEffect(
+  (actions$ = inject(Actions), sounds = inject(Sounds)) => {
+    return actions$.pipe(
+      ofType(SessionApiActions.signedIn, SessionApiActions.signInFailed),
+      tap(({ type }) =>
+        sounds.play(
+          type === SessionApiActions.signedIn.type ? 'success' : 'error'
+        )
+      )
+    );
+  },
+  { functional: true, dispatch: false }
 );
 
 /** After signing in, goes to the user's own page, by role. */

@@ -15,6 +15,7 @@ import { of } from 'rxjs';
 import { ReportsDialog } from '../reports/reports.dialog';
 import { INITIAL_REPORT_PICK } from '../reports/reports.store';
 import { initialSessionState } from '../session/session.feature';
+import { Sounds } from '../sound/sounds';
 import { TicketConversationDialog } from '../tickets/ticket-conversation.dialog';
 import { AssignTicketDialog } from './assign-ticket.dialog';
 import { MemberHistoryDialog } from './member-history.dialog';
@@ -68,6 +69,8 @@ describe('SupervisorPage', () => {
     open: vi.fn(() => ({ afterClosed: () => of(closedWith) })),
   };
   const snackBar = { open: vi.fn() };
+  /** Stands in for the sounds, to hear which play. */
+  const sounds = { play: vi.fn() };
 
   afterEach(() => TestBed.inject(HttpTestingController).verify());
 
@@ -75,6 +78,7 @@ describe('SupervisorPage', () => {
     closedWith = undefined;
     dialog.open.mockClear();
     snackBar.open.mockClear();
+    sounds.play.mockClear();
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
@@ -86,6 +90,7 @@ describe('SupervisorPage', () => {
         }),
         { provide: MatDialog, useValue: dialog },
         { provide: MatSnackBar, useValue: snackBar },
+        { provide: Sounds, useValue: sounds },
       ],
     });
     const fixture = TestBed.createComponent(SupervisorPage);
@@ -500,6 +505,7 @@ describe('SupervisorPage', () => {
           expect.objectContaining({ duration: 5000 })
         )
       );
+      expect(sounds.play).toHaveBeenCalledExactlyOnceWith('success');
     });
 
     it('says why an assignment was refused', async () => {
@@ -527,6 +533,7 @@ describe('SupervisorPage', () => {
           expect.objectContaining({ duration: 5000 })
         )
       );
+      expect(sounds.play).toHaveBeenCalledExactlyOnceWith('error');
     });
 
     it('assigns nothing when the popup is cancelled', async () => {
@@ -618,6 +625,8 @@ describe('SupervisorPage', () => {
           expect.objectContaining({ duration: 5000 })
         )
       );
+      // Finishing the work: a chime.
+      expect(sounds.play).toHaveBeenCalledExactlyOnceWith('success');
     });
   });
 

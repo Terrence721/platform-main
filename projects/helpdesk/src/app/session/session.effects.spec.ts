@@ -18,8 +18,10 @@ import {
   restoreSession,
   SIGN_IN_UNAVAILABLE_MESSAGE,
   signIn,
+  signInSounds,
   signOut,
 } from './session.effects';
+import { Sounds } from '../sound/sounds';
 
 const alex: CurrentUser = {
   id: 'alex.morgan',
@@ -33,16 +35,20 @@ describe('session effects', () => {
   let actions$: Subject<Action>;
   let http: HttpTestingController;
   const navigateByUrl = vi.fn(async () => true);
+  /** A stand-in for the sounds, to hear which play. */
+  const sounds = { play: vi.fn() };
 
   beforeEach(() => {
     actions$ = new Subject<Action>();
     navigateByUrl.mockClear();
+    sounds.play.mockClear();
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
         provideMockActions(() => actions$),
         { provide: Router, useValue: { navigateByUrl } },
+        { provide: Sounds, useValue: sounds },
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -158,6 +164,34 @@ describe('session effects', () => {
       actions$.next(SignInDialogActions.submitted({ request }));
 
       http.expectOne('/api/auth/sign-in').flush({ user: alex });
+    });
+  });
+
+  describe('signInSounds', () => {
+    it('chimes when signing in works', () => {
+      run(signInSounds);
+
+      actions$.next(SessionApiActions.signedIn({ user: alex }));
+
+      expect(sounds.play).toHaveBeenCalledExactlyOnceWith('success');
+    });
+
+    it('plays the low tone when signing in is refused', () => {
+      run(signInSounds);
+
+      actions$.next(
+        SessionApiActions.signInFailed({ message: SIGN_IN_FAILED_MESSAGE })
+      );
+
+      expect(sounds.play).toHaveBeenCalledExactlyOnceWith('error');
+    });
+
+    it('is quiet for the session found on start-up', () => {
+      run(signInSounds);
+
+      actions$.next(SessionApiActions.sessionRestored({ user: alex }));
+
+      expect(sounds.play).not.toHaveBeenCalled();
     });
   });
 

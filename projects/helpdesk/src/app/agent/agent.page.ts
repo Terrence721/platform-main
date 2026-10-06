@@ -16,6 +16,7 @@ import {
 import { Store } from '@ngrx/store';
 import { STATUS_GUIDE } from '../landing/ticket-workflow.store';
 import { sessionFeature } from '../session/session.feature';
+import { isFinished, Sounds } from '../sound/sounds';
 import { openTicket } from '../tickets/open-ticket';
 import { TicketTable } from '../tickets/ticket-table';
 import { MyTicketsStore } from './my-tickets.store';
@@ -169,6 +170,8 @@ export default class AgentPage {
     sessionFeature.selectUser
   );
   private readonly injector = inject(Injector);
+  /** A chime when taking or finishing a ticket works; a low tone if not. */
+  private readonly sounds = inject(Sounds);
 
   /** The signed-in agent takes this ticket for themselves. */
   protected take(ticket: TicketDto): void {
@@ -211,10 +214,12 @@ export default class AgentPage {
       untracked(() => {
         const ticket = this.store.lastTaken();
         if (state === 'taken' && ticket !== null) {
+          this.sounds.play('success');
           void this.report(
             `${formatTicketNumber(ticket.ticketNumber)} is yours`
           );
         } else if (state === 'failed') {
+          this.sounds.play('error');
           void this.report(this.store.takeError() ?? '');
         }
       });
@@ -224,10 +229,14 @@ export default class AgentPage {
       untracked(() => {
         const ticket = this.store.lastChanged();
         if (state === 'changed' && ticket !== null) {
+          if (isFinished(ticket.status)) {
+            this.sounds.play('success');
+          }
           void this.report(
             `${formatTicketNumber(ticket.ticketNumber)} is now ${STATUS_GUIDE[ticket.status].label}`
           );
         } else if (state === 'failed') {
+          this.sounds.play('error');
           void this.report(this.store.statusError() ?? '');
         }
       });

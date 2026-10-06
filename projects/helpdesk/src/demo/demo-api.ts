@@ -169,6 +169,13 @@ export class DemoApi {
         access: agent,
         run: ({ user }) => this.tickets.recentlyFinished(user.id, this.now()),
       },
+      // After mine and unassigned, which its pattern matches too.
+      {
+        method: 'GET',
+        path: new RegExp(`^/api/tickets/${ID}$`),
+        access: agentOrSupervisor,
+        run: ({ user, params: [ticketId] }) => this.tickets.one(ticketId, user),
+      },
       {
         method: 'PUT',
         path: new RegExp(`^/api/tickets/${ID}/assignee$`),

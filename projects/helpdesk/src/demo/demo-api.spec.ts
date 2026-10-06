@@ -182,6 +182,22 @@ describe('DemoApi', { timeout: 60_000 }, () => {
       expect(conversation.at(-1)).toEqual(added.body);
     });
 
+    it('reads one of their tickets, and answers 404 for one that is not theirs', async () => {
+      const [ticket] = (await call('GET', '/api/tickets/mine'))
+        .body as TicketDto[];
+      const [unassigned] = (await call('GET', '/api/tickets/unassigned'))
+        .body as TicketDto[];
+
+      expect(await call('GET', `/api/tickets/${ticket.id}`)).toEqual({
+        status: 200,
+        body: ticket,
+      });
+      expect(await call('GET', `/api/tickets/${unassigned.id}`)).toMatchObject({
+        status: 404,
+        body: { message: 'No such ticket among yours.' },
+      });
+    });
+
     it("refuses the admins' and supervisors' routes (403)", async () => {
       expect(await call('GET', '/api/users')).toEqual({
         status: 403,

@@ -87,6 +87,21 @@ export class TicketsController {
   }
 
   /**
+   * One ticket, as it is now: the ticket popup's details, fetched again
+   * when it changes (#982). 404 for a ticket that is not the agent's own
+   * (or, for a supervisor, their team's). Declared after `mine` and
+   * `unassigned`, which `:ticketId` would match too.
+   */
+  @Get(':ticketId')
+  @OnlyFor('agent', 'supervisor')
+  one(
+    @SignedInUser() user: CurrentUser,
+    @Param('ticketId') ticketId: string
+  ): Promise<TicketDto> {
+    return this.tickets.one(ticketId, user);
+  }
+
+  /**
    * Moves a ticket to another status, as the workflow allows: 200 with the
    * ticket; 400 for a body without a status; 404 for a ticket that is not
    * the agent's own (or, for a supervisor, their team's); 409 for a move

@@ -1,4 +1,3 @@
-import { PageRequest } from './page';
 import { TicketPriority, TicketStatus } from './ticket';
 
 /** Limits the app's forms and the API's validation both enforce. */
@@ -112,17 +111,6 @@ export type TicketSort = TicketSortField | `-${TicketSortField}`;
 
 /** Most recently changed first. */
 export const DEFAULT_TICKET_SORT: TicketSort = '-updatedAt';
-
-/** Filters, sorting and paging for a ticket list; every part is optional. */
-export interface TicketListQuery extends PageRequest {
-  status?: TicketStatus;
-  priority?: TicketPriority;
-  assigneeId?: string;
-  queueId?: string;
-  /** Matched against the subject, description and ticket number. */
-  search?: string;
-  sort?: TicketSort;
-}
 
 /** Whether a value, such as a query string parameter, is a ticket sort. */
 export function isTicketSort(value: unknown): value is TicketSort {

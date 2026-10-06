@@ -55,8 +55,9 @@ export interface CreateAccountRequest {
  * its team, and whether it can sign in. The same team rules as Create
  * Account apply. Someone who stops working a team's tickets (deactivated,
  * moved to another team, or made an admin) hands their open tickets back
- * to that team's Unassigned; a lead who stops leading leaves the team with
- * no lead; someone made a supervisor of a team becomes its lead.
+ * to Unassigned, the one list every team picks work from; a lead who stops
+ * leading leaves the team with no lead; an active account made a supervisor
+ * of a team, or moved to another team as a supervisor, becomes its lead.
  */
 export interface UpdateAccountRequest {
   role: Role;
@@ -68,7 +69,7 @@ export interface UpdateAccountRequest {
 /** The account after a change, and how many open tickets it handed back. */
 export interface UpdateAccountResponse {
   account: UserAccount;
-  /** Open tickets that went back to the team's Unassigned list. */
+  /** Open tickets that went back to Unassigned, the list every team sees. */
   releasedTickets: number;
 }
 

@@ -177,13 +177,15 @@ describe('EditAccountDialog', () => {
     });
   });
 
-  it('warns that a supervisor on Atlas would replace its lead', async () => {
+  it('warns that an agent made a supervisor on Atlas would replace its lead, and hand back their tickets', async () => {
     const form = await render(sam);
 
     await form.choose('Role', 'supervisor');
 
+    // Supervisors don't work tickets, so Sam's go back to Unassigned (#1009).
     expect(form.warnings()).toEqual([
       "Chris Taylor leads Team Atlas now. They'll stay on the team, but Sam Rivera will lead it.",
+      'Any open tickets Sam Rivera holds will go back to Unassigned.',
     ]);
   });
 

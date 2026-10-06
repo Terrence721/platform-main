@@ -186,14 +186,18 @@ export class EditAccountDialog {
       this.teamId() !== (this.account.team?.id ?? null) ||
       this.value().active !== this.account.active
   );
-  /** Whether the account would stop working tickets on its team. */
+  /**
+   * Whether an agent would stop working tickets on their team: no longer
+   * active, no longer an agent (supervisors don't work tickets, #1009), or
+   * on another team. The server then hands their open tickets back.
+   */
   protected readonly leavesTeamWork = computed(
     () =>
       this.account.team !== null &&
-      this.account.role !== 'admin' &&
+      this.account.role === 'agent' &&
       this.account.active &&
       (!this.value().active ||
-        this.value().role === 'admin' ||
+        this.value().role !== 'agent' ||
         this.teamId() !== this.account.team.id)
   );
   /** Whether the account would lead its team after saving. */

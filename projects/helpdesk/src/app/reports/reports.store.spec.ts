@@ -4,9 +4,15 @@ import {
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import type { ReportsResponse, TeamReport } from '@helpdesk/contract';
+import type {
+  ReportChoices,
+  ReportsResponse,
+  TeamReport,
+} from '@helpdesk/contract';
 import {
+  INITIAL_REPORT_PICK,
   openTickets,
+  type ReportPick,
   REPORTS_API,
   ReportsStore,
   slaMetPercent,
@@ -168,6 +174,121 @@ describe('ReportsStore', () => {
       slaMetPercent: null,
     });
     request().flush(REPORT);
+  });
+});
+
+/** What an admin may pick. */
+const CHOICES: ReportChoices = {
+  teams: [{ teamId: 'atlas', name: 'Team Atlas', leadName: 'Chris Taylor' }],
+  agents: [{ agentId: 'sam.rivera', name: 'Sam Rivera', teamId: 'atlas' }],
+};
+
+/** Sam's own report: no team rows, his one row. */
+const SAM_REPORT: ReportsResponse = {
+  ...REPORT,
+  scope: { agentId: 'sam.rivera' },
+  openByStatus: { new: 1, open: 1, pending: 0 },
+  teams: [],
+  agents: [
+    {
+      ...row('Sam Rivera', {
+        openByPriority: { low: 1, normal: 0, high: 0, urgent: 1 },
+        overdue: 1,
+        finished: 3,
+        finishedWithDueTime: 3,
+        finishedOnTime: 2,
+      }),
+      agentId: 'sam.rivera',
+      teamId: 'atlas',
+    },
+  ],
+  choices: CHOICES,
+};
+
+describe('ReportsStore: who the report is for', () => {
+  let http: HttpTestingController;
+
+  /** A store, opening on `initial` when given one. */
+  function create(initial?: ReportPick) {
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        ReportsStore,
+        ...(initial
+          ? [{ provide: INITIAL_REPORT_PICK, useValue: initial }]
+          : []),
+      ],
+    });
+    http = TestBed.inject(HttpTestingController);
+    return TestBed.inject(ReportsStore);
+  }
+
+  afterEach(() => http.verify());
+
+  /** The one request for the figures, with its team or agent. */
+  const request = () =>
+    http.expectOne(
+      ({ method, url }) => method === 'GET' && url === REPORTS_API
+    );
+  const picked = (call: ReturnType<typeof request>) => ({
+    team: call.request.params.get('team'),
+    agent: call.request.params.get('agent'),
+  });
+
+  it("asks for the caller's own default when nothing is picked", () => {
+    create();
+
+    expect(picked(request())).toEqual({ team: null, agent: null });
+  });
+
+  it('opens on the pick it is given', () => {
+    const store = create({ kind: 'agent', agentId: 'sam.rivera' });
+
+    const call = request();
+    expect(picked(call)).toEqual({ team: null, agent: 'sam.rivera' });
+    call.flush(SAM_REPORT);
+    expect(store.report()).toEqual(SAM_REPORT);
+  });
+
+  it('switches to a team: the figures go, the choices stay', () => {
+    const store = create();
+    request().flush({ ...REPORT, scope: 'all', choices: CHOICES });
+
+    store.select({ kind: 'team', teamId: 'atlas' });
+
+    expect(store.loadState()).toBe('loading');
+    expect(store.report()).toBeNull();
+    expect(store.choices()).toEqual(CHOICES);
+    const call = request();
+    expect(picked(call)).toEqual({ team: 'atlas', agent: null });
+    call.flush(REPORT);
+    expect(store.report()).toEqual(REPORT);
+  });
+
+  it("refreshes the picked report, not the caller's default", () => {
+    const store = create({ kind: 'agent', agentId: 'sam.rivera' });
+    request().flush(SAM_REPORT);
+
+    store.load();
+
+    expect(store.refreshing()).toBe(true);
+    const call = request();
+    expect(picked(call).agent).toBe('sam.rivera');
+    call.flush(SAM_REPORT);
+  });
+
+  it("sums an agent's report from their own row", () => {
+    const store = create({ kind: 'agent', agentId: 'sam.rivera' });
+
+    request().flush(SAM_REPORT);
+
+    expect(store.summary()).toEqual({
+      open: 2,
+      overdue: 1,
+      finished: 3,
+      slaMetPercent: 67,
+    });
   });
 });
 

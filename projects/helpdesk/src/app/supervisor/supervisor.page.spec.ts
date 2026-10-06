@@ -5,7 +5,7 @@ import {
 } from '@angular/common/http/testing';
 import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { TestBed } from '@angular/core/testing';
-import { MatDialog } from '@angular/material/dialog';
+import { MatDialog, type MatDialogConfig } from '@angular/material/dialog';
 import { MatFormFieldHarness } from '@angular/material/form-field/testing';
 import { MatSelectHarness } from '@angular/material/select/testing';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -13,6 +13,7 @@ import type { CurrentUser, TeamOverview, TicketDto } from '@helpdesk/contract';
 import { provideMockStore } from '@ngrx/store/testing';
 import { of } from 'rxjs';
 import { ReportsDialog } from '../reports/reports.dialog';
+import { INITIAL_REPORT_PICK } from '../reports/reports.store';
 import { initialSessionState } from '../session/session.feature';
 import { TicketConversationDialog } from '../tickets/ticket-conversation.dialog';
 import { AssignTicketDialog } from './assign-ticket.dialog';
@@ -196,6 +197,27 @@ describe('SupervisorPage', () => {
         ReportsDialog,
         expect.objectContaining({ width: '72rem' })
       );
+      // Nobody picked in Team member: the team's report.
+      expect(
+        (dialog.open.mock.calls[0] as unknown[])[1] as MatDialogConfig
+      ).not.toHaveProperty('injector');
+    });
+
+    it('opens on the agent picked in Team member', async () => {
+      const { page, answer, chooseMember, http } = render();
+      answer(atlas);
+      await chooseMember('Benny Lind (5 open · 3 overdue)');
+      http.expectOne(memberTicketsApi('benny.lind')).flush([]);
+
+      reportsButton(page)?.click();
+
+      await vi.waitFor(() => expect(dialog.open).toHaveBeenCalledOnce());
+      const config = (dialog.open.mock.calls[0] as unknown[])[1] as
+        MatDialogConfig | undefined;
+      expect(config?.injector?.get(INITIAL_REPORT_PICK)).toEqual({
+        kind: 'agent',
+        agentId: 'benny.lind',
+      });
     });
 
     it('offers no Reports to a supervisor who leads no team', () => {

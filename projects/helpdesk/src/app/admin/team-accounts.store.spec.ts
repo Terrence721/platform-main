@@ -17,19 +17,26 @@ import {
   UPDATE_UNAVAILABLE_MESSAGE,
 } from './team-accounts.store';
 
+import { Subject } from 'rxjs';
+import { type LiveUpdate, LiveUpdates } from '../live/live-updates';
+
 /** An account with just what these tests look at. */
 const account = (id: string) =>
   ({ id, name: id, role: 'agent', team: null, active: true }) as UserAccount;
 
 describe('TeamAccountsStore', () => {
   let http: HttpTestingController;
+  /** The live updates the store hears, sent by the test. */
+  let live: Subject<LiveUpdate>;
 
   beforeEach(() => {
+    live = new Subject<LiveUpdate>();
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
         TeamAccountsStore,
+        { provide: LiveUpdates, useValue: { updates: live } },
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -296,6 +303,58 @@ describe('TeamAccountsStore', () => {
       expect(store.updateState()).toBe('idle');
       expect(store.updateError()).toBeNull();
       expect(store.updated()).toBeNull();
+    });
+  });
+
+  describe('live updates', () => {
+    const accountsChanged: LiveUpdate = {
+      kind: 'event',
+      event: { type: 'accounts' },
+    };
+
+    it('fetches the accounts again, quietly, when another admin changes one', () => {
+      const store = loadedStore('alex.morgan', 'sam.rivera');
+
+      live.next(accountsChanged);
+
+      expect(store.loadState()).toBe('loaded');
+      http
+        .expectOne({ method: 'GET', url: TEAM_ACCOUNTS_API })
+        .flush([
+          account('alex.morgan'),
+          account('nia.new'),
+          account('sam.rivera'),
+        ]);
+      expect(ids(store)).toEqual(['alex.morgan', 'nia.new', 'sam.rivera']);
+    });
+
+    it('fetches them again when the stream comes back after a break', () => {
+      loadedStore('alex.morgan');
+
+      live.next({ kind: 'reconnected' });
+
+      http.expectOne(TEAM_ACCOUNTS_API).flush([account('alex.morgan')]);
+    });
+
+    it('leaves them alone for a ticket or a reply', () => {
+      loadedStore('alex.morgan');
+
+      live.next({ kind: 'event', event: { type: 'ticket', ticketId: 't-1' } });
+      live.next({ kind: 'event', event: { type: 'message', ticketId: 't-1' } });
+
+      http.expectNone(TEAM_ACCOUNTS_API);
+    });
+
+    it('keeps the tables as they are when fetching them again fails', () => {
+      const store = loadedStore('alex.morgan', 'sam.rivera');
+
+      live.next(accountsChanged);
+      http
+        .expectOne(TEAM_ACCOUNTS_API)
+        .flush(null, { status: 500, statusText: 'Server Error' });
+
+      expect(store.loadState()).toBe('loaded');
+      expect(ids(store)).toEqual(['alex.morgan', 'sam.rivera']);
     });
   });
 });

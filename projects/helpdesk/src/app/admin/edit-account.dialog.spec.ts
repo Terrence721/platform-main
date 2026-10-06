@@ -17,6 +17,8 @@ import {
 } from '@helpdesk/contract';
 import type { TeamChoice } from './create-account.dialog';
 import { EditAccountDialog } from './edit-account.dialog';
+import { NEVER } from 'rxjs';
+import { LiveUpdates } from '../live/live-updates';
 import { TEAM_ACCOUNTS_API, TeamAccountsStore } from './team-accounts.store';
 
 const TEAMS: TeamChoice[] = [
@@ -71,6 +73,8 @@ describe('EditAccountDialog', () => {
         TeamAccountsStore,
         { provide: MAT_DIALOG_DATA, useValue: { account, teams: TEAMS } },
         { provide: MatDialogRef, useValue: dialogRef },
+        // Live updates are the store's spec's concern: none here.
+        { provide: LiveUpdates, useValue: { updates: NEVER } },
       ],
     });
     const http = TestBed.inject(HttpTestingController);

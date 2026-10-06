@@ -7,6 +7,7 @@
 
 [![Quality](https://github.com/Terrence721/platform-main/actions/workflows/quality.yml/badge.svg)](https://github.com/Terrence721/platform-main/actions/workflows/quality.yml)
 [![CodeQL](https://github.com/Terrence721/platform-main/actions/workflows/codeql.yml/badge.svg)](https://github.com/Terrence721/platform-main/actions/workflows/codeql.yml)
+[![security](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Terrence721/Terrence721/main/badges/platform-main.json)](https://github.com/Terrence721/platform-main/security)
 
 Last updated: October 2, 2026
 

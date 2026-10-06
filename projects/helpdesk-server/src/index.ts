@@ -11,6 +11,7 @@ export * from './lib/database/schema';
 export * from './lib/database/seed/generate';
 export * from './lib/database/seed/seed';
 export * from './lib/database/seed/story';
+export * from './lib/live/live-events';
 export * from './lib/reports/reports.service';
 export * from './lib/requests/requests';
 export * from './lib/teams/teams.service';

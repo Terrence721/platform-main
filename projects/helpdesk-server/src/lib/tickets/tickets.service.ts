@@ -11,10 +11,13 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { and, asc, desc, eq, gte, inArray, isNull, or, sql } from 'drizzle-orm';
 import { DATABASE, type Database } from '../database/database-token';
 import { teams, tickets, users } from '../database/schema';
+import { LiveEvents } from '../live/live-events';
+import { ticketAudience } from '../live/ticket-audience';
 import { MOST_URGENT_FIRST, selectTickets, toTicketDto } from './ticket-dto';
 
 /** A ticket's id is a UUID; anything else names no ticket. */
@@ -30,10 +33,31 @@ export const OPEN_WORK_STATUSES: readonly TicketStatus[] = [
   'pending',
 ];
 
-/** Reads tickets for the people who work them. */
+/**
+ * Reads tickets for the people who work them, and changes them: taking,
+ * assigning, moving through the workflow. Each change is told to the open
+ * pages it concerns (`live`, #950; none in the in-browser demo).
+ */
 @Injectable()
 export class TicketsService {
-  constructor(@Inject(DATABASE) private readonly database: Database) {}
+  constructor(
+    @Inject(DATABASE) private readonly database: Database,
+    // Named, as an optional parameter's recorded type is only `Object`.
+    @Optional() @Inject(LiveEvents) private readonly live?: LiveEvents
+  ) {}
+
+  /** Tells the pages a change concerns that this ticket changed. */
+  private async changed(
+    ticketId: string,
+    before: { formerHolderId?: string | null; wasUnassigned?: boolean } = {}
+  ): Promise<void> {
+    if (this.live) {
+      this.live.publish({
+        event: { type: 'ticket', ticketId },
+        audience: await ticketAudience(this.database, ticketId, before),
+      });
+    }
+  }
 
   /** The open work assigned to a user, most urgent first. */
   async assignedTo(userId: string): Promise<TicketDto[]> {
@@ -127,7 +151,7 @@ export class TicketsService {
     if (!UUID.test(ticketId)) {
       throw new NotFoundException('No such ticket.');
     }
-    await this.database.transaction(async (tx) => {
+    const formerHolderId = await this.database.transaction(async (tx) => {
       /** The user, if an active agent on this supervisor's team. */
       const agentOnTeam = async (userId: string) =>
         (
@@ -175,6 +199,11 @@ export class TicketsService {
           status: ticket.status === 'new' ? 'open' : ticket.status,
         })
         .where(eq(tickets.id, ticketId));
+      return ticket.assigneeId;
+    });
+    await this.changed(ticketId, {
+      formerHolderId,
+      wasUnassigned: formerHolderId === null,
     });
 
     const [row] = await selectTickets(this.database).where(
@@ -207,7 +236,7 @@ export class TicketsService {
     if (!UUID.test(ticketId)) {
       throw new NotFoundException('No such ticket.');
     }
-    await this.database.transaction(async (tx) => {
+    const taken = await this.database.transaction(async (tx) => {
       const [ticket] = await tx
         .select({ status: tickets.status, assigneeId: tickets.assigneeId })
         .from(tickets)
@@ -222,7 +251,7 @@ export class TicketsService {
         );
       }
       if (ticket.assigneeId === agentId) {
-        return;
+        return false;
       }
       if (ticket.assigneeId !== null) {
         throw new ConflictException('Someone else has taken this ticket.');
@@ -234,7 +263,12 @@ export class TicketsService {
           status: ticket.status === 'new' ? 'open' : ticket.status,
         })
         .where(eq(tickets.id, ticketId));
+      return true;
     });
+    if (taken) {
+      // It was unassigned work: everyone's Unassigned list changes.
+      await this.changed(ticketId, { wasUnassigned: true });
+    }
 
     const [row] = await selectTickets(this.database).where(
       eq(tickets.id, ticketId)
@@ -290,6 +324,7 @@ export class TicketsService {
         .set({ status: to })
         .where(eq(tickets.id, ticketId));
     });
+    await this.changed(ticketId);
 
     const [row] = await selectTickets(this.database).where(
       eq(tickets.id, ticketId)

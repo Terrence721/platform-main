@@ -1,8 +1,10 @@
 /**
- * The Helpdesk contract: the types and values the Angular app and the NestJS
- * API share, imported as `@helpdesk/contract`. Each part (ticket statuses and
- * priorities, roles, signing in, then the API's request and response types)
- * is exported from here as it is added.
+ * The Helpdesk contract: the types, constants and small helpers that the
+ * Angular app, the NestJS API and the server library share, imported as
+ * `@helpdesk/contract`. It covers tickets (statuses, priorities, the workflow
+ * and the API's requests and responses) and their replies and notes, roles,
+ * accounts and signing in, teams, reports, live events, and paging. Every
+ * file in `lib/` is exported from here.
  */
 export * from './lib/account';
 export * from './lib/auth';

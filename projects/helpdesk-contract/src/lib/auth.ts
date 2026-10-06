@@ -6,6 +6,10 @@ import type { Role } from './roles';
  * Admins choose it when they set up an account.
  */
 export const USER_ID_PATTERN = /^[a-z][a-z0-9.-]{2,31}$/;
+/**
+ * The longest user ID `USER_ID_PATTERN` allows; change the two together.
+ * It also sets the width of every database column that holds a user ID.
+ */
 export const USER_ID_MAX_LENGTH = 32;
 
 /**

@@ -273,7 +273,7 @@ export default defineConfig(({ mode }) => {
             'default',
             ['html', { outputDir: './test-results' }],
             // Plain JSON alongside the interactive report - scripts/generate-
-            // test-summary.ts reads this to render the pie-chart summary page,
+            // test-summary.ts reads this to render the summary page's bars,
             // rather than decoding the html reporter's flatted-serialized data.
             ['json', { outputFile: './test-results/results.json' }],
           ],

@@ -53,9 +53,9 @@ export interface CreateAccountRequest {
 /**
  * Changes an account (`PUT /api/users/:userId`, admins only): its role,
  * its team, and whether it can sign in. The same team rules as Create
- * Account apply. Someone who stops working a team's tickets (deactivated,
- * moved to another team, or made an admin) hands their open tickets back
- * to Unassigned, the one list every team picks work from; a lead who stops
+ * Account apply. An agent who stops working a team's tickets (deactivated,
+ * moved to another team, or made a supervisor or an admin) hands their open
+ * tickets back to Unassigned, the one list every team picks work from; a lead who stops
  * leading leaves the team with no lead; an active account made a supervisor
  * of a team, or moved to another team as a supervisor, becomes its lead.
  */

@@ -37,7 +37,7 @@ Noted for later files rather than changed here: 7 exported names are used nowher
 
 ### [`helpdesk-contract/src/lib/account.ts`](https://github.com/Terrence721/platform-main/blob/a57da936448e63ae2c401ab5de2efbbf0fa5c80a/projects/helpdesk-contract/src/lib/account.ts)
 
-**Medium · Correctness** — 1 bug found (fixed separately in [#1009](https://github.com/Terrence721/platform-main/issues/1009)), 2 doc comments fixed ([issue #1010](https://github.com/Terrence721/platform-main/issues/1010))
+**Medium · Correctness** — 1 bug found and fixed separately ([#1009](https://github.com/Terrence721/platform-main/issues/1009), [PR #1012](https://github.com/Terrence721/platform-main/pull/1012)), 2 doc comments fixed ([issue #1010](https://github.com/Terrence721/platform-main/issues/1010))
 
 The account types and constants. Every doc comment here promises server behavior, so each promise was traced to the code behind it rather than read on trust: the password hash never leaves the database (`selectAccounts` reads six columns only); a new account's user ID, name, password and team are checked as described, the name by both the Create popup and the API; your own account and the last active admin are protected.
 

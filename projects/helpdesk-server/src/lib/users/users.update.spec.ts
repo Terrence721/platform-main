@@ -186,6 +186,12 @@ describe('UsersService.update', { timeout: 60_000 }, () => {
         { role: 'agent', teamId: 'beacon', active: true },
       ],
       ['made an admin', { role: 'admin', teamId: null, active: true }],
+      // Supervisors don't work tickets, and reassigning takes only an
+      // agent's, so kept tickets would be stuck (#1009).
+      [
+        'made a supervisor of the same team',
+        { role: 'supervisor', teamId: 'atlas', active: true },
+      ],
     ] as const)(
       'go back to Unassigned when the holder is %s; finished ones stay',
       async (_, request) => {
@@ -202,11 +208,11 @@ describe('UsersService.update', { timeout: 60_000 }, () => {
       }
     );
 
-    it('stay with someone still working the same team', async () => {
+    it('stay with an agent still working the same team', async () => {
       const before = await holders();
 
       const { releasedTickets } = await update('sam.rivera', {
-        role: 'supervisor',
+        role: 'agent',
         teamId: 'atlas',
         active: true,
       });

@@ -123,10 +123,11 @@ export class UsersService {
    * - 404 for no such account; 409 for the admin's own account, or for a
    *   change that would leave no active admin; the team rules are Create
    *   Account's (400).
-   * - Someone who stops working a team's tickets (deactivated, moved to
-   *   another team, or made an admin) hands their open tickets (new, open,
-   *   pending) back to that team's Unassigned; finished tickets keep their
-   *   assignee, for the history.
+   * - Someone who is no longer an active agent on the same team
+   *   (deactivated, moved to another team, made a supervisor or an admin)
+   *   hands their open tickets (new, open, pending) back to Unassigned, the
+   *   list every team works from; finished tickets keep their assignee, for
+   *   the history.
    * - A lead who is deactivated, stops being a supervisor or moves team
    *   leaves that team with no lead; an active supervisor newly on a team,
    *   or newly a supervisor there, becomes its lead (as in Create Account).
@@ -200,10 +201,12 @@ export class UsersService {
           .set({ role, teamId, active })
           .where(eq(users.id, userId));
 
-        // Open work goes back to the old team's Unassigned when its holder
-        // stops working that team's tickets.
+        // Open work goes back to Unassigned when its holder is no longer an
+        // active agent on the same team. Supervisors don't work tickets, and
+        // reassigning takes only an agent's, so a new supervisor's would be
+        // stuck (#1009).
         const leavesTeamWork =
-          !active || role === 'admin' || teamId !== before.teamId;
+          !active || role !== 'agent' || teamId !== before.teamId;
         const released = leavesTeamWork
           ? await tx
               .update(tickets)

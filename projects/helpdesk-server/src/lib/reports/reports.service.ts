@@ -1,35 +1,42 @@
 import {
+  type AgentReport,
   type CurrentUser,
   REPORT_WINDOW_DAYS,
+  type ReportChoices,
+  type ReportFigures,
+  type ReportScope,
   type ReportsResponse,
   type TeamReport,
 } from '@helpdesk/contract';
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { asc, eq, isNull, or, type SQL, sql } from 'drizzle-orm';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { and, asc, eq, isNull, or, type SQL, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { DATABASE, type Database } from '../database/database-token';
-import { reportingTeams, reportingTickets as t } from '../database/reporting';
+import {
+  reportingTeams,
+  reportingTickets as t,
+  reportingUsers,
+} from '../database/reporting';
 
 /** The name of the row for work nobody holds yet. */
 export const UNASSIGNED_REPORT_NAME = 'Unassigned';
 
-/** Who a report is for: every team, or one team (and Unassigned). */
-export type ReportScope = ReportsResponse['scope'];
-
 /** Shown to a supervisor who is on no team, so has nothing to report on. */
 export const NO_TEAM_MESSAGE = 'You are on no team.';
+export const NO_SUCH_TEAM_MESSAGE = 'No such team.';
+export const NO_SUCH_AGENT_MESSAGE = 'No such agent.';
+export const TEAM_OR_AGENT_MESSAGE = 'Pick a team or an agent, not both.';
 
-/**
- * What a signed-in supervisor or admin may see: every team for an admin,
- * their own team for a supervisor; 404 for a supervisor on no team.
- */
-export function scopeFor(user: CurrentUser): ReportScope {
-  if (user.role === 'admin') {
-    return 'all';
-  }
-  if (user.teamId === null) {
-    throw new NotFoundException(NO_TEAM_MESSAGE);
-  }
-  return { teamId: user.teamId };
+/** What GET /api/reports was asked for: a team, an agent, or neither. */
+export interface ReportQuery {
+  team?: string;
+  agent?: string;
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -51,130 +58,320 @@ const hoursFromCreated = (to: SQL) =>
   sql`extract(epoch from (${to} - ${t.createdAt})) / 3600`;
 
 /**
- * The Reports page's figures (#967), from the reporting views (#966):
- * open work by status, priority and team as of `now`; finished work, SLA
- * and reply times over the last REPORT_WINDOW_DAYS days.
+ * The figures a group of tickets adds up to: open work by status and
+ * priority and overdue as of `now`; finished work, SLA and reply times
+ * since `since`.
+ */
+function figureColumns(now: Date, since: Date) {
+  const finishedInWindow = sql`${t.finishedAt} >= ${since}`;
+  return {
+    statusNew: countWhere(sql`${t.status} = 'new'`),
+    statusOpen: countWhere(sql`${t.status} = 'open'`),
+    statusPending: countWhere(sql`${t.status} = 'pending'`),
+    low: countWhere(sql`${isOpen} and ${t.priority} = 'low'`),
+    normal: countWhere(sql`${isOpen} and ${t.priority} = 'normal'`),
+    high: countWhere(sql`${isOpen} and ${t.priority} = 'high'`),
+    urgent: countWhere(sql`${isOpen} and ${t.priority} = 'urgent'`),
+    overdue: countWhere(sql`${isOpen} and ${t.dueAt} < ${now}`),
+    finished: countWhere(finishedInWindow),
+    finishedWithDueTime: countWhere(
+      sql`${finishedInWindow} and ${t.dueAt} is not null`
+    ),
+    finishedOnTime: countWhere(
+      sql`${finishedInWindow} and ${t.finishedAt} <= ${t.dueAt}`
+    ),
+    medianHoursToResolve: medianWhere(
+      hoursFromCreated(sql`${t.finishedAt}`),
+      finishedInWindow
+    ),
+    medianHoursToFirstReply: medianWhere(
+      hoursFromCreated(sql`${t.firstReplyAt}`),
+      sql`${t.createdAt} >= ${since} and ${t.firstReplyAt} is not null`
+    ),
+  };
+}
+
+/** The figures of one group, as the query gives them. */
+type GroupFigures = {
+  [K in keyof ReturnType<typeof figureColumns>]: K extends `median${string}`
+    ? number | null
+    : number;
+};
+
+/**
+ * The Reports popup's figures (#967, #969), from the reporting views
+ * (#966): for every team, one team (and its agents), or one agent.
  */
 @Injectable()
 export class ReportsService {
   constructor(@Inject(DATABASE) private readonly database: Database) {}
 
   /**
-   * The report for `scope`: every team for an admin, one team for its
-   * supervisor; both with the Unassigned row last. Every team in scope has
-   * a row, with zeros when it has no tickets.
+   * GET /api/reports for this caller: decides what they may see (see
+   * `scopeFor`), then the report and what they may pick next.
    */
-  async report(scope: ReportScope, now = new Date()): Promise<ReportsResponse> {
-    const since = new Date(now.getTime() - REPORT_WINDOW_DAYS * DAY_MS);
-    const finishedInWindow = sql`${t.finishedAt} >= ${since}`;
+  async reportFor(
+    user: CurrentUser,
+    query: ReportQuery,
+    now = new Date()
+  ): Promise<ReportsResponse> {
+    const scope = await this.scopeFor(user, query);
+    const [report, choices] = await Promise.all([
+      this.report(scope, now),
+      this.choicesFor(user),
+    ]);
+    return { ...report, choices };
+  }
 
+  /**
+   * What a caller may see. Admins: every team, or the team or agent they
+   * pick. Supervisors: their own team, or an agent on it; another team or
+   * agent is 404, as if there were none. A supervisor on no team: 404.
+   * Both a team and an agent: 400. Agents: 403.
+   */
+  async scopeFor(user: CurrentUser, query: ReportQuery): Promise<ReportScope> {
+    if (user.role === 'agent') {
+      throw new ForbiddenException();
+    }
+    if (query.team && query.agent) {
+      throw new BadRequestException(TEAM_OR_AGENT_MESSAGE);
+    }
+    if (user.role === 'supervisor' && user.teamId === null) {
+      throw new NotFoundException(NO_TEAM_MESSAGE);
+    }
+    // A supervisor's own team, unless asked otherwise; 'all' for an admin.
+    const ownTeam = user.role === 'supervisor' ? user.teamId : null;
+
+    if (query.agent) {
+      const [agent] = await this.database
+        .select({ teamId: reportingUsers.teamId })
+        .from(reportingUsers)
+        .where(
+          and(
+            eq(reportingUsers.userId, query.agent),
+            eq(reportingUsers.role, 'agent')
+          )
+        );
+      if (agent === undefined || (ownTeam && agent.teamId !== ownTeam)) {
+        throw new NotFoundException(NO_SUCH_AGENT_MESSAGE);
+      }
+      return { agentId: query.agent };
+    }
+    if (query.team) {
+      const [team] = await this.database
+        .select({ teamId: reportingTeams.teamId })
+        .from(reportingTeams)
+        .where(eq(reportingTeams.teamId, query.team));
+      if (team === undefined || (ownTeam && query.team !== ownTeam)) {
+        throw new NotFoundException(NO_SUCH_TEAM_MESSAGE);
+      }
+      return { teamId: query.team };
+    }
+    return ownTeam ? { teamId: ownTeam } : 'all';
+  }
+
+  /**
+   * What a caller may pick, by name: an admin every team (with its lead)
+   * and every active agent; a supervisor their own team and its agents.
+   */
+  async choicesFor(user: CurrentUser): Promise<ReportChoices> {
+    const ownTeam = user.role === 'supervisor' ? user.teamId : null;
+    const lead = alias(reportingUsers, 'lead');
     const teams = await this.database
-      .select({ teamId: reportingTeams.teamId, name: reportingTeams.name })
-      .from(reportingTeams)
-      .where(
-        scope === 'all' ? undefined : eq(reportingTeams.teamId, scope.teamId)
-      )
-      .orderBy(asc(reportingTeams.name));
-
-    const figures = await this.database
       .select({
-        teamId: t.teamId,
-        statusNew: countWhere(sql`${t.status} = 'new'`),
-        statusOpen: countWhere(sql`${t.status} = 'open'`),
-        statusPending: countWhere(sql`${t.status} = 'pending'`),
-        low: countWhere(sql`${isOpen} and ${t.priority} = 'low'`),
-        normal: countWhere(sql`${isOpen} and ${t.priority} = 'normal'`),
-        high: countWhere(sql`${isOpen} and ${t.priority} = 'high'`),
-        urgent: countWhere(sql`${isOpen} and ${t.priority} = 'urgent'`),
-        overdue: countWhere(sql`${isOpen} and ${t.dueAt} < ${now}`),
-        finished: countWhere(finishedInWindow),
-        finishedWithDueTime: countWhere(
-          sql`${finishedInWindow} and ${t.dueAt} is not null`
-        ),
-        finishedOnTime: countWhere(
-          sql`${finishedInWindow} and ${t.finishedAt} <= ${t.dueAt}`
-        ),
-        medianHoursToResolve: medianWhere(
-          hoursFromCreated(sql`${t.finishedAt}`),
-          finishedInWindow
-        ),
-        medianHoursToFirstReply: medianWhere(
-          hoursFromCreated(sql`${t.firstReplyAt}`),
-          sql`${t.createdAt} >= ${since} and ${t.firstReplyAt} is not null`
-        ),
+        teamId: reportingTeams.teamId,
+        name: reportingTeams.name,
+        leadName: lead.name,
       })
-      .from(t)
+      .from(reportingTeams)
+      .leftJoin(lead, eq(lead.userId, reportingTeams.leadId))
+      .where(ownTeam ? eq(reportingTeams.teamId, ownTeam) : undefined)
+      .orderBy(asc(reportingTeams.name));
+    const agents = await this.database
+      .select({
+        agentId: reportingUsers.userId,
+        name: reportingUsers.name,
+        teamId: sql<string>`${reportingUsers.teamId}`,
+      })
+      .from(reportingUsers)
       .where(
-        scope === 'all'
-          ? undefined
-          : or(eq(t.teamId, scope.teamId), isNull(t.teamId))
+        and(
+          eq(reportingUsers.role, 'agent'),
+          eq(reportingUsers.active, true),
+          ownTeam
+            ? eq(reportingUsers.teamId, ownTeam)
+            : sql`${reportingUsers.teamId} is not null`
+        )
       )
-      .groupBy(t.teamId);
+      .orderBy(asc(reportingUsers.name), asc(reportingUsers.userId));
+    return { teams, agents };
+  }
 
-    const byTeam = new Map(figures.map((row) => [row.teamId, row]));
-    const sum = (pick: (row: (typeof figures)[number]) => number) =>
-      figures.reduce((total, row) => total + pick(row), 0);
-
-    return {
+  /**
+   * The report for `scope`. Every team: each team by name, then
+   * Unassigned. One team: the team, Unassigned, and a row per active agent
+   * on it. One agent: that agent's row. Rows with no tickets are zeros.
+   */
+  async report(
+    scope: ReportScope,
+    now = new Date()
+  ): Promise<Omit<ReportsResponse, 'choices'>> {
+    const since = new Date(now.getTime() - REPORT_WINDOW_DAYS * DAY_MS);
+    const header = {
       asOf: now.toISOString(),
       since: since.toISOString(),
       scope,
-      openByStatus: {
-        new: sum((row) => row.statusNew),
-        open: sum((row) => row.statusOpen),
-        pending: sum((row) => row.statusPending),
-      },
-      teams: [
-        ...teams.map(({ teamId, name }) =>
-          teamReport(teamId, name, byTeam.get(teamId))
-        ),
-        teamReport(null, UNASSIGNED_REPORT_NAME, byTeam.get(null)),
-      ],
     };
+
+    if (typeof scope === 'object' && 'agentId' in scope) {
+      const rows = await this.agentRows(
+        eq(reportingUsers.userId, scope.agentId),
+        now,
+        since
+      );
+      return {
+        ...header,
+        openByStatus: sumStatuses(rows.map(({ group }) => group)),
+        teams: [],
+        agents: rows.map(({ report }) => report),
+      };
+    }
+
+    const teamId = scope === 'all' ? null : scope.teamId;
+    const teams = await this.database
+      .select({ teamId: reportingTeams.teamId, name: reportingTeams.name })
+      .from(reportingTeams)
+      .where(teamId ? eq(reportingTeams.teamId, teamId) : undefined)
+      .orderBy(asc(reportingTeams.name));
+    const figures = await this.database
+      .select({ teamId: t.teamId, ...figureColumns(now, since) })
+      .from(t)
+      .where(teamId ? or(eq(t.teamId, teamId), isNull(t.teamId)) : undefined)
+      .groupBy(t.teamId);
+    const byTeam = new Map(figures.map((row) => [row.teamId, row]));
+    const agents = teamId
+      ? await this.agentRows(
+          and(
+            eq(reportingUsers.teamId, teamId),
+            eq(reportingUsers.active, true)
+          ),
+          now,
+          since
+        )
+      : [];
+
+    return {
+      ...header,
+      openByStatus: sumStatuses(figures),
+      teams: [
+        ...teams.map(({ teamId, name }): TeamReport => ({
+          teamId,
+          name,
+          ...reportFigures(byTeam.get(teamId)),
+        })),
+        {
+          teamId: null,
+          name: UNASSIGNED_REPORT_NAME,
+          ...reportFigures(byTeam.get(null)),
+        },
+      ],
+      agents: agents.map(({ report }) => report),
+    };
+  }
+
+  /**
+   * A row per agent matching `which`, by name, from the tickets they hold;
+   * with each one's raw figures, for adding up their open work by status.
+   */
+  private async agentRows(
+    which: SQL | undefined,
+    now: Date,
+    since: Date
+  ): Promise<{ report: AgentReport; group: GroupFigures }[]> {
+    const people = await this.database
+      .select({
+        agentId: reportingUsers.userId,
+        name: reportingUsers.name,
+        teamId: sql<string>`${reportingUsers.teamId}`,
+      })
+      .from(reportingUsers)
+      .where(and(eq(reportingUsers.role, 'agent'), which))
+      .orderBy(asc(reportingUsers.name), asc(reportingUsers.userId));
+    if (people.length === 0) {
+      return [];
+    }
+    const figures = await this.database
+      .select({ agentId: t.assigneeId, ...figureColumns(now, since) })
+      .from(t)
+      .where(
+        sql`${t.assigneeId} in (${sql.join(
+          people.map(({ agentId }) => sql`${agentId}`),
+          sql`, `
+        )})`
+      )
+      .groupBy(t.assigneeId);
+    const byAgent = new Map(figures.map((row) => [row.agentId, row]));
+    return people.map((person) => {
+      const group = byAgent.get(person.agentId) ?? emptyGroup();
+      return { report: { ...person, ...reportFigures(group) }, group };
+    });
   }
 }
 
-/** The figures one team's tickets add up to, as the query gives them. */
-interface TeamFigures {
-  low: number;
-  normal: number;
-  high: number;
-  urgent: number;
-  overdue: number;
-  finished: number;
-  finishedWithDueTime: number;
-  finishedOnTime: number;
-  medianHoursToResolve: number | null;
-  medianHoursToFirstReply: number | null;
+/** A group with no tickets. */
+function emptyGroup(): GroupFigures {
+  return {
+    statusNew: 0,
+    statusOpen: 0,
+    statusPending: 0,
+    low: 0,
+    normal: 0,
+    high: 0,
+    urgent: 0,
+    overdue: 0,
+    finished: 0,
+    finishedWithDueTime: 0,
+    finishedOnTime: 0,
+    medianHoursToResolve: null,
+    medianHoursToFirstReply: null,
+  };
 }
 
-/** A team's row: its figures, or zeros when it has no tickets. */
-function teamReport(
-  teamId: string | null,
-  name: string,
-  figures: TeamFigures | undefined
-): TeamReport {
+/** Open work by status, added up over these groups. */
+function sumStatuses(
+  groups: Pick<GroupFigures, 'statusNew' | 'statusOpen' | 'statusPending'>[]
+): ReportsResponse['openByStatus'] {
+  const sum = (pick: (group: (typeof groups)[number]) => number) =>
+    groups.reduce((total, group) => total + pick(group), 0);
   return {
-    teamId,
-    name,
+    new: sum((group) => group.statusNew),
+    open: sum((group) => group.statusOpen),
+    pending: sum((group) => group.statusPending),
+  };
+}
+
+/** A group's figures as a report row has them; zeros when it has none. */
+function reportFigures(group: GroupFigures | undefined): ReportFigures {
+  const figures = group ?? emptyGroup();
+  return {
     openByPriority: {
-      low: figures?.low ?? 0,
-      normal: figures?.normal ?? 0,
-      high: figures?.high ?? 0,
-      urgent: figures?.urgent ?? 0,
+      low: figures.low,
+      normal: figures.normal,
+      high: figures.high,
+      urgent: figures.urgent,
     },
-    overdue: figures?.overdue ?? 0,
-    finished: figures?.finished ?? 0,
-    finishedWithDueTime: figures?.finishedWithDueTime ?? 0,
-    finishedOnTime: figures?.finishedOnTime ?? 0,
-    medianHoursToResolve: roundHours(figures?.medianHoursToResolve),
-    medianHoursToFirstReply: roundHours(figures?.medianHoursToFirstReply),
+    overdue: figures.overdue,
+    finished: figures.finished,
+    finishedWithDueTime: figures.finishedWithDueTime,
+    finishedOnTime: figures.finishedOnTime,
+    medianHoursToResolve: roundHours(figures.medianHoursToResolve),
+    medianHoursToFirstReply: roundHours(figures.medianHoursToFirstReply),
   };
 }
 
 /** Hours to one decimal; none stays `null`. */
-function roundHours(hours: number | null | undefined): number | null {
-  return hours === null || hours === undefined || Number.isNaN(hours)
+function roundHours(hours: number | null): number | null {
+  return hours === null || Number.isNaN(hours)
     ? null
     : Math.round(hours * 10) / 10;
 }

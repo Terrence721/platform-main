@@ -63,6 +63,8 @@ const REPORT: ReportsResponse = {
       overdue: 1,
     }),
   ],
+  agents: [],
+  choices: { teams: [], agents: [] },
 };
 
 describe('ReportsDialog', () => {

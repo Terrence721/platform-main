@@ -1,22 +1,6 @@
 import { SIGN_IN_FAILED_MESSAGE } from '@helpdesk/contract';
-import { expect, type Page, test } from '@playwright/test';
-
-/** The seed's password for everyone (.env can change it, as for Compose). */
-const PASSWORD = process.env['HELPDESK_SEED_PASSWORD'] ?? 'helpdesk-dev-only';
-
-/** Opens the sign-in popup from the toolbar and signs in as `userId`. */
-async function signIn(page: Page, userId: string, password = PASSWORD) {
-  await page.goto('/');
-  await page
-    .getByRole('navigation', { name: 'Page' })
-    .getByRole('button', { name: 'Sign in' })
-    .click();
-  const dialog = page.getByRole('dialog', { name: 'Sign in to Helpdesk' });
-  await dialog.getByRole('textbox', { name: 'User ID' }).fill(userId);
-  await dialog.getByLabel('Password', { exact: true }).fill(password);
-  await dialog.getByRole('button', { name: 'Sign in', exact: true }).click();
-  return dialog;
-}
+import { expect, test } from '@playwright/test';
+import { signIn, signInDialog } from './support';
 
 test.describe('signing in', () => {
   for (const { userId, who, path, title } of [
@@ -56,9 +40,7 @@ test.describe('signing in', () => {
     await expect(page).toHaveURL('/');
     await page.goto('/agent');
     // Signed out, a role's page sends you to sign in instead.
-    await expect(
-      page.getByRole('dialog', { name: 'Sign in to Helpdesk' })
-    ).toBeVisible();
+    await expect(signInDialog(page)).toBeVisible();
     await expect(page).toHaveURL('/');
   });
 
@@ -77,8 +59,6 @@ test.describe('signing in', () => {
         .getByRole('button', { name: 'Sign in' })
     ).toBeVisible();
     await page.goto('/agent');
-    await expect(
-      page.getByRole('dialog', { name: 'Sign in to Helpdesk' })
-    ).toBeVisible();
+    await expect(signInDialog(page)).toBeVisible();
   });
 });

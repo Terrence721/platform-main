@@ -1,4 +1,3 @@
-import { PageRequest } from './page';
 import {
   CreateTicketRequest,
   DEFAULT_TICKET_SORT,
@@ -10,7 +9,6 @@ import {
   TICKET_SUBJECT_MAX_LENGTH,
   TICKET_TAG_MAX_LENGTH,
   TicketDto,
-  TicketListQuery,
   TicketSort,
   UpdateTicketRequest,
 } from './ticket-api';
@@ -125,18 +123,5 @@ describe('ticket shapes', () => {
       string | null | undefined
     >();
     expectTypeOf<Required<UpdateTicketRequest>>().toHaveProperty('status');
-  });
-
-  it('includes paging in the list query', () => {
-    expectTypeOf<TicketListQuery>().toExtend<PageRequest>();
-    const query: TicketListQuery = {
-      status: 'open',
-      assigneeId: 'u1',
-      search: 'password',
-      sort: '-slaDueAt',
-      page: 2,
-      pageSize: 50,
-    };
-    expect(isTicketSort(query.sort)).toBe(true);
   });
 });

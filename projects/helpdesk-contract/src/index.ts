@@ -3,13 +3,12 @@
  * Angular app, the NestJS API and the server library share, imported as
  * `@helpdesk/contract`. It covers tickets (statuses, priorities, the workflow
  * and the API's requests and responses) and their replies and notes, roles,
- * accounts and signing in, teams, reports, live events, and paging. Every
- * file in `lib/` is exported from here.
+ * accounts and signing in, teams, reports, and live events. Every file in
+ * `lib/` is exported from here.
  */
 export * from './lib/account';
 export * from './lib/auth';
 export * from './lib/live-events';
-export * from './lib/page';
 export * from './lib/reports';
 export * from './lib/roles';
 export * from './lib/team';

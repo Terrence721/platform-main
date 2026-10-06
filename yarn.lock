@@ -10271,6 +10271,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"eslint-plugin-playwright@npm:2.12.1":
+  version: 2.12.1
+  resolution: "eslint-plugin-playwright@npm:2.12.1"
+  dependencies:
+    globals: "npm:^17.3.0"
+  peerDependencies:
+    eslint: ">=8.40.0"
+  checksum: 10c0/498699568260e14b7c5258e714c75504d9abf5e6d36d32500e78dea33c5a072fa643ef826dc528248fd50d1936b12c4f47df8d18ad93d0c6b27c3bf1825e0e83
+  languageName: node
+  linkType: hard
+
 "eslint-scope@npm:9.1.2, eslint-scope@npm:^9.1.2":
   version: 9.1.2
   resolution: "eslint-scope@npm:9.1.2"
@@ -11131,6 +11142,13 @@ __metadata:
   version: 17.9.0
   resolution: "globals@npm:17.9.0"
   checksum: 10c0/776116bffb916e462d548c26a44c9a5d8f4e551935a883991e9f5d68cbcb21b63e4c688e36bbc564f97d3025e304d8b2bb0a611ecf944825aeee164898dcfbdd
+  languageName: node
+  linkType: hard
+
+"globals@npm:^17.3.0":
+  version: 17.13.0
+  resolution: "globals@npm:17.13.0"
+  checksum: 10c0/8371d9e4e5581640141b5cce70a098edd765d2e3ab063b14998e590698071e0afb4a4a6739ccfbdcbdeb2565c5553697ba07d95703c51039912cf341a7dba7a7
   languageName: node
   linkType: hard
 
@@ -14665,6 +14683,7 @@ __metadata:
     drizzle-orm: "npm:0.45.3"
     echarts: "npm:6.1.0"
     eslint: "npm:10.11.0"
+    eslint-plugin-playwright: "npm:2.12.1"
     firebase-functions: "npm:^7.4.0"
     husky: "npm:^9.1.7"
     jiti: "npm:2.7.0"

@@ -1,0 +1,19 @@
+{
+  "name": "helpdesk-e2e",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "projects/helpdesk-e2e/src",
+  "implicitDependencies": ["helpdesk", "helpdesk-api"],
+  "tags": [],
+  "targets": {
+    "e2e": {
+      "executor": "@nx/playwright:playwright",
+      "cache": false,
+      "outputs": ["{workspaceRoot}/dist/.playwright/projects/helpdesk-e2e"],
+      "options": {
+        "config": "projects/helpdesk-e2e/playwright.config.ts",
+        "skipInstall": true
+      }
+    }
+  }
+}

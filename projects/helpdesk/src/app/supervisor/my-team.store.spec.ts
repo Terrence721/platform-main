@@ -5,6 +5,8 @@ import {
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import type { TeamOverview, TicketDto } from '@helpdesk/contract';
+import { Subject } from 'rxjs';
+import { type LiveUpdate, LiveUpdates } from '../live/live-updates';
 import { assigneeApi, statusApi } from '../tickets/ticket-api-paths';
 import {
   ASSIGN_UNAVAILABLE_MESSAGE,
@@ -25,10 +27,18 @@ const atlas: TeamOverview = {
 
 describe('MyTeamStore', () => {
   let http: HttpTestingController;
+  /** The live updates the store hears, sent by the test. */
+  let live: Subject<LiveUpdate>;
 
   beforeEach(() => {
+    live = new Subject<LiveUpdate>();
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting(), MyTeamStore],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        MyTeamStore,
+        { provide: LiveUpdates, useValue: { updates: live } },
+      ],
     });
     http = TestBed.inject(HttpTestingController);
   });
@@ -366,6 +376,97 @@ describe('MyTeamStore', () => {
       put().flush(resolved);
       http.expectOne(MY_TEAM_API).flush(atlas);
       http.expectOne(memberTicketsApi('sam.rivera')).flush([resolved]);
+    });
+  });
+
+  describe('live updates', () => {
+    /** A ticket with just what these tests look at. */
+    const ticket = (ticketNumber: number) =>
+      ({ id: `ticket-${ticketNumber}`, ticketNumber }) as TicketDto;
+
+    /** The store with Atlas loaded and Sam chosen, as the page has it. */
+    function withSamChosen() {
+      const store = TestBed.inject(MyTeamStore);
+      http.expectOne(MY_TEAM_API).flush(atlas);
+      store.selectMember('sam.rivera');
+      http.expectOne(memberTicketsApi('sam.rivera')).flush([ticket(1001)]);
+      return store;
+    }
+
+    const event = (type: 'ticket' | 'message' | 'accounts'): LiveUpdate => ({
+      kind: 'event',
+      event: type === 'accounts' ? { type } : { type, ticketId: 'ticket-1001' },
+    });
+
+    it.each([
+      ['a ticket changes', event('ticket')],
+      ['accounts change', event('accounts')],
+      ['the stream comes back after a break', { kind: 'reconnected' }],
+    ] as [string, LiveUpdate][])(
+      'fetches the team and the chosen member again, quietly, when %s',
+      (_, update) => {
+        const store = withSamChosen();
+        const busier = {
+          ...atlas,
+          unassigned: [ticket(1005)],
+        } as TeamOverview;
+
+        live.next(update);
+
+        expect(store.loadState()).toBe('loaded');
+        expect(store.memberTicketsState()).toBe('loaded');
+        http.expectOne(MY_TEAM_API).flush(busier);
+        http
+          .expectOne(memberTicketsApi('sam.rivera'))
+          .flush([ticket(1001), ticket(1002)]);
+        expect(store.team()).toEqual(busier);
+        expect(store.memberTickets()).toEqual([ticket(1001), ticket(1002)]);
+      }
+    );
+
+    it('leaves it alone for a reply', () => {
+      withSamChosen();
+
+      live.next(event('message'));
+
+      http.expectNone(MY_TEAM_API);
+    });
+
+    it('chooses nobody when the chosen member has left the team', () => {
+      const store = withSamChosen();
+
+      live.next(event('accounts'));
+      http.expectOne(MY_TEAM_API).flush({ ...atlas, members: [] });
+
+      expect(store.selectedMemberId()).toBeNull();
+      expect(store.memberTickets()).toEqual([]);
+      expect(store.memberTicketsState()).toBe('idle');
+    });
+
+    it('shows the team once the supervisor leads one again', () => {
+      const store = TestBed.inject(MyTeamStore);
+      http
+        .expectOne(MY_TEAM_API)
+        .flush(null, { status: 404, statusText: 'Not Found' });
+      expect(store.loadState()).toBe('no-team');
+
+      live.next(event('accounts'));
+      http.expectOne(MY_TEAM_API).flush(atlas);
+
+      expect(store.loadState()).toBe('loaded');
+      expect(store.team()).toEqual(atlas);
+    });
+
+    it('keeps what is shown when fetching it again fails', () => {
+      const store = withSamChosen();
+
+      live.next(event('ticket'));
+      http
+        .expectOne(MY_TEAM_API)
+        .flush(null, { status: 500, statusText: 'Server Error' });
+
+      expect(store.team()).toEqual(atlas);
+      expect(store.memberTickets()).toEqual([ticket(1001)]);
     });
   });
 });

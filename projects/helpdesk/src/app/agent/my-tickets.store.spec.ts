@@ -5,6 +5,8 @@ import {
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import type { TicketDto } from '@helpdesk/contract';
+import { Subject } from 'rxjs';
+import { type LiveUpdate, LiveUpdates } from '../live/live-updates';
 import { assigneeApi, statusApi } from '../tickets/ticket-api-paths';
 import {
   FINISHED_API,
@@ -21,13 +23,17 @@ const ticket = (ticketNumber: number) =>
 
 describe('MyTicketsStore', () => {
   let http: HttpTestingController;
+  /** The live updates the store hears, sent by the test. */
+  let live: Subject<LiveUpdate>;
 
   beforeEach(() => {
+    live = new Subject<LiveUpdate>();
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
         MyTicketsStore,
+        { provide: LiveUpdates, useValue: { updates: live } },
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -315,6 +321,74 @@ describe('MyTicketsStore', () => {
       put().flush(resolved);
       http.expectOne(MY_TICKETS_API).flush([]);
       http.expectOne(FINISHED_API).flush([resolved]);
+    });
+  });
+
+  describe('live updates', () => {
+    /** A store with its three lists loaded, as the page has them. */
+    function loaded() {
+      const store = TestBed.inject(MyTicketsStore);
+      http.expectOne(MY_TICKETS_API).flush([ticket(1001)]);
+      http.expectOne(UNASSIGNED_API).flush([ticket(1005)]);
+      http.expectOne(FINISHED_API).flush([]);
+      return store;
+    }
+
+    const aTicketChanged: LiveUpdate = {
+      kind: 'event',
+      event: { type: 'ticket', ticketId: 'ticket-1005' },
+    };
+
+    it('fetches all three lists again, quietly, when a ticket changes', () => {
+      const store = loaded();
+
+      live.next(aTicketChanged);
+
+      // No spinner while it loads: the lists stay as they are.
+      expect(store.loadState()).toBe('loaded');
+      expect(store.unassignedState()).toBe('loaded');
+      http.expectOne(MY_TICKETS_API).flush([ticket(1001), ticket(1005)]);
+      http.expectOne(UNASSIGNED_API).flush([]);
+      http.expectOne(FINISHED_API).flush([ticket(990)]);
+      expect(numbers(store)).toEqual([1001, 1005]);
+      expect(store.unassigned()).toEqual([]);
+      expect(store.finished()).toEqual([ticket(990)]);
+    });
+
+    it('fetches them again when the stream comes back after a break', () => {
+      loaded();
+
+      live.next({ kind: 'reconnected' });
+
+      http.expectOne(MY_TICKETS_API).flush([]);
+      http.expectOne(UNASSIGNED_API).flush([]);
+      http.expectOne(FINISHED_API).flush([]);
+    });
+
+    it('leaves the lists alone for a reply or an account change', () => {
+      loaded();
+
+      live.next({
+        kind: 'event',
+        event: { type: 'message', ticketId: 'ticket-1001' },
+      });
+      live.next({ kind: 'event', event: { type: 'accounts' } });
+
+      http.expectNone(MY_TICKETS_API);
+      http.expectNone(UNASSIGNED_API);
+    });
+
+    it('keeps the lists as they are when fetching them again fails', () => {
+      const store = loaded();
+
+      live.next(aTicketChanged);
+      http
+        .expectOne(MY_TICKETS_API)
+        .flush(null, { status: 500, statusText: 'Server Error' });
+
+      expect(store.loadState()).toBe('loaded');
+      expect(numbers(store)).toEqual([1001]);
+      expect(store.unassigned()).toEqual([ticket(1005)]);
     });
   });
 });

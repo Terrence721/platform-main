@@ -7,6 +7,7 @@ import {
 import { bootstrapApplication } from '@angular/platform-browser';
 import { AppComponent } from './app/app.component';
 import { appConfig } from './app/app.config';
+import { OPEN_EVENT_SOURCE } from './app/live/live-updates';
 import type { DemoApi } from './demo/demo-api';
 import { DEMO_API, DemoBackend } from './demo/demo-backend';
 import { DemoBanner } from './demo/demo-banner';
@@ -79,6 +80,9 @@ bootstrapApplication(
     providers: [
       { provide: HttpBackend, useClass: DemoBackend },
       { provide: DEMO_API, useValue: demoApi },
+      // No live updates (#950): no server to stream them, and in one tab
+      // the pages already show their own changes.
+      { provide: OPEN_EVENT_SOURCE, useValue: () => null },
     ],
   })
 )

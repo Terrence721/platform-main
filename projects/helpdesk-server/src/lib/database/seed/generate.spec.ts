@@ -6,6 +6,7 @@ import {
 } from '@helpdesk/contract';
 import {
   AGENTS_PER_TEAM,
+  FINISHED_ON_TIME_SHARE,
   generateSeed,
   OPEN_WORK_MAX_AGE_OF_SLA,
   SEED_DEFAULTS,
@@ -197,6 +198,49 @@ describe('generateSeed', () => {
       expect(
         old.filter(({ status }) => !['resolved', 'closed'].includes(status))
       ).toEqual([]);
+    });
+  });
+
+  describe('finished work (resolved, closed) looks like a team keeping its promises', () => {
+    const finished = data.tickets.filter(({ status }) =>
+      ['resolved', 'closed'].includes(status)
+    );
+    // A finished ticket's last change is when it was finished.
+    const minutesToFinish = ({
+      createdMinutesAgo,
+      updatedMinutesAgo,
+    }: (typeof finished)[number]) => createdMinutesAgo - updatedMinutesAgo;
+    const withSla = finished.filter(
+      ({ slaDueInMinutes }) => slaDueInMinutes !== null
+    );
+
+    it('was finished after it was raised, and not later than now', () => {
+      expect(finished.length).toBeGreaterThan(0);
+      for (const ticket of finished) {
+        expect(ticket.updatedMinutesAgo).toBeGreaterThanOrEqual(0);
+        expect(minutesToFinish(ticket)).toBeGreaterThanOrEqual(0);
+      }
+    });
+
+    it(`was finished within its SLA about ${FINISHED_ON_TIME_SHARE * 100}% of the time`, () => {
+      const onTime = withSla.filter(
+        (ticket) => minutesToFinish(ticket) <= SLA_MINUTES[ticket.priority]
+      );
+
+      expect(onTime.length / withSla.length).toBeGreaterThanOrEqual(
+        FINISHED_ON_TIME_SHARE - 0.05
+      );
+      expect(onTime.length / withSla.length).toBeLessThanOrEqual(
+        FINISHED_ON_TIME_SHARE + 0.05
+      );
+    });
+
+    it('was late, when it was, by at most its SLA again', () => {
+      for (const ticket of finished) {
+        expect(minutesToFinish(ticket)).toBeLessThanOrEqual(
+          2 * SLA_MINUTES[ticket.priority]
+        );
+      }
     });
   });
 

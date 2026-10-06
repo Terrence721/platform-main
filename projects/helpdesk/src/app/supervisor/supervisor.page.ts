@@ -259,9 +259,16 @@ export default class SupervisorPage {
     });
   }
 
-  /** Opens the Reports popup: the team's and the unassigned work. */
+  /**
+   * Opens the Reports popup: on the agent picked in Team member, if any;
+   * otherwise on the team's and the unassigned work.
+   */
   protected openReports(): void {
-    void openReports(this.injector);
+    const agentId = this.store.selectedMemberId();
+    void openReports(
+      this.injector,
+      agentId ? { kind: 'agent', agentId } : undefined
+    );
   }
 
   /** Opens a team member's ticket: its details and conversation. */

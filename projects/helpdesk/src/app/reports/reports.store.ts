@@ -1,6 +1,12 @@
-import { HttpClient } from '@angular/common/http';
-import { computed, inject } from '@angular/core';
-import type { ReportsResponse, TeamReport } from '@helpdesk/contract';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { computed, inject, InjectionToken } from '@angular/core';
+import {
+  REPORT_AGENT_PARAM,
+  REPORT_TEAM_PARAM,
+  type ReportChoices,
+  type ReportFigures,
+  type ReportsResponse,
+} from '@helpdesk/contract';
 import { tapResponse } from '@ngrx/operators';
 import {
   patchState,
@@ -16,12 +22,26 @@ import { pipe, switchMap, tap } from 'rxjs';
 /** Where the figures come from, through the dev server's proxy. */
 export const REPORTS_API = '/api/reports';
 
-/** `loading` until the first answer; a refresh keeps the figures shown. */
+/** `loading` until an answer; a refresh keeps the figures shown. */
 export type ReportsLoadState = 'loading' | 'loaded' | 'failed';
 
+/**
+ * Who the report is for: the caller's own default (an admin's every team,
+ * a supervisor's own team), one team, or one agent.
+ */
+export type ReportPick =
+  | { kind: 'default' }
+  | { kind: 'team'; teamId: string }
+  | { kind: 'agent'; agentId: string };
+
+/** The pick a popup opens on; without one, the caller's default. */
+export const INITIAL_REPORT_PICK = new InjectionToken<ReportPick>(
+  'INITIAL_REPORT_PICK'
+);
+
 /** Every open ticket a row holds, whatever its priority. */
-export function openTickets(team: TeamReport): number {
-  const { low, normal, high, urgent } = team.openByPriority;
+export function openTickets(row: ReportFigures): number {
+  const { low, normal, high, urgent } = row.openByPriority;
   return low + normal + high + urgent;
 }
 
@@ -33,41 +53,68 @@ export function slaMetPercent(onTime: number, withDueTime: number) {
   return withDueTime === 0 ? null : Math.round((onTime / withDueTime) * 100);
 }
 
+/** GET /api/reports's query for a pick. */
+function paramsFor(pick: ReportPick): HttpParams {
+  const params = new HttpParams();
+  switch (pick.kind) {
+    case 'team':
+      return params.set(REPORT_TEAM_PARAM, pick.teamId);
+    case 'agent':
+      return params.set(REPORT_AGENT_PARAM, pick.agentId);
+    default:
+      return params;
+  }
+}
+
 /**
- * The Reports popup's figures (#967), from GET /api/reports. Provided by
- * the popup, so it lives only while the popup is open; it loads when
- * created, and `load` again keeps the current figures on screen until the
- * new ones come. A newer load replaces one still running.
+ * The Reports popup's figures (#967, #969), from GET /api/reports. Provided
+ * by the popup, so it lives only while the popup is open; it loads when
+ * created, for INITIAL_REPORT_PICK if the popup was given one. `select`
+ * switches who the report is for (the figures go while the new ones load;
+ * the "Report for" choices stay). `load` again keeps the current figures on
+ * screen until the new ones come. A newer load replaces one still running.
  */
 export const ReportsStore = signalStore(
-  withState({
+  withState(() => ({
+    pick: inject(INITIAL_REPORT_PICK, { optional: true }) ?? {
+      kind: 'default' as const,
+    },
     report: null as ReportsResponse | null,
+    /** What the caller may pick, from the last answer; kept across picks. */
+    choices: null as ReportChoices | null,
     loadState: 'loading' as ReportsLoadState,
     /** Whether a refresh is running, with figures already shown. */
     refreshing: false,
-  }),
+  })),
   withComputed(({ report }) => ({
-    /** The totals across every row: the popup's summary figures. */
+    /**
+     * The totals across the rows a report is about: the popup's summary
+     * figures. A team's or every team's: its team rows (the agent rows are
+     * part of them). An agent's: their own row.
+     */
     summary: computed(() => {
-      const teams = report()?.teams ?? [];
-      const sum = (pick: (team: TeamReport) => number) =>
-        teams.reduce((total, team) => total + pick(team), 0);
-      const finishedOnTime = sum((team) => team.finishedOnTime);
-      const finishedWithDueTime = sum((team) => team.finishedWithDueTime);
+      const current = report();
+      const rows: ReportFigures[] =
+        current === null
+          ? []
+          : current.teams.length > 0
+            ? current.teams
+            : current.agents;
+      const sum = (pick: (row: ReportFigures) => number) =>
+        rows.reduce((total, row) => total + pick(row), 0);
       return {
         open: sum(openTickets),
-        overdue: sum((team) => team.overdue),
-        finished: sum((team) => team.finished),
-        slaMetPercent: slaMetPercent(finishedOnTime, finishedWithDueTime),
+        overdue: sum((row) => row.overdue),
+        finished: sum((row) => row.finished),
+        slaMetPercent: slaMetPercent(
+          sum((row) => row.finishedOnTime),
+          sum((row) => row.finishedWithDueTime)
+        ),
       };
     }),
   })),
-  withMethods((store, http = inject(HttpClient)) => ({
-    /**
-     * Loads the figures: the first time, again after a failure, or for
-     * Refresh, when the figures already shown stay until the new ones come.
-     */
-    load: rxMethod<void>(
+  withMethods((store, http = inject(HttpClient)) => {
+    const load = rxMethod<void>(
       pipe(
         tap(() =>
           store.report() === null
@@ -75,26 +122,43 @@ export const ReportsStore = signalStore(
             : patchState(store, { refreshing: true })
         ),
         switchMap(() =>
-          http.get<ReportsResponse>(REPORTS_API).pipe(
-            tapResponse({
-              next: (report) =>
-                patchState(store, {
-                  report,
-                  loadState: 'loaded',
-                  refreshing: false,
-                }),
-              // A failed refresh keeps the figures already shown.
-              error: () =>
-                patchState(store, {
-                  loadState: store.report() === null ? 'failed' : 'loaded',
-                  refreshing: false,
-                }),
+          http
+            .get<ReportsResponse>(REPORTS_API, {
+              params: paramsFor(store.pick()),
             })
-          )
+            .pipe(
+              tapResponse({
+                next: (report) =>
+                  patchState(store, {
+                    report,
+                    choices: report.choices,
+                    loadState: 'loaded',
+                    refreshing: false,
+                  }),
+                // A failed refresh keeps the figures already shown.
+                error: () =>
+                  patchState(store, {
+                    loadState: store.report() === null ? 'failed' : 'loaded',
+                    refreshing: false,
+                  }),
+              })
+            )
         )
       )
-    ),
-  })),
+    );
+    return {
+      /**
+       * Loads the figures: the first time, again after a failure, or for
+       * Refresh, when the figures shown stay until the new ones come.
+       */
+      load: () => load(),
+      /** Reports on someone else: their figures replace the current ones. */
+      select(pick: ReportPick): void {
+        patchState(store, { pick, report: null });
+        load();
+      },
+    };
+  }),
   withHooks({
     onInit: (store) => store.load(),
   })

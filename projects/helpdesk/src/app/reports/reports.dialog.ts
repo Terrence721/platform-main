@@ -8,16 +8,21 @@ import {
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSelectModule } from '@angular/material/select';
 import {
   OPEN_REPORT_STATUSES,
+  type ReportAgentChoice,
   TICKET_PRIORITIES,
   type TicketPriority,
 } from '@helpdesk/contract';
+import { Store } from '@ngrx/store';
 import type { EChartsCoreOption } from 'echarts/core';
 import { NgxEchartsDirective, provideEchartsCore } from 'ngx-echarts';
-import { ReportsStore, slaMetPercent } from './reports.store';
+import { sessionFeature } from '../session/session.feature';
+import { type ReportPick, ReportsStore, slaMetPercent } from './reports.store';
 
 /**
  * ECharts with only what these charts use (pie and bar charts, their
@@ -61,13 +66,46 @@ interface Tile {
   hint: string;
 }
 
+/** One team's agents, as the "Report for" list groups them. */
+interface AgentGroup {
+  teamId: string;
+  teamName: string;
+  agents: ReportAgentChoice[];
+}
+
+/** A pick as the "Report for" list's value: "default", "team:…", "agent:…". */
+export function pickValue(pick: ReportPick): string {
+  switch (pick.kind) {
+    case 'team':
+      return `team:${pick.teamId}`;
+    case 'agent':
+      return `agent:${pick.agentId}`;
+    default:
+      return 'default';
+  }
+}
+
+/** The pick a "Report for" value stands for. */
+export function pickFrom(value: string): ReportPick {
+  const [kind, id] = value.split(/:(.*)/);
+  if (kind === 'team' && id) {
+    return { kind: 'team', teamId: id };
+  }
+  if (kind === 'agent' && id) {
+    return { kind: 'agent', agentId: id };
+  }
+  return { kind: 'default' };
+}
+
 /**
- * The Reports popup (#967): open work, overdue, SLA and reply times, for
- * a supervisor's team or (for an admin) every team, with the Unassigned
- * work. Four figures across the top, then four charts. The figures come
- * from the popup's own ReportsStore (GET /api/reports); Refresh loads the
- * latest while the charts stay up. Chart text and lines take the page's
- * theme colors, so the charts suit the light and the dark theme.
+ * The Reports popup (#967, #969): open work, overdue, SLA and reply times.
+ * "Report for" picks who: an admin's every team, a supervisor and their
+ * team, or an agent; a supervisor's own team or one of its agents. A
+ * team's report has four charts and the Unassigned work, then two
+ * comparing its agents; an agent's report has their own three. The
+ * figures come from the popup's own ReportsStore (GET /api/reports);
+ * Refresh loads the latest while the charts stay up. Chart text and lines
+ * take the page's theme colors, so the charts suit both themes.
  */
 @Component({
   selector: 'hd-reports-dialog',
@@ -75,8 +113,10 @@ interface Tile {
     DatePipe,
     MatButtonModule,
     MatDialogModule,
+    MatFormFieldModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    MatSelectModule,
     NgxEchartsDirective,
   ],
   providers: [ReportsStore, provideEchartsCore({ echarts: loadEcharts })],
@@ -89,6 +129,35 @@ interface Tile {
             {{ scopeName() }} · open work now · finished work since
             {{ report.since | date: 'd MMM' }}
           </p>
+        }
+        @if (store.choices(); as choices) {
+          <mat-form-field appearance="outline" class="report-for">
+            <mat-label>Report for</mat-label>
+            <mat-select
+              [value]="selected()"
+              (selectionChange)="choose($event.value)"
+            >
+              <mat-option value="default">{{ defaultLabel() }}</mat-option>
+              @if (isAdmin()) {
+                <mat-optgroup label="Supervisors and their teams">
+                  @for (team of choices.teams; track team.teamId) {
+                    <mat-option [value]="'team:' + team.teamId">
+                      {{ team.leadName ?? 'No lead' }} · {{ team.name }}
+                    </mat-option>
+                  }
+                </mat-optgroup>
+              }
+              @for (group of agentGroups(); track group.teamId) {
+                <mat-optgroup [label]="'Agents · ' + group.teamName">
+                  @for (agent of group.agents; track agent.agentId) {
+                    <mat-option [value]="'agent:' + agent.agentId">{{
+                      agent.name
+                    }}</mat-option>
+                  }
+                </mat-optgroup>
+              }
+            </mat-select>
+          </mat-form-field>
         }
       </div>
       <button
@@ -129,18 +198,41 @@ interface Tile {
               <h3 id="by-status">Open work by status</h3>
               <div echarts class="chart" [options]="byStatus()"></div>
             </section>
-            <section class="chart-card" aria-labelledby="by-team">
-              <h3 id="by-team">Open work by team and priority</h3>
-              <div echarts class="chart" [options]="byTeam()"></div>
-            </section>
-            <section class="chart-card" aria-labelledby="sla">
-              <h3 id="sla">SLA met, last 30 days</h3>
-              <div echarts class="chart" [options]="sla()"></div>
-            </section>
-            <section class="chart-card" aria-labelledby="times">
-              <h3 id="times">Median hours, last 30 days</h3>
-              <div echarts class="chart" [options]="times()"></div>
-            </section>
+            @if (isAgentReport()) {
+              <section class="chart-card" aria-labelledby="by-priority">
+                <h3 id="by-priority">Open work by priority</h3>
+                <div echarts class="chart" [options]="byPriority()"></div>
+              </section>
+              <section class="chart-card" aria-labelledby="agent-times">
+                <h3 id="agent-times">Median hours, last 30 days</h3>
+                <div echarts class="chart" [options]="agentTimes()"></div>
+              </section>
+            } @else {
+              <section class="chart-card" aria-labelledby="by-team">
+                <h3 id="by-team">Open work by team and priority</h3>
+                <div echarts class="chart" [options]="byTeam()"></div>
+              </section>
+              <section class="chart-card" aria-labelledby="sla">
+                <h3 id="sla">SLA met, last 30 days</h3>
+                <div echarts class="chart" [options]="sla()"></div>
+              </section>
+              <section class="chart-card" aria-labelledby="times">
+                <h3 id="times">Median hours, last 30 days</h3>
+                <div echarts class="chart" [options]="times()"></div>
+              </section>
+              @if (store.report()?.agents?.length) {
+                <section class="chart-card wide" aria-labelledby="by-agent">
+                  <h3 id="by-agent">Agents: open work by priority</h3>
+                  <div echarts class="chart tall" [options]="byAgent()"></div>
+                </section>
+                <section class="chart-card wide" aria-labelledby="agent-sla">
+                  <h3 id="agent-sla">
+                    Agents: SLA met and median hours to resolve, last 30 days
+                  </h3>
+                  <div echarts class="chart tall" [options]="agentSla()"></div>
+                </section>
+              }
+            }
           </div>
         }
       }
@@ -160,6 +252,10 @@ interface Tile {
       margin: -0.75rem 1.5rem 0;
       font: var(--mat-sys-body-medium);
       color: var(--mat-sys-on-surface-variant);
+    }
+    .report-for {
+      width: min(24rem, calc(100vw - 6rem));
+      margin: 0.75rem 1.5rem 0;
     }
     .tiles {
       display: grid;
@@ -204,6 +300,13 @@ interface Tile {
     .chart {
       height: 16rem;
     }
+    /* The agents' charts: the whole width, and room for ten names. */
+    .wide {
+      grid-column: 1 / -1;
+    }
+    .tall {
+      height: 22rem;
+    }
     .message {
       color: var(--mat-sys-on-surface-variant);
     }
@@ -230,6 +333,49 @@ interface Tile {
 export class ReportsDialog {
   protected readonly store = inject(ReportsStore);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly user = inject(Store).selectSignal(sessionFeature.selectUser);
+
+  protected readonly isAdmin = computed(() => this.user()?.role === 'admin');
+
+  /** Whether the report is about one agent, not a team or every team. */
+  protected readonly isAgentReport = computed(
+    () => this.store.pick().kind === 'agent'
+  );
+
+  /** The "Report for" list's current value. */
+  protected readonly selected = computed(() => pickValue(this.store.pick()));
+
+  /** The first choice: an admin's every team, a supervisor's own. */
+  protected readonly defaultLabel = computed(() =>
+    this.isAdmin()
+      ? 'All teams'
+      : `My team · ${this.store.choices()?.teams[0]?.name ?? ''}`
+  );
+
+  /** The agents to pick, grouped by team, the teams by name. */
+  protected readonly agentGroups = computed((): AgentGroup[] => {
+    const choices = this.store.choices();
+    if (choices === null) {
+      return [];
+    }
+    return choices.teams
+      .map(({ teamId, name }) => ({
+        teamId,
+        teamName: name,
+        agents: choices.agents.filter((agent) => agent.teamId === teamId),
+      }))
+      .filter(({ agents }) => agents.length > 0);
+  });
+
+  /** Reports on what was picked in "Report for". */
+  protected choose(value: string): void {
+    this.store.select(pickFrom(value));
+    // A new report starts at its top, wherever the last one was scrolled.
+    const content = this.host.nativeElement.querySelector('mat-dialog-content');
+    if (content) {
+      content.scrollTop = 0;
+    }
+  }
 
   /** "All teams", or the team or agent by name. */
   protected readonly scopeName = computed(() => {
@@ -272,10 +418,16 @@ export class ReportsDialog {
           type: 'pie',
           radius: ['45%', '70%'],
           label: { color: this.text(), formatter: '{b}: {c}' },
-          data: OPEN_REPORT_STATUSES.map((status) => ({
-            name: status,
-            value: report?.openByStatus[status] ?? 0,
-          })),
+          data: OPEN_REPORT_STATUSES.map((status) => {
+            const value = report?.openByStatus[status] ?? 0;
+            // No label for an empty slice: it stays in the legend only.
+            return {
+              name: status,
+              value,
+              label: { show: value > 0 },
+              labelLine: { show: value > 0 },
+            };
+          }),
         },
       ],
     };
@@ -373,6 +525,148 @@ export class ReportsDialog {
           name: 'To first reply',
           color: '#29b6f6',
           data: teams.map((team) => team.medianHoursToFirstReply ?? '-'),
+        },
+      ],
+    };
+  });
+
+  /** An agent's open work by priority: one bar each. */
+  protected readonly byPriority = computed((): EChartsCoreOption => {
+    const agent = this.store.report()?.agents[0];
+    return {
+      ...this.base(),
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+      grid: { left: 8, right: 16, top: 24, bottom: 8, containLabel: true },
+      xAxis: { type: 'category', data: [...TICKET_PRIORITIES], ...this.axis() },
+      yAxis: { type: 'value', minInterval: 1, ...this.axis() },
+      series: [
+        {
+          type: 'bar',
+          name: 'Open',
+          label: { show: true, position: 'top', color: this.text() },
+          data: TICKET_PRIORITIES.map((priority) => ({
+            value: agent?.openByPriority[priority] ?? 0,
+            itemStyle: { color: PRIORITY_COLORS[priority] },
+          })),
+        },
+      ],
+    };
+  });
+
+  /** An agent's median hours to resolve and to first reply: two bars. */
+  protected readonly agentTimes = computed((): EChartsCoreOption => {
+    const agent = this.store.report()?.agents[0];
+    return {
+      ...this.base(),
+      tooltip: {
+        trigger: 'axis',
+        valueFormatter: (value: unknown) => `${value} h`,
+      },
+      grid: { left: 8, right: 16, top: 24, bottom: 8, containLabel: true },
+      xAxis: {
+        type: 'category',
+        data: ['To resolve', 'To first reply'],
+        ...this.axis(),
+      },
+      yAxis: { type: 'value', name: 'hours', ...this.axis() },
+      series: [
+        {
+          type: 'bar',
+          name: 'Median hours',
+          label: { show: true, position: 'top', color: this.text() },
+          data: [
+            {
+              value: agent?.medianHoursToResolve ?? '-',
+              itemStyle: { color: '#5c6bc0' },
+            },
+            {
+              value: agent?.medianHoursToFirstReply ?? '-',
+              itemStyle: { color: '#29b6f6' },
+            },
+          ],
+        },
+      ],
+    };
+  });
+
+  /** A team's agents' open work, stacked by priority: horizontal bars. */
+  protected readonly byAgent = computed((): EChartsCoreOption => {
+    const agents = this.store.report()?.agents ?? [];
+    return {
+      ...this.base(),
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+      legend: { bottom: 0, textStyle: { color: this.text() } },
+      grid: { left: 8, right: 16, top: 8, bottom: 32, containLabel: true },
+      xAxis: { type: 'value', minInterval: 1, ...this.axis() },
+      yAxis: {
+        type: 'category',
+        inverse: true,
+        data: agents.map(({ name }) => name),
+        ...this.axis(),
+      },
+      series: [
+        ...TICKET_PRIORITIES.map((priority) => ({
+          type: 'bar',
+          name: priority,
+          stack: 'open',
+          color: PRIORITY_COLORS[priority],
+          data: agents.map(({ openByPriority }) => openByPriority[priority]),
+        })),
+        {
+          // How much of it is overdue, beside each bar.
+          type: 'bar',
+          name: 'overdue',
+          color: '#b71c1c',
+          barGap: '10%',
+          data: agents.map(({ overdue }) => overdue),
+        },
+      ],
+    };
+  });
+
+  /**
+   * A team's agents' SLA met % (bars, left axis) and median hours to
+   * resolve (bars, right axis); a gap where an agent finished nothing.
+   */
+  protected readonly agentSla = computed((): EChartsCoreOption => {
+    const agents = this.store.report()?.agents ?? [];
+    return {
+      ...this.base(),
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+      legend: { bottom: 0, textStyle: { color: this.text() } },
+      grid: { left: 8, right: 8, top: 32, bottom: 32, containLabel: true },
+      xAxis: {
+        type: 'category',
+        data: agents.map(({ name }) => name),
+        ...this.axis(),
+        axisLabel: { color: this.text(), interval: 0, rotate: 30 },
+      },
+      yAxis: [
+        { type: 'value', name: 'SLA met %', max: 100, ...this.axis() },
+        {
+          type: 'value',
+          name: 'hours',
+          ...this.axis(),
+          splitLine: { show: false },
+        },
+      ],
+      series: [
+        {
+          type: 'bar',
+          name: 'SLA met %',
+          color: '#66bb6a',
+          data: agents.map(
+            (agent) =>
+              slaMetPercent(agent.finishedOnTime, agent.finishedWithDueTime) ??
+              '-'
+          ),
+        },
+        {
+          type: 'bar',
+          name: 'Median hours to resolve',
+          yAxisIndex: 1,
+          color: '#5c6bc0',
+          data: agents.map((agent) => agent.medianHoursToResolve ?? '-'),
         },
       ],
     };

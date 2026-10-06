@@ -72,7 +72,14 @@ import { TicketConversationStore } from './ticket-conversation.store';
         </div>
         <div>
           <dt>Assigned to</dt>
-          <dd>{{ ticket().assignee?.name ?? 'Nobody' }}</dd>
+          <!-- No longer theirs: who has it now isn't theirs to see. -->
+          <dd>
+            {{
+              store.access() === 'gone'
+                ? 'Someone else'
+                : (ticket().assignee?.name ?? 'Nobody')
+            }}
+          </dd>
         </div>
         <div>
           <dt>Due</dt>

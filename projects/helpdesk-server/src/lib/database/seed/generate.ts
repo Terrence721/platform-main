@@ -69,6 +69,28 @@ export const SLA_MINUTES: Record<TicketPriority, number> = {
  */
 export const OPEN_WORK_MAX_AGE_OF_SLA = 1.25;
 
+/**
+ * Of the finished tickets (resolved or closed), the share finished within
+ * their SLA; the rest are late by up to as long again (at most twice the
+ * SLA), as on a team that mostly keeps its promises.
+ */
+export const FINISHED_ON_TIME_SHARE = 0.85;
+
+/**
+ * How long after it was raised a finished ticket was finished, in
+ * minutes: within its priority's SLA for FINISHED_ON_TIME_SHARE of them,
+ * otherwise after it, by up to as long again.
+ */
+export function minutesToFinish(
+  faker: Faker,
+  priority: TicketPriority
+): number {
+  const sla = SLA_MINUTES[priority];
+  return faker.number.float() < FINISHED_ON_TIME_SHARE
+    ? faker.number.int({ min: 10, max: sla })
+    : faker.number.int({ min: sla + 1, max: 2 * sla });
+}
+
 /** The statuses that still need work. */
 const OPEN_WORK: readonly TicketStatus[] = ['new', 'open', 'pending'];
 
@@ -458,7 +480,12 @@ export function generateSeed(options: Partial<SeedOptions> = {}): SeedData {
           ? null
           : SLA_MINUTES[priority] - createdMinutesAgo,
       createdMinutesAgo,
-      updatedMinutesAgo: faker.number.int({ min: 0, max: createdMinutesAgo }),
+      // Open work last changed any time since it was raised. Finished work
+      // last changed when it was finished: a realistic time after it was
+      // raised (see minutesToFinish), and never later than now.
+      updatedMinutesAgo: OPEN_WORK.includes(status)
+        ? faker.number.int({ min: 0, max: createdMinutesAgo })
+        : Math.max(0, createdMinutesAgo - minutesToFinish(faker, priority)),
       messages: [],
     });
   }

@@ -1,0 +1,666 @@
+<title>Project Dependency Graph — platform-main</title>
+<style>
+  :root {
+    --paper: #ede9df;
+    --paper-2: #e2ddd0;
+    --ink: #1c2333;
+    --ink-soft: #4b5567;
+    --rule: #c7c0ac;
+    --accent: #a13d2b;
+    --accent-2: #2e5266;
+    --tier0: #2e5266;
+    --tier0-bg: #dfe6ea;
+    --tier1: #a13d2b;
+    --tier1-bg: #f1e2dd;
+    --tier2: #6b4a8a;
+    --tier2-bg: #e9e0f0;
+    --project: #3d5a2c;
+    --project-bg: #e1e8d6;
+    --font-display:
+      Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', serif;
+    --font-body:
+      -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial,
+      sans-serif;
+    --font-mono:
+      ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono',
+      monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --paper: #14181f;
+      --paper-2: #1b212b;
+      --ink: #e8e4d9;
+      --ink-soft: #a3aabb;
+      --rule: #303748;
+      --accent: #dd7a4a;
+      --accent-2: #7fb2cc;
+      --tier0: #7fb2cc;
+      --tier0-bg: #1b2731;
+      --tier1: #dd7a4a;
+      --tier1-bg: #2c2019;
+      --tier2: #b79bd6;
+      --tier2-bg: #26212f;
+      --project: #a9c98e;
+      --project-bg: #1e2619;
+    }
+  }
+  :root[data-theme='dark'] {
+    --paper: #14181f;
+    --paper-2: #1b212b;
+    --ink: #e8e4d9;
+    --ink-soft: #a3aabb;
+    --rule: #303748;
+    --accent: #dd7a4a;
+    --accent-2: #7fb2cc;
+    --tier0: #7fb2cc;
+    --tier0-bg: #1b2731;
+    --tier1: #dd7a4a;
+    --tier1-bg: #2c2019;
+    --tier2: #b79bd6;
+    --tier2-bg: #26212f;
+    --project: #a9c98e;
+    --project-bg: #1e2619;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+  html {
+    color-scheme: light dark;
+  }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    padding: 2.75rem 1.5rem 4rem;
+  }
+  @media (max-width: 600px) {
+    body {
+      padding: 2rem 1rem 3rem;
+    }
+  }
+  a {
+    color: var(--accent-2);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+  }
+  a:hover {
+    color: var(--accent);
+  }
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+  }
+
+  .page {
+    max-width: 940px;
+    margin: 0 auto;
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 0.9rem;
+  }
+  .eyebrow::before {
+    content: '◆ ';
+    color: var(--accent);
+  }
+
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: clamp(1.7rem, 3.4vw, 2.5rem);
+    line-height: 1.15;
+    margin: 0 0 0.7rem;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+
+  .dek {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    max-width: 68ch;
+    margin: 0 0 2.4rem;
+  }
+  .dek code {
+    color: var(--ink);
+  }
+
+  h2 {
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 1rem;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 0.6rem;
+  }
+
+  /* ---- layered diagram ---- */
+  .diagram {
+    border: 1px solid var(--rule);
+    background: var(--paper-2);
+    padding: 1.6rem 1.8rem;
+    margin-bottom: 2.4rem;
+  }
+  .layer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.9rem;
+  }
+  .lanes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.2rem;
+  }
+  @media (max-width: 600px) {
+    .diagram {
+      padding: 1.2rem 1rem;
+    }
+    .lanes {
+      grid-template-columns: 1fr;
+    }
+  }
+  .lane {
+    border: 1px dashed var(--rule);
+    padding: 0.9rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .lane-label,
+  .layer-label {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    text-align: center;
+    width: 100%;
+  }
+  .node {
+    font-family: var(--font-mono);
+    font-size: 0.84rem;
+    font-weight: 600;
+    padding: 0.55rem 0.9rem;
+    border: 1px solid var(--project);
+    color: var(--project);
+    background: var(--project-bg);
+    text-align: center;
+  }
+  .node small {
+    display: block;
+    font-family: var(--font-body);
+    font-weight: 400;
+    font-size: 0.74rem;
+    color: var(--ink-soft);
+    margin-top: 0.15rem;
+  }
+  .edge {
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    color: var(--ink-soft);
+    text-align: center;
+    padding: 0.45rem 0;
+  }
+  .mod {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0.4rem 0.7rem;
+    border: 1px solid var(--rule);
+  }
+  .mod--tier0 {
+    color: var(--tier0);
+    background: var(--tier0-bg);
+    border-color: var(--tier0);
+  }
+  .mod--tier1 {
+    color: var(--tier1);
+    background: var(--tier1-bg);
+    border-color: var(--tier1);
+  }
+  .mod--tier2 {
+    color: var(--tier2);
+    background: var(--tier2-bg);
+    border-color: var(--tier2);
+  }
+  .mod--tool {
+    color: var(--ink-soft);
+    border-style: dashed;
+  }
+
+  /* ---- exact table ---- */
+  .table-wrap {
+    overflow-x: auto;
+    margin-bottom: 2.4rem;
+    border: 1px solid var(--rule);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+  th,
+  td {
+    padding: 0.5rem 0.7rem;
+    border-bottom: 1px solid var(--rule);
+    text-align: center;
+    white-space: nowrap;
+  }
+  thead th {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--project);
+    background: var(--paper-2);
+  }
+  tbody th {
+    text-align: left;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 0.8rem;
+  }
+  tbody tr.group th {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    background: var(--paper-2);
+  }
+  tbody tr:last-child th,
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+  .yes {
+    color: var(--project);
+    font-weight: 700;
+  }
+  .part {
+    color: var(--ink-soft);
+    font-size: 0.78rem;
+  }
+  .none {
+    color: var(--rule);
+  }
+
+  /* ---- cards ---- */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2.4rem;
+  }
+  .card {
+    border: 1px solid var(--rule);
+    padding: 1.1rem 1.25rem 1.3rem;
+  }
+  .card h3 {
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--project);
+    margin: 0 0 0.5rem;
+  }
+  .card ul {
+    margin: 0;
+    padding-left: 1.1rem;
+    font-size: 0.85rem;
+    line-height: 1.65;
+    color: var(--ink-soft);
+  }
+  .card ul li::marker {
+    color: var(--rule);
+  }
+
+  .note {
+    border-left: 2px solid var(--accent-2);
+    padding: 0.3rem 0 0.3rem 1rem;
+    color: var(--ink-soft);
+    font-size: 0.92rem;
+    margin: 0 0 2.4rem;
+    max-width: 66ch;
+  }
+  .note strong {
+    color: var(--ink);
+  }
+
+  footer {
+    margin-top: 2.6rem;
+    padding-top: 1.2rem;
+    border-top: 1px solid var(--rule);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--ink-soft);
+  }
+  footer a {
+    margin-right: 1.2rem;
+  }
+</style>
+
+<div class="page">
+  <p class="eyebrow">platform-main — project dependency graph</p>
+  <h1>
+    5 Helpdesk projects, and exactly which modules each one uses — read from
+    every import, not guessed.
+  </h1>
+  <p class="dek">
+    The Helpdesk app is where the 13 modules do real work together. This page
+    shows how its five projects depend on each other and on the modules: only
+    the Angular app reaches into NgRx, it shares only a contract of types and
+    rules with the API (its in-browser demo also reuses the back end's
+    services), and the end-to-end suite stands on top of both. Every edge below
+    was counted from the projects' own
+    <code>import</code> statements on 2026-10-06. The
+    <a href="module-dependency-graph.html">module dependency graph</a> shows how
+    the modules depend on each other.
+  </p>
+
+  <h2>Dependency Diagram</h2>
+  <div class="diagram">
+    <div class="layer">
+      <span class="node"
+        >helpdesk-e2e<small
+          >Playwright · imports the contract · Nx runs it after the app and the
+          API</small
+        ></span
+      >
+    </div>
+    <div class="edge">↓ drives both in a real browser</div>
+    <div class="lanes">
+      <div class="lane">
+        <span class="lane-label">Front end</span>
+        <span class="node"
+          >helpdesk<small
+            >Angular app · ECharts · PGlite for the demo</small
+          ></span
+        >
+      </div>
+      <div class="lane">
+        <span class="lane-label">Back end</span>
+        <span class="node">helpdesk-api<small>NestJS · JWT · pg</small></span>
+        <span class="edge">↓ uses its services</span>
+        <span class="node"
+          >helpdesk-server<small>services · Drizzle schema · seed</small></span
+        >
+      </div>
+    </div>
+    <div class="edge">↓ all four import the shared contract</div>
+    <div class="layer">
+      <span class="node"
+        >helpdesk-contract<small
+          >types and rules both sides share · imports nothing</small
+        ></span
+      >
+    </div>
+    <div class="edge">
+      The NgRx modules below are imported only by <code>helpdesk</code>, the
+      front end above, not by the contract or the back end: 10 runtime modules
+      in its code, 2 tooling modules without an import
+    </div>
+    <div class="layer">
+      <span class="mod mod--tier0">store</span>
+      <span class="mod mod--tier0">signals</span>
+      <span class="mod mod--tier0">operators</span>
+      <span class="mod mod--tier0">component</span>
+      <span class="mod mod--tier0">component-store</span>
+      <span class="mod mod--tier1">effects</span>
+      <span class="mod mod--tier1">entity</span>
+      <span class="mod mod--tier1">router-store</span>
+      <span class="mod mod--tier1">store-devtools</span>
+      <span class="mod mod--tier2">data</span>
+      <span class="mod mod--tool">eslint-plugin</span>
+      <span class="mod mod--tool">schematics</span>
+    </div>
+    <div class="layer-label" style="margin-top: 0.7rem">
+      Module colors follow their tier in the module dependency graph · dashed:
+      used without an import
+    </div>
+  </div>
+
+  <h2>Exactly Who Imports What</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col" style="text-align: left">Dependency</th>
+          <th scope="col">helpdesk</th>
+          <th scope="col">helpdesk-api</th>
+          <th scope="col">helpdesk-server</th>
+          <th scope="col">helpdesk-contract</th>
+          <th scope="col">helpdesk-e2e</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="group">
+          <th scope="rowgroup" colspan="6">Helpdesk projects</th>
+        </tr>
+        <tr>
+          <th scope="row">@helpdesk/contract</th>
+          <td class="yes">✓</td>
+          <td class="yes">✓</td>
+          <td class="yes">✓</td>
+          <td class="none">—</td>
+          <td class="yes">✓</td>
+        </tr>
+        <tr>
+          <th scope="row">@helpdesk/server</th>
+          <td class="part">demo only</td>
+          <td class="yes">✓</td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+        </tr>
+        <tr class="group">
+          <th scope="rowgroup" colspan="6">NgRx runtime modules</th>
+        </tr>
+        <tr>
+          <th scope="row">@ngrx/store</th>
+          <td class="yes">✓ <span class="part">+ testing in specs</span></td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+        </tr>
+        <tr>
+          <th scope="row">@ngrx/effects</th>
+          <td class="yes">✓ <span class="part">+ testing in specs</span></td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+        </tr>
+        <tr>
+          <th scope="row">@ngrx/signals</th>
+          <td class="yes">
+            ✓ <span class="part">+ rxjs-interop, entities</span>
+          </td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+        </tr>
+        <tr>
+          <th scope="row">@ngrx/operators</th>
+          <td class="yes">✓</td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+        </tr>
+        <tr>
+          <th scope="row">@ngrx/data</th>
+          <td class="yes">✓</td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+        </tr>
+        <tr>
+          <th scope="row">@ngrx/component</th>
+          <td class="yes">✓</td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+        </tr>
+        <tr>
+          <th scope="row">@ngrx/store-devtools</th>
+          <td class="yes">✓</td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+        </tr>
+        <tr>
+          <th scope="row">@ngrx/router-store</th>
+          <td class="yes">✓</td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+        </tr>
+        <tr>
+          <th scope="row">@ngrx/entity</th>
+          <td class="yes">✓</td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+        </tr>
+        <tr>
+          <th scope="row">@ngrx/component-store</th>
+          <td class="yes">✓</td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+        </tr>
+        <tr class="group">
+          <th scope="rowgroup" colspan="6">
+            NgRx tooling, used without an import
+          </th>
+        </tr>
+        <tr>
+          <th scope="row">@ngrx/eslint-plugin</th>
+          <td class="part">lint config</td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+        </tr>
+        <tr>
+          <th scope="row">@ngrx/schematics</th>
+          <td class="part">generated code</td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+          <td class="none">—</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>What Each Project Is</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>helpdesk</h3>
+      <ul>
+        <li>The Angular app: a page per role, reports, live updates, sounds</li>
+        <li>
+          The only project that imports NgRx: a signal store per page, the NgRx
+          store and effects for the session, landing page and router state
+        </li>
+        <li>
+          Its in-browser demo imports <code>helpdesk-server</code>'s real
+          services and runs them against PGlite, with no server at all
+        </li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>helpdesk-api</h3>
+      <ul>
+        <li>NestJS: sign-in with a JWT cookie and role guards</li>
+        <li>
+          One module per feature; each controller hands the work to
+          <code>helpdesk-server</code>
+        </li>
+        <li>Shares nothing with the app except the contract</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>helpdesk-server</h3>
+      <ul>
+        <li>
+          The services, the Drizzle schema and migrations, and the seed data
+        </li>
+        <li>
+          No HTTP of its own, which is why the same code also runs in the
+          browser for the demo
+        </li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>helpdesk-contract</h3>
+      <ul>
+        <li>
+          Tickets, roles, the ticket workflow, live events and report shapes
+        </li>
+        <li>
+          Imports nothing at all, so every other project can depend on it
+          without pulling anything else in
+        </li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>helpdesk-e2e</h3>
+      <ul>
+        <li>
+          Playwright tests against the real Docker Compose stack, run on every
+          pull request
+        </li>
+        <li>
+          Imports only the contract's types; Nx's implicit dependencies make it
+          run after <code>helpdesk</code> and <code>helpdesk-api</code>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>How these edges were found:</strong> every <code>@ngrx/*</code> and
+    <code>@helpdesk/*</code> import in each project's source, with specs counted
+    separately (that is where <code>store/testing</code> and
+    <code>effects/testing</code> appear). The two tooling modules show up
+    nowhere in the code: <code>eslint-plugin</code> is loaded by the app's
+    <code>eslint.config.mjs</code>, and <code>schematics</code> generated the
+    landing page's state once (<code>nx g @ngrx/schematics:entity</code>). Three
+    pieces planned for the app were never needed and aren't imported:
+    <code>concatLatestFrom</code>, <code>router-store/data-persistence</code>
+    and signals events.
+  </div>
+
+  <footer>
+    <a href="https://github.com/Terrence721/platform-main">Repository</a>
+    <a
+      href="https://github.com/Terrence721/platform-main/blob/main/docs/how-it-fits-together.md"
+      >How it fits together</a
+    >
+    <a href="module-dependency-graph.html">Module dependency graph</a>
+    platform-main · 5 Helpdesk projects · verified against real imports
+  </footer>
+</div>

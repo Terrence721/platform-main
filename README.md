@@ -24,6 +24,7 @@ This repo is **not affiliated with, and not published by, the upstream [@ngrx/pl
 - **[`docs/case-study.md`](docs/case-study.md)** — problem, constraints, tradeoffs, and results, for anyone scanning this repo as a portfolio piece rather than reading it as documentation.
 - **[How It Fits Together](docs/how-it-fits-together.md)** — the big picture in one diagram: the 13 modules, the Helpdesk app built on them, how it runs (dev server or Docker), the in-browser demo, and the path from a pull request to the live site
 - **[Module Dependency Graph](https://terrence721.github.io/platform-main/diagrams/module-dependency-graph.html)** — the 13 modules and their 3 real dependency tiers, read from every `peerDependencies` field
+- **[Project Dependency Graph](https://terrence721.github.io/platform-main/diagrams/project-dependency-graph.html)** — the 5 Helpdesk projects and exactly which modules each one imports, read from every `import`
 - **[Nx Project Graph](docs/diagrams/nx-project-graph.png)** — Nx's own graph of the 13 modules and the 5 Helpdesk projects (`nx graph`), including the implicit edges to `schematics` that order the builds
 - **[Composition Over Inheritance](https://terrence721.github.io/platform-main/diagrams/composition-over-inheritance.html)** — before/after for all 6 classes redesigned off RxJS inheritance, and what each change actually cost
 - **[Code-Review Audit Pipeline](https://terrence721.github.io/platform-main/diagrams/code-review-audit-pipeline.html)** — the per-file table → issue → PR → merge process, plus live per-module status

@@ -16,7 +16,8 @@ import {
 } from '@ngrx/signals';
 import { setAllEntities, withEntities } from '@ngrx/signals/entities';
 import { rxMethod } from '@ngrx/signals/rxjs-interop';
-import { exhaustMap, forkJoin, pipe, switchMap, tap } from 'rxjs';
+import { exhaustMap, filter, forkJoin, map, pipe, switchMap, tap } from 'rxjs';
+import { LiveUpdates } from '../live/live-updates';
 import { apiErrorMessage } from '../tickets/api-error-message';
 import { assigneeApi, statusApi } from '../tickets/ticket-api-paths';
 
@@ -50,7 +51,8 @@ export type StatusState = 'idle' | 'saving' | 'changed' | 'failed';
  * unassigned work they may take; and what they finished in the last 24
  * hours (Done). Each comes in the API's order, which the store keeps.
  * Provided by the page, so it lives only while the page is open; all three
- * load when created.
+ * load when created, and again, quietly, whenever a live update says a
+ * ticket changed (#950).
  */
 export const MyTicketsStore = signalStore(
   withEntities<TicketDto>(),
@@ -196,12 +198,53 @@ export const MyTicketsStore = signalStore(
         })
       )
     ),
+    /**
+     * Fetches all three lists again and swaps them in quietly, with no
+     * spinner: for a live update (#950), when something changed elsewhere.
+     * A newer refresh replaces one still running; a failed one keeps the
+     * lists as they are, until the next.
+     */
+    refresh: rxMethod<void>(
+      pipe(
+        switchMap(() =>
+          forkJoin({
+            mine: http.get<TicketDto[]>(MY_TICKETS_API),
+            unassigned: http.get<TicketDto[]>(UNASSIGNED_API),
+            finished: http.get<TicketDto[]>(FINISHED_API),
+          }).pipe(
+            tapResponse({
+              next: ({ mine, unassigned, finished }) =>
+                patchState(store, setAllEntities(mine), {
+                  unassigned,
+                  finished,
+                  loadState: 'loaded',
+                  unassignedState: 'loaded',
+                  finishedState: 'loaded',
+                }),
+              error: () => undefined,
+            })
+          )
+        )
+      )
+    ),
   })),
   withHooks({
-    onInit: (store) => {
+    onInit: (store, live = inject(LiveUpdates)) => {
       store.load();
       store.loadUnassigned();
       store.loadFinished();
+      // A ticket changed somewhere, or the stream came back after a break:
+      // the lists may be out of date. Replies and accounts don't change
+      // them.
+      store.refresh(
+        live.updates.pipe(
+          filter(
+            (update) =>
+              update.kind === 'reconnected' || update.event.type === 'ticket'
+          ),
+          map(() => undefined)
+        )
+      );
     },
   })
 );

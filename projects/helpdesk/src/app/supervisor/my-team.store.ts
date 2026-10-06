@@ -16,7 +16,18 @@ import {
   withState,
 } from '@ngrx/signals';
 import { rxMethod } from '@ngrx/signals/rxjs-interop';
-import { EMPTY, exhaustMap, forkJoin, of, pipe, switchMap, tap } from 'rxjs';
+import {
+  EMPTY,
+  exhaustMap,
+  filter,
+  forkJoin,
+  map,
+  of,
+  pipe,
+  switchMap,
+  tap,
+} from 'rxjs';
+import { LiveUpdates } from '../live/live-updates';
 import { apiErrorMessage } from '../tickets/api-error-message';
 import { assigneeApi, statusApi } from '../tickets/ticket-api-paths';
 
@@ -72,7 +83,8 @@ interface MyTeamState {
  * The signed-in supervisor's team and its workload, for the supervisor
  * page's My team, plus the tickets of the team member the supervisor
  * chooses. Provided by the page, so it lives only while the page is open;
- * the team loads when created.
+ * the team loads when created, and again, quietly, whenever a live update
+ * says a ticket or an account changed (#950).
  */
 export const MyTeamStore = signalStore(
   withState<MyTeamState>({
@@ -227,9 +239,71 @@ export const MyTeamStore = signalStore(
           })
         )
       ),
+      /**
+       * Fetches the team and the chosen member's tickets again and swaps
+       * them in quietly, with no spinner: for a live update (#950), when
+       * something changed elsewhere. A member who left the team is no
+       * longer chosen; one chosen while it ran keeps their own tickets. A
+       * newer refresh replaces one still running; a failed one keeps what
+       * is shown, until the next.
+       */
+      refresh: rxMethod<void>(
+        pipe(
+          switchMap(() => {
+            const memberId = store.selectedMemberId();
+            return http.get<TeamOverview>(MY_TEAM_API).pipe(
+              switchMap((team) => {
+                const stillOnTeam =
+                  memberId !== null &&
+                  team.members.some(({ id }) => id === memberId);
+                return forkJoin({
+                  team: of(team),
+                  memberTickets: stillOnTeam
+                    ? http.get<TicketDto[]>(memberTicketsApi(memberId))
+                    : of([]),
+                  stillOnTeam: of(stillOnTeam),
+                });
+              }),
+              tapResponse({
+                next: ({ team, memberTickets, stillOnTeam }) => {
+                  patchState(store, { team, loadState: 'loaded' });
+                  if (store.selectedMemberId() !== memberId) {
+                    return;
+                  }
+                  patchState(
+                    store,
+                    stillOnTeam
+                      ? { memberTickets, memberTicketsState: 'loaded' }
+                      : {
+                          selectedMemberId: null,
+                          memberTickets: [],
+                          memberTicketsState: 'idle',
+                        }
+                  );
+                },
+                error: () => undefined,
+              })
+            );
+          })
+        )
+      ),
     };
   }),
   withHooks({
-    onInit: (store) => store.load(),
+    onInit: (store, live = inject(LiveUpdates)) => {
+      store.load();
+      // A ticket changed somewhere, accounts changed (someone may have
+      // joined or left the team), or the stream came back after a break:
+      // what is shown may be out of date. Replies don't change it.
+      store.refresh(
+        live.updates.pipe(
+          filter(
+            (update) =>
+              update.kind === 'reconnected' || update.event.type !== 'message'
+          ),
+          map(() => undefined)
+        )
+      );
+    },
   })
 );

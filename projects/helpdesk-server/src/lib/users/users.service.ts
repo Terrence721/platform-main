@@ -13,17 +13,35 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { and, asc, eq, inArray, ne, sql } from 'drizzle-orm';
 import { hashPassword } from '../auth/password';
 import { DATABASE, type Database } from '../database/database-token';
 import { teams, tickets, users } from '../database/schema';
+import { LiveEvents } from '../live/live-events';
 import { OPEN_WORK_STATUSES } from '../tickets/tickets.service';
 
-/** Reads, creates and changes Helpdesk accounts, for admins. */
+/**
+ * Reads, creates and changes Helpdesk accounts, for admins. Each change is
+ * told to the open pages it concerns (`live`, #950): accounts to admins
+ * and supervisors; tickets an edit hands back, as unassigned work.
+ */
 @Injectable()
 export class UsersService {
-  constructor(@Inject(DATABASE) private readonly database: Database) {}
+  constructor(
+    @Inject(DATABASE) private readonly database: Database,
+    // Named, as an optional parameter's recorded type is only `Object`.
+    @Optional() @Inject(LiveEvents) private readonly live?: LiveEvents
+  ) {}
+
+  /** Tells admins and supervisors the accounts changed. */
+  private accountsChanged(): void {
+    this.live?.publish({
+      event: { type: 'accounts' },
+      audience: { kind: 'accounts' },
+    });
+  }
 
   /**
    * Every account, by name: user ID, name, role, team, whether they lead
@@ -57,7 +75,7 @@ export class UsersService {
     // Hashing is slow on purpose, so it happens before the transaction.
     const passwordHash = await hashPassword(password);
 
-    return this.database.transaction(async (tx) => {
+    const account = await this.database.transaction(async (tx) => {
       let team: { id: string; name: string } | null = null;
       if (teamId !== null) {
         [team = null] = await tx
@@ -94,6 +112,8 @@ export class UsersService {
         active: created[0].active,
       };
     });
+    this.accountsChanged();
+    return account;
   }
 
   /**
@@ -127,99 +147,120 @@ export class UsersService {
       throw new BadRequestException('Choose a team.');
     }
 
-    return this.database.transaction(async (tx) => {
-      const [before] = await tx
-        .select({
-          role: users.role,
-          teamId: users.teamId,
-          active: users.active,
-        })
-        .from(users)
-        .where(eq(users.id, userId))
-        .for('update');
-      if (before === undefined) {
-        throw new NotFoundException('No such account.');
-      }
-      if (teamId !== null) {
-        const [team] = await tx
-          .select({ id: teams.id })
-          .from(teams)
-          .where(eq(teams.id, teamId));
-        if (team === undefined) {
-          throw new BadRequestException('That team does not exist.');
-        }
-      }
-
-      // An active admin who stops being one needs another active admin
-      // left. The others are locked too, so two admins removing each other
-      // at once cannot both succeed.
-      const stopsBeingAdmin =
-        before.role === 'admin' &&
-        before.active &&
-        (role !== 'admin' || !active);
-      if (stopsBeingAdmin) {
-        const otherAdmins = await tx
-          .select({ id: users.id })
+    const { response, released, formerTeamId } =
+      await this.database.transaction(async (tx) => {
+        const [before] = await tx
+          .select({
+            role: users.role,
+            teamId: users.teamId,
+            active: users.active,
+          })
           .from(users)
-          .where(
-            and(
-              eq(users.role, 'admin'),
-              eq(users.active, true),
-              ne(users.id, userId)
-            )
-          )
+          .where(eq(users.id, userId))
           .for('update');
-        if (otherAdmins.length === 0) {
-          throw new ConflictException(LAST_ADMIN_MESSAGE);
+        if (before === undefined) {
+          throw new NotFoundException('No such account.');
         }
-      }
+        if (teamId !== null) {
+          const [team] = await tx
+            .select({ id: teams.id })
+            .from(teams)
+            .where(eq(teams.id, teamId));
+          if (team === undefined) {
+            throw new BadRequestException('That team does not exist.');
+          }
+        }
 
-      await tx
-        .update(users)
-        .set({ role, teamId, active })
-        .where(eq(users.id, userId));
-
-      // Open work goes back to the old team's Unassigned when its holder
-      // stops working that team's tickets.
-      const leavesTeamWork =
-        !active || role === 'admin' || teamId !== before.teamId;
-      const released = leavesTeamWork
-        ? await tx
-            .update(tickets)
-            .set({ assigneeId: null })
+        // An active admin who stops being one needs another active admin
+        // left. The others are locked too, so two admins removing each other
+        // at once cannot both succeed.
+        const stopsBeingAdmin =
+          before.role === 'admin' &&
+          before.active &&
+          (role !== 'admin' || !active);
+        if (stopsBeingAdmin) {
+          const otherAdmins = await tx
+            .select({ id: users.id })
+            .from(users)
             .where(
               and(
-                eq(tickets.assigneeId, userId),
-                inArray(tickets.status, [...OPEN_WORK_STATUSES])
+                eq(users.role, 'admin'),
+                eq(users.active, true),
+                ne(users.id, userId)
               )
             )
-            .returning({ id: tickets.id })
-        : [];
+            .for('update');
+          if (otherAdmins.length === 0) {
+            throw new ConflictException(LAST_ADMIN_MESSAGE);
+          }
+        }
 
-      // The team lead.
-      const stillLeads =
-        active && role === 'supervisor' && teamId === before.teamId;
-      if (!stillLeads) {
         await tx
-          .update(teams)
-          .set({ supervisorId: null })
-          .where(eq(teams.supervisorId, userId));
-      }
-      const becomesLead =
-        active &&
-        role === 'supervisor' &&
-        teamId !== null &&
-        (before.role !== 'supervisor' || teamId !== before.teamId);
-      if (becomesLead) {
-        await tx
-          .update(teams)
-          .set({ supervisorId: userId })
-          .where(eq(teams.id, teamId));
-      }
+          .update(users)
+          .set({ role, teamId, active })
+          .where(eq(users.id, userId));
 
-      const [account] = await selectAccounts(tx).where(eq(users.id, userId));
-      return { account, releasedTickets: released.length };
-    });
+        // Open work goes back to the old team's Unassigned when its holder
+        // stops working that team's tickets.
+        const leavesTeamWork =
+          !active || role === 'admin' || teamId !== before.teamId;
+        const released = leavesTeamWork
+          ? await tx
+              .update(tickets)
+              .set({ assigneeId: null })
+              .where(
+                and(
+                  eq(tickets.assigneeId, userId),
+                  inArray(tickets.status, [...OPEN_WORK_STATUSES])
+                )
+              )
+              .returning({ id: tickets.id })
+          : [];
+
+        // The team lead.
+        const stillLeads =
+          active && role === 'supervisor' && teamId === before.teamId;
+        if (!stillLeads) {
+          await tx
+            .update(teams)
+            .set({ supervisorId: null })
+            .where(eq(teams.supervisorId, userId));
+        }
+        const becomesLead =
+          active &&
+          role === 'supervisor' &&
+          teamId !== null &&
+          (before.role !== 'supervisor' || teamId !== before.teamId);
+        if (becomesLead) {
+          await tx
+            .update(teams)
+            .set({ supervisorId: userId })
+            .where(eq(teams.id, teamId));
+        }
+
+        const [account] = await selectAccounts(tx).where(eq(users.id, userId));
+        return {
+          response: { account, releasedTickets: released.length },
+          released,
+          formerTeamId: before.teamId,
+        };
+      });
+
+    this.accountsChanged();
+    // Each ticket handed back is unassigned work now: everyone's
+    // Unassigned list changes, and the holder's and their old team's.
+    for (const { id } of released) {
+      this.live?.publish({
+        event: { type: 'ticket', ticketId: id },
+        audience: {
+          kind: 'ticket',
+          holderIds: [userId],
+          teamIds: formerTeamId === null ? [] : [formerTeamId],
+          unassigned: true,
+        },
+      });
+    }
+    return response;
   }
 }
 

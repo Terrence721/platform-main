@@ -15,6 +15,14 @@ export function Inject(_token: unknown): ParameterDecorator {
   return () => undefined;
 }
 
+/**
+ * Marks a constructor parameter Nest may leave out; nothing to do outside
+ * Nest (the demo leaves out the live events: one tab, nobody to tell).
+ */
+export function Optional(): ParameterDecorator {
+  return () => undefined;
+}
+
 /** An error with the HTTP status the API answers it with. */
 export class HttpException extends Error {
   constructor(

@@ -9,10 +9,13 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { asc, eq } from 'drizzle-orm';
 import { DATABASE, type Database } from '../database/database-token';
 import { teams, ticketMessages, tickets, users } from '../database/schema';
+import { LiveEvents } from '../live/live-events';
+import { ticketAudience } from '../live/ticket-audience';
 
 /** A ticket's id is a UUID; anything else names no ticket. */
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -35,11 +38,16 @@ const MESSAGE_COLUMNS = {
 /**
  * A ticket's conversation: replies to the customer and internal notes.
  * Only the agent who holds the ticket, or the supervisor who leads that
- * agent's team, may read or write it, as with changing its status.
+ * agent's team, may read or write it, as with changing its status. A new
+ * message is told to the open pages it concerns (`live`, #950).
  */
 @Injectable()
 export class TicketMessagesService {
-  constructor(@Inject(DATABASE) private readonly database: Database) {}
+  constructor(
+    @Inject(DATABASE) private readonly database: Database,
+    // Named, as an optional parameter's recorded type is only `Object`.
+    @Optional() @Inject(LiveEvents) private readonly live?: LiveEvents
+  ) {}
 
   /**
    * A ticket's messages, oldest first. 404 for a ticket the user may not
@@ -72,7 +80,7 @@ export class TicketMessagesService {
     { kind, body }: AddTicketMessageRequest,
     by: CurrentUser
   ): Promise<TicketMessage> {
-    return this.database.transaction(async (tx) => {
+    const message = await this.database.transaction(async (tx) => {
       const status = await this.reachable(tx, ticketId, by, 'update');
       if (status === 'closed') {
         throw new ConflictException("A closed ticket can't change.");
@@ -93,6 +101,13 @@ export class TicketMessagesService {
         .where(eq(ticketMessages.id, id));
       return toTicketMessage(row);
     });
+    if (this.live) {
+      this.live.publish({
+        event: { type: 'message', ticketId },
+        audience: await ticketAudience(this.database, ticketId),
+      });
+    }
+    return message;
   }
 
   /**

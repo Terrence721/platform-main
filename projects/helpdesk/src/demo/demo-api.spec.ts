@@ -239,6 +239,38 @@ describe('DemoApi', { timeout: 60_000 }, () => {
         scope: { teamId: 'atlas' },
       });
       expect(report.teams.map(({ teamId }) => teamId)).toEqual(['atlas', null]);
+      // A row per agent on the team, and only their team to pick.
+      expect(report.agents.length).toBeGreaterThan(0);
+      expect(report.agents.every(({ teamId }) => teamId === 'atlas')).toBe(
+        true
+      );
+      expect(report.choices.teams.map(({ teamId }) => teamId)).toEqual([
+        'atlas',
+      ]);
+    });
+
+    it('reports on one agent of the team when picked (?agent=)', async () => {
+      const { status, body } = await call(
+        'GET',
+        '/api/reports?agent=sam.rivera'
+      );
+
+      expect(status).toBe(200);
+      expect(body).toMatchObject({
+        scope: { agentId: 'sam.rivera' },
+        teams: [],
+        agents: [{ agentId: 'sam.rivera', name: 'Sam Rivera' }],
+      });
+    });
+
+    it('answers 404 for another team or its agent, as the API does', async () => {
+      expect(await call('GET', '/api/reports?team=beacon')).toMatchObject({
+        status: 404,
+        body: { message: 'No such team.' },
+      });
+      expect((await call('GET', '/api/reports?agent=nina.patel')).status).toBe(
+        404
+      );
     });
 
     it('answers 404 for an agent on another team, as for no one', async () => {

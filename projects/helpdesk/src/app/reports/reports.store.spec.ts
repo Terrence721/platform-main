@@ -51,6 +51,8 @@ const REPORT: ReportsResponse = {
       teamId: null,
     },
   ],
+  agents: [],
+  choices: { teams: [], agents: [] },
 };
 
 describe('ReportsStore', () => {

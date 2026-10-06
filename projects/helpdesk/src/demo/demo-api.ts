@@ -1,6 +1,8 @@
 import {
   type CurrentUser,
   isUserId,
+  REPORT_AGENT_PARAM,
+  REPORT_TEAM_PARAM,
   type Role,
   SIGN_IN_FAILED_MESSAGE,
 } from '@helpdesk/contract';
@@ -15,7 +17,6 @@ import {
   readStatus,
   readUpdateAccount,
   ReportsService,
-  scopeFor,
   TeamsService,
   TicketMessagesService,
   TicketsService,
@@ -62,6 +63,8 @@ interface Route {
   run: (context: {
     user: CurrentUser;
     params: string[];
+    /** The query string's parameters, as a controller's @Query reads them. */
+    query: URLSearchParams;
     body: unknown;
   }) => Promise<unknown> | unknown;
   /** The status of a success, when it is not 200. */
@@ -105,7 +108,8 @@ export class DemoApi {
 
   /** Answers one request; a refusal comes back as Nest would send it. */
   async handle(request: DemoRequest): Promise<DemoResponse> {
-    const path = new URL(request.url, 'http://demo.invalid').pathname;
+    const url = new URL(request.url, 'http://demo.invalid');
+    const path = url.pathname;
     try {
       if (request.method === 'POST' && path === '/api/auth/sign-in') {
         return { status: 200, body: { user: await this.signIn(request.body) } };
@@ -128,6 +132,7 @@ export class DemoApi {
           const body = await route.run({
             user,
             params: match.slice(1),
+            query: url.searchParams,
             body: request.body,
           });
           return { status: route.status ?? 200, body };
@@ -270,7 +275,15 @@ export class DemoApi {
         method: 'GET',
         path: /^\/api\/reports$/,
         access: ['supervisor', 'admin'],
-        run: ({ user }) => this.reports.report(scopeFor(user), this.now()),
+        run: ({ user, query }) =>
+          this.reports.reportFor(
+            user,
+            {
+              team: query.get(REPORT_TEAM_PARAM) ?? undefined,
+              agent: query.get(REPORT_AGENT_PARAM) ?? undefined,
+            },
+            this.now()
+          ),
       },
     ];
   }

@@ -231,14 +231,18 @@ export class ReportsDialog {
   protected readonly store = inject(ReportsStore);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
-  /** "All teams", or the supervisor's team by name. */
+  /** "All teams", or the team or agent by name. */
   protected readonly scopeName = computed(() => {
     const report = this.store.report();
     if (report === null || report.scope === 'all') {
       return 'All teams';
     }
-    const { teamId } = report.scope;
-    return report.teams.find((team) => team.teamId === teamId)?.name ?? '';
+    const { scope } = report;
+    return 'agentId' in scope
+      ? (report.agents.find(({ agentId }) => agentId === scope.agentId)?.name ??
+          '')
+      : (report.teams.find(({ teamId }) => teamId === scope.teamId)?.name ??
+          '');
   });
 
   protected readonly tiles = computed((): Tile[] => {

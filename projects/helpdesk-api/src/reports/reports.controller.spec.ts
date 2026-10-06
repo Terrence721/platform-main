@@ -1,6 +1,14 @@
 import type { CurrentUser, ReportsResponse } from '@helpdesk/contract';
-import { NO_TEAM_MESSAGE, ReportsService } from '@helpdesk/server';
-import { INestApplication } from '@nestjs/common';
+import {
+  NO_SUCH_TEAM_MESSAGE,
+  ReportsService,
+  TEAM_OR_AGENT_MESSAGE,
+} from '@helpdesk/server';
+import {
+  BadRequestException,
+  INestApplication,
+  NotFoundException,
+} from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import cookieParser from 'cookie-parser';
 import { AddressInfo } from 'net';
@@ -23,13 +31,6 @@ const SESSIONS: Record<string, CurrentUser> = {
     role: 'supervisor',
     teamId: 'atlas',
   },
-  // A supervisor whose team was taken away: nothing to report on.
-  noTeam: {
-    id: 'old.lead',
-    name: 'Old Lead',
-    role: 'supervisor',
-    teamId: null,
-  },
   agent: {
     id: 'sam.rivera',
     name: 'Sam Rivera',
@@ -50,15 +51,14 @@ const REPORT: ReportsResponse = {
   scope: 'all',
   openByStatus: { new: 0, open: 0, pending: 0 },
   teams: [],
+  agents: [],
+  choices: { teams: [], agents: [] },
 };
 
 describe('/api/reports', () => {
-  const reports = {
-    report: vi.fn(async (scope: ReportsResponse['scope']) => ({
-      ...REPORT,
-      scope,
-    })),
-  };
+  // What the service decides is tested with it; here, only what the
+  // controller hands it and passes on.
+  const reports = { reportFor: vi.fn(async () => REPORT) };
   let app: INestApplication;
   let base: string;
 
@@ -85,42 +85,47 @@ describe('/api/reports', () => {
     await app.close();
   });
 
-  /** GET /api/reports with this session token, or signed out. */
-  const get = (session: string | null) =>
-    fetch(base, {
+  /** GET /api/reports with this query, as this session token or signed out. */
+  const get = (session: string | null, query = '') =>
+    fetch(`${base}${query}`, {
       headers:
         session === null ? {} : { cookie: `${SESSION_COOKIE}=${session}` },
     });
 
-  it('reports on every team for an admin', async () => {
+  it("answers with the service's report for the caller", async () => {
     const response = await get('admin');
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual(REPORT);
-    expect(reports.report).toHaveBeenCalledExactlyOnceWith('all');
-  });
-
-  it("reports on a supervisor's own team", async () => {
-    const response = await get('supervisor');
-
-    expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({
-      ...REPORT,
-      scope: { teamId: 'atlas' },
-    });
-    expect(reports.report).toHaveBeenCalledExactlyOnceWith({
-      teamId: 'atlas',
-    });
-  });
-
-  it('answers a supervisor on no team with 404, reading nothing', async () => {
-    const response = await get('noTeam');
-
-    expect(response.status).toBe(404);
-    expect(await response.json()).toEqual(
-      expect.objectContaining({ message: NO_TEAM_MESSAGE })
+    expect(reports.reportFor).toHaveBeenCalledExactlyOnceWith(
+      SESSIONS['admin'],
+      { team: undefined, agent: undefined }
     );
-    expect(reports.report).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['a team', '?team=beacon', { team: 'beacon', agent: undefined }],
+    ['an agent', '?agent=sam.rivera', { team: undefined, agent: 'sam.rivera' }],
+  ])('hands the service %s the caller picked', async (_, query, picked) => {
+    expect((await get('supervisor', query)).status).toBe(200);
+    expect(reports.reportFor).toHaveBeenCalledExactlyOnceWith(
+      SESSIONS['supervisor'],
+      picked
+    );
+  });
+
+  it.each([
+    [new NotFoundException(NO_SUCH_TEAM_MESSAGE), 404],
+    [new BadRequestException(TEAM_OR_AGENT_MESSAGE), 400],
+  ])("passes on the service's %s", async (error, status) => {
+    reports.reportFor.mockRejectedValueOnce(error);
+
+    const response = await get('supervisor', '?team=beacon');
+
+    expect(response.status).toBe(status);
+    expect(await response.json()).toEqual(
+      expect.objectContaining({ message: error.message })
+    );
   });
 
   it.each([
@@ -128,6 +133,6 @@ describe('/api/reports', () => {
     ['a signed-out request', null, 401],
   ] as const)('turns away %s, reading nothing', async (_, session, status) => {
     expect((await get(session)).status).toBe(status);
-    expect(reports.report).not.toHaveBeenCalled();
+    expect(reports.reportFor).not.toHaveBeenCalled();
   });
 });

@@ -134,4 +134,4 @@ Upstream has no tests for this entry point, so supporting it meant writing them:
 
 ### Consequences going forward
 
-The Helpdesk app ([#303](https://github.com/Terrence721/platform-main/issues/303)) uses these operators for its URL-driven ticket loading and optimistic updates, so the API gets a real consumer here, not only its spec.
+The Helpdesk app ([#303](https://github.com/Terrence721/platform-main/issues/303)) was planned to use these operators for URL-driven ticket loading and optimistic updates, but none of its features needed them: its pages load and save through signal stores (`rxMethod`), and its live updates refresh from the server instead of updating optimistically. Adding them only to give the API a consumer would have made the app read like an example again, so the epic closed without them, and its closing summary says so. Their 11 tests remain the only thing checking this entry point, so any change to it must keep them passing.

@@ -22,6 +22,7 @@ This repo is **not affiliated with, and not published by, the upstream [@ngrx/pl
 - **[HelpDesk project board](https://github.com/users/Terrence721/projects/11)** — the Helpdesk app's own board: its issues and PRs, from the scaffold through the landing page and on.
 - **[`docs/architecture.md`](docs/architecture.md)** — the reasoning behind this repo's architectural decisions (context, alternatives, what each one actually cost), not just what changed.
 - **[`docs/case-study.md`](docs/case-study.md)** — problem, constraints, tradeoffs, and results, for anyone scanning this repo as a portfolio piece rather than reading it as documentation.
+- **[How It Fits Together](docs/how-it-fits-together.md)** — the big picture in one diagram: the 13 modules, the Helpdesk app built on them, how it runs (dev server or Docker), the in-browser demo, and the path from a pull request to the live site
 - **[Module Dependency Graph](https://terrence721.github.io/platform-main/diagrams/module-dependency-graph.html)** — the 13 modules and their 3 real dependency tiers, read from every `peerDependencies` field
 - **[Nx Project Graph](docs/diagrams/nx-project-graph.png)** — Nx's own graph of the 13 modules and the Helpdesk app (`nx graph`), including the implicit edges to `schematics` that order the builds
 - **[Composition Over Inheritance](https://terrence721.github.io/platform-main/diagrams/composition-over-inheritance.html)** — before/after for all 6 classes redesigned off RxJS inheritance, and what each change actually cost
@@ -43,50 +44,48 @@ Anyone can `cp -r` a well-known open-source library. The more useful exercise �
 
 An [Nx](https://nx.dev/) workspace (`modules/` for libraries, `projects/` for apps), using Yarn 4, Vitest, and ESLint's flat config.
 
-```text
-modules/
-  store/              ← added (real source); 5 classes redesigned to
-                         composition over inheritance, see docs/architecture.md
-  schematics-core/     ← added (real source), shared schematic/AST utilities
-  entity/              ← added (real source); audited clean, no RxJS-extending
-                         classes to redesign
-  effects/             ← added (real source); EffectSources redesigned to
-                         composition
-  operators/            ← added (real source); pure functions, audited clean
-  router-store/         ← added (real source); audited clean, adapted 3 call
-                           sites in production code + specs to the composed
-                           Store/ActionsSubject surface (state$/asObservable())
-  store-devtools/       ← added (real source); 1 legitimate DI-token extends
-                           reviewed clean, same composition ripple adapted,
-                           plus a StateObservable-specific fix
-  data/                 ← added (real source); largest module yet, audited
-                           clean, found and fixed 2 real upstream bugs plus
-                           the composition ripple in a third shape
-  component-store/      ← added (real source); no @ngrx/store dependency,
-                           audited clean, fixed a real TS strictness gap
-  schematics/            ← added (real source); also holds every other
-                           module's ng-add schematic (module-qualified
-                           keys), one shared implementation instead of 11
-                           duplicated copies — each module still resolves
-                           its own real `ng add @ngrx/X`, see
-                           docs/architecture.md
-  signals/               ← added (real source); no @ngrx/store dependency,
-                           audited clean; first module added the corrected
-                           way from the start, ng-add went straight into the
-                           shared schematics package
-  component/              ← added (real source); LetDirective/PushPipe, no
-                           @ngrx/store dependency, audited clean
-  eslint-plugin/           ← added (real source); 38 lint rules + configs,
-                           including template rules for @ngrx/component;
-                           13th and last module — all module additions
-                           complete
-projects/
-  helpdesk/                ← in progress: a real help desk app that uses
-                           every module (Angular Material; a NestJS API,
-                           PostgreSQL and sign-in to come), see #303
-```
+### The 13 modules (`modules/`)
 
-All 13 modules are added, and the per-module code review audit is complete ([#32](https://github.com/Terrence721/platform-main/issues/32), closed 2026-09-30): all 270 source files reviewed, each with its own issue and PR. `store` — 3 real bugs found and fixed; `entity` and `effects` — none; `router-store` — 7 real bugs fixed across 12/12 files; `store-devtools` — 6 real bugs plus 1 minor cleanup across 11/11 files; `component-store` — 1 real gap across 4/4 files; `component` — 1 real bug plus 2 barrel-export gaps across 10/10 files; `operators` — 2 barrel-export gaps across 4/4 files; `schematics-core` — 9 real bugs, 2 test-coverage gaps and 13 barrel-export gaps across 16/16 files; `signals` — 14 defects across 11 of 18 files, including the most severe of the audit (a state property named `set`/`update`/`asReadonly` silently and permanently broke `patchState`); `schematics` — 25/25 files, including standalone-app failures, generated code that did not compile, and weak tests; `data` — 42 of 61 files needed fixes; `eslint-plugin` — 38 of 55 files needed fixes (an aliased `Store` import silently turned off 14 rules; the rules now also cover functional effects, standalone providers and stores held in variables). Every finding is in [`docs/code-review.md`](docs/code-review.md). After the audit, the `migrations/` folders were reviewed the same way ([#106](https://github.com/Terrence721/platform-main/issues/106), 31 files, 27 fixed) and every module gained type-level tests of its public API ([#162](https://github.com/Terrence721/platform-main/issues/162), 11 type defects and 3 runtime bugs fixed). Now in progress: the Helpdesk app ([#303](https://github.com/Terrence721/platform-main/issues/303)), which runs anywhere with Docker ([#20](https://github.com/Terrence721/platform-main/issues/20)); see `todo.md`'s "Still to do" table for the rest.
+Each is real, MIT-licensed NgRx source, added one module at a time and then reviewed file by file.
+
+**Runtime modules**, used by apps:
+
+| Module            | What it does                                        | What changed here                                                                                                                 |
+| ----------------- | --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `store`           | Global state: actions, reducers, selectors          | 5 classes redesigned from RxJS inheritance to composition ([why](docs/architecture.md)); 3 bugs fixed in review                   |
+| `effects`         | Side effects that react to actions                  | `EffectSources` redesigned to composition; review found nothing to fix                                                            |
+| `entity`          | Entity adapter for collections in the store         | Review found nothing to fix                                                                                                       |
+| `router-store`    | Router state in the store, plus `data-persistence`  | Adapted to the composed `Store`; 7 bugs fixed in review; `data-persistence` ported as supported, not deprecated                   |
+| `store-devtools`  | Redux DevTools integration                          | A `StateObservable` fix on port; 6 bugs and 1 cleanup in review                                                                   |
+| `operators`       | `tapResponse`, `concatLatestFrom`, `mapResponse`    | 2 missing exports fixed in review                                                                                                 |
+| `signals`         | Signal stores, signal state, entities, events       | 14 defects fixed in review, the worst in the audit: a state key named `set`, `update` or `asReadonly` silently broke `patchState` |
+| `component-store` | Local state for a component, no global store needed | A TypeScript strictness gap fixed on port; 1 more gap fixed in review                                                             |
+| `component`       | `ngrxLet` and `ngrxPush`                            | 1 bug and 2 missing exports fixed in review                                                                                       |
+| `data`            | Entity data services over HTTP                      | 2 upstream bugs fixed on port; 42 of its 61 files fixed in review                                                                 |
+
+**Tooling modules**, used while developing:
+
+| Module            | What it does                                        | What changed here                                                                                                                                                                                                |
+| ----------------- | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `eslint-plugin`   | 38 lint rules and configs, including template rules | 38 of 55 files fixed: an aliased `Store` import had silently turned off 14 rules, and the rules now also cover functional effects, standalone providers and stores held in variables                             |
+| `schematics`      | `ng add` and code generators for every module       | One shared copy instead of 11, while each module keeps its own `ng add` ([why](docs/architecture.md)); all 25 files reviewed, fixing standalone-app failures, generated code that didn't compile, and weak tests |
+| `schematics-core` | Shared code-editing utilities for the schematics    | 9 bugs, 2 test gaps and 13 missing exports fixed                                                                                                                                                                 |
+
+The code review covered all 270 source files, each with its own issue and pull request ([#32](https://github.com/Terrence721/platform-main/issues/32)); every finding is in [`docs/code-review.md`](docs/code-review.md). After it, the 31 `ng update` migrations were reviewed the same way (27 fixed, [#106](https://github.com/Terrence721/platform-main/issues/106)), and every module gained type-level tests of its public API (11 type defects and 3 runtime bugs fixed, [#162](https://github.com/Terrence721/platform-main/issues/162)).
+
+### The Helpdesk app (`projects/`)
+
+A real help desk built on the modules, so every module does real work in a real app ([#303](https://github.com/Terrence721/platform-main/issues/303)). [How It Fits Together](docs/how-it-fits-together.md) shows how the parts connect.
+
+| Project             | What it is                                                                                    |
+| ------------------- | --------------------------------------------------------------------------------------------- |
+| `helpdesk`          | The Angular app: a page per role (agent, supervisor, admin), reports, live updates and sounds |
+| `helpdesk-contract` | The types and rules the app and the API share                                                 |
+| `helpdesk-api`      | The NestJS API: sign-in, roles, tickets, teams, accounts, reports, live updates               |
+| `helpdesk-server`   | The API's services, the PostgreSQL schema and migrations (Drizzle), and the seed data         |
+| `helpdesk-e2e`      | Playwright end-to-end tests against the real stack, run on every pull request                 |
+
+It runs with only Docker installed ([#20](https://github.com/Terrence721/platform-main/issues/20)), and a [live demo](https://terrence721.github.io/platform-main/helpdesk/) runs entirely in the browser.
 
 ## 🖥 Getting Started
 

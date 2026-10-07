@@ -49,9 +49,7 @@ export async function startDemoDatabase(
     }
   }
 
-  // The services are typed for the node-postgres driver; both are Drizzle's
-  // Postgres databases with the same query builder (as in the API's specs).
-  const database = drizzle(client) as unknown as Database;
+  const database: Database = drizzle(client);
   const summary = await seedDatabase(database, {
     now,
     password: DEFAULT_SEED_PASSWORD,

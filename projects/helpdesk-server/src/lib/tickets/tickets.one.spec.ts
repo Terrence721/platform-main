@@ -5,7 +5,6 @@ import { eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
 import { fileURLToPath } from 'url';
-import type { Database } from '../database/database-token';
 import { customers, queues, teams, tickets, users } from '../database/schema';
 import { TicketsService } from './tickets.service';
 
@@ -103,9 +102,7 @@ describe('TicketsService: one ticket', { timeout: 30_000 }, () => {
       ids[name as TicketName] = id;
     }
 
-    // The service is typed for the node-postgres driver; both are Drizzle's
-    // Postgres databases with the same query builder.
-    service = new TicketsService(database as unknown as Database);
+    service = new TicketsService(database);
   }, 60_000);
 
   afterAll(() => client.close());

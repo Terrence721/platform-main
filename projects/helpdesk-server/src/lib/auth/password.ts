@@ -1,3 +1,7 @@
+// Node's crypto and Buffer, declared here rather than left to another
+// import to bring in: the app type-checks this file for the in-browser
+// demo, whose build swaps crypto for its own stand-in (#1043).
+/// <reference types="node" />
 import { randomBytes, scrypt, timingSafeEqual } from 'crypto';
 import { promisify } from 'util';
 

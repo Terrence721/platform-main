@@ -3,7 +3,6 @@ import type { TicketStatus } from '@helpdesk/contract';
 import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
 import { fileURLToPath } from 'url';
-import type { Database } from '../database/database-token';
 import { customers, queues, tickets, users } from '../database/schema';
 import { TicketsService } from './tickets.service';
 
@@ -198,9 +197,7 @@ describe('TicketsService', () => {
       });
     }
 
-    // The service is typed for the node-postgres driver; both are Drizzle's
-    // Postgres databases with the same query builder.
-    service = new TicketsService(database as unknown as Database);
+    service = new TicketsService(database);
   }, 60_000);
 
   afterAll(() => client.close());

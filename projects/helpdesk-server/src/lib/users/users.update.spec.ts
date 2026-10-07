@@ -10,7 +10,6 @@ import { eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
 import { fileURLToPath } from 'url';
-import type { Database } from '../database/database-token';
 import { customers, queues, teams, tickets, users } from '../database/schema';
 import { UsersService } from './users.service';
 
@@ -83,9 +82,7 @@ describe('UsersService.update', { timeout: 60_000 }, () => {
       }))
     );
 
-    // The service is typed for the node-postgres driver; both are Drizzle's
-    // Postgres databases with the same query builder.
-    service = new UsersService(database as unknown as Database);
+    service = new UsersService(database);
   }, 60_000);
 
   afterEach(() => client.close());

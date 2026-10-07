@@ -16,7 +16,6 @@ import { eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
 import { fileURLToPath } from 'url';
-import type { Database } from '../database/database-token';
 import {
   customers,
   queues,
@@ -350,9 +349,7 @@ describe('ReportsService', { timeout: 60_000 }, () => {
       }
     }
 
-    // The service is typed for the node-postgres driver; both are Drizzle's
-    // Postgres databases with the same query builder.
-    service = new ReportsService(database as unknown as Database);
+    service = new ReportsService(database);
   });
 
   afterAll(() => client.close());

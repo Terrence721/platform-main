@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` next)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 1 of 24)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -298,3 +298,11 @@ It also shows the question left for the reports: a lead who is replaced stays a 
 The Reports popup's figures, and who may see which: the last of the server's 23 files. The figures hold, with finished work measured by the real finish time since #1020, first replies counting customer replies only, and medians rounded or absent as the contract says; so do the rules for admins (every team, any team or agent), agents (refused) and a team asked for together with an agent (refused).
 
 The one rule that differed was a supervisor's. Everywhere else a supervisor works with the team they lead: My team, the tickets they may open, and the app's "You don't lead a team yet". The reports went by the team they are on, so a lead who had been replaced still got the whole team's report and every agent's figures. Agreed with the repo owner, the reports now follow the lead too: a supervisor's report and choices come from the team they lead, and one who leads none is refused with "You don't lead a team." and offered nothing, rather than, as an empty team would otherwise have meant, every team. This settles the question raised by the files before it. Also here: the open-work statuses were a SQL literal, the server's last copy of the contract's list, and are now built from it.
+
+### [`helpdesk-api/src/database/database-url.ts`](https://github.com/Terrence721/platform-main/blob/a1aab60/projects/helpdesk-api/src/database/database-url.ts)
+
+**No findings** ([issue #1097](https://github.com/Terrence721/platform-main/issues/1097))
+
+The first file of `helpdesk-api`, whose review starts after the server's (23 files, complete; the summary is on [#1003](https://github.com/Terrence721/platform-main/issues/1003)). It says where the database is: `DATABASE_URL`, or the local development database when that is not set, only reading the environment its callers have loaded. In production a missing `DATABASE_URL` falls back to a local address where nothing answers inside a container, so the API fails to start rather than doing anything wrong, and Compose always sets it; left as a note.
+
+Reading it beside its twin turned up something weightier for `auth-config.ts`: the sign-in secret falls back the same way, even in production, to the development secret published in `.env.example`, which `compose.yaml` also passes by default. Anyone who reads the repository could sign a session as any user on a deployment that forgot its own secret. That is reviewed and decided with its own file.

@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 17 of 23)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 18 of 23)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -254,3 +254,9 @@ The one fault was in the date beside them. `historySince` promised "the same mom
 The one access rule for a ticket's details, its conversation and its status. You may work a ticket you hold, or one held by an agent on the team you lead; everything else, from a ticket that does not exist to someone else's or an unassigned one, gets the same 404, so nothing can be learned by probing IDs. A malformed ID is turned away before it reaches PostgreSQL, and only the ticket's own row is locked, to the end of the transaction, so checking and changing cannot be split by another write.
 
 One thing it surfaced is left for `reports.service.ts`: "the team you lead" means only the team's lead, as My team also has it, while the Reports popup gives any supervisor on a team that team's report. Which is intended is checked there.
+
+### [`helpdesk-server/src/lib/tickets/ticket-dto.ts`](https://github.com/Terrence721/platform-main/blob/e93b7d6/projects/helpdesk-server/src/lib/tickets/ticket-dto.ts)
+
+**No findings** ([issue #1083](https://github.com/Terrence721/platform-main/issues/1083))
+
+The one query and mapping behind every ticket the API sends. A ticket comes with its requester and queue, which it always has, and its assignee by a left join, so an unassigned ticket's assignee is `null`. Nothing private leaves: the assignee is an ID and a name, never the account row, and the requester's email goes because staff reply to it. The mapping builds the contract's shape field by field, so a new column, such as the finish time added for #1020, cannot reach a response unless it is added on purpose; and "most urgent first" puts the soonest due first, overdue work leading, as every work list expects.

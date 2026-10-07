@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 2 of 22)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 3 of 22)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -140,3 +140,11 @@ The first file of `helpdesk-server`, whose review starts after the contract's (1
 Password hashing and checking with Node's built-in scrypt. The mechanics are sound: a fresh 16-byte salt per hash, a constant-time comparison with the lengths checked first, no exception on a damaged hash, and over-long passwords refused before any hashing (the 128-character maximum, from `auth.ts`), so a huge password cannot slow the server down. Sign-in checks unknown users against a dummy hash, so they take as long as known ones. The in-browser demo's quick stand-in is deliberate and documented.
 
 The weakness is the cost. scrypt runs with Node's defaults, N = 2¹⁴, where OWASP's Password Storage guidance asks for at least N = 2¹⁷: measured here, 59 ms a hash against 551 ms. That cost is what makes a stolen database expensive to crack. And the stored form, `scrypt$<salt>$<key>`, does not record the cost, so raising it would quietly break every existing hash despite the comment's "a stronger one can be added later". The fix raises the cost, makes the stored form carry its settings, and has the seed hash its one shared password once so start-up stays quick. It touched the seed, the in-browser demo's stand-in for scrypt and the specs as well, so it was filed as #1039 and fixed in its own PR ([#1042](https://github.com/Terrence721/platform-main/pull/1042)): new passwords are hashed at N = 2¹⁷ and stored as `scrypt$N=131072,r=8,p=1$<salt>$<key>`, `verifyPassword` reads the cost back and refuses any it would not run, and the seed hashes its one published password once for all 48 accounts.
+
+### [`helpdesk-server/src/lib/database/database-token.ts`](https://github.com/Terrence721/platform-main/blob/b5da27a/projects/helpdesk-server/src/lib/database/database-token.ts)
+
+**Low · Type safety** — 1 finding filed ([#1043](https://github.com/Terrence721/platform-main/issues/1043)) ([issue #1044](https://github.com/Terrence721/platform-main/issues/1044))
+
+The injection token and type the services take their database by. Its comment holds: the two are kept apart from the API's `DatabaseModule` so that the in-browser demo never loads `pg` or the Node driver, and the driver import is type-only, so nothing of it is left after compiling.
+
+The type names one driver, though. `Database` is node-postgres's `NodePgDatabase`, while the in-browser demo and 14 specs run the same services on PGlite, so each passes its client as `as unknown as Database`, most beside a copied comment saying both are Drizzle's Postgres databases with the same query builder. That is true, and Drizzle has a type for it, `PgDatabase<PgQueryResultHKT>`, which both clients extend. A double cast turns type checking off at exactly the seam between the two drivers: a service relying on something only node-postgres offers would break the demo at run time without a compiler warning. Typing `Database` as the shared base removes all 15 casts; it touches the demo and the specs, so it is filed as #1043 with its own PR.

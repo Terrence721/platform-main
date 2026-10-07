@@ -63,6 +63,13 @@ const PEOPLE: {
     role: 'supervisor',
     teamId: 'beacon',
   },
+  // On Atlas but not its lead, as a lead is once replaced.
+  {
+    id: 'sue.second',
+    name: 'Sue Second',
+    role: 'supervisor',
+    teamId: 'atlas',
+  },
   { id: 'sam.rivera', name: 'Sam Rivera', role: 'agent', teamId: 'atlas' },
   { id: 'ben.ward', name: 'Ben Ward', role: 'agent', teamId: 'atlas' },
   {
@@ -556,6 +563,26 @@ describe('ReportsService', { timeout: 60_000 }, () => {
       ).rejects.toThrow(new NotFoundException(NO_TEAM_MESSAGE));
     });
 
+    // A supervisor works with the team they lead, as on My team: one on a
+    // team they do not lead (a replaced lead) has no report of it.
+    it.each([
+      ['no pick', {}],
+      ['the team they are on', { team: 'atlas' }],
+      ['an agent on it', { agent: 'sam.rivera' }],
+    ])(
+      'refuses a supervisor who does not lead their team, asking for %s (404)',
+      async (_, query) => {
+        expect(await scope('sue.second', query)).toEqual({
+          refused: 'NotFoundException',
+          message: NO_TEAM_MESSAGE,
+        });
+      }
+    );
+
+    it('says so as My team does', () => {
+      expect(NO_TEAM_MESSAGE).toBe("You don't lead a team.");
+    });
+
     it('refuses an agent (403)', async () => {
       await expect(service.scopeFor(as('sam.rivera'), {})).rejects.toThrow(
         ForbiddenException
@@ -564,6 +591,14 @@ describe('ReportsService', { timeout: 60_000 }, () => {
   });
 
   describe('choicesFor', () => {
+    // Not every team, as an admin is offered: nothing.
+    it('offers a supervisor who leads no team nothing', async () => {
+      expect(await service.choicesFor(as('sue.second'))).toEqual({
+        teams: [],
+        agents: [],
+      });
+    });
+
     it('offers an admin every team with its lead, and every active agent', async () => {
       expect(await service.choicesFor(as('alex.morgan'))).toEqual({
         teams: [

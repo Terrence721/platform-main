@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 22 of 23)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` next)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -290,3 +290,11 @@ A supervisor's My team: the team they lead, its active agents with their open an
 Accounts, for admins. Its edit was already fixed during this audit (open tickets handed back from a new supervisor, #1009; live streams ended on an edit, #1073), and the rest holds on a full re-read. Listing reads only what it sends, so no password hash leaves the database. Creating hashes the password before its transaction and lets the user ID's key decide when two admins pick the same one. Editing locks the account, refuses the admin's own, and locks the other admins so two admins cannot remove each other as the last; the lead rules hand a team over and leave it without a lead as they say. It locks a user before their tickets, the order assigning and taking now follow too (#1085), so the two cannot deadlock.
 
 It also shows the question left for the reports: a lead who is replaced stays a supervisor on the team but, from then on, sees neither My team nor its tickets, while the Reports popup still gives them the team's report.
+
+### [`helpdesk-server/src/lib/reports/reports.service.ts`](https://github.com/Terrence721/platform-main/blob/27cb6af/projects/helpdesk-server/src/lib/reports/reports.service.ts)
+
+**Medium-low · Access** — 1 fix; **Low** — the last server duplicate removed ([issue #1095](https://github.com/Terrence721/platform-main/issues/1095))
+
+The Reports popup's figures, and who may see which: the last of the server's 23 files. The figures hold, with finished work measured by the real finish time since #1020, first replies counting customer replies only, and medians rounded or absent as the contract says; so do the rules for admins (every team, any team or agent), agents (refused) and a team asked for together with an agent (refused).
+
+The one rule that differed was a supervisor's. Everywhere else a supervisor works with the team they lead: My team, the tickets they may open, and the app's "You don't lead a team yet". The reports went by the team they are on, so a lead who had been replaced still got the whole team's report and every agent's figures. Agreed with the repo owner, the reports now follow the lead too: a supervisor's report and choices come from the team they lead, and one who leads none is refused with "You don't lead a team." and offered nothing, rather than, as an empty team would otherwise have meant, every team. This settles the question raised by the files before it. Also here: the open-work statuses were a SQL literal, the server's last copy of the contract's list, and are now built from it.

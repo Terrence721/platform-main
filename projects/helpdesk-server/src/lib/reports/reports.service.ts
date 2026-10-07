@@ -1,6 +1,7 @@
 import {
   type AgentReport,
   type CurrentUser,
+  OPEN_WORK_STATUSES,
   REPORT_WINDOW_DAYS,
   type ReportChoices,
   type ReportFigures,
@@ -15,7 +16,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, eq, isNull, or, type SQL, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, or, type SQL, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { DATABASE, type Database } from '../database/database-token';
 import {
@@ -27,8 +28,11 @@ import {
 /** The name of the row for work nobody holds yet. */
 export const UNASSIGNED_REPORT_NAME = 'Unassigned';
 
-/** Shown to a supervisor who is on no team, so has nothing to report on. */
-export const NO_TEAM_MESSAGE = 'You are on no team.';
+/**
+ * Shown to a supervisor who leads no team, so has nothing to report on: as
+ * on My team, a supervisor works with the team they lead.
+ */
+export const NO_TEAM_MESSAGE = "You don't lead a team.";
 export const NO_SUCH_TEAM_MESSAGE = 'No such team.';
 export const NO_SUCH_AGENT_MESSAGE = 'No such agent.';
 export const TEAM_OR_AGENT_MESSAGE = 'Pick a team or an agent, not both.';
@@ -41,8 +45,8 @@ export interface ReportQuery {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** Open work: new, open or pending. */
-const isOpen = sql`${t.status} in ('new', 'open', 'pending')`;
+/** Open work: the contract's `OPEN_WORK_STATUSES`. */
+const isOpen = inArray(t.status, [...OPEN_WORK_STATUSES]);
 
 /** How many tickets match `condition`. */
 const countWhere = (condition: SQL) =>
@@ -124,10 +128,27 @@ export class ReportsService {
   }
 
   /**
+   * The team a supervisor leads, or `null` (for anyone else, or a
+   * supervisor who leads none). A supervisor works with the team they lead,
+   * as on My team: one who is on a team without leading it (a replaced
+   * lead) has no report of it.
+   */
+  private async ledTeamOf(user: CurrentUser): Promise<string | null> {
+    if (user.role !== 'supervisor') {
+      return null;
+    }
+    const [team] = await this.database
+      .select({ teamId: reportingTeams.teamId })
+      .from(reportingTeams)
+      .where(eq(reportingTeams.leadId, user.id));
+    return team?.teamId ?? null;
+  }
+
+  /**
    * What a caller may see. Admins: every team, or the team or agent they
-   * pick. Supervisors: their own team, or an agent on it; another team or
-   * agent is 404, as if there were none. A supervisor on no team: 404.
-   * Both a team and an agent: 400. Agents: 403.
+   * pick. Supervisors: the team they lead, or an agent on it; another team
+   * or agent is 404, as if there were none. A supervisor who leads no team:
+   * 404. Both a team and an agent: 400. Agents: 403.
    */
   async scopeFor(user: CurrentUser, query: ReportQuery): Promise<ReportScope> {
     if (user.role === 'agent') {
@@ -136,11 +157,11 @@ export class ReportsService {
     if (query.team && query.agent) {
       throw new BadRequestException(TEAM_OR_AGENT_MESSAGE);
     }
-    if (user.role === 'supervisor' && user.teamId === null) {
+    // A supervisor's team, unless asked otherwise; 'all' for an admin.
+    const ownTeam = await this.ledTeamOf(user);
+    if (user.role === 'supervisor' && ownTeam === null) {
       throw new NotFoundException(NO_TEAM_MESSAGE);
     }
-    // A supervisor's own team, unless asked otherwise; 'all' for an admin.
-    const ownTeam = user.role === 'supervisor' ? user.teamId : null;
 
     if (query.agent) {
       const [agent] = await this.database
@@ -172,10 +193,14 @@ export class ReportsService {
 
   /**
    * What a caller may pick, by name: an admin every team (with its lead)
-   * and every active agent; a supervisor their own team and its agents.
+   * and every active agent; a supervisor the team they lead and its active
+   * agents, and nothing if they lead none.
    */
   async choicesFor(user: CurrentUser): Promise<ReportChoices> {
-    const ownTeam = user.role === 'supervisor' ? user.teamId : null;
+    const ownTeam = await this.ledTeamOf(user);
+    if (user.role === 'supervisor' && ownTeam === null) {
+      return { teams: [], agents: [] };
+    }
     const lead = alias(reportingUsers, 'lead');
     const teams = await this.database
       .select({

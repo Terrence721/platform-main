@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 6 of 24)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 7 of 24)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -350,3 +350,11 @@ The gap was the one `database-url.ts` pointed at. The secret fell back to the de
 Signs users in and recognizes them on each request. It holds. A failed sign-in is always the same `null`, for a wrong password, an unknown or inactive user, a malformed user ID or an over-long password, and an unknown user is checked against a dummy hash of the same cost, so whether a user ID exists cannot be told. Each request reads the user's role, team and whether they are active from the database rather than trusting the token, so a deactivation ends the session at once; wrong-secret, expired and broken tokens are refused, and the password hash never leaves. With no way to change a password, no session outlives one.
 
 The one gap was a claim: the comment said every failed sign-in looks the same "in its timing", but an over-long password is refused before any hashing, so it is quicker. That gives nothing away, as it does not depend on the user ID, and the comment now says what holds: the same answer, taking as long, whether or not the user ID exists. Also here, a spec for an unsigned (`alg: none`) token, which the library already refuses; it keeps a later `algorithms` option from undoing that. Left for `auth.controller.ts`: sign-in has no rate limit, though each attempt costs about half a second of scrypt work and 128 MB.
+
+### [`helpdesk-api/src/auth/auth.guard.ts`](https://github.com/Terrence721/platform-main/blob/7e9bea1/projects/helpdesk-api/src/auth/auth.guard.ts)
+
+**No findings** ([issue #1109](https://github.com/Terrence721/platform-main/issues/1109))
+
+Lets a request through only with a valid session for an active user, and attaches that user. It reads exactly the session cookie and fails closed: no cookies (so also if cookie-parser were missing), other cookies only, or a session the service does not recognize are each a 401 that says nothing more and attaches nobody, and `@SignedInUser` answers 401 rather than hand an endpoint `undefined` if the guard is missing. Today every one of the 20 routes outside `/health` and `/auth` is behind it, through `@OnlyFor(...)`.
+
+Mapping those routes turned up one thing for `role.guard.ts`: its comment says a forgotten `OnlyFor` fails safe, closed to everyone, but `OnlyFor` is what attaches both guards, so an endpoint without it has none and is public. Nothing is exposed now; the next endpoint that forgets it would be. That is decided with its own file.

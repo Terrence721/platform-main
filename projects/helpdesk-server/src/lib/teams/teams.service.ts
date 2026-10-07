@@ -109,7 +109,8 @@ export class TeamsService {
           )
         )
         .groupBy(users.id, users.name)
-        .orderBy(asc(users.name))
+        // By name; two of the same name by user ID, so the order is fixed.
+        .orderBy(asc(users.name), asc(users.id))
     );
   }
 }

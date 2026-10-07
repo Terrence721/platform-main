@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { Pool } from 'pg';
 import { databaseUrl } from './database-url';
@@ -52,5 +53,30 @@ describe('DatabaseModule', () => {
     expect(pool.options.connectionTimeoutMillis).toBe(CONNECTION_TIMEOUT_MS);
     expect(pool.totalCount).toBe(0);
     await moduleRef.close();
+  });
+
+  // node-postgres emits `error` when an idle connection breaks (the
+  // database restarts, the network drops); with no listener, Node ends the
+  // process, so one database restart would take the whole API down.
+  it('survives an idle connection breaking, and logs it', async () => {
+    const logged = vi
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
+    const moduleRef = await Test.createTestingModule({
+      imports: [DatabaseModule],
+    }).compile();
+    const pool = moduleRef.get<Pool>(PG_POOL);
+
+    try {
+      expect(() =>
+        pool.emit('error', new Error('connection lost'))
+      ).not.toThrow();
+      expect(logged).toHaveBeenCalledWith(
+        expect.stringContaining('connection lost')
+      );
+    } finally {
+      logged.mockRestore();
+      await moduleRef.close();
+    }
   });
 });

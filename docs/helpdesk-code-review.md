@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 10 of 24)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 11 of 24)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -384,3 +384,9 @@ The second gap was the body it accepted: an HTML form post signed in too, so a p
 **No findings** ([issue #1115](https://github.com/Terrence721/platform-main/issues/1115))
 
 Wires the JWT module, the controller, `AuthService`, `AuthGuard` and `SignInLimits`. Its one comment holds: the secret comes from a factory because imports run before `main.ts`'s own code, so `register({ secret: jwtSecret() })` would read the environment before `.env` is loaded. Nest makes the module once, though five feature modules import it, so production's random secret (#1105) is one per start, as the Docker check showed with a single warning. The token's lifetime and the cookie's both come from `SESSION_HOURS`; it exports only what `@OnlyFor` needs elsewhere, keeping `SignInLimits` to itself; and with a shared secret, tokens are signed with HS256 and only shared-secret algorithms are accepted, `alg: none` refused under its own spec. Noted and left: pinning HS256 would only matter after a switch to key pairs.
+
+### [`helpdesk-api/src/live/events.controller.ts`](https://github.com/Terrence721/platform-main/blob/f9f8529/projects/helpdesk-api/src/live/events.controller.ts)
+
+**No findings** ([issue #1117](https://github.com/Terrence721/platform-main/issues/1117))
+
+The live updates stream, `/api/events`, as reworked by #1073 during the server's review. It holds, each rule under a spec: any signed-in role may open it and someone signed out gets 401; only the events that concern the person are sent, as `message` JSON; a `ping` every 25 seconds keeps a quiet stream open, and pages ignore it, as `EventSource` hands them only messages; and the stream ends, pings and all, when the session ends or the person's account changes, and only theirs. A token that expired between the guard and the stream ends it at once, and when the page closes, Nest unsubscribes. nginx passes it on as it comes (no buffering, HTTP/1.1 keep-alive, an hour's read timeout), which the e2e live-update tests go through. Noted and left: a person may open as many streams as tabs, signed-in staff only and each cheap; and for a token already expired, `share()` resets on the immediate end, so the events are subscribed twice, both ending at once.

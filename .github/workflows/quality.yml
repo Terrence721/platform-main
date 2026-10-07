@@ -108,6 +108,13 @@ jobs:
       - name: Run build
         run: yarn nx affected -t build
 
+      # The Helpdesk's migrations are generated from its schema. A schema
+      # change without its migration makes this write a new one, which the
+      # next step then reports (#1053). drizzle-kit generates offline: it
+      # compares the schema with the last snapshot, with no database.
+      - name: Generate any Helpdesk migration the schema needs
+        run: yarn db:generate
+
       # A build that writes into the source tree (as the schematics build once
       # did into schematics-core, #478) leaves tracked or unignored changes.
       - name: Check the build left the source tree unchanged

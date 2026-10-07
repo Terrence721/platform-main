@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 10 of 23)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 11 of 23)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -200,3 +200,13 @@ The migration written for #1020 earlier in this audit, so reviewed by its author
 **No findings** ([issue #1063](https://github.com/Terrence721/platform-main/issues/1063))
 
 The last of the five migrations, written for #1049 earlier in this audit: two generated statements dropping the reporting views nothing read. Nothing depends on either view, the plain `DROP VIEW` (without `IF EXISTS`) is right for a migration that runs once and in order, the in-browser demo applies it, and it matches the schema. With it, every migration has been reviewed: two of them (`0003`, `0004`) exist because of this audit, and the others needed no change.
+
+### [`helpdesk-server/src/lib/database/seed/generate.ts`](https://github.com/Terrence721/platform-main/blob/b80778e/projects/helpdesk-server/src/lib/database/seed/generate.ts)
+
+**Medium · Correctness** — 1 bug filed ([#1065](https://github.com/Terrence721/platform-main/issues/1065)); **Low** — 1 duplicate removed ([issue #1066](https://github.com/Terrence721/platform-main/issues/1066))
+
+The generated part of the seed: the rest of the agents, the customers and the ticket volume around the hand-written story. Much of it holds: Faker runs on a fixed seed, customers use only the domains reserved for examples, user IDs are always valid and unique, open work is mostly on time and finished work mostly finished within its SLA, and every message falls between its ticket's creation and last change.
+
+The bug: 5% of assigned tickets go to a supervisor, though supervisors do not work tickets (#1009). With the default seed that is 42 tickets. Three are open work nobody can reach, exactly the stuck tickets of #1009: not on My team, impossible to reassign, and supervisors have no My tickets page. The other 39 count in their team's row of the Reports popup but in no agent's, so a team's totals do not add up to its agents'. The fix changes which tickets the seed generates, so it is filed as #1065 with its own PR.
+
+Also here: the local `OPEN_WORK` list repeated the contract's `OPEN_WORK_STATUSES`, one of the copies the `reports.ts` review left to switch; it now uses the contract's. And a note: `userIdFor` would loop forever on a name that cleans to nothing, which Faker's English names never do, so it is left as it is.

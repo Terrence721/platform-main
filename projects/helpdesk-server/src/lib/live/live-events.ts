@@ -1,6 +1,14 @@
 import type { CurrentUser, LiveEvent } from '@helpdesk/contract';
 import { Injectable } from '@nestjs/common';
-import { filter, map, type Observable, Subject } from 'rxjs';
+import {
+  filter,
+  map,
+  merge,
+  type Observable,
+  Subject,
+  takeUntil,
+  timer,
+} from 'rxjs';
 
 /**
  * Who an event concerns. For a ticket or its conversation: who held it
@@ -61,17 +69,32 @@ export function concerns(audience: LiveAudience, user: CurrentUser): boolean {
 @Injectable()
 export class LiveEvents {
   private readonly notices = new Subject<LiveNotice>();
+  /** The user IDs whose streams must end, as their accounts change. */
+  private readonly ended = new Subject<string>();
 
   /** Tells everyone it concerns that something changed. */
   publish(notice: LiveNotice): void {
     this.notices.next(notice);
   }
 
-  /** The events that concern this person, from now on. */
-  for(user: CurrentUser): Observable<LiveEvent> {
+  /**
+   * The events that concern this person, from now on, until `endsAt` (their
+   * session's end) or until their account changes. A stream judges by the
+   * account as it was when it opened, so it must not outlive either (#1073):
+   * the browser reconnects, and the sign-in check judges them afresh.
+   */
+  for(user: CurrentUser, endsAt: Date): Observable<LiveEvent> {
     return this.notices.pipe(
       filter(({ audience }) => concerns(audience, user)),
-      map(({ event }) => event)
+      map(({ event }) => event),
+      takeUntil(
+        merge(timer(endsAt), this.ended.pipe(filter((id) => id === user.id)))
+      )
     );
+  }
+
+  /** Ends every stream this person has open: their account has changed. */
+  endStreamsOf(userId: string): void {
+    this.ended.next(userId);
   }
 }

@@ -151,6 +151,37 @@ describe('AuthService', () => {
       expect(await auth.currentUser(signedIn?.token)).toBeNull();
     });
   });
+
+  // A live-updates stream must end with its session (#1073), so it needs to
+  // know when that is.
+  describe('sessionEndsAt', () => {
+    it("is the token's expiry: eight hours after signing in", async () => {
+      const signedIn = await auth.signIn('sam.rivera', PASSWORD);
+      const { exp } = jwt.decode<{ exp: number }>(signedIn?.token ?? '');
+
+      expect(await auth.sessionEndsAt(signedIn?.token)).toEqual(
+        new Date(exp * 1000)
+      );
+      expect(exp * 1000 - Date.now()).toBeGreaterThan(8 * 60 * 60_000 - 60_000);
+    });
+
+    it('is nothing without a valid token', async () => {
+      const signedIn = await auth.signIn('sam.rivera', PASSWORD);
+      const expired = await jwt.signAsync(
+        { sub: 'sam.rivera', role: 'agent' },
+        { expiresIn: -10 }
+      );
+      const forged = await new JwtService({ secret: 'someone-else' }).signAsync(
+        { sub: 'sam.rivera', role: 'agent' },
+        { expiresIn: '8h' }
+      );
+
+      expect(await auth.sessionEndsAt(undefined)).toBeNull();
+      expect(await auth.sessionEndsAt(`${signedIn?.token}x`)).toBeNull();
+      expect(await auth.sessionEndsAt(expired)).toBeNull();
+      expect(await auth.sessionEndsAt(forged)).toBeNull();
+    });
+  });
 });
 
 describe('auth config', () => {

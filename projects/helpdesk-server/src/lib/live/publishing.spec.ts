@@ -250,5 +250,34 @@ describe('what each write tells the open pages', { timeout: 60_000 }, () => {
         },
       ]);
     });
+
+    // Their open streams judge by the account as it was, so they end, and
+    // the browser reconnects under the new role and team, or not at all
+    // (#1073).
+    it("an edit ends the edited person's open streams", async () => {
+      const ended = vi.spyOn(live, 'endStreamsOf');
+
+      await accounts.update(
+        'sam.rivera',
+        { role: 'agent', teamId: 'atlas', active: false },
+        'alex.morgan'
+      );
+
+      expect(ended.mock.calls).toEqual([['sam.rivera']]);
+    });
+
+    it("a refused edit ends no one's streams", async () => {
+      const ended = vi.spyOn(live, 'endStreamsOf');
+
+      await expect(
+        accounts.update(
+          'sam.rivera',
+          { role: 'agent', teamId: 'nowhere', active: true },
+          'alex.morgan'
+        )
+      ).rejects.toMatchObject({ status: 400 });
+
+      expect(ended).not.toHaveBeenCalled();
+    });
   });
 });

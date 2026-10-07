@@ -69,6 +69,24 @@ export class AuthService {
     return row?.active ? toCurrentUser(row) : null;
   }
 
+  /**
+   * When a valid session token's session ends (its expiry), or `null` for
+   * no valid token. Only the token is checked, not the account: the live
+   * updates stream asks after AuthGuard has checked that, so the stream
+   * can end with its session (#1073).
+   */
+  async sessionEndsAt(token: string | undefined): Promise<Date | null> {
+    if (!token) {
+      return null;
+    }
+    try {
+      const { exp } = await this.jwt.verifyAsync<{ exp?: number }>(token);
+      return typeof exp === 'number' ? new Date(exp * 1000) : null;
+    } catch {
+      return null;
+    }
+  }
+
   private async findUser(id: string) {
     const [row] = await this.database
       .select({

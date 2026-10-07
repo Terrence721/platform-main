@@ -17,7 +17,10 @@ export interface TeamMember extends PersonSummary {
 export interface TeamOverview {
   id: string;
   name: string;
-  /** The team's agents, by name. */
+  /**
+   * The team's active agents, by name: the ones a ticket can be assigned
+   * to. A deactivated agent stays on the team but is not listed (#1027).
+   */
   members: TeamMember[];
   /**
    * Every unassigned open ticket, most urgent first. Tickets belong to

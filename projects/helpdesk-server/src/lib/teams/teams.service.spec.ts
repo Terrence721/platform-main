@@ -14,12 +14,16 @@ const MIGRATIONS = fileURLToPath(new URL('../../../drizzle', import.meta.url));
 /** "Now" for these tests: overdue means due before this. */
 const NOW = new Date('2026-10-03T12:00:00.000Z');
 
-/** Atlas (Chris) and Beacon (Nina), and who is on them. */
+/**
+ * Atlas (Chris) and Beacon (Nina), and who is on them. Lee has left: still
+ * on Atlas, as a deactivated agent is, but inactive.
+ */
 const PEOPLE: {
   id: string;
   name: string;
   role: Role;
   teamId: string | null;
+  active?: boolean;
 }[] = [
   {
     id: 'chris.taylor',
@@ -30,6 +34,13 @@ const PEOPLE: {
   { id: 'sam.rivera', name: 'Sam Rivera', role: 'agent', teamId: 'atlas' },
   { id: 'benny.lind', name: 'Benny Lind', role: 'agent', teamId: 'atlas' },
   { id: 'ida.idle', name: 'Ida Idle', role: 'agent', teamId: 'atlas' },
+  {
+    id: 'lee.left',
+    name: 'Lee Left',
+    role: 'agent',
+    teamId: 'atlas',
+    active: false,
+  },
   {
     id: 'nina.patel',
     name: 'Nina Patel',
@@ -191,7 +202,7 @@ describe('TeamsService', () => {
     );
   });
 
-  it('lists the agents by name with their open and overdue work, the idle one at 0', async () => {
+  it('lists the active agents by name with their open and overdue work, the idle one at 0', async () => {
     expect((await overview())?.members).toEqual([
       // Benny: new (overdue) + open (no SLA, so not overdue).
       {
@@ -202,6 +213,8 @@ describe('TeamsService', () => {
       },
       // Ida: nothing at all.
       { id: 'ida.idle', name: 'Ida Idle', openTickets: 0, overdueTickets: 0 },
+      // Not Lee: inactive, so not someone a ticket can be assigned to
+      // (#1027).
       // Sam: open (overdue) + pending (due later). His resolved ticket,
       // though past its due time, is not open work, so neither counts it.
       {

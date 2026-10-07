@@ -76,8 +76,9 @@ export class TeamsService {
   }
 
   /**
-   * The team's agents by name, each with their open-ticket count and how
-   * many of those are past their due time at `now`.
+   * The team's active agents by name, each with their open-ticket count and
+   * how many of those are past their due time at `now`. A deactivated agent
+   * stays on the team but cannot be assigned work, so is left out (#1027).
    */
   private membersOf(teamId: string, now: Date): Promise<TeamMember[]> {
     return (
@@ -100,7 +101,13 @@ export class TeamsService {
             inArray(tickets.status, [...OPEN_WORK_STATUSES])
           )
         )
-        .where(and(eq(users.teamId, teamId), eq(users.role, 'agent')))
+        .where(
+          and(
+            eq(users.teamId, teamId),
+            eq(users.role, 'agent'),
+            eq(users.active, true)
+          )
+        )
         .groupBy(users.id, users.name)
         .orderBy(asc(users.name))
     );

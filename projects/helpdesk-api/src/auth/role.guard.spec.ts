@@ -1,12 +1,26 @@
 import type { CurrentUser, Role } from '@helpdesk/contract';
-import { Controller, Get, INestApplication, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  INestApplication,
+  Module,
+  Post,
+  RequestMethod,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  METHOD_METADATA,
+  MODULE_METADATA,
+  PATH_METADATA,
+} from '@nestjs/common/constants';
 import { Test } from '@nestjs/testing';
 import cookieParser from 'cookie-parser';
 import { AddressInfo } from 'net';
+import { AppModule } from '../app/app.module';
 import { SESSION_COOKIE } from './auth-config';
 import { AuthGuard } from './auth.guard';
 import { AuthService } from './auth.service';
-import { OnlyFor, RoleGuard } from './role.guard';
+import { ONLY_FOR_ROLE, OnlyFor, RoleGuard } from './role.guard';
 
 /** One user per role; each one's session token is their role's name. */
 const fakeAuth = {
@@ -49,7 +63,11 @@ class PagesController {
     return { ok: true };
   }
 
-  /** RoleGuard without OnlyFor: a mistake, which must fail safe. */
+  /**
+   * RoleGuard added by hand without OnlyFor: closed to everyone. (Leaving
+   * OnlyFor out altogether leaves no guard at all; the walk over every
+   * route, at the end, catches that.)
+   */
   @Get('forgotten')
   @UseGuards(AuthGuard, RoleGuard)
   forgotten() {
@@ -134,4 +152,118 @@ describe('OnlyFor and RoleGuard', () => {
       expect(await statusOf('/pages/forgotten', role)).toBe(403);
     }
   );
+});
+
+/**
+ * Every route reachable from `module` (its imports, theirs, and so on), as
+ * "GET /path" without the /api prefix, and whether `OnlyFor` guards it, on
+ * the method or its controller. OnlyFor is what attaches the guards, so a
+ * route without it has none.
+ */
+function routesOf(module: unknown): { route: string; guarded: boolean }[] {
+  const routes: { route: string; guarded: boolean }[] = [];
+  const seen = new Set<unknown>();
+  const visit = (entry: unknown): void => {
+    // A dynamic module, such as JwtModule.registerAsync(...), is an object
+    // naming its module class.
+    const dynamic = typeof entry === 'object' && entry !== null;
+    const moduleClass = dynamic
+      ? (entry as { module?: unknown }).module
+      : entry;
+    if (typeof moduleClass !== 'function' || seen.has(entry)) {
+      return;
+    }
+    seen.add(entry);
+    const imports: unknown[] = [
+      ...(Reflect.getMetadata(MODULE_METADATA.IMPORTS, moduleClass) ?? []),
+      ...((dynamic && (entry as { imports?: unknown[] }).imports) || []),
+    ];
+    imports.forEach(visit);
+    const controllers: Function[] =
+      Reflect.getMetadata(MODULE_METADATA.CONTROLLERS, moduleClass) ?? [];
+    for (const controller of controllers) {
+      const prefix: string = Reflect.getMetadata(PATH_METADATA, controller);
+      const classGuarded =
+        Reflect.getMetadata(ONLY_FOR_ROLE, controller) !== undefined;
+      for (const name of Object.getOwnPropertyNames(controller.prototype)) {
+        const handler = Object.getOwnPropertyDescriptor(
+          controller.prototype,
+          name
+        )?.value;
+        if (name === 'constructor' || typeof handler !== 'function') {
+          continue;
+        }
+        const path: string | undefined = Reflect.getMetadata(
+          PATH_METADATA,
+          handler
+        );
+        if (path === undefined) {
+          continue;
+        }
+        const method: RequestMethod = Reflect.getMetadata(
+          METHOD_METADATA,
+          handler
+        );
+        const segments = `${prefix}/${path}`.split('/').filter(Boolean);
+        routes.push({
+          route: `${RequestMethod[method]} /${segments.join('/')}`,
+          guarded:
+            classGuarded ||
+            Reflect.getMetadata(ONLY_FOR_ROLE, handler) !== undefined,
+        });
+      }
+    }
+  };
+  visit(module);
+  return routes;
+}
+
+const unguarded = (module: unknown) =>
+  routesOf(module)
+    .filter(({ guarded }) => !guarded)
+    .map(({ route }) => route)
+    .sort();
+
+// A route without OnlyFor has no guard at all, and anyone may call it. So
+// the API's open routes are listed here, and a new one fails this spec
+// until it is given its roles or, if it is meant to be open, added below.
+describe('every route of the API', () => {
+  it('is for its roles only, except signing in and out, and health', () => {
+    expect(unguarded(AppModule)).toEqual([
+      'GET /auth/me',
+      'GET /health',
+      'POST /auth/sign-in',
+      'POST /auth/sign-out',
+    ]);
+  });
+
+  it('is found, every one of them', () => {
+    // health 1, auth 3, events 1, reports 1, teams 3, tickets 8, users 3.
+    expect(routesOf(AppModule)).toHaveLength(20);
+  });
+
+  it('would show a route that forgot OnlyFor, in an imported module', () => {
+    @Controller('open')
+    class ForgottenController {
+      @Post()
+      oops() {
+        return { ok: true };
+      }
+
+      @Get('fine')
+      @OnlyFor('admin')
+      fine() {
+        return { ok: true };
+      }
+    }
+    @Module({ controllers: [ForgottenController] })
+    class ForgottenModule {}
+    @Module({
+      imports: [{ module: ForgottenModule }],
+      controllers: [SupervisorAreaController],
+    })
+    class SomeAppModule {}
+
+    expect(unguarded(SomeAppModule)).toEqual(['POST /open']);
+  });
 });

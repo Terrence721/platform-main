@@ -16,10 +16,12 @@ export const ONLY_FOR_ROLE = 'helpdesk:only-for-role';
 
 /**
  * Lets a request through only if the signed-in user has one of the
- * endpoint's roles (from `OnlyFor`); otherwise answers 403. An endpoint
- * without roles is closed to everyone, so a forgotten `OnlyFor` fails
- * safe. Runs after AuthGuard, which has already turned away anyone signed
- * out with 401.
+ * endpoint's roles (from `OnlyFor`); otherwise answers 403, also when the
+ * endpoint has no roles. Runs after AuthGuard, which has already turned
+ * away anyone signed out with 401. `OnlyFor` is what attaches both guards,
+ * so an endpoint without it has no guard at all and is open to anyone;
+ * role.guard.spec.ts walks every route of the API and fails on one that is
+ * not on its short list of open routes.
  */
 @Injectable()
 export class RoleGuard implements CanActivate {

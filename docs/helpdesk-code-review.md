@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 7 of 24)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 8 of 24)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -355,6 +355,16 @@ The one gap was a claim: the comment said every failed sign-in looks the same "i
 
 **No findings** ([issue #1109](https://github.com/Terrence721/platform-main/issues/1109))
 
-Lets a request through only with a valid session for an active user, and attaches that user. It reads exactly the session cookie and fails closed: no cookies (so also if cookie-parser were missing), other cookies only, or a session the service does not recognize are each a 401 that says nothing more and attaches nobody, and `@SignedInUser` answers 401 rather than hand an endpoint `undefined` if the guard is missing. Today every one of the 20 routes outside `/health` and `/auth` is behind it, through `@OnlyFor(...)`.
+Lets a request through only with a valid session for an active user, and attaches that user. It reads exactly the session cookie and fails closed: no cookies (so also if cookie-parser were missing), other cookies only, or a session the service does not recognize are each a 401 that says nothing more and attaches nobody, and `@SignedInUser` answers 401 rather than hand an endpoint `undefined` if the guard is missing. Today every one of the 16 routes outside `/health` and `/auth` (20 in all) is behind it, through `@OnlyFor(...)`.
 
 Mapping those routes turned up one thing for `role.guard.ts`: its comment says a forgotten `OnlyFor` fails safe, closed to everyone, but `OnlyFor` is what attaches both guards, so an endpoint without it has none and is public. Nothing is exposed now; the next endpoint that forgets it would be. That is decided with its own file.
+
+### [`helpdesk-api/src/auth/role.guard.ts`](https://github.com/Terrence721/platform-main/blob/93a8e18/projects/helpdesk-api/src/auth/role.guard.ts)
+
+**Medium-low · Access control** — 1 fix ([issue #1111](https://github.com/Terrence721/platform-main/issues/1111))
+
+`@OnlyFor(...roles)` and the role guard it attaches with AuthGuard. The rules hold, each proven over real HTTP: on a method the right role gets in, another gets 403 and someone signed out 401; on a controller the roles apply to its methods, and a method's own win; with several roles each one listed gets in.
+
+The gap was the safety net its comment promised: "an endpoint without roles is closed to everyone, so a forgotten `OnlyFor` fails safe". The spec proved only that the role guard, added by hand without roles, answers 403. But `OnlyFor` is what attaches both guards, so the real mistake, leaving it out, leaves the endpoint with no guard at all, open to anyone. Nothing is exposed today, as every one of the 16 routes outside `/health` and `/auth` has it. Agreed with the repo owner (option A of two, the other being global guards with a `@Public()` marker): a spec now walks every route reachable from `AppModule`, through imported and dynamic modules, and expects exactly the four open ones (`GET /health`, `POST /auth/sign-in`, `GET /auth/me`, `POST /auth/sign-out`); another checks that it finds all 20 routes, and a third that it shows a route which forgot `OnlyFor` in an imported module. The comments now say what holds. Noted and left: `OnlyFor` on both a controller and its method would run the guards twice; no controller does that.
+
+Writing that spec also corrected the count in the review of `auth.guard.ts`, which had said 20 routes outside `/health` and `/auth`.

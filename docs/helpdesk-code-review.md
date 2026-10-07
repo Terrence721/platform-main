@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 9 of 24)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 10 of 24)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -378,3 +378,9 @@ Writing that spec also corrected the count in the review of `auth.guard.ts`, whi
 What it lacked was a limit. Passwords could be guessed without end, and as each check costs about half a second of scrypt work and 128 MB, four at a time, a burst of sign-ins, even for made-up user IDs, could hold up everyone's. Agreed with the repo owner (option A of three, the others being a per-address limit through `@nestjs/throttler`, which behind nginx needs the forwarded address trusted, or a note only), a new `SignInLimits` keeps two limits in memory. After 5 failed sign-ins for one user ID in 15 minutes, that ID gets 429 with `Retry-After` before any password is checked, and a success clears its count; a user ID nobody has is counted like any other, so a wait shows nothing about it, and malformed ones share one count, so made-up values cannot fill the memory. At most 4 sign-ins are checked at once and 16 more wait their turn; beyond that the answer is 429 at once. The trade-off is the usual one: someone who knows a user ID can make that user wait up to 15 minutes.
 
 The second gap was the body it accepted: an HTML form post signed in too, so a page on another site could post a hidden form and sign its visitor in to the attacker's account. Sign-in now accepts only JSON, and anything else gets the same 401; other endpoints were never open to this, as a cross-site form does not carry the SameSite=Strict cookie. The two controller specs failed first; on the Docker stack, through nginx, five wrong passwords and then the right one gave 429 with `Retry-After: 898`, a form post 401, and the e2e suite passes. Noted and left: the app shows its "isn't available right now" message for a 429 and could say how long (for its review), and signing out drops the cookie without revoking the token, as usual with stateless JWTs.
+
+### [`helpdesk-api/src/auth/auth.module.ts`](https://github.com/Terrence721/platform-main/blob/8f72570/projects/helpdesk-api/src/auth/auth.module.ts)
+
+**No findings** ([issue #1115](https://github.com/Terrence721/platform-main/issues/1115))
+
+Wires the JWT module, the controller, `AuthService`, `AuthGuard` and `SignInLimits`. Its one comment holds: the secret comes from a factory because imports run before `main.ts`'s own code, so `register({ secret: jwtSecret() })` would read the environment before `.env` is loaded. Nest makes the module once, though five feature modules import it, so production's random secret (#1105) is one per start, as the Docker check showed with a single warning. The token's lifetime and the cookie's both come from `SESSION_HOURS`; it exports only what `@OnlyFor` needs elsewhere, keeping `SignInLimits` to itself; and with a shared secret, tokens are signed with HS256 and only shared-secret algorithms are accepted, `alg: none` refused under its own spec. Noted and left: pinning HS256 would only matter after a switch to key pairs.

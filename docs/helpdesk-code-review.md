@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 3 of 24)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 4 of 24)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -326,3 +326,11 @@ The Docker image's first step (`node setup.js && exec node main.js`): it applies
 The gap was the failure message. Drizzle 0.45 wraps every database error, and the wrapper's message is only the failed query, with the reason in its `cause`. A failed start printed `Database setup failed: Failed query: CREATE SCHEMA IF NOT EXISTS "drizzle" params:`, which says nothing of a refused connection, a wrong password or a conflicting migration. A small helper, `errorText` in `error-text.ts` with its own spec, now prints the message and then each cause; the built `setup.js`, pointed at a closed port, says `… — connect ECONNREFUSED 127.0.0.1:1`. `seed-cli.ts` has the same line and moves to the helper in its own review.
 
 Noted and left: this pool has no connection timeout (Compose starts the API only once the database is healthy); two containers starting at once could both migrate (Compose runs one); and the seed's default password is the published development one, which belongs with the production secret decided in `auth-config.ts`.
+
+### [`helpdesk-api/src/database/seed/seed-cli.ts`](https://github.com/Terrence721/platform-main/blob/b5da27a/projects/helpdesk-api/src/database/seed/seed-cli.ts)
+
+**Low · Diagnostics** — 1 fix ([issue #1103](https://github.com/Terrence721/platform-main/issues/1103))
+
+`yarn db:seed`, which `yarn start:helpdesk` runs after migrating: it seeds the database and says how to sign in. It holds: the seed refuses a database that already has users, pointing at `yarn db:reset`, and writes everything in one transaction; variables already set win over `.env`; the summary's fields all exist, and the file is type-checked with the rest of the API although `tsx` runs it unchecked; the pool is always closed, and a failure exits with code 1, which stops `yarn start:helpdesk`.
+
+Its failure message had the same gap as `setup-cli.ts`: `Seeding failed: Failed query: select count(*) from "users" params:`, with no reason. It now goes through `errorText` too, and against a closed port says `… — connect ECONNREFUSED 127.0.0.1:1`. Noted and left: it prints the sign-in password, a custom one included; that is what this local command is for, and the container seeds through `setup-cli.ts`, which does not.

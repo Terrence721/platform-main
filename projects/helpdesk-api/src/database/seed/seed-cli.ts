@@ -3,6 +3,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { existsSync } from 'fs';
 import { Pool } from 'pg';
 import { databaseUrl } from '../database-url';
+import { errorText } from '../error-text';
 
 // `yarn db:seed`: fills the empty, migrated database with the seed data and
 // says how to sign in. Run from the repo root (yarn start:helpdesk runs it
@@ -36,8 +37,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
-  console.error(
-    `Seeding failed: ${error instanceof Error ? error.message : String(error)}`
-  );
+  console.error(`Seeding failed: ${errorText(error)}`);
   process.exitCode = 1;
 });

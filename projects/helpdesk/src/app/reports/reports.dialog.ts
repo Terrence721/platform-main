@@ -13,7 +13,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import {
-  OPEN_REPORT_STATUSES,
+  OPEN_WORK_STATUSES,
   type ReportAgentChoice,
   TICKET_PRIORITIES,
   type TicketPriority,
@@ -418,7 +418,7 @@ export class ReportsDialog {
           type: 'pie',
           radius: ['45%', '70%'],
           label: { color: this.text(), formatter: '{b}: {c}' },
-          data: OPEN_REPORT_STATUSES.map((status) => {
+          data: OPEN_WORK_STATUSES.map((status) => {
             const value = report?.openByStatus[status] ?? 0;
             // No label for an empty slice: it stays in the legend only.
             return {

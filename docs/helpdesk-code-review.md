@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 3 of 22)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 4 of 22)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -148,3 +148,13 @@ The weakness is the cost. scrypt runs with Node's defaults, N = 2¹⁴, where OW
 The injection token and type the services take their database by. Its comment holds: the two are kept apart from the API's `DatabaseModule` so that the in-browser demo never loads `pg` or the Node driver, and the driver import is type-only, so nothing of it is left after compiling.
 
 The type names one driver, though. `Database` is node-postgres's `NodePgDatabase`, while the in-browser demo and 14 specs run the same services on PGlite, so each passes its client as `as unknown as Database`, most beside a copied comment saying both are Drizzle's Postgres databases with the same query builder. That is true, and Drizzle has a type for it, `PgDatabase<PgQueryResultHKT>`, which both clients extend. A double cast turns type checking off at exactly the seam between the two drivers: a service relying on something only node-postgres offers would break the demo at run time without a compiler warning. Typing `Database` as the shared base removed the 13 PGlite casts (two more cast hand-made fake databases, where a cast is the right tool). It touched the demo and the specs, so it was filed as #1043 and fixed in its own PR ([#1046](https://github.com/Terrence721/platform-main/pull/1046)). The change also surfaced a hidden dependency: `password.ts` uses Node's `crypto` and `Buffer`, and the app's build (which type-checks the server code for the demo) found them only because the old type pulled in Node's types as a side effect. `password.ts` now declares them itself.
+
+### [`helpdesk-server/src/lib/database/schema.ts`](https://github.com/Terrence721/platform-main/blob/5a9b084/projects/helpdesk-server/src/lib/database/schema.ts)
+
+**Low · Documentation** — 3 doc comments fixed ([issue #1047](https://github.com/Terrence721/platform-main/issues/1047))
+
+The tables, enums and indexes, checked against the migrations, the services and the contract. The structure holds: values and limits come from the contract; users and teams refer to each other, one team per supervisor; the user ID is the key, so an assignee is the sign-in ID; ticket numbers start at 1001 and are never reused; messages go with their ticket while their authors are kept, as accounts are deactivated rather than deleted.
+
+Three comments were wrong or missing. The indexes were said to serve "the contract's list filters and sorts", a list query removed in #1018 and #1032; the comment now names what the services filter and sort by, and admits that the queue index serves no query yet (it stays, as dropping it would take a migration). `updatedAt` was said to move on every update, but it is Drizzle's `$onUpdate`, not a database trigger, so raw SQL such as migration `0003`'s backfill leaves it alone. And `tickets`, the central table, was the only one without a doc comment.
+
+Considered and left for later: CHECK constraints for rules only the services enforce (admins have no team, a team's supervisor has that role, `finishedAt` is set exactly when a ticket is finished). They would add defense in depth, but each needs a migration, and the services and their tests enforce them today.

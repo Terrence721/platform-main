@@ -1,10 +1,11 @@
 import { TicketPriority, TicketStatus } from './ticket';
 
-/** Limits the app's forms and the API's validation both enforce. */
+/**
+ * The longest subject and description a ticket may have: the widths of the
+ * database columns that hold them.
+ */
 export const TICKET_SUBJECT_MAX_LENGTH = 200;
 export const TICKET_DESCRIPTION_MAX_LENGTH = 10_000;
-export const TICKET_MAX_TAGS = 10;
-export const TICKET_TAG_MAX_LENGTH = 30;
 
 /**
  * A date and time as JSON carries it: an ISO 8601 string in UTC, such as
@@ -49,35 +50,13 @@ export interface TicketDto {
   updatedAt: IsoDateTime;
 }
 
-/** Raises a ticket. New tickets start as `new` and unassigned. */
-export interface CreateTicketRequest {
-  subject: string;
-  description: string;
-  priority: TicketPriority;
-  requesterId: string;
-  queueId: string;
-  tags?: string[];
-}
-
-/**
- * Changes any of a ticket's fields at once; fields left out stay as they
- * are. The server checks each changed field: the status against
- * `canTransition`, and assigning someone else against `hasPermission`.
- */
-export interface UpdateTicketRequest {
-  status?: TicketStatus;
-  priority?: TicketPriority;
-  /** Who works the ticket; `null` unassigns it. */
-  assigneeId?: string | null;
-  queueId?: string;
-  tags?: string[];
-}
-
 /**
  * Gives an open ticket to an agent. A supervisor may give an unassigned
- * ticket, or one held by an agent on their team, to an agent on their
- * team; assigning a `new` ticket also opens it. Finished (resolved or
- * closed) tickets cannot be assigned.
+ * ticket, or one held by an agent on their team, to an active agent on
+ * their team. An agent takes an unassigned ticket by naming themselves
+ * (anyone else is refused; one someone has taken is a conflict).
+ * Assigning a `new` ticket also opens it. Finished (resolved or closed)
+ * tickets cannot be assigned.
  */
 export interface AssignTicketRequest {
   assigneeId: string;
@@ -94,32 +73,6 @@ export interface ChangeStatusRequest {
 
 /** How long a finished ticket stays in an agent's Done list. */
 export const RECENTLY_FINISHED_HOURS = 24;
-
-/** The fields a ticket list can be sorted by. */
-export const TICKET_SORT_FIELDS = [
-  'ticketNumber',
-  'createdAt',
-  'updatedAt',
-  'priority',
-  'slaDueAt',
-] as const;
-
-export type TicketSortField = (typeof TICKET_SORT_FIELDS)[number];
-
-/** A sort field, ascending; with a leading `-`, descending. */
-export type TicketSort = TicketSortField | `-${TicketSortField}`;
-
-/** Most recently changed first. */
-export const DEFAULT_TICKET_SORT: TicketSort = '-updatedAt';
-
-/** Whether a value, such as a query string parameter, is a ticket sort. */
-export function isTicketSort(value: unknown): value is TicketSort {
-  if (typeof value !== 'string') {
-    return false;
-  }
-  const field = value.startsWith('-') ? value.slice(1) : value;
-  return (TICKET_SORT_FIELDS as readonly string[]).includes(field);
-}
 
 /** The ticket number as people see it: `#1042`. */
 export function formatTicketNumber(ticketNumber: number): string {

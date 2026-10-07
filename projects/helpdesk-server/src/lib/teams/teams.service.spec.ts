@@ -137,11 +137,12 @@ const TICKETS: {
 
 describe('TeamsService', () => {
   let client: PGlite;
+  let database: ReturnType<typeof drizzle>;
   let service: TeamsService;
 
   beforeAll(async () => {
     client = new PGlite();
-    const database = drizzle(client);
+    database = drizzle(client);
     await migrate(database, { migrationsFolder: MIGRATIONS });
 
     await database.insert(queues).values([
@@ -268,5 +269,27 @@ describe('TeamsService', () => {
     ])('does not find %s', async (_, supervisorId, userId) => {
       expect(await service.agentLedBy(supervisorId, userId)).toBeNull();
     });
+  });
+
+  // Two people may share a name; their user IDs then decide, so My team
+  // and its Assign list keep one order.
+  it('lists two agents with the same name by user ID', async () => {
+    await database.insert(users).values({
+      id: 'aaa.idle',
+      name: 'Ida Idle',
+      role: 'agent',
+      teamId: 'atlas',
+      passwordHash: 'x',
+    });
+    try {
+      const ids = (await overview())?.members.map(({ id }) => id);
+
+      expect(ids?.filter((id) => id.endsWith('.idle'))).toEqual([
+        'aaa.idle',
+        'ida.idle',
+      ]);
+    } finally {
+      await database.delete(users).where(eq(users.id, 'aaa.idle'));
+    }
   });
 });

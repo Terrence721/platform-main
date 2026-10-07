@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 20 of 23)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 21 of 23)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -276,3 +276,9 @@ Also here: `OPEN_WORK_STATUSES` was one more copy of the contract's list, which 
 **No findings** ([issue #1089](https://github.com/Terrence721/platform-main/issues/1089))
 
 A ticket's conversation. Only the ticket's holder, or the lead of the holder's team, may read or write it, through the shared access rule. A closed ticket's conversation can still be read, but nothing more can be added to it; a new message marks the ticket as changed without moving when it was finished; the conversation comes oldest first in a stable order; and only an author's ID and name are sent. Unlike assigning and taking (#1085), adding a message cannot race an admin's edit of its writer: it is written under the ticket's lock, so the edit waits or goes first, and the ticket is then no longer the writer's. One thing checked and left: the seed has supervisors write only notes, but that is a choice of sample data, not a rule; the popup and the API let a holder or their lead write either.
+
+### [`helpdesk-server/src/lib/teams/teams.service.ts`](https://github.com/Terrence721/platform-main/blob/925a9bb/projects/helpdesk-server/src/lib/teams/teams.service.ts)
+
+**Low · Correctness** — 1 fix ([issue #1091](https://github.com/Terrence721/platform-main/issues/1091))
+
+A supervisor's My team: the team they lead, its active agents with their open and overdue work, every unassigned ticket, and the check that one member is theirs before showing that member's tickets. It holds, including the fixes made earlier in this audit (only active agents, #1027; the contract's open-work list, #1087). The one gap was the order: agents were sorted by name only, so two people with the same name had no fixed order in My team or its Assign list. They now follow by user ID, as the Reports popup's choices already do. The check for one member also finds a deactivated agent, which keeps a former member's history reachable by its address; that is the team's own record, and left as it is.

@@ -1,4 +1,5 @@
 import { hashPassword } from '@helpdesk/server';
+import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import type { Database } from '../database/database.module';
 import {
@@ -189,6 +190,56 @@ describe('auth config', () => {
     expect(jwtSecret({ HELPDESK_JWT_SECRET: 'from-env' })).toBe('from-env');
     expect(jwtSecret({})).toBe(DEV_JWT_SECRET);
     expect(jwtSecret({ HELPDESK_JWT_SECRET: '' })).toBe(DEV_JWT_SECRET);
+  });
+
+  describe('in production', () => {
+    const STRONG = 'a-long-random-secret-of-at-least-32-chars';
+
+    it('signs with HELPDESK_JWT_SECRET when it is long enough', () => {
+      expect(
+        jwtSecret({ NODE_ENV: 'production', HELPDESK_JWT_SECRET: STRONG })
+      ).toBe(STRONG);
+    });
+
+    // The development secret is published in this repository: anyone could
+    // sign a session with it, as any user.
+    it('never falls back to the published development secret', () => {
+      const warned = vi
+        .spyOn(Logger.prototype, 'warn')
+        .mockImplementation(() => undefined);
+      try {
+        for (const unset of [{}, { HELPDESK_JWT_SECRET: '' }]) {
+          const secret = jwtSecret({ NODE_ENV: 'production', ...unset });
+
+          expect(secret).not.toBe(DEV_JWT_SECRET);
+          expect(secret.length).toBeGreaterThanOrEqual(32);
+        }
+        // A new one on each start, and said so.
+        expect(jwtSecret({ NODE_ENV: 'production' })).not.toBe(
+          jwtSecret({ NODE_ENV: 'production' })
+        );
+        expect(warned).toHaveBeenCalledWith(
+          expect.stringContaining('HELPDESK_JWT_SECRET')
+        );
+      } finally {
+        warned.mockRestore();
+      }
+    });
+
+    it('refuses the published development secret', () => {
+      expect(() =>
+        jwtSecret({
+          NODE_ENV: 'production',
+          HELPDESK_JWT_SECRET: DEV_JWT_SECRET,
+        })
+      ).toThrow(/published development secret/);
+    });
+
+    it('refuses a secret shorter than 32 characters', () => {
+      expect(() =>
+        jwtSecret({ NODE_ENV: 'production', HELPDESK_JWT_SECRET: 'short' })
+      ).toThrow(/at least 32 characters/);
+    });
   });
 
   it('keeps the session in an httpOnly, SameSite=Strict cookie for /api, for 8 hours', () => {

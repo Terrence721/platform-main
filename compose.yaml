@@ -48,7 +48,9 @@ services:
       # Seeds an empty database on first start; restarts keep the data.
       HELPDESK_SEED: 'true'
       HELPDESK_SEED_PASSWORD: ${HELPDESK_SEED_PASSWORD:-helpdesk-dev-only}
-      HELPDESK_JWT_SECRET: ${HELPDESK_JWT_SECRET:-helpdesk-dev-only-jwt-secret}
+      # Unset by default: the API then signs sessions with a random secret
+      # made at each start (it refuses the published development one).
+      HELPDESK_JWT_SECRET: ${HELPDESK_JWT_SECRET:-}
     ports:
       # localhost only, like the database. The same port as `nx serve`, so
       # run one or the other.

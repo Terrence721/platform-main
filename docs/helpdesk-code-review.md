@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 4 of 24)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 5 of 24)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -334,3 +334,11 @@ Noted and left: this pool has no connection timeout (Compose starts the API only
 `yarn db:seed`, which `yarn start:helpdesk` runs after migrating: it seeds the database and says how to sign in. It holds: the seed refuses a database that already has users, pointing at `yarn db:reset`, and writes everything in one transaction; variables already set win over `.env`; the summary's fields all exist, and the file is type-checked with the rest of the API although `tsx` runs it unchecked; the pool is always closed, and a failure exits with code 1, which stops `yarn start:helpdesk`.
 
 Its failure message had the same gap as `setup-cli.ts`: `Seeding failed: Failed query: select count(*) from "users" params:`, with no reason. It now goes through `errorText` too, and against a closed port says `… — connect ECONNREFUSED 127.0.0.1:1`. Noted and left: it prints the sign-in password, a custom one included; that is what this local command is for, and the container seeds through `setup-cli.ts`, which does not.
+
+### [`helpdesk-api/src/auth/auth-config.ts`](https://github.com/Terrence721/platform-main/blob/7e9bea1/projects/helpdesk-api/src/auth/auth-config.ts)
+
+**Medium · Security** — 1 fix ([issue #1105](https://github.com/Terrence721/platform-main/issues/1105))
+
+The sign-in secret and the session cookie's settings. The cookie holds: httpOnly, SameSite=Strict, sent only to `/api`, for the contract's hours, and Secure in production; the Docker stack runs as production over plain HTTP and still works, because browsers treat `localhost` as secure, as its e2e sign-ins show. The secret is read at start-up, after `.env` is loaded.
+
+The gap was the one `database-url.ts` pointed at. The secret fell back to the development one in every mode, production included, and `compose.yaml` passed it by default; the comment said any real deployment must set its own, but nothing made it. That secret is published in this repository, so the image, run anywhere reachable without its own secret, would accept a session cookie anyone signed, as any admin. Everything binds to `127.0.0.1` and nothing is deployed, so the exposure was small, but the default was unsafe. Agreed with the repo owner (option A of three, the others being a hard refusal that would have made every Docker run set a secret first, or comments only): in production an unset secret is now a random one made at each start, with a warning that sessions end when the API restarts, and the development secret, or any shorter than 32 characters, stops the API from starting. `compose.yaml` and `.env.example` no longer pass the development secret, so `yarn start:helpdesk:docker` needs no setup, and `nx serve` keeps the development secret so a rebuild signs no one out. Three specs failed first; on the Docker stack the e2e suite passes, the API logs the warning, and given the development secret it exits with the reason.

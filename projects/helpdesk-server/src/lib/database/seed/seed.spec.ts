@@ -3,9 +3,16 @@ import { asc, count, eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
 import { fileURLToPath } from 'url';
+import { verifyPassword } from '../../auth/password';
 import type { Database } from '../database-token';
-import { ticketMessages, tickets } from '../schema';
-import { minutesFrom, seedDatabase, SeedSummary, ticketRow } from './seed';
+import { ticketMessages, tickets, users } from '../schema';
+import {
+  DEFAULT_SEED_PASSWORD,
+  minutesFrom,
+  seedDatabase,
+  SeedSummary,
+  ticketRow,
+} from './seed';
 import { SHOWCASE_TICKETS } from './story';
 
 const now = new Date('2026-10-03T12:00:00.000Z');
@@ -112,6 +119,17 @@ describe('seedDatabase into a fresh database', { timeout: 60_000 }, () => {
   });
 
   afterAll(() => client.close());
+
+  it('hashes the shared password once, for every account, and it verifies (#1039)', async () => {
+    const hashes = await database
+      .selectDistinct({ hash: users.passwordHash })
+      .from(users);
+
+    expect(hashes).toHaveLength(1);
+    expect(await verifyPassword(DEFAULT_SEED_PASSWORD, hashes[0].hash)).toBe(
+      true
+    );
+  });
 
   it('stores every generated message, and counts them in the summary', async () => {
     const [{ stored }] = await database

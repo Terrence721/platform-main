@@ -102,11 +102,10 @@ export async function seedDatabase(
   }
 
   const data: SeedData = generateSeed(options);
-  // One hash per user, each with its own salt; in parallel, as scrypt is
-  // deliberately slow.
-  const passwordHashes = await Promise.all(
-    data.users.map(() => hashPassword(password))
-  );
+  // Every seeded user has the same, published password, so one hash serves
+  // them all: hashing it per user, at about half a second each (#1039),
+  // would slow every start for nothing.
+  const passwordHash = await hashPassword(password);
 
   await db.transaction(async (tx) => {
     await tx.insert(queues).values([...data.queues]);
@@ -116,10 +115,7 @@ export async function seedDatabase(
       .insert(teams)
       .values(data.teams.map(({ id, name }) => ({ id, name })));
     for (const batch of inBatches(
-      data.users.map((user, index) => ({
-        ...user,
-        passwordHash: passwordHashes[index],
-      }))
+      data.users.map((user) => ({ ...user, passwordHash }))
     )) {
       await tx.insert(users).values(batch);
     }

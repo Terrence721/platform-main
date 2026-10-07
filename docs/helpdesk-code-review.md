@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 15 of 23)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 16 of 23)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -238,3 +238,11 @@ But a stream judges by the account as it was when it opened, and runs until the 
 **Low · Documentation** — 1 doc comment fixed ([issue #1077](https://github.com/Terrence721/platform-main/issues/1077))
 
 Works out who a change to a ticket concerns, for the live updates: whoever holds it now and, on a reassignment, the agent who held it before, their teams, and whether it was or is unassigned work. It holds against its two callers, which call it only after a successful write. It reads after the change has committed, so a later change could show in it, which is fine for a nudge to reload: that change sends its own event anyway. Account edits that hand tickets back build the same shape of audience themselves. Only the comment was off: "`formerHolderId` when it held it before" now names the agent who held it before.
+
+### [`helpdesk-server/src/lib/requests/requests.ts`](https://github.com/Terrence721/platform-main/blob/a57da93/projects/helpdesk-server/src/lib/requests/requests.ts)
+
+**Low · Correctness** — 1 fix ([issue #1079](https://github.com/Terrence721/platform-main/issues/1079))
+
+Where every request body is checked, shared by the API and the in-browser demo so both refuse the same requests with the same words. The readers hold: a malformed sign-in fails like a wrong password and in the same time; assignments, statuses and messages are checked as the contract says; and account bodies are refused at their first wrong field, with a message saying what is expected, leaving the team rules to the service.
+
+The one fault was in the date beside them. `historySince` promised "the same moment, months earlier", but setting the month back rolls a missing day into the next month: from 31 May the history started on 3 March, from 31 December on 1 October, a few days short. It now stops at the last day of the earlier month, with spec cases for both and for a leap year. Two notes stay notes: `historySince` lives with the request checks only because the API and the demo both need it (its comment now says so), and an empty team ID is refused by the service with a slightly odd message, for a value the app never sends.

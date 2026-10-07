@@ -5,8 +5,9 @@ import type { LiveAudience } from './live-events';
 
 /**
  * Who a change to a ticket concerns, read after the change: whoever holds
- * it now, `formerHolderId` when it held it before (a reassignment), their
- * teams, and whether it was or is unassigned work.
+ * it now, the agent who held it before (`formerHolderId`, when a
+ * reassignment passes one in), their teams, and whether it was or is
+ * unassigned work.
  */
 export async function ticketAudience(
   database: Pick<Database, 'select'>,

@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 16 of 23)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 17 of 23)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -246,3 +246,11 @@ Works out who a change to a ticket concerns, for the live updates: whoever holds
 Where every request body is checked, shared by the API and the in-browser demo so both refuse the same requests with the same words. The readers hold: a malformed sign-in fails like a wrong password and in the same time; assignments, statuses and messages are checked as the contract says; and account bodies are refused at their first wrong field, with a message saying what is expected, leaving the team rules to the service.
 
 The one fault was in the date beside them. `historySince` promised "the same moment, months earlier", but setting the month back rolls a missing day into the next month: from 31 May the history started on 3 March, from 31 December on 1 October, a few days short. It now stops at the last day of the earlier month, with spec cases for both and for a leap year. Two notes stay notes: `historySince` lives with the request checks only because the API and the demo both need it (its comment now says so), and an empty team ID is refused by the service with a slightly odd message, for a value the app never sends.
+
+### [`helpdesk-server/src/lib/tickets/ticket-access.ts`](https://github.com/Terrence721/platform-main/blob/e93b7d6/projects/helpdesk-server/src/lib/tickets/ticket-access.ts)
+
+**No findings** ([issue #1081](https://github.com/Terrence721/platform-main/issues/1081))
+
+The one access rule for a ticket's details, its conversation and its status. You may work a ticket you hold, or one held by an agent on the team you lead; everything else, from a ticket that does not exist to someone else's or an unassigned one, gets the same 404, so nothing can be learned by probing IDs. A malformed ID is turned away before it reaches PostgreSQL, and only the ticket's own row is locked, to the end of the transaction, so checking and changing cannot be split by another write.
+
+One thing it surfaced is left for `reports.service.ts`: "the team you lead" means only the team's lead, as My team also has it, while the Reports popup gives any supervisor on a team that team's report. Which is intended is checked there.

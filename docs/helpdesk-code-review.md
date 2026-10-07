@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` in progress: 10 of 11 files)
+**Last Updated: October 7, 2026** (`helpdesk-contract`: all 11 files reviewed; `helpdesk-server` next)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -118,3 +118,11 @@ Two comments were fixed. The limits were said to be enforced by "the app's forms
 Replies and internal notes. Every export is used, and every claim holds: a reply stays on the ticket and no email is sent, a note is for staff, the customer's first message is the description and is not repeated, and only the holder or their team's supervisor may write. The form and the API both trim the text, refuse it empty and refuse it over 5,000 characters.
 
 Two comments said less than the code does. `AddTicketMessageRequest` did not say that a closed ticket refuses messages while a resolved one still takes them, nor that the body is trimmed and must not be empty; it now does. And `TICKET_MESSAGE_MAX_LENGTH` also sets the width of the column that holds a message, as `USER_ID_MAX_LENGTH` does for user IDs, so its comment now says the two change together.
+
+### [`helpdesk-contract/src/lib/ticket.ts`](https://github.com/Terrence721/platform-main/blob/ff19b57/projects/helpdesk-contract/src/lib/ticket.ts)
+
+**Low · Dead code** — 1 unused guard removed ([issue #1035](https://github.com/Terrence721/platform-main/issues/1035))
+
+The statuses, priorities and the workflow table. Every claim holds: the statuses are in workflow order and the priorities lowest first; a resolved ticket can be reopened and a closed one is final, which the server enforces ("A closed ticket can't change."); and no status lists itself, so a move to the same status is refused. The table drives both the ticket table's status menu and the landing page's "How a ticket moves", and `canTransition` is the server's check.
+
+`isTicketPriority` had no source users: priorities cannot be changed, so nothing reads one from a request. Its only users were its own test and a landing spec checking the sample tickets' priorities, which TypeScript already types. As with the tag limits in `ticket-api.ts`, it is removed with both checks; the customer reports of #1026 can add a guard when a supervisor picks a priority.

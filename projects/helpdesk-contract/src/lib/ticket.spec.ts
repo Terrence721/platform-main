@@ -1,6 +1,5 @@
 import {
   canTransition,
-  isTicketPriority,
   isTicketStatus,
   TICKET_PRIORITIES,
   TICKET_STATUS_TRANSITIONS,
@@ -34,20 +33,15 @@ describe('ticket statuses and priorities', () => {
   });
 });
 
-describe('isTicketStatus / isTicketPriority', () => {
+describe('isTicketStatus', () => {
   it.each(TICKET_STATUSES)('accepts the status %s', (status) => {
     expect(isTicketStatus(status)).toBe(true);
-  });
-
-  it.each(TICKET_PRIORITIES)('accepts the priority %s', (priority) => {
-    expect(isTicketPriority(priority)).toBe(true);
   });
 
   it.each([['reopened'], ['Open'], [''], [null], [undefined], [1], [{}]])(
     'rejects %j',
     (value) => {
       expect(isTicketStatus(value)).toBe(false);
-      expect(isTicketPriority(value)).toBe(false);
     }
   );
 

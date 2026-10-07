@@ -1,5 +1,4 @@
 import {
-  isTicketPriority,
   isTicketStatus,
   TICKET_DESCRIPTION_MAX_LENGTH,
   TICKET_SUBJECT_MAX_LENGTH,
@@ -40,7 +39,6 @@ describe('showcaseTickets', () => {
     '#%s is valid by the contract',
     (_, ticket) => {
       expect(isTicketStatus(ticket.status)).toBe(true);
-      expect(isTicketPriority(ticket.priority)).toBe(true);
       expect(ticket.subject.length).toBeLessThanOrEqual(
         TICKET_SUBJECT_MAX_LENGTH
       );

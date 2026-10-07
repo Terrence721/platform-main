@@ -34,11 +34,6 @@ export function isTicketStatus(value: unknown): value is TicketStatus {
   return (TICKET_STATUSES as readonly unknown[]).includes(value);
 }
 
-/** Whether a value, such as a request field, is a ticket priority. */
-export function isTicketPriority(value: unknown): value is TicketPriority {
-  return (TICKET_PRIORITIES as readonly unknown[]).includes(value);
-}
-
 /** Whether a ticket may change from one status to another. */
 export function canTransition(from: TicketStatus, to: TicketStatus): boolean {
   return TICKET_STATUS_TRANSITIONS[from].includes(to);

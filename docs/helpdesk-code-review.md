@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 4 of 22)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 5 of 22)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -158,3 +158,11 @@ The tables, enums and indexes, checked against the migrations, the services and 
 Three comments were wrong or missing. The indexes were said to serve "the contract's list filters and sorts", a list query removed in #1018 and #1032; the comment now names what the services filter and sort by, and admits that the queue index serves no query yet (it stays, as dropping it would take a migration). `updatedAt` was said to move on every update, but it is Drizzle's `$onUpdate`, not a database trigger, so raw SQL such as migration `0003`'s backfill leaves it alone. And `tickets`, the central table, was the only one without a doc comment.
 
 Considered and left for later: CHECK constraints for rules only the services enforce (admins have no team, a team's supervisor has that role, `finishedAt` is set exactly when a ticket is finished). They would add defense in depth, but each needs a migration, and the services and their tests enforce them today.
+
+### [`helpdesk-server/src/lib/database/reporting.ts`](https://github.com/Terrence721/platform-main/blob/5a9b084/projects/helpdesk-server/src/lib/database/reporting.ts)
+
+**Low · Dead code** — 1 finding filed ([#1049](https://github.com/Terrence721/platform-main/issues/1049)) ([issue #1050](https://github.com/Terrence721/platform-main/issues/1050))
+
+The `reporting` schema: read-only views over the tables, which the Reports popup's service reads instead of the tables themselves. Its privacy promise holds (no password hashes, no message text, no customers), statuses and the like are plain text, times keep their time zone, and since #1022 a ticket's `finished_at` is when it was really finished.
+
+The header says the schema holds "only what the reports need", but two of its five views serve nothing. The schema was first built for a Power BI report (#966); Power BI was dropped (#965), and the Reports popup then read only the teams, users and tickets views. The queues and messages views stayed, in the code and in the database, read only by their own spec. Removing them takes a migration, so it is filed as #1049 with its own PR.

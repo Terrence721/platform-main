@@ -1,6 +1,7 @@
 import {
   type CreateAccountRequest,
   LAST_ADMIN_MESSAGE,
+  OPEN_WORK_STATUSES,
   OWN_ACCOUNT_MESSAGE,
   type UpdateAccountRequest,
   type UpdateAccountResponse,
@@ -20,7 +21,6 @@ import { hashPassword } from '../auth/password';
 import { DATABASE, type Database } from '../database/database-token';
 import { teams, tickets, users } from '../database/schema';
 import { LiveEvents } from '../live/live-events';
-import { OPEN_WORK_STATUSES } from '../tickets/tickets.service';
 
 /**
  * Reads, creates and changes Helpdesk accounts, for admins. Each change is

@@ -2,6 +2,7 @@ import {
   canTransition,
   type CurrentUser,
   type HistorySummary,
+  OPEN_WORK_STATUSES,
   RECENTLY_FINISHED_HOURS,
   type TicketDto,
   type TicketStatus,
@@ -22,14 +23,12 @@ import { lockWorkable, UUID } from './ticket-access';
 import { MOST_URGENT_FIRST, selectTickets, toTicketDto } from './ticket-dto';
 
 /**
- * The statuses that still need someone's work. Resolved and closed tickets
- * are done, so a work list leaves them out.
+ * Whether a ticket still needs someone's work (the contract's
+ * `OPEN_WORK_STATUSES`). Resolved and closed tickets are done, so a work
+ * list leaves them out.
  */
-export const OPEN_WORK_STATUSES: readonly TicketStatus[] = [
-  'new',
-  'open',
-  'pending',
-];
+const isOpenWorkStatus = (status: TicketStatus) =>
+  (OPEN_WORK_STATUSES as readonly TicketStatus[]).includes(status);
 
 /**
  * Reads tickets for the people who work them, and changes them: taking,
@@ -119,7 +118,7 @@ export class TicketsService {
       late: 0,
     };
     for (const { ticket } of rows) {
-      if (OPEN_WORK_STATUSES.includes(ticket.status)) {
+      if (isOpenWorkStatus(ticket.status)) {
         summary.open++;
         continue;
       }
@@ -181,7 +180,7 @@ export class TicketsService {
       if (ticket === undefined) {
         throw new NotFoundException('No such ticket.');
       }
-      if (!OPEN_WORK_STATUSES.includes(ticket.status)) {
+      if (!isOpenWorkStatus(ticket.status)) {
         throw new ConflictException(
           "This ticket is finished, so it can't be assigned."
         );
@@ -248,7 +247,7 @@ export class TicketsService {
       if (ticket === undefined) {
         throw new NotFoundException('No such ticket.');
       }
-      if (!OPEN_WORK_STATUSES.includes(ticket.status)) {
+      if (!isOpenWorkStatus(ticket.status)) {
         throw new ConflictException(
           "This ticket is finished, so it can't be taken."
         );
@@ -318,8 +317,8 @@ export class TicketsService {
       // When it was finished (#1020): set as it leaves open work, kept as a
       // resolved ticket is closed, cleared as it is reopened.
       const now = new Date();
-      const finishing = !OPEN_WORK_STATUSES.includes(to);
-      const wasOpenWork = OPEN_WORK_STATUSES.includes(status);
+      const finishing = !isOpenWorkStatus(to);
+      const wasOpenWork = isOpenWorkStatus(status);
       await tx
         .update(tickets)
         .set({

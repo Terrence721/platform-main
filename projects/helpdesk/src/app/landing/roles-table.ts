@@ -11,20 +11,20 @@ export interface Ability {
   permissions: readonly Permission[];
 }
 
-/** What the landing page lists, in the mockup's order and words. */
+/**
+ * What the landing page lists, in the mockup's order: only what the help
+ * desk does (the mockup's priority changes and queue, customer and canned
+ * reply management were never built, #1023).
+ */
 export const ABILITIES: readonly Ability[] = [
   {
-    label: 'Work tickets: reply, add notes, change status and priority',
+    label: 'Work tickets: reply, add notes, change status',
     permissions: ['tickets:read', 'tickets:reply', 'tickets:update'],
   },
   { label: 'Take a ticket', permissions: ['tickets:assign-self'] },
   {
     label: "Assign or reassign within one's team",
     permissions: ['tickets:assign-others'],
-  },
-  {
-    label: 'Manage queues, customers and canned replies',
-    permissions: ['admin:queues', 'admin:customers', 'admin:canned-replies'],
   },
   { label: "Manage the team's accounts", permissions: ['admin:users'] },
 ];

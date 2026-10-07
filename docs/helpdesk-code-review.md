@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 13 of 23)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 14 of 23)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -224,3 +224,11 @@ The showcase lives twice, here and in the app's landing page, which shows it wit
 **No findings** ([issue #1071](https://github.com/Terrence721/platform-main/issues/1071))
 
 Writes the seed into an empty database. It does what it says: everything goes in one transaction, so a failure keeps nothing, and the one slow step, hashing the shared password, comes before it. It refuses a database that already has users; two seeds started at once could both pass that check, but the second would then fail on the users' keys and roll back, so nothing mixes either way. Teams, users and each team's supervisor go in the only order their foreign keys allow; inserts stay well under PostgreSQL's parameter limit; and messages are matched to their tickets by ticket number, which a spec proves on a real database. The summary it returns holds counts and example user IDs, never the password. With it, the seed's three files are reviewed: two bugs fixed (#1020's finish times, #1065's supervisor-held tickets) and the showcase's two copies now tied by a test.
+
+### [`helpdesk-server/src/lib/live/live-events.ts`](https://github.com/Terrence721/platform-main/blob/6f52d53/projects/helpdesk-server/src/lib/live/live-events.ts)
+
+**Low · Security** — 1 finding filed ([#1073](https://github.com/Terrence721/platform-main/issues/1073)) ([issue #1074](https://github.com/Terrence721/platform-main/issues/1074))
+
+The live-updates hub: the services tell it of each change, and each signed-in person's stream hears the events that concern them. Its rules match the REST endpoints (agents hear unassigned work and their own tickets, supervisors unassigned work and their team's, admins and supervisors account changes, admins no tickets), only the event itself reaches the browser, and its comment is honest that keeping it in memory suits one API process.
+
+But a stream judges by the account as it was when it opened, and runs until the page closes it. A deactivated agent, a session past its eight hours, or someone moved to another team or role keeps hearing by the old rules while the tab stays open. What leaks is small, event types and ticket IDs, and the app often ends it itself when the next reload is refused; the server should not depend on that. Ending streams at their session's expiry and when their person's account changes touches the account service and the API as well, so it is filed as #1073 with its own PR.

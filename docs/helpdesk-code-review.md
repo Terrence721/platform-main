@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 21 of 23)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 22 of 23)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -282,3 +282,11 @@ A ticket's conversation. Only the ticket's holder, or the lead of the holder's t
 **Low · Correctness** — 1 fix ([issue #1091](https://github.com/Terrence721/platform-main/issues/1091))
 
 A supervisor's My team: the team they lead, its active agents with their open and overdue work, every unassigned ticket, and the check that one member is theirs before showing that member's tickets. It holds, including the fixes made earlier in this audit (only active agents, #1027; the contract's open-work list, #1087). The one gap was the order: agents were sorted by name only, so two people with the same name had no fixed order in My team or its Assign list. They now follow by user ID, as the Reports popup's choices already do. The check for one member also finds a deactivated agent, which keeps a former member's history reachable by its address; that is the team's own record, and left as it is.
+
+### [`helpdesk-server/src/lib/users/users.service.ts`](https://github.com/Terrence721/platform-main/blob/925a9bb/projects/helpdesk-server/src/lib/users/users.service.ts)
+
+**No findings** ([issue #1093](https://github.com/Terrence721/platform-main/issues/1093))
+
+Accounts, for admins. Its edit was already fixed during this audit (open tickets handed back from a new supervisor, #1009; live streams ended on an edit, #1073), and the rest holds on a full re-read. Listing reads only what it sends, so no password hash leaves the database. Creating hashes the password before its transaction and lets the user ID's key decide when two admins pick the same one. Editing locks the account, refuses the admin's own, and locks the other admins so two admins cannot remove each other as the last; the lead rules hand a team over and leave it without a lead as they say. It locks a user before their tickets, the order assigning and taking now follow too (#1085), so the two cannot deadlock.
+
+It also shows the question left for the reports: a lead who is replaced stays a supervisor on the team but, from then on, sees neither My team nor its tickets, while the Reports popup still gives them the team's report.

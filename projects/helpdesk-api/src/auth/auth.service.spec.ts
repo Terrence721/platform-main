@@ -136,6 +136,21 @@ describe('AuthService', () => {
       expect(await auth.currentUser(forged)).toBeNull();
     });
 
+    // A token that says it needs no signature ("alg": "none") must not be
+    // accepted, or anyone could write their own.
+    it('recognizes nobody from an unsigned token', async () => {
+      const part = (value: object) =>
+        Buffer.from(JSON.stringify(value)).toString('base64url');
+      const unsigned = `${part({ alg: 'none', typ: 'JWT' })}.${part({
+        sub: 'sam.rivera',
+        role: 'admin',
+        exp: Math.floor(Date.now() / 1000) + 3600,
+      })}.`;
+
+      expect(await auth.currentUser(unsigned)).toBeNull();
+      expect(await auth.sessionEndsAt(unsigned)).toBeNull();
+    });
+
     it('recognizes nobody once the session has expired', async () => {
       const expired = await jwt.signAsync(
         { sub: 'sam.rivera', role: 'agent' },

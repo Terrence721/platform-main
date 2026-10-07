@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 5 of 24)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 6 of 24)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -342,3 +342,11 @@ Its failure message had the same gap as `setup-cli.ts`: `Seeding failed: Failed 
 The sign-in secret and the session cookie's settings. The cookie holds: httpOnly, SameSite=Strict, sent only to `/api`, for the contract's hours, and Secure in production; the Docker stack runs as production over plain HTTP and still works, because browsers treat `localhost` as secure, as its e2e sign-ins show. The secret is read at start-up, after `.env` is loaded.
 
 The gap was the one `database-url.ts` pointed at. The secret fell back to the development one in every mode, production included, and `compose.yaml` passed it by default; the comment said any real deployment must set its own, but nothing made it. That secret is published in this repository, so the image, run anywhere reachable without its own secret, would accept a session cookie anyone signed, as any admin. Everything binds to `127.0.0.1` and nothing is deployed, so the exposure was small, but the default was unsafe. Agreed with the repo owner (option A of three, the others being a hard refusal that would have made every Docker run set a secret first, or comments only): in production an unset secret is now a random one made at each start, with a warning that sessions end when the API restarts, and the development secret, or any shorter than 32 characters, stops the API from starting. `compose.yaml` and `.env.example` no longer pass the development secret, so `yarn start:helpdesk:docker` needs no setup, and `nx serve` keeps the development secret so a rebuild signs no one out. Three specs failed first; on the Docker stack the e2e suite passes, the API logs the warning, and given the development secret it exits with the reason.
+
+### [`helpdesk-api/src/auth/auth.service.ts`](https://github.com/Terrence721/platform-main/blob/f9f8529/projects/helpdesk-api/src/auth/auth.service.ts)
+
+**Low · Documentation** — 1 fix ([issue #1107](https://github.com/Terrence721/platform-main/issues/1107))
+
+Signs users in and recognizes them on each request. It holds. A failed sign-in is always the same `null`, for a wrong password, an unknown or inactive user, a malformed user ID or an over-long password, and an unknown user is checked against a dummy hash of the same cost, so whether a user ID exists cannot be told. Each request reads the user's role, team and whether they are active from the database rather than trusting the token, so a deactivation ends the session at once; wrong-secret, expired and broken tokens are refused, and the password hash never leaves. With no way to change a password, no session outlives one.
+
+The one gap was a claim: the comment said every failed sign-in looks the same "in its timing", but an over-long password is refused before any hashing, so it is quicker. That gives nothing away, as it does not depend on the user ID, and the comment now says what holds: the same answer, taking as long, whether or not the user ID exists. Also here, a spec for an unsigned (`alg: none`) token, which the library already refuses; it keeps a later `algorithms` option from undoing that. Left for `auth.controller.ts`: sign-in has no rate limit, though each attempt costs about half a second of scrypt work and 128 MB.

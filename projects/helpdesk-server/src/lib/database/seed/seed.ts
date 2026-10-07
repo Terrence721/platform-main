@@ -47,6 +47,7 @@ export function ticketRow(
   if (requesterId === undefined) {
     throw new Error(`No customer with the email ${ticket.requesterEmail}.`);
   }
+  const updatedAt = minutesFrom(now, -ticket.updatedMinutesAgo);
   return {
     subject: ticket.subject,
     description: ticket.description,
@@ -61,7 +62,12 @@ export function ticketRow(
         ? null
         : minutesFrom(now, ticket.slaDueInMinutes),
     createdAt: minutesFrom(now, -ticket.createdMinutesAgo),
-    updatedAt: minutesFrom(now, -ticket.updatedMinutesAgo),
+    updatedAt,
+    // A seed ticket that is finished last changed when it was finished.
+    finishedAt:
+      ticket.status === 'resolved' || ticket.status === 'closed'
+        ? updatedAt
+        : null,
   };
 }
 

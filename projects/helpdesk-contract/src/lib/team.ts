@@ -35,11 +35,11 @@ export interface HistorySummary {
   /** Of those, still new, open or pending. */
   open: number;
   /**
-   * Finished tickets with a due time, last changed by it. There is no
-   * resolved-at time yet, so the last change stands in for it.
+   * Finished tickets with a due time, finished by it: when they left open
+   * work, whatever changed after (#1020).
    */
   onTime: number;
-  /** Finished tickets with a due time, last changed after it. */
+  /** Finished tickets with a due time, finished after it. */
   late: number;
 }
 

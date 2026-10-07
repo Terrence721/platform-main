@@ -49,6 +49,15 @@ describe('ticketRow', () => {
     });
   });
 
+  it('says when a finished ticket was finished: its last change (#1020)', () => {
+    expect(ticketRow(overdue, now, customerIds).finishedAt).toBeNull();
+    for (const status of ['resolved', 'closed'] as const) {
+      expect(
+        ticketRow({ ...overdue, status }, now, customerIds).finishedAt
+      ).toEqual(new Date('2026-10-03T11:20:00.000Z'));
+    }
+  });
+
   it('keeps a ticket without an SLA without one', () => {
     expect(
       ticketRow({ ...overdue, slaDueInMinutes: null }, now, customerIds)

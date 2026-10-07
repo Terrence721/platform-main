@@ -101,6 +101,10 @@ describe('TicketMessagesService', { timeout: 30_000 }, () => {
           ...ticket,
           status: ticket.status as TicketStatus,
           updatedAt: LAST_CHANGED,
+          // A finished ticket here was finished when it last changed.
+          ...((ticket.status === 'resolved' || ticket.status === 'closed') && {
+            finishedAt: LAST_CHANGED,
+          }),
         })
         .returning({ id: tickets.id });
       ids[name as TicketName] = id;
@@ -267,6 +271,20 @@ describe('TicketMessagesService', { timeout: 30_000 }, () => {
       );
 
       expect(await messagesOn('samResolved')).toHaveLength(1);
+    });
+
+    it('marks a resolved ticket as changed, but not as finished later (#1020)', async () => {
+      await service.add(
+        ids.samResolved,
+        { kind: 'reply', body: 'Did that fix it?' },
+        as('sam.rivera')
+      );
+
+      const ticket = await stored('samResolved');
+      expect(ticket.updatedAt.getTime()).toBeGreaterThan(
+        LAST_CHANGED.getTime()
+      );
+      expect(ticket.finishedAt).toEqual(LAST_CHANGED);
     });
 
     it('refuses a closed ticket with 409, writing nothing', async () => {

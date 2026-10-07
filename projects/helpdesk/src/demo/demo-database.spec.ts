@@ -33,6 +33,7 @@ describe('startDemoDatabase', { timeout: 60_000 }, () => {
       '0000_init.sql',
       '0001_ticket_messages.sql',
       '0002_reporting_views.sql',
+      '0003_ticket_finished_at.sql',
     ]);
   });
 

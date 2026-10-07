@@ -15,6 +15,7 @@ const MIGRATIONS = fileURLToPath(new URL('../../../drizzle', import.meta.url));
  * ticket numbers 1001, 1002, ... in this order. Due times are fixed;
  * "overdue" just means earlier than the rest. Some tickets say when they
  * were created or last changed; the rest default to the time of the insert.
+ * A finished ticket was finished when it last changed, unless it says so.
  */
 const TICKETS: {
   subject: string;
@@ -23,6 +24,7 @@ const TICKETS: {
   slaDueAt: string | null;
   createdAt?: string;
   updatedAt?: string;
+  finishedAt?: string;
 }[] = [
   // #1001
   {
@@ -139,6 +141,16 @@ const TICKETS: {
     createdAt: '2026-02-01T09:00:00Z',
     updatedAt: '2026-03-01T09:00:00Z',
   },
+  // #1016 (#1020): finished on time, closed after its due time.
+  {
+    subject: 'Resolved on time, closed later',
+    assigneeId: 'helen.history',
+    status: 'closed',
+    slaDueAt: '2026-09-20T09:00:00Z',
+    createdAt: '2026-09-15T09:00:00Z',
+    finishedAt: '2026-09-18T09:00:00Z',
+    updatedAt: '2026-09-25T09:00:00Z',
+  },
 ];
 
 /** The start of Helen's history window: 3 months before 3 October. */
@@ -167,6 +179,10 @@ describe('TicketsService', () => {
       ].map((user) => ({ ...user, role: 'agent' as const, passwordHash: 'x' }))
     );
     for (const ticket of TICKETS) {
+      const finishedAt =
+        ticket.status === 'resolved' || ticket.status === 'closed'
+          ? (ticket.finishedAt ?? ticket.updatedAt)
+          : undefined;
       await database.insert(tickets).values({
         subject: ticket.subject,
         description: `About: ${ticket.subject}`,
@@ -178,6 +194,7 @@ describe('TicketsService', () => {
         slaDueAt: ticket.slaDueAt === null ? null : new Date(ticket.slaDueAt),
         ...(ticket.createdAt && { createdAt: new Date(ticket.createdAt) }),
         ...(ticket.updatedAt && { updatedAt: new Date(ticket.updatedAt) }),
+        ...(finishedAt && { finishedAt: new Date(finishedAt) }),
       });
     }
 
@@ -268,7 +285,8 @@ describe('TicketsService', () => {
       const { tickets } = await history();
 
       expect(tickets.map(({ ticketNumber }) => ticketNumber)).toEqual([
-        1013, // changed 11 Sep
+        1016, // changed 25 Sep
+        1013, // 11 Sep
         1010, // 1 Sep
         1012, // 20 Aug
         1011, // 2 Aug
@@ -279,10 +297,12 @@ describe('TicketsService', () => {
 
     it('adds them up: finished on time or late, no SLA counting as neither', async () => {
       expect((await history()).summary).toEqual({
-        assigned: 5,
-        finished: 4, // #1011, #1012, #1013, #1014
+        assigned: 6,
+        finished: 5, // #1011, #1012, #1013, #1014, #1016
         open: 1, // #1010
-        onTime: 1, // #1011
+        // #1016 was finished before its due time, though closed after it
+        // (#1020).
+        onTime: 2, // #1011, #1016
         late: 2, // #1012, #1014 (#1013 has no SLA)
       });
     });

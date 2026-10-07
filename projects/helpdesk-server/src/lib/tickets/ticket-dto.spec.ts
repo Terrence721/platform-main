@@ -14,6 +14,7 @@ const row: TicketRow = {
     queueId: 'accounts',
     tags: ['login', 'password'],
     slaDueAt: new Date('2026-10-03T12:00:00.000Z'),
+    finishedAt: null,
     createdAt: new Date('2026-10-01T08:30:00.000Z'),
     updatedAt: new Date('2026-10-02T16:45:00.000Z'),
   },

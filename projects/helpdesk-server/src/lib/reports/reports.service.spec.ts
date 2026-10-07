@@ -92,8 +92,10 @@ interface TicketFixture {
   priority: TicketPriority;
   assigneeId: string | null;
   createdHoursAgo: number;
-  /** When it last changed: for a finished ticket, when it was finished. */
+  /** When it last changed. */
   updatedHoursAgo: number;
+  /** When a finished ticket was finished; when it last changed if not given. */
+  finishedHoursAgo?: number;
   /** When it is due, in hours ago (negative: still to come); none: no SLA. */
   dueHoursAgo: number | null;
   /** Its messages, by kind, in hours after it was created. */
@@ -104,7 +106,8 @@ interface TicketFixture {
  * Atlas (Sam, Ben; led by Chris) has open work of three priorities, one
  * overdue (Sam's), Ben's pending one, and three of Sam's finished in the
  * window (on time after 8 h, late after 50 h, no due time after 4 h) plus
- * one finished long before it. Beacon (Bea; led by Nina) has one open and
+ * one finished long before it; two of them changed after they were finished,
+ * which must not move when they were finished (#1020). Beacon (Bea; led by Nina) has one open and
  * one finished on time after 6 h. Comet has no tickets and no lead. Two
  * unassigned new tickets, one overdue.
  */
@@ -142,12 +145,14 @@ const TICKETS: TicketFixture[] = [
     dueHoursAgo: -5,
   },
   {
-    subject: 'atlas resolved on time',
+    // Replied to after its due time: still finished on time (#1020).
+    subject: 'atlas resolved on time, replied to later',
     status: 'resolved',
     priority: 'normal',
     assigneeId: 'sam.rivera',
     createdHoursAgo: 48,
-    updatedHoursAgo: 40,
+    updatedHoursAgo: 25,
+    finishedHoursAgo: 40,
     dueHoursAgo: 30,
     messages: [['reply', 3]],
   },
@@ -170,12 +175,14 @@ const TICKETS: TicketFixture[] = [
     dueHoursAgo: null,
   },
   {
-    subject: 'atlas closed before the window',
+    // Closed yesterday: still finished before the window (#1020).
+    subject: 'atlas resolved before the window, closed in it',
     status: 'closed',
     priority: 'normal',
     assigneeId: 'sam.rivera',
     createdHoursAgo: 50 * 24,
-    updatedHoursAgo: 40 * 24,
+    updatedHoursAgo: 24,
+    finishedHoursAgo: 40 * 24,
     dueHoursAgo: 45 * 24,
     messages: [['reply', 1]],
   },
@@ -323,6 +330,11 @@ describe('ReportsService', { timeout: 60_000 }, () => {
           assigneeId: ticket.assigneeId,
           createdAt: hoursAgo(ticket.createdHoursAgo),
           updatedAt: hoursAgo(ticket.updatedHoursAgo),
+          ...((ticket.status === 'resolved' || ticket.status === 'closed') && {
+            finishedAt: hoursAgo(
+              ticket.finishedHoursAgo ?? ticket.updatedHoursAgo
+            ),
+          }),
           slaDueAt:
             ticket.dueHoursAgo === null ? null : hoursAgo(ticket.dueHoursAgo),
         })

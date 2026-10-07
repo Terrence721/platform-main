@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 19 of 23)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 20 of 23)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -270,3 +270,9 @@ Reading and changing tickets: the work lists, a member's history, taking, assign
 What is not locked is the agent. Assigning checks that the agent is active and on the team without locking their row, and taking does not check the agent inside its transaction at all, while an admin's edit hands back an agent's open tickets as it deactivates or moves them. Run at the same moment, the assignment can land after the hand-back, leaving an open ticket with an inactive agent: the stuck ticket of #1009 again. Locking the agent's row lets PostgreSQL put the two in order. The specs run on PGlite, with one connection, so the race cannot be shown there. It was filed as #1085 and fixed in its own PR ([#1088](https://github.com/Terrence721/platform-main/pull/1088)) with a spec on real PostgreSQL: it holds Sam's row as an admin's edit would, starts the real assignment or take, waits until PostgreSQL reports it waiting, then deactivates Sam. Both ended with the ticket held by inactive Sam before the fix. Now both lock the agent's row first (before the ticket, in the edit's own order, so the two cannot deadlock) and refuse: 404 to assign, 403 to take. CI runs that spec against the Docker stack's database.
 
 Also here: `OPEN_WORK_STATUSES` was one more copy of the contract's list, which `teams.service` and `users.service` imported from this file; all three now use the contract's.
+
+### [`helpdesk-server/src/lib/tickets/ticket-messages.service.ts`](https://github.com/Terrence721/platform-main/blob/e93b7d6/projects/helpdesk-server/src/lib/tickets/ticket-messages.service.ts)
+
+**No findings** ([issue #1089](https://github.com/Terrence721/platform-main/issues/1089))
+
+A ticket's conversation. Only the ticket's holder, or the lead of the holder's team, may read or write it, through the shared access rule. A closed ticket's conversation can still be read, but nothing more can be added to it; a new message marks the ticket as changed without moving when it was finished; the conversation comes oldest first in a stable order; and only an author's ID and name are sent. Unlike assigning and taking (#1085), adding a message cannot race an admin's edit of its writer: it is written under the ticket's lock, so the edit waits or goes first, and the ticket is then no longer the writer's. One thing checked and left: the seed has supervisors write only notes, but that is a choice of sample data, not a rule; the popup and the API let a holder or their lead write either.

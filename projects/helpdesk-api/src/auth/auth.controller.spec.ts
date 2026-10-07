@@ -5,6 +5,11 @@ import cookieParser from 'cookie-parser';
 import { AddressInfo } from 'net';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import {
+  FAILED_SIGN_IN_WINDOW_MS,
+  MAX_FAILED_SIGN_INS,
+  SignInLimits,
+} from './sign-in-limits';
 
 const sam: CurrentUser = {
   id: 'sam.rivera',
@@ -15,10 +20,11 @@ const sam: CurrentUser = {
 
 /** A service that knows one user, password "right-password". */
 const fakeAuth = {
-  signIn: async (userId: string, password: string) =>
+  signIn: vi.fn(async (userId: string, password: string) =>
     userId === 'sam.rivera' && password === 'right-password'
       ? { user: sam, token: 'session-token' }
-      : null,
+      : null
+  ),
   currentUser: async (token: string | undefined) =>
     token === 'session-token' ? sam : null,
 };
@@ -30,7 +36,7 @@ describe('/api/auth', () => {
   beforeEach(async () => {
     const moduleRef = await Test.createTestingModule({
       controllers: [AuthController],
-      providers: [{ provide: AuthService, useValue: fakeAuth }],
+      providers: [{ provide: AuthService, useValue: fakeAuth }, SignInLimits],
     }).compile();
     app = moduleRef.createNestApplication({ logger: false });
     // As main.ts sets the app up.
@@ -104,6 +110,50 @@ describe('/api/auth', () => {
         expect(response.headers.getSetCookie()).toEqual([]);
       }
     );
+
+    // A page on another site could post a hidden form and sign its visitor
+    // in to the attacker's account; only the app's JSON is accepted.
+    it('refuses a form post, even with the right details', async () => {
+      const response = await signIn(
+        'userId=sam.rivera&password=right-password',
+        'application/x-www-form-urlencoded'
+      );
+
+      expect(response.status).toBe(401);
+      expect(response.headers.getSetCookie()).toEqual([]);
+    });
+
+    describe('after too many failed tries for one user ID', () => {
+      const wrong = JSON.stringify({ userId: 'sam.rivera', password: 'wrong' });
+
+      beforeEach(async () => {
+        for (let i = 0; i < MAX_FAILED_SIGN_INS; i++) {
+          expect((await signIn(wrong)).status).toBe(401);
+        }
+        fakeAuth.signIn.mockClear();
+      });
+
+      it('answers 429 with when to try again, without checking the password', async () => {
+        const response = await signIn(
+          JSON.stringify({ userId: 'sam.rivera', password: 'right-password' })
+        );
+
+        expect(response.status).toBe(429);
+        expect(response.headers.get('retry-after')).toBe(
+          String(FAILED_SIGN_IN_WINDOW_MS / 1000)
+        );
+        expect(response.headers.getSetCookie()).toEqual([]);
+        expect(fakeAuth.signIn).not.toHaveBeenCalled();
+      });
+
+      it('still lets other user IDs sign in', async () => {
+        const response = await signIn(
+          JSON.stringify({ userId: 'alex.chen', password: 'wrong' })
+        );
+
+        expect(response.status).toBe(401);
+      });
+    });
   });
 
   describe('GET me', () => {

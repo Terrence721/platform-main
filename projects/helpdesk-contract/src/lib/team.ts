@@ -30,9 +30,9 @@ export interface TeamOverview {
 export interface HistorySummary {
   /** Every ticket of theirs created or changed in the period. */
   assigned: number;
-  /** Of those, resolved or closed. */
+  /** Of `assigned`, resolved or closed. */
   finished: number;
-  /** Of those, still new, open or pending. */
+  /** Of `assigned`, still new, open or pending. */
   open: number;
   /**
    * Finished tickets with a due time, finished by it: when they left open

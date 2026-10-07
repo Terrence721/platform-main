@@ -2,19 +2,19 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 5 of 22)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 5 of 23)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
 
 The Helpdesk app ([#303](https://github.com/Terrence721/platform-main/issues/303)) was built through one issue and pull request per feature, with tests and review on every one, but its finished files had never been audited one by one for defects. This audit does that, the same way the 13 modules were audited ([#32](https://github.com/Terrence721/platform-main/issues/32), findings in [`code-review.md`](code-review.md)). Its tracking issue is [#1001](https://github.com/Terrence721/platform-main/issues/1001), with one sub-issue per project.
 
-**Scope: 122 files.** Every non-spec source file of the five Helpdesk projects, plus the files with real logic outside TypeScript: the SQL migrations, both `Dockerfile`s and the app's `nginx.conf`. It began at 121; the fix for [#1020](https://github.com/Terrence721/platform-main/issues/1020) added a fourth migration, so `helpdesk-server` has 22. Specs, ESLint configs, styles and tool configs are out of scope, as in #32.
+**Scope: 123 files.** Every non-spec source file of the five Helpdesk projects, plus the files with real logic outside TypeScript: the SQL migrations, both `Dockerfile`s and the app's `nginx.conf`. It began at 121; the fixes for [#1020](https://github.com/Terrence721/platform-main/issues/1020) and [#1049](https://github.com/Terrence721/platform-main/issues/1049) each added a migration, so `helpdesk-server` has 23. Specs, ESLint configs, styles and tool configs are out of scope, as in #32.
 
 | Order | Project             | Files | Tracking issue                                                    |
 | ----- | ------------------- | ----- | ----------------------------------------------------------------- |
 | 1     | `helpdesk-contract` | 11    | [#1002](https://github.com/Terrence721/platform-main/issues/1002) |
-| 2     | `helpdesk-server`   | 22    | [#1003](https://github.com/Terrence721/platform-main/issues/1003) |
+| 2     | `helpdesk-server`   | 23    | [#1003](https://github.com/Terrence721/platform-main/issues/1003) |
 | 3     | `helpdesk-api`      | 24    | [#1004](https://github.com/Terrence721/platform-main/issues/1004) |
 | 4     | `helpdesk`          | 63    | [#1005](https://github.com/Terrence721/platform-main/issues/1005) |
 | 5     | `helpdesk-e2e`      | 2     | [#1006](https://github.com/Terrence721/platform-main/issues/1006) |
@@ -161,8 +161,8 @@ Considered and left for later: CHECK constraints for rules only the services enf
 
 ### [`helpdesk-server/src/lib/database/reporting.ts`](https://github.com/Terrence721/platform-main/blob/5a9b084/projects/helpdesk-server/src/lib/database/reporting.ts)
 
-**Low · Dead code** — 1 finding filed ([#1049](https://github.com/Terrence721/platform-main/issues/1049)) ([issue #1050](https://github.com/Terrence721/platform-main/issues/1050))
+**Low · Dead code** — 1 finding fixed ([#1049](https://github.com/Terrence721/platform-main/issues/1049)) ([issue #1050](https://github.com/Terrence721/platform-main/issues/1050))
 
 The `reporting` schema: read-only views over the tables, which the Reports popup's service reads instead of the tables themselves. Its privacy promise holds (no password hashes, no message text, no customers), statuses and the like are plain text, times keep their time zone, and since #1022 a ticket's `finished_at` is when it was really finished.
 
-The header says the schema holds "only what the reports need", but two of its five views serve nothing. The schema was first built for a Power BI report (#966); Power BI was dropped (#965), and the Reports popup then read only the teams, users and tickets views. The queues and messages views stayed, in the code and in the database, read only by their own spec. Removing them takes a migration, so it is filed as #1049 with its own PR.
+The header says the schema holds "only what the reports need", but two of its five views serve nothing. The schema was first built for a Power BI report (#966); Power BI was dropped (#965), and the Reports popup then read only the teams, users and tickets views. The queues and messages views stayed, in the code and in the database, read only by their own spec. Removing them took a migration, so it was filed as #1049 and fixed in its own PR ([#1052](https://github.com/Terrence721/platform-main/pull/1052)): both views are gone from the code, migration `0004` drops them from the database, and the spec now also checks that each ticket's finish time is the table's, not its last change, a leftover from before #1022.

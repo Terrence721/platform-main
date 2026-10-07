@@ -31,16 +31,12 @@ describe('RolesTable', () => {
       ),
     ]);
 
+    // As the API allows it (#1023): admins work no tickets, and only
+    // agents take them.
     expect(rows).toEqual([
-      [
-        'Work tickets: reply, add notes, change status and priority',
-        'Yes',
-        'Yes',
-        'Yes',
-      ],
-      ['Take a ticket', 'Yes', 'Yes', 'Yes'],
+      ['Work tickets: reply, add notes, change status', 'Yes', 'Yes', 'No'],
+      ['Take a ticket', 'Yes', 'No', 'No'],
       ["Assign or reassign within one's team", 'No', 'Yes', 'No'],
-      ['Manage queues, customers and canned replies', 'No', 'No', 'Yes'],
       ["Manage the team's accounts", 'No', 'No', 'Yes'],
     ]);
   });
@@ -54,7 +50,7 @@ describe('RolesTable', () => {
   it('hides the check marks and dashes from screen readers, which hear Yes or No', () => {
     const cells = [...render().querySelectorAll('td.role')];
 
-    expect(cells).toHaveLength(15);
+    expect(cells).toHaveLength(12);
     for (const cell of cells) {
       expect(
         cell.querySelector('mat-icon, .no')?.getAttribute('aria-hidden')

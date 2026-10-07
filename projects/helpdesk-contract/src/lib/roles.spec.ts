@@ -20,9 +20,6 @@ describe('roles and permissions', () => {
       'tickets:update',
       'tickets:assign-self',
       'tickets:assign-others',
-      'admin:queues',
-      'admin:customers',
-      'admin:canned-replies',
       'admin:users',
     ]);
   });
@@ -35,9 +32,6 @@ describe('roles and permissions', () => {
       | 'tickets:update'
       | 'tickets:assign-self'
       | 'tickets:assign-others'
-      | 'admin:queues'
-      | 'admin:customers'
-      | 'admin:canned-replies'
       | 'admin:users'
     >();
   });
@@ -64,8 +58,10 @@ describe('isRole', () => {
 });
 
 describe('role permissions', () => {
-  // The agreed table (#866, admins' assigning removed in #936), written out
-  // independently of the implementation.
+  // What the API's routes allow each role (their `@OnlyFor` guards, #1023),
+  // written out independently of the implementation: agents work and take
+  // tickets; supervisors work them and assign them to their team's agents,
+  // but take none; admins manage accounts and work no tickets.
   const granted: Record<Role, readonly Permission[]> = {
     agent: [
       'tickets:read',
@@ -77,12 +73,9 @@ describe('role permissions', () => {
       'tickets:read',
       'tickets:reply',
       'tickets:update',
-      'tickets:assign-self',
       'tickets:assign-others',
     ],
-    admin: PERMISSIONS.filter(
-      (permission) => permission !== 'tickets:assign-others'
-    ),
+    admin: ['admin:users'],
   };
 
   it.each(
@@ -95,18 +88,24 @@ describe('role permissions', () => {
     );
   });
 
-  it("gives supervisors and admins all of an agent's ticket work", () => {
-    for (const role of ['supervisor', 'admin'] as const) {
-      expect(ROLE_PERMISSIONS[role]).toEqual(
-        expect.arrayContaining([...ROLE_PERMISSIONS.agent])
-      );
-    }
-  });
-
-  it('lets only supervisors assign tickets to others', () => {
+  it('lets only agents take tickets, and only supervisors assign them', () => {
+    expect(
+      ROLES.filter((role) => hasPermission(role, 'tickets:assign-self'))
+    ).toEqual(['agent']);
     expect(
       ROLES.filter((role) => hasPermission(role, 'tickets:assign-others'))
     ).toEqual(['supervisor']);
+  });
+
+  it('gives admins no ticket work, and only admins the accounts', () => {
+    expect(
+      ROLE_PERMISSIONS.admin.filter((permission) =>
+        permission.startsWith('tickets:')
+      )
+    ).toEqual([]);
+    expect(ROLES.filter((role) => hasPermission(role, 'admin:users'))).toEqual([
+      'admin',
+    ]);
   });
 
   it.each(ROLES)('lists no permission twice for %s', (role) => {

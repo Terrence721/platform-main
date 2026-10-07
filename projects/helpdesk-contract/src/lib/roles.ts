@@ -13,36 +13,29 @@ export const PERMISSIONS = [
   'tickets:update',
   'tickets:assign-self',
   'tickets:assign-others',
-  'admin:queues',
-  'admin:customers',
-  'admin:canned-replies',
   'admin:users',
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
 
+/** Reading a ticket, replying and adding notes, changing its status. */
 const TICKET_WORK: readonly Permission[] = [
   'tickets:read',
   'tickets:reply',
   'tickets:update',
-  'tickets:assign-self',
 ];
 
 /**
- * What each role may do. Agents work tickets and take them; supervisors can
- * also assign them to the agents on their team; admins manage the help desk
- * and its users, and leave assigning to the supervisors (#936).
+ * What each role may do, as the API's routes allow it (their `@OnlyFor`
+ * guards; this table enforces nothing itself). Agents work tickets and take
+ * them; supervisors work their team's tickets and assign them to its agents,
+ * but take none; admins manage the accounts and work no tickets (#936,
+ * #1023).
  */
 export const ROLE_PERMISSIONS: Readonly<Record<Role, readonly Permission[]>> = {
-  agent: TICKET_WORK,
+  agent: [...TICKET_WORK, 'tickets:assign-self'],
   supervisor: [...TICKET_WORK, 'tickets:assign-others'],
-  admin: [
-    ...TICKET_WORK,
-    'admin:queues',
-    'admin:customers',
-    'admin:canned-replies',
-    'admin:users',
-  ],
+  admin: ['admin:users'],
 };
 
 /** Whether a value, such as a token claim, is a role. */

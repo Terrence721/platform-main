@@ -9,6 +9,7 @@ import {
 } from '@helpdesk/contract';
 import {
   ConflictException,
+  ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
@@ -154,7 +155,12 @@ export class TicketsService {
       throw new NotFoundException('No such ticket.');
     }
     const formerHolderId = await this.database.transaction(async (tx) => {
-      /** The user, if an active agent on this supervisor's team. */
+      /**
+       * The user, if an active agent on this supervisor's team. Their row
+       * is locked to the end of the transaction, so an admin deactivating
+       * or moving them meanwhile waits, then hands back this ticket too; or
+       * goes first, and this sees the change (#1085).
+       */
       const agentOnTeam = async (userId: string) =>
         (
           await tx
@@ -169,8 +175,14 @@ export class TicketsService {
                 eq(teams.supervisorId, supervisorId)
               )
             )
+            .for('share', { of: users })
         ).length > 0;
 
+      // The agent before the ticket: an admin's edit locks the user, then
+      // their tickets, and taking locks in the same order cannot deadlock.
+      if (!(await agentOnTeam(assigneeId))) {
+        throw new NotFoundException('No such agent on your team.');
+      }
       const [ticket] = await tx
         .select({ status: tickets.status, assigneeId: tickets.assigneeId })
         .from(tickets)
@@ -190,9 +202,6 @@ export class TicketsService {
         !(await agentOnTeam(ticket.assigneeId))
       ) {
         throw new NotFoundException('No such ticket on your team.');
-      }
-      if (!(await agentOnTeam(assigneeId))) {
-        throw new NotFoundException('No such agent on your team.');
       }
       await tx
         .update(tickets)
@@ -232,13 +241,31 @@ export class TicketsService {
    * becomes `open`. In one transaction with the ticket locked, so when two
    * agents take it at once only the first gets it: the other gets 409. A
    * ticket they hold already stays theirs. 404 for no such ticket, 409 for
-   * a finished one. Answers with the ticket.
+   * a finished one, 403 if the agent is no longer active (deactivated while
+   * taking it). Answers with the ticket.
    */
   async take(ticketId: string, agentId: string): Promise<TicketDto> {
     if (!UUID.test(ticketId)) {
       throw new NotFoundException('No such ticket.');
     }
     const taken = await this.database.transaction(async (tx) => {
+      // The agent first, locked to the end of the transaction, as in
+      // `assign`: an admin deactivating them meanwhile waits, or goes first
+      // and this sees it (#1085).
+      const [agent] = await tx
+        .select({ id: users.id })
+        .from(users)
+        .where(
+          and(
+            eq(users.id, agentId),
+            eq(users.role, 'agent'),
+            eq(users.active, true)
+          )
+        )
+        .for('share');
+      if (agent === undefined) {
+        throw new ForbiddenException('Only an active agent can take tickets.');
+      }
       const [ticket] = await tx
         .select({ status: tickets.status, assigneeId: tickets.assigneeId })
         .from(tickets)

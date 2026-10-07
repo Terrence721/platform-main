@@ -189,6 +189,14 @@ jobs:
           curl --fail --silent --output /dev/null http://localhost:8088/
           curl --fail --silent http://localhost:8088/api/health
 
+      # The specs that need two connections at once, which PGlite cannot
+      # give (#1085), against the stack's PostgreSQL; each works in a
+      # scratch database of its own.
+      - name: Run the real-PostgreSQL specs
+        run: npx vitest run --project helpdesk-server projects/helpdesk-server/src/lib/tickets/tickets.race.spec.ts
+        env:
+          HELPDESK_RACE_DATABASE_URL: postgres://helpdesk:helpdesk-dev-only@localhost:5435/helpdesk
+
       # The end-to-end tests (#986) in Chromium, against this stack as it is
       # (E2E_BASE_URL: their setup leaves it to this job). Only Chromium,
       # with the system libraries it needs.

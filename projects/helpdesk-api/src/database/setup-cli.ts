@@ -5,6 +5,7 @@ import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { dirname, join } from 'path';
 import { Pool } from 'pg';
 import { databaseUrl } from './database-url';
+import { errorText } from './error-text';
 
 // The Docker image's first step (`node setup.js && node main.js`): brings
 // the database at DATABASE_URL up to date before the API starts. Applies the
@@ -45,8 +46,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
-  console.error(
-    `Database setup failed: ${error instanceof Error ? error.message : String(error)}`
-  );
+  console.error(`Database setup failed: ${errorText(error)}`);
   process.exitCode = 1;
 });

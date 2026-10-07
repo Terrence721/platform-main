@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 2 of 24)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 3 of 24)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -309,10 +309,20 @@ Reading it beside its twin turned up something weightier for `auth-config.ts`: t
 
 ### [`helpdesk-api/src/database/database.module.ts`](https://github.com/Terrence721/platform-main/blob/b5da27a/projects/helpdesk-api/src/database/database.module.ts)
 
-**Medium · Reliability** — 1 fix; **Low · Documentation** — 1 fix ([issue #ISSUE](https://github.com/Terrence721/platform-main/issues/ISSUE))
+**Medium · Reliability** — 1 fix; **Low · Documentation** — 1 fix ([issue #1099](https://github.com/Terrence721/platform-main/issues/1099))
 
 The API's one pool of connections to PostgreSQL, and the Drizzle client on it, available everywhere. It connects on first use, so the API starts while the database is down and the health check says so, and a new connection that takes longer than 2 seconds fails, so a silent database reads as down rather than leaving requests waiting.
 
 The gap was a broken idle connection. When the database restarts or the network drops, node-postgres reports it as an `error` on the pool, and with nothing listening Node ends the process: one database restart took the whole API down, and Compose has no restart policy to bring it back. The pool's errors are now logged ("An idle database connection failed: …"), and the pool opens a new connection when one is next needed. A spec failed first, with the error thrown; on the Docker stack, after `docker compose restart db`, the API logged the event, stayed up, and its health check still answered `database: up`.
 
 Also here: the comment said the pool is closed "when the API stops", which holds only when the app is closed in code (`app.close()`); no shutdown hooks are enabled, so stopping the container skips it (the system drops the connections anyway). The comment now says so; whether to enable shutdown hooks is decided with `main.ts`.
+
+### [`helpdesk-api/src/database/setup-cli.ts`](https://github.com/Terrence721/platform-main/blob/b5da27a/projects/helpdesk-api/src/database/setup-cli.ts)
+
+**Low · Diagnostics** — 1 fix ([issue #1101](https://github.com/Terrence721/platform-main/issues/1101))
+
+The Docker image's first step (`node setup.js && exec node main.js`): it applies the migrations, then, with `HELPDESK_SEED=true`, seeds a database that has no users yet. It holds: the migrations are copied beside the built file, applied ones are skipped and a seeded database is left alone, so it is safe on every start; the seed runs in one transaction; a failure exits with code 1, which keeps the API from starting; and the pool is always closed. CI runs it for real in the Docker job, whose e2e tests sign in with the seeded accounts.
+
+The gap was the failure message. Drizzle 0.45 wraps every database error, and the wrapper's message is only the failed query, with the reason in its `cause`. A failed start printed `Database setup failed: Failed query: CREATE SCHEMA IF NOT EXISTS "drizzle" params:`, which says nothing of a refused connection, a wrong password or a conflicting migration. A small helper, `errorText` in `error-text.ts` with its own spec, now prints the message and then each cause; the built `setup.js`, pointed at a closed port, says `… — connect ECONNREFUSED 127.0.0.1:1`. `seed-cli.ts` has the same line and moves to the helper in its own review.
+
+Noted and left: this pool has no connection timeout (Compose starts the API only once the database is healthy); two containers starting at once could both migrate (Compose runs one); and the seed's default password is the published development one, which belongs with the production secret decided in `auth-config.ts`.

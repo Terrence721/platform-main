@@ -96,6 +96,8 @@ describe('concerns', () => {
 
 describe('LiveEvents', () => {
   const event: LiveEvent = { type: 'ticket', ticketId: 'ticket-1' };
+  /** A session that outlasts every test. */
+  const later = () => new Date(Date.now() + 60 * 60_000);
 
   /** What `user` hears while `act` runs. */
   function heardBy(
@@ -104,7 +106,9 @@ describe('LiveEvents', () => {
     act: () => void
   ): LiveEvent[] {
     const heard: LiveEvent[] = [];
-    const subscription = events.for(user).subscribe((e) => heard.push(e));
+    const subscription = events
+      .for(user, later())
+      .subscribe((e) => heard.push(e));
     act();
     subscription.unsubscribe();
     return heard;
@@ -125,8 +129,8 @@ describe('LiveEvents', () => {
     const forSam: LiveEvent[] = [];
     const forBea: LiveEvent[] = [];
     const subscriptions = [
-      events.for(sam).subscribe((e) => forSam.push(e)),
-      events.for(bea).subscribe((e) => forBea.push(e)),
+      events.for(sam, later()).subscribe((e) => forSam.push(e)),
+      events.for(bea, later()).subscribe((e) => forBea.push(e)),
     ];
 
     events.publish({ event, audience: ticket(['sam.rivera'], ['atlas']) });
@@ -145,5 +149,57 @@ describe('LiveEvents', () => {
     events.publish({ event, audience: ticket([], [], true) });
 
     expect(heardBy(sam, events, () => undefined)).toEqual([]);
+  });
+
+  // A stream must not outlive what it was opened for (#1073): the browser
+  // reconnects, and the sign-in check then judges the person afresh.
+  describe('ending streams', () => {
+    afterEach(() => vi.useRealTimers());
+
+    /** A stream for `user`, with what it heard and whether it ended. */
+    function listen(events: LiveEvents, user: CurrentUser, endsAt: Date) {
+      const stream = { heard: [] as LiveEvent[], ended: false };
+      events.for(user, endsAt).subscribe({
+        next: (e) => stream.heard.push(e),
+        complete: () => (stream.ended = true),
+      });
+      return stream;
+    }
+
+    it('ends a stream when its session does, and not before', () => {
+      vi.useFakeTimers();
+      const events = new LiveEvents();
+      const stream = listen(events, sam, new Date(Date.now() + 60_000));
+
+      vi.advanceTimersByTime(59_999);
+      expect(stream.ended).toBe(false);
+      vi.advanceTimersByTime(1);
+      expect(stream.ended).toBe(true);
+
+      events.publish({ event, audience: ticket([], [], true) });
+      expect(stream.heard).toEqual([]);
+    });
+
+    it('ends a stream at once if its session has already ended', () => {
+      vi.useFakeTimers();
+      const stream = listen(new LiveEvents(), sam, new Date(Date.now() - 1));
+
+      vi.advanceTimersByTime(0);
+      expect(stream.ended).toBe(true);
+    });
+
+    it("ends all of a person's streams when their account changes, and only theirs", () => {
+      const events = new LiveEvents();
+      const samTab = listen(events, sam, later());
+      const samOtherTab = listen(events, sam, later());
+      const bennyTab = listen(events, benny, later());
+
+      events.endStreamsOf('sam.rivera');
+      events.publish({ event, audience: ticket([], [], true) });
+
+      expect([samTab.ended, samOtherTab.ended]).toEqual([true, true]);
+      expect(samTab.heard).toEqual([]);
+      expect(bennyTab).toEqual({ heard: [event], ended: false });
+    });
   });
 });

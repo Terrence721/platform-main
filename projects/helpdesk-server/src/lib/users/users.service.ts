@@ -250,6 +250,9 @@ export class UsersService {
       });
 
     this.accountsChanged();
+    // Their open streams judge by the account as it was: end them, and the
+    // browser reconnects under the new role and team, or not at all (#1073).
+    this.live?.endStreamsOf(userId);
     // Each ticket handed back is unassigned work now: everyone's
     // Unassigned list changes, and the holder's and their old team's.
     for (const { id } of released) {

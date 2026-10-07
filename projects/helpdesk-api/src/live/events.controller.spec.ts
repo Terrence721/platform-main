@@ -15,9 +15,17 @@ const SESSIONS: Record<string, CurrentUser> = {
   bea: { id: 'bea.quinn', name: 'Bea Quinn', role: 'agent', teamId: 'beacon' },
 };
 
+/** A session that outlasts every test. */
+const later = () => new Date(Date.now() + 60 * 60_000);
+/** When the "brief" session ends: set in the test that opens it. */
+let briefEndsAt = later();
+
 const fakeAuth = {
   currentUser: async (token: string | undefined) =>
-    (token && SESSIONS[token]) || null,
+    (token && (SESSIONS[token] ?? (token === 'brief' && SESSIONS['sam']))) ||
+    null,
+  sessionEndsAt: async (token: string | undefined) =>
+    token === 'brief' ? briefEndsAt : token ? later() : null,
 };
 
 /** A change to a ticket Sam holds, on Atlas. */
@@ -139,20 +147,47 @@ describe('/api/events', () => {
     expect(await bea.next()).toEqual(unassignedWork.event);
   });
 
-  it('says it is still there every so often, as a ping pages ignore', () => {
+  it('says it is still there every so often, as a ping pages ignore', async () => {
     vi.useFakeTimers();
     try {
       const heard: MessageEvent[] = [];
-      const subscription = new EventsController(live)
-        .events(SESSIONS['sam'])
+      const subscription = new EventsController(
+        live,
+        fakeAuth as unknown as AuthService
+      )
+        .events(SESSIONS['sam'], { cookies: { [SESSION_COOKIE]: 'sam' } })
         .subscribe((event) => heard.push(event));
 
-      vi.advanceTimersByTime(KEEP_ALIVE_MS);
+      await vi.advanceTimersByTimeAsync(KEEP_ALIVE_MS);
 
       expect(heard).toEqual([{ type: 'ping', data: '' }]);
       subscription.unsubscribe();
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  // A stream judges by the account as it was when it opened, so it must not
+  // outlive its session or an account change; the browser then reconnects,
+  // through the sign-in check again (#1073).
+  describe('ending', () => {
+    it('ends the stream when its session ends, pings and all', async () => {
+      briefEndsAt = new Date(Date.now() + 300);
+      const sam = await connect('brief');
+
+      expect(sam.response.status).toBe(200);
+      await expect(sam.next()).rejects.toThrow('The stream ended.');
+    });
+
+    it("ends the stream when the person's account changes, and only theirs", async () => {
+      const sam = await connect('sam');
+      const bea = await connect('bea');
+
+      live.endStreamsOf('sam.rivera');
+      live.publish(unassignedWork);
+
+      await expect(sam.next()).rejects.toThrow('The stream ended.');
+      expect(await bea.next()).toEqual(unassignedWork.event);
+    });
   });
 });

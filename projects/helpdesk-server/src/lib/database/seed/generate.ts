@@ -415,7 +415,6 @@ export function generateSeed(options: Partial<SeedOptions> = {}): SeedData {
     }
   }
   const agents = users.filter((user) => user.role === 'agent');
-  const supervisors = users.filter((user) => user.role === 'supervisor');
 
   // Customers: the showcase ones, then fictional people on example domains.
   const emails = new Set(SHOWCASE_CUSTOMERS.map((customer) => customer.email));
@@ -459,13 +458,13 @@ export function generateSeed(options: Partial<SeedOptions> = {}): SeedData {
             faker.number.float()
         )
       : ageMinutes;
-    // New tickets wait for someone to take them; a few others do too.
+    // New tickets wait for someone to take them; a few others do too. Only
+    // agents hold tickets: supervisors assign them, and one a supervisor
+    // held would be stuck (#1065).
     const unassigned = status === 'new' || faker.number.float() < 0.05;
     const assigneeId = unassigned
       ? null
-      : faker.number.float() < 0.05
-        ? faker.helpers.arrayElement(supervisors).id
-        : faker.helpers.arrayElement(agents).id;
+      : faker.helpers.arrayElement(agents).id;
 
     tickets.push({
       subject,

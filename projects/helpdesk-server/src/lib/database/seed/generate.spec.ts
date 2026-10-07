@@ -78,6 +78,20 @@ describe('generateSeed', () => {
     }
   });
 
+  // Supervisors do not work tickets: one they held would be stuck, off My
+  // team and impossible to reassign (#1009), and would count in its team's
+  // report but in no agent's (#1065).
+  it('gives tickets only to agents, never to supervisors or admins', () => {
+    const agents = new Set(
+      data.users.filter((user) => user.role === 'agent').map((user) => user.id)
+    );
+    const heldByOthers = data.tickets.filter(
+      ({ assigneeId }) => assigneeId !== null && !agents.has(assigneeId)
+    );
+
+    expect(heldByOthers.map(({ subject }) => subject)).toEqual([]);
+  });
+
   it('keeps every subject and description within the contract limits', () => {
     for (const { subject, description } of data.tickets) {
       expect(subject.length).toBeLessThanOrEqual(TICKET_SUBJECT_MAX_LENGTH);

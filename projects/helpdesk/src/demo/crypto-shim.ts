@@ -30,16 +30,25 @@ export function randomBytes(size: number): DemoBytes {
   return new DemoBytes(bytes);
 }
 
+type ScryptCallback = (error: Error | null, key: DemoBytes) => void;
+
 /**
- * Node's callback signature, with a quick stand-in key: the password and
- * salt marked "demo", padded to the length asked for. Not a real key.
+ * Node's callback signature, with or without its cost options (which the
+ * API passes, #1039, and this ignores), and a quick stand-in key: the
+ * password and salt marked "demo", padded to the length asked for. Not a
+ * real key.
  */
 export function scrypt(
   password: string,
   salt: DemoBytes,
   keyLength: number,
-  done: (error: Error | null, key: DemoBytes) => void
+  optionsOrDone: object | ScryptCallback,
+  maybeDone?: ScryptCallback
 ): void {
+  const done = typeof optionsOrDone === 'function' ? optionsOrDone : maybeDone;
+  if (done === undefined) {
+    throw new TypeError('scrypt needs a callback.');
+  }
   const text = new TextEncoder().encode(
     `demo:${salt.toString('hex')}:${password}`
   );

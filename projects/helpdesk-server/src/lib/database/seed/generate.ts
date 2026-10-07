@@ -1,6 +1,7 @@
 import { en, Faker } from '@faker-js/faker';
 import {
   isUserId,
+  OPEN_WORK_STATUSES,
   TicketPriority,
   TicketStatus,
   USER_ID_MAX_LENGTH,
@@ -91,8 +92,9 @@ export function minutesToFinish(
     : faker.number.int({ min: sla + 1, max: 2 * sla });
 }
 
-/** The statuses that still need work. */
-const OPEN_WORK: readonly TicketStatus[] = ['new', 'open', 'pending'];
+/** Whether a ticket still needs work: new, open or pending. */
+const isOpenWork = (status: TicketStatus) =>
+  (OPEN_WORK_STATUSES as readonly TicketStatus[]).includes(status);
 
 /** Domains reserved for examples (RFC 2606), so no real inbox is used. */
 const EMAIL_DOMAINS = ['example.com', 'example.org', 'example.net'];
@@ -449,7 +451,7 @@ export function generateSeed(options: Partial<SeedOptions> = {}): SeedData {
     // Open work is recent: raised within about its SLA, so most of it is
     // on time and the late ones are only just late. Finished tickets keep
     // the age drawn above, over the whole history.
-    const createdMinutesAgo = OPEN_WORK.includes(status)
+    const createdMinutesAgo = isOpenWork(status)
       ? 10 +
         Math.floor(
           SLA_MINUTES[priority] *
@@ -483,7 +485,7 @@ export function generateSeed(options: Partial<SeedOptions> = {}): SeedData {
       // Open work last changed any time since it was raised. Finished work
       // last changed when it was finished: a realistic time after it was
       // raised (see minutesToFinish), and never later than now.
-      updatedMinutesAgo: OPEN_WORK.includes(status)
+      updatedMinutesAgo: isOpenWork(status)
         ? faker.number.int({ min: 0, max: createdMinutesAgo })
         : Math.max(0, createdMinutesAgo - minutesToFinish(faker, priority)),
       messages: [],

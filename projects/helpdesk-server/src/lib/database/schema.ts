@@ -35,7 +35,11 @@ export const ticketMessageKindEnum = pgEnum(
   TICKET_MESSAGE_KINDS
 );
 
-/** Created when the row is added; `updatedAt` also moves on every update. */
+/**
+ * Created when the row is added; `updatedAt` also moves on every update made
+ * through Drizzle (`$onUpdate`, not a database trigger, so raw SQL such as a
+ * migration's backfill leaves it as it is).
+ */
 const timestamps = {
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
@@ -95,6 +99,11 @@ export const customers = pgTable('customers', {
   ...timestamps,
 });
 
+/**
+ * A customer's request and the work on it: who raised it, its queue,
+ * status and priority, who holds it and by when it is due. Its team is its
+ * assignee's; an unassigned ticket belongs to no team yet.
+ */
 export const tickets = pgTable(
   'tickets',
   {
@@ -137,7 +146,11 @@ export const tickets = pgTable(
     ...timestamps,
   },
   (table) => [
-    // The contract's list filters and sorts.
+    // What the services filter and sort by: the holder (My tickets, the
+    // history, Done), the status (open work), the due time (most urgent
+    // first) and the last change (the history's order). No query lists a
+    // queue's tickets yet; that index stays for when one does, as dropping
+    // it would take a migration.
     index('tickets_status_idx').on(table.status),
     index('tickets_assignee_idx').on(table.assigneeId),
     index('tickets_queue_idx').on(table.queueId),

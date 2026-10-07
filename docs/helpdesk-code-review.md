@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 1 of 22)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 2 of 22)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -132,3 +132,11 @@ The statuses, priorities and the workflow table. Every claim holds: the statuses
 **Low · Documentation** — 1 doc comment completed ([issue #1037](https://github.com/Terrence721/platform-main/issues/1037))
 
 The first file of `helpdesk-server`, whose review starts after the contract's (11 files, complete; the summary is on [#1002](https://github.com/Terrence721/platform-main/issues/1002)). The entry point re-exports 14 modules; the three it leaves out are internal (the reporting views, read only by the reports service, the ticket access check and the live-event audiences). Its comment held, but named only four of the library's parts: the schema, the seed, password hashing and the services. It left out the request checkers, where every request body is checked (the API and the in-browser demo both call them, which is why they live here), and the live-updates hub the services tell of each change. It now names all six.
+
+### [`helpdesk-server/src/lib/auth/password.ts`](https://github.com/Terrence721/platform-main/blob/b5da27a/projects/helpdesk-server/src/lib/auth/password.ts)
+
+**Medium · Security** — 1 weakness filed ([#1039](https://github.com/Terrence721/platform-main/issues/1039)) ([issue #1040](https://github.com/Terrence721/platform-main/issues/1040))
+
+Password hashing and checking with Node's built-in scrypt. The mechanics are sound: a fresh 16-byte salt per hash, a constant-time comparison with the lengths checked first, no exception on a damaged hash, and over-long passwords refused before any hashing (the 128-character maximum, from `auth.ts`), so a huge password cannot slow the server down. Sign-in checks unknown users against a dummy hash, so they take as long as known ones. The in-browser demo's quick stand-in is deliberate and documented.
+
+The weakness is the cost. scrypt runs with Node's defaults, N = 2¹⁴, where OWASP's Password Storage guidance asks for at least N = 2¹⁷: measured here, 59 ms a hash against 551 ms. That cost is what makes a stolen database expensive to crack. And the stored form, `scrypt$<salt>$<key>`, does not record the cost, so raising it would quietly break every existing hash despite the comment's "a stronger one can be added later". The fix raises the cost, makes the stored form carry its settings, and has the seed hash its one shared password once so start-up stays quick. It touches the seed and the specs as well, so it is filed as #1039 with its own PR.

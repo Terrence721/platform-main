@@ -158,9 +158,19 @@ export function readUpdateAccount(body: unknown): UpdateAccountRequest {
 /** How far back a team member's history goes. */
 export const HISTORY_MONTHS = 3;
 
-/** The start of a history ending `now`: the same moment, months earlier. */
+/**
+ * The start of a history ending `now`: the same moment, months earlier, or
+ * the last day of that month when it is shorter (31 May gives 28 February),
+ * rather than rolling over into the next month and losing days. The API and
+ * the in-browser demo both use it, so it lives here with the request checks.
+ */
 export function historySince(now: Date): Date {
   const since = new Date(now);
+  since.setUTCDate(1);
   since.setUTCMonth(since.getUTCMonth() - HISTORY_MONTHS);
+  const lastDay = new Date(
+    Date.UTC(since.getUTCFullYear(), since.getUTCMonth() + 1, 0)
+  ).getUTCDate();
+  since.setUTCDate(Math.min(now.getUTCDate(), lastDay));
   return since;
 }

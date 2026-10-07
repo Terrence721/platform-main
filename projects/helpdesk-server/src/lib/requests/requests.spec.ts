@@ -206,4 +206,23 @@ describe('historySince', () => {
       new Date('2026-07-03T14:30:00.000Z')
     );
   });
+
+  // A day the earlier month lacks is not rolled into the next month, which
+  // would make the history days short.
+  it.each([
+    ['31 May', '2026-05-31T09:00:00.000Z', '2026-02-28T09:00:00.000Z'],
+    [
+      '31 May in a leap year',
+      '2028-05-31T09:00:00.000Z',
+      '2028-02-29T09:00:00.000Z',
+    ],
+    ['31 December', '2026-12-31T09:00:00.000Z', '2026-09-30T09:00:00.000Z'],
+    [
+      '31 March, across the year',
+      '2026-03-31T09:00:00.000Z',
+      '2025-12-31T09:00:00.000Z',
+    ],
+  ])('starts at the end of the earlier month from %s', (_, now, since) => {
+    expect(historySince(new Date(now))).toEqual(new Date(since));
+  });
 });

@@ -1,4 +1,10 @@
-import { Global, Inject, Module, OnModuleDestroy } from '@nestjs/common';
+import {
+  Global,
+  Inject,
+  Logger,
+  Module,
+  OnModuleDestroy,
+} from '@nestjs/common';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { DATABASE, type Database } from '@helpdesk/server';
@@ -17,22 +23,33 @@ export const PG_POOL = Symbol('PG_POOL');
  */
 export const CONNECTION_TIMEOUT_MS = 2_000;
 
+const logger = new Logger('Database');
+
 /**
  * The API's database connection, available everywhere (global). The pool
  * connects on first use, not at start-up, so the API starts even while the
  * database is down (the health check then says so), and it is closed when
- * the API stops, so no connections are left open.
+ * the app is closed (`app.close()`), so no connections are left open.
  */
 @Global()
 @Module({
   providers: [
     {
       provide: PG_POOL,
-      useFactory: (): Pool =>
-        new Pool({
+      useFactory: (): Pool => {
+        const pool = new Pool({
           connectionString: databaseUrl(),
           connectionTimeoutMillis: CONNECTION_TIMEOUT_MS,
-        }),
+        });
+        // An idle connection that breaks (the database restarts, the
+        // network drops) is reported here. Without a listener Node would end
+        // the process; logged instead, and the pool opens a new connection
+        // when one is next needed.
+        pool.on('error', (error) =>
+          logger.error(`An idle database connection failed: ${error.message}`)
+        );
+        return pool;
+      },
     },
     {
       provide: DATABASE,

@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 1 of 24)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 2 of 24)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -306,3 +306,13 @@ The one rule that differed was a supervisor's. Everywhere else a supervisor work
 The first file of `helpdesk-api`, whose review starts after the server's (23 files, complete; the summary is on [#1003](https://github.com/Terrence721/platform-main/issues/1003)). It says where the database is: `DATABASE_URL`, or the local development database when that is not set, only reading the environment its callers have loaded. In production a missing `DATABASE_URL` falls back to a local address where nothing answers inside a container, so the API fails to start rather than doing anything wrong, and Compose always sets it; left as a note.
 
 Reading it beside its twin turned up something weightier for `auth-config.ts`: the sign-in secret falls back the same way, even in production, to the development secret published in `.env.example`, which `compose.yaml` also passes by default. Anyone who reads the repository could sign a session as any user on a deployment that forgot its own secret. That is reviewed and decided with its own file.
+
+### [`helpdesk-api/src/database/database.module.ts`](https://github.com/Terrence721/platform-main/blob/b5da27a/projects/helpdesk-api/src/database/database.module.ts)
+
+**Medium · Reliability** — 1 fix; **Low · Documentation** — 1 fix ([issue #ISSUE](https://github.com/Terrence721/platform-main/issues/ISSUE))
+
+The API's one pool of connections to PostgreSQL, and the Drizzle client on it, available everywhere. It connects on first use, so the API starts while the database is down and the health check says so, and a new connection that takes longer than 2 seconds fails, so a silent database reads as down rather than leaving requests waiting.
+
+The gap was a broken idle connection. When the database restarts or the network drops, node-postgres reports it as an `error` on the pool, and with nothing listening Node ends the process: one database restart took the whole API down, and Compose has no restart policy to bring it back. The pool's errors are now logged ("An idle database connection failed: …"), and the pool opens a new connection when one is next needed. A spec failed first, with the error thrown; on the Docker stack, after `docker compose restart db`, the API logged the event, stayed up, and its health check still answered `database: up`.
+
+Also here: the comment said the pool is closed "when the API stops", which holds only when the app is closed in code (`app.close()`); no shutdown hooks are enabled, so stopping the container skips it (the system drops the connections anyway). The comment now says so; whether to enable shutdown hooks is decided with `main.ts`.

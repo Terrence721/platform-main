@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 11 of 23)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 12 of 23)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -210,3 +210,11 @@ The generated part of the seed: the rest of the agents, the customers and the ti
 The bug: 5% of assigned tickets go to a supervisor, though supervisors do not work tickets (#1009). With the default seed that is 42 tickets. Three are open work nobody can reach, exactly the stuck tickets of #1009: not on My team, impossible to reassign, and supervisors have no My tickets page. The other 39 count in their team's row of the Reports popup but in no agent's, so a team's totals do not add up to its agents'. The fix changed which tickets the seed generates, so it was filed as #1065 and fixed in its own PR ([#1068](https://github.com/Terrence721/platform-main/pull/1068)): generated tickets go only to agents, with a test that failed on all 42; the seed's statistics tests and the end-to-end suite, run on the real stack, pass on the new data.
 
 Also here: the local `OPEN_WORK` list repeated the contract's `OPEN_WORK_STATUSES`, one of the copies the `reports.ts` review left to switch; it now uses the contract's. And a note: `userIdFor` would loop forever on a name that cleans to nothing, which Faker's English names never do, so it is left as it is.
+
+### [`helpdesk-server/src/lib/database/seed/story.ts`](https://github.com/Terrence721/platform-main/blob/b5da27a/projects/helpdesk-server/src/lib/database/seed/story.ts)
+
+**Low · Maintainability, documentation** — 1 spec added, 1 doc comment ([issue #1069](https://github.com/Terrence721/platform-main/issues/1069))
+
+The hand-written part of the seed: the queues, the teams and their supervisors, the named users, and the four showcase tickets the landing page previews. It holds: every showcase ticket goes to Sam, an agent; every message falls within its ticket's life; the one supervisor note is by Sam's own team lead; and the only real names, the four customers, are a tribute to computing pioneers on example addresses.
+
+The showcase lives twice, here and in the app's landing page, which shows it without an API. The copies agreed, but editing one would have failed no test, and the live demo would then show a preview that differs from Sam's seeded My tickets. A spec in the app now compares the two field by field. And the showcase's due times do not follow the SLA rules the generated tickets do (Ada's urgent ticket would already be an hour overdue); they are chosen to show each state on the preview, which the comment now says.

@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 18 of 23)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 19 of 23)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -260,3 +260,13 @@ One thing it surfaced is left for `reports.service.ts`: "the team you lead" mean
 **No findings** ([issue #1083](https://github.com/Terrence721/platform-main/issues/1083))
 
 The one query and mapping behind every ticket the API sends. A ticket comes with its requester and queue, which it always has, and its assignee by a left join, so an unassigned ticket's assignee is `null`. Nothing private leaves: the assignee is an ID and a name, never the account row, and the requester's email goes because staff reply to it. The mapping builds the contract's shape field by field, so a new column, such as the finish time added for #1020, cannot reach a response unless it is added on purpose; and "most urgent first" puts the soonest due first, overdue work leading, as every work list expects.
+
+### [`helpdesk-server/src/lib/tickets/tickets.service.ts`](https://github.com/Terrence721/platform-main/blob/5a9b084/projects/helpdesk-server/src/lib/tickets/tickets.service.ts)
+
+**Medium-low · Correctness** — 1 race filed ([#1085](https://github.com/Terrence721/platform-main/issues/1085)); **Low** — 1 duplicate removed ([issue #1086](https://github.com/Terrence721/platform-main/issues/1086))
+
+Reading and changing tickets: the work lists, a member's history, taking, assigning, one ticket and status changes. Most of it holds. The lists and the history use the finish times of #1020; taking locks the ticket, so of two agents at once only the first gets it; assigning locks the ticket and keeps reassignment within the supervisor's team; reading one ticket and changing its status go through the shared access rule; and every change tells the live updates after it commits.
+
+What is not locked is the agent. Assigning checks that the agent is active and on the team without locking their row, and taking does not check the agent inside its transaction at all, while an admin's edit hands back an agent's open tickets as it deactivates or moves them. Run at the same moment, the assignment can land after the hand-back, leaving an open ticket with an inactive agent: the stuck ticket of #1009 again. Locking the agent's row lets PostgreSQL put the two in order. The specs run on PGlite, with one connection, so the race cannot be shown there; how to test the fix is decided with it, as #1085.
+
+Also here: `OPEN_WORK_STATUSES` was one more copy of the contract's list, which `teams.service` and `users.service` imported from this file; all three now use the contract's.

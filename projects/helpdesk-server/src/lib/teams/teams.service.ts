@@ -1,7 +1,8 @@
-import type {
-  PersonSummary,
-  TeamMember,
-  TeamOverview,
+import {
+  OPEN_WORK_STATUSES,
+  type PersonSummary,
+  type TeamMember,
+  type TeamOverview,
 } from '@helpdesk/contract';
 import { Inject, Injectable } from '@nestjs/common';
 import { and, asc, count, eq, inArray, isNull, lt, sql } from 'drizzle-orm';
@@ -12,7 +13,6 @@ import {
   selectTickets,
   toTicketDto,
 } from '../tickets/ticket-dto';
-import { OPEN_WORK_STATUSES } from '../tickets/tickets.service';
 
 /** Reads a team's members and workload, for its supervisor. */
 @Injectable()

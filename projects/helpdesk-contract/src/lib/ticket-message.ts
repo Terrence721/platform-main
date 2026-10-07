@@ -9,7 +9,11 @@ export const TICKET_MESSAGE_KINDS = ['reply', 'note'] as const;
 
 export type TicketMessageKind = (typeof TICKET_MESSAGE_KINDS)[number];
 
-/** The longest message the app's form and the API's validation accept. */
+/**
+ * The longest message the app's form and the API's validation accept. It
+ * also sets the width of the database column that holds a message, so the
+ * two change together.
+ */
 export const TICKET_MESSAGE_MAX_LENGTH = 5_000;
 
 /**
@@ -28,7 +32,9 @@ export interface TicketMessage {
 
 /**
  * Adds a reply or an internal note to a ticket. The agent who holds the
- * ticket, or their team's supervisor, may do it.
+ * ticket, or their team's supervisor, may do it. A resolved ticket still
+ * takes messages; a closed one is final and refuses them. The body is
+ * trimmed, and empty text is refused.
  */
 export interface AddTicketMessageRequest {
   kind: TicketMessageKind;

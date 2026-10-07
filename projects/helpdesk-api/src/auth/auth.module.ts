@@ -5,6 +5,7 @@ import { jwtSecret } from './auth-config';
 import { AuthController } from './auth.controller';
 import { AuthGuard } from './auth.guard';
 import { AuthService } from './auth.service';
+import { SignInLimits } from './sign-in-limits';
 
 /**
  * Signing in and out (/api/auth), and AuthGuard for every endpoint that
@@ -22,7 +23,7 @@ import { AuthService } from './auth.service';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, AuthGuard],
+  providers: [AuthService, AuthGuard, SignInLimits],
   exports: [AuthService, AuthGuard],
 })
 export class AuthModule {}

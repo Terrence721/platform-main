@@ -4,14 +4,17 @@ import type { IsoDateTime } from './ticket-api';
 /** How far back the Reports popup looks at finished work, in days. */
 export const REPORT_WINDOW_DAYS = 30;
 
-/** The statuses that count as open work, in workflow order. */
-export const OPEN_REPORT_STATUSES = [
+/**
+ * The statuses that still need someone's work, in workflow order. Resolved
+ * and closed tickets are done.
+ */
+export const OPEN_WORK_STATUSES = [
   'new',
   'open',
   'pending',
 ] as const satisfies readonly TicketStatus[];
 
-export type OpenReportStatus = (typeof OPEN_REPORT_STATUSES)[number];
+export type OpenWorkStatus = (typeof OPEN_WORK_STATUSES)[number];
 
 /**
  * What a report row adds up, whoever it is for: a team, the Unassigned
@@ -107,13 +110,16 @@ export interface ReportsResponse {
   /** Who the report is about. */
   scope: ReportScope;
   /** Open work by status, across the rows below. */
-  openByStatus: Record<OpenReportStatus, number>;
+  openByStatus: Record<OpenWorkStatus, number>;
   /**
    * The teams by name, then the Unassigned row last: every team for 'all',
    * the one team for a team; none for an agent.
    */
   teams: TeamReport[];
-  /** The team's agents by name; the one agent for an agent; none for 'all'. */
+  /**
+   * The team's active agents by name; the one agent for an agent; none for
+   * 'all'.
+   */
   agents: AgentReport[];
   /** What the caller may pick next. */
   choices: ReportChoices;

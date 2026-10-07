@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 9 of 23)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 10 of 23)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -194,3 +194,9 @@ One note: the views share the app's database login, with no read-only role or gr
 **No findings** ([issue #1061](https://github.com/Terrence721/platform-main/issues/1061))
 
 The migration written for #1020 earlier in this audit, so reviewed by its author and checked step by step. It drops the tickets view (nothing depends on it), adds `finished_at` as a nullable column with no default (a metadata-only change in PostgreSQL, with no table rewrite), backfills finished tickets from their last change by hand (the best record there is, and without moving `updated_at`), and recreates the view to read the new column, in that order. The in-browser demo runs it statement by statement, comment lines included, as its spec and every spec on the real migrations show; and its generated parts match the schema, which CI now enforces (#1053).
+
+### [`helpdesk-server/drizzle/0004_drop_unused_reporting_views.sql`](https://github.com/Terrence721/platform-main/blob/00d5bbb/projects/helpdesk-server/drizzle/0004_drop_unused_reporting_views.sql)
+
+**No findings** ([issue #1063](https://github.com/Terrence721/platform-main/issues/1063))
+
+The last of the five migrations, written for #1049 earlier in this audit: two generated statements dropping the reporting views nothing read. Nothing depends on either view, the plain `DROP VIEW` (without `IF EXISTS`) is right for a migration that runs once and in order, the in-browser demo applies it, and it matches the schema. With it, every migration has been reviewed: two of them (`0003`, `0004`) exist because of this audit, and the others needed no change.

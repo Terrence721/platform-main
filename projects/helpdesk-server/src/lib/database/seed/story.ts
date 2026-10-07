@@ -118,7 +118,13 @@ const SHOWCASE_AGENT = 'sam.rivera';
 const HOUR = 60;
 const DAY = 24 * HOUR;
 
-/** The landing page's "My tickets" preview, as real tickets. */
+/**
+ * The landing page's "My tickets" preview, as real tickets. The app keeps
+ * its own copy for the landing page (showcase-tickets.ts), and a spec there
+ * checks the two match. Their due times are chosen to show each state on the
+ * preview (overdue, due soon, on track), not computed from the priorities'
+ * SLAs as generate.ts does.
+ */
 export const SHOWCASE_CUSTOMERS: readonly SeedCustomer[] = [
   { name: 'Ada Lovelace', email: 'ada@example.com' },
   { name: 'Grace Hopper', email: 'grace@example.com' },

@@ -12,9 +12,10 @@ interface SessionClaims {
 }
 
 /**
- * Signs users in and recognizes them again. Every failed sign-in looks the
- * same from outside, in its answer and its timing, so user IDs cannot be
- * discovered; a deactivated user's session stops working straight away.
+ * Signs users in and recognizes them again. A failed sign-in gives the same
+ * answer, and takes as long, whether or not the user ID exists, so user IDs
+ * cannot be discovered; a deactivated user's session stops working straight
+ * away.
  */
 @Injectable()
 export class AuthService {

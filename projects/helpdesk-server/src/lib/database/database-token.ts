@@ -1,4 +1,4 @@
-import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core';
 
 // The database token and type the services inject, apart from
 // DatabaseModule: the module brings in pg and the Node driver, which the
@@ -8,4 +8,10 @@ import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 /** The Drizzle client services inject to query the database. */
 export const DATABASE = Symbol('DATABASE');
 
-export type Database = NodePgDatabase;
+/**
+ * Any Drizzle PostgreSQL client: node-postgres in the API, PGlite in the
+ * in-browser demo and the specs. Both extend this base, so either can be
+ * passed as it is, and the compiler checks the services use only what both
+ * have (#1043).
+ */
+export type Database = PgDatabase<PgQueryResultHKT, Record<string, unknown>>;

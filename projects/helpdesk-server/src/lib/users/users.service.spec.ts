@@ -9,7 +9,6 @@ import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
 import { fileURLToPath } from 'url';
 import { verifyPassword } from '../auth/password';
-import type { Database } from '../database/database-token';
 import { teams, users } from '../database/schema';
 import { UsersService } from './users.service';
 
@@ -68,9 +67,7 @@ async function seededService() {
     .set({ supervisorId: 'chris.taylor' })
     .where(eq(teams.id, 'atlas'));
 
-  // The service is typed for the node-postgres driver; both are Drizzle's
-  // Postgres databases with the same query builder.
-  const service = new UsersService(database as unknown as Database);
+  const service = new UsersService(database);
   return { client, database, service };
 }
 

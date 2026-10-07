@@ -111,7 +111,7 @@ describe('seedDatabase into a fresh database', { timeout: 60_000 }, () => {
     client = new PGlite();
     database = drizzle(client);
     await migrate(database, { migrationsFolder: MIGRATIONS });
-    summary = await seedDatabase(database as unknown as Database, {
+    summary = await seedDatabase(database, {
       now,
       customers: 10,
       tickets: 30,

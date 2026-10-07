@@ -103,9 +103,7 @@ describe('what each write tells the open pages', { timeout: 60_000 }, () => {
     vi.spyOn(live, 'publish').mockImplementation((notice) => {
       published.push(notice);
     });
-    // The services are typed for the node-postgres driver; both are
-    // Drizzle's Postgres databases with the same query builder.
-    const db = database as unknown as Database;
+    const db: Database = database;
     ticketsService = new TicketsService(db, live);
     messages = new TicketMessagesService(db, live);
     accounts = new UsersService(db, live);

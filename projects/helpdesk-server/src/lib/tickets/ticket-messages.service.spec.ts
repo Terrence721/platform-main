@@ -4,7 +4,6 @@ import { eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
 import { fileURLToPath } from 'url';
-import type { Database } from '../database/database-token';
 import {
   customers,
   queues,
@@ -129,9 +128,7 @@ describe('TicketMessagesService', { timeout: 30_000 }, () => {
       },
     ]);
 
-    // The service is typed for the node-postgres driver; both are Drizzle's
-    // Postgres databases with the same query builder.
-    service = new TicketMessagesService(database as unknown as Database);
+    service = new TicketMessagesService(database);
   };
 
   /** The stored ticket, straight from the table. */

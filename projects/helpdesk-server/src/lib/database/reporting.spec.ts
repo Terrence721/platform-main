@@ -26,7 +26,7 @@ describe('the reporting views', { timeout: 60_000 }, () => {
   beforeAll(async () => {
     client = new PGlite();
     await migrate(drizzle(client), { migrationsFolder: MIGRATIONS });
-    database = drizzle(client) as unknown as Database;
+    database = drizzle(client);
     summary = await seedDatabase(database, {
       now,
       customers: 10,

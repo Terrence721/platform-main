@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 14 of 23)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 15 of 23)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -232,3 +232,9 @@ Writes the seed into an empty database. It does what it says: everything goes in
 The live-updates hub: the services tell it of each change, and each signed-in person's stream hears the events that concern them. Its rules match the REST endpoints (agents hear unassigned work and their own tickets, supervisors unassigned work and their team's, admins and supervisors account changes, admins no tickets), only the event itself reaches the browser, and its comment is honest that keeping it in memory suits one API process.
 
 But a stream judges by the account as it was when it opened, and runs until the page closes it. A deactivated agent, a session past its eight hours, or someone moved to another team or role keeps hearing by the old rules while the tab stays open. What leaks is small, event types and ticket IDs, and the app often ends it itself when the next reload is refused; the server should not depend on that. Ending streams at their session's expiry and when their person's account changes touched the account service and the API as well, so it was filed as #1073 and fixed in its own PR ([#1076](https://github.com/Terrence721/platform-main/pull/1076)): the hub ends a stream at its session's end or when an account edit ends that person's streams, the API reads the session's end from its token, and the keep-alive pings stop with the events, or they would have held the stream open. The browser reconnects through the sign-in check, which refuses or opens a stream with the current role and team.
+
+### [`helpdesk-server/src/lib/live/ticket-audience.ts`](https://github.com/Terrence721/platform-main/blob/6f52d53/projects/helpdesk-server/src/lib/live/ticket-audience.ts)
+
+**Low · Documentation** — 1 doc comment fixed ([issue #1077](https://github.com/Terrence721/platform-main/issues/1077))
+
+Works out who a change to a ticket concerns, for the live updates: whoever holds it now and, on a reassignment, the agent who held it before, their teams, and whether it was or is unassigned work. It holds against its two callers, which call it only after a successful write. It reads after the change has committed, so a later change could show in it, which is fine for a nudge to reload: that change sends its own event anyway. Account edits that hand tickets back build the same shape of audience themselves. Only the comment was off: "`formerHolderId` when it held it before" now names the agent who held it before.

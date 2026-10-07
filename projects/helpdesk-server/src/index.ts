@@ -1,9 +1,10 @@
 /**
  * The Helpdesk's server-side logic, imported as `@helpdesk/server`: the
  * database schema (its migrations sit in ../drizzle), the seed, password
- * hashing, and the services that apply the help desk's rules. The NestJS
- * API (helpdesk-api) wires them to HTTP; the in-browser demo (#942) runs
- * the same services against PGlite.
+ * hashing, the checks every request body passes (`read…`), the services
+ * that apply the help desk's rules, and the live-updates hub they tell of
+ * each change. The NestJS API (helpdesk-api) wires them to HTTP; the
+ * in-browser demo (#942) runs the same checks and services against PGlite.
  */
 export * from './lib/auth/password';
 export * from './lib/database/database-token';

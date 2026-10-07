@@ -2,19 +2,19 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract`: all 11 files reviewed; `helpdesk-server` next)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 1 of 22)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
 
 The Helpdesk app ([#303](https://github.com/Terrence721/platform-main/issues/303)) was built through one issue and pull request per feature, with tests and review on every one, but its finished files had never been audited one by one for defects. This audit does that, the same way the 13 modules were audited ([#32](https://github.com/Terrence721/platform-main/issues/32), findings in [`code-review.md`](code-review.md)). Its tracking issue is [#1001](https://github.com/Terrence721/platform-main/issues/1001), with one sub-issue per project.
 
-**Scope: 121 files.** Every non-spec source file of the five Helpdesk projects, plus the files with real logic outside TypeScript: the SQL migrations, both `Dockerfile`s and the app's `nginx.conf`. Specs, ESLint configs, styles and tool configs are out of scope, as in #32.
+**Scope: 122 files.** Every non-spec source file of the five Helpdesk projects, plus the files with real logic outside TypeScript: the SQL migrations, both `Dockerfile`s and the app's `nginx.conf`. It began at 121; the fix for [#1020](https://github.com/Terrence721/platform-main/issues/1020) added a fourth migration, so `helpdesk-server` has 22. Specs, ESLint configs, styles and tool configs are out of scope, as in #32.
 
 | Order | Project             | Files | Tracking issue                                                    |
 | ----- | ------------------- | ----- | ----------------------------------------------------------------- |
 | 1     | `helpdesk-contract` | 11    | [#1002](https://github.com/Terrence721/platform-main/issues/1002) |
-| 2     | `helpdesk-server`   | 21    | [#1003](https://github.com/Terrence721/platform-main/issues/1003) |
+| 2     | `helpdesk-server`   | 22    | [#1003](https://github.com/Terrence721/platform-main/issues/1003) |
 | 3     | `helpdesk-api`      | 24    | [#1004](https://github.com/Terrence721/platform-main/issues/1004) |
 | 4     | `helpdesk`          | 63    | [#1005](https://github.com/Terrence721/platform-main/issues/1005) |
 | 5     | `helpdesk-e2e`      | 2     | [#1006](https://github.com/Terrence721/platform-main/issues/1006) |
@@ -126,3 +126,9 @@ Two comments said less than the code does. `AddTicketMessageRequest` did not say
 The statuses, priorities and the workflow table. Every claim holds: the statuses are in workflow order and the priorities lowest first; a resolved ticket can be reopened and a closed one is final, which the server enforces ("A closed ticket can't change."); and no status lists itself, so a move to the same status is refused. The table drives both the ticket table's status menu and the landing page's "How a ticket moves", and `canTransition` is the server's check.
 
 `isTicketPriority` had no source users: priorities cannot be changed, so nothing reads one from a request. Its only users were its own test and a landing spec checking the sample tickets' priorities, which TypeScript already types. As with the tag limits in `ticket-api.ts`, it is removed with both checks; the customer reports of #1026 can add a guard when a supervisor picks a priority.
+
+### [`helpdesk-server/src/index.ts`](https://github.com/Terrence721/platform-main/blob/6f52d53/projects/helpdesk-server/src/index.ts)
+
+**Low · Documentation** — 1 doc comment completed ([issue #1037](https://github.com/Terrence721/platform-main/issues/1037))
+
+The first file of `helpdesk-server`, whose review starts after the contract's (11 files, complete; the summary is on [#1002](https://github.com/Terrence721/platform-main/issues/1002)). The entry point re-exports 14 modules; the three it leaves out are internal (the reporting views, read only by the reports service, the ticket access check and the live-event audiences). Its comment held, but named only four of the library's parts: the schema, the seed, password hashing and the services. It left out the request checkers, where every request body is checked (the API and the in-browser demo both call them, which is why they live here), and the live-updates hub the services tell of each change. It now names all six.

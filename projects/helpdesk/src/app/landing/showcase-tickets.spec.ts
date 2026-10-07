@@ -2,9 +2,7 @@ import {
   isTicketPriority,
   isTicketStatus,
   TICKET_DESCRIPTION_MAX_LENGTH,
-  TICKET_MAX_TAGS,
   TICKET_SUBJECT_MAX_LENGTH,
-  TICKET_TAG_MAX_LENGTH,
 } from '@helpdesk/contract';
 import { showcaseTickets } from './showcase-tickets';
 
@@ -49,10 +47,6 @@ describe('showcaseTickets', () => {
       expect(ticket.description.length).toBeLessThanOrEqual(
         TICKET_DESCRIPTION_MAX_LENGTH
       );
-      expect(ticket.tags.length).toBeLessThanOrEqual(TICKET_MAX_TAGS);
-      for (const tag of ticket.tags) {
-        expect(tag.length).toBeLessThanOrEqual(TICKET_TAG_MAX_LENGTH);
-      }
       expect(ticket.createdAt <= ticket.updatedAt).toBe(true);
     }
   );

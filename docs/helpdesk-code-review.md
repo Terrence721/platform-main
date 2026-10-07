@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` in progress: 8 of 11 files)
+**Last Updated: October 7, 2026** (`helpdesk-contract` in progress: 9 of 11 files)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -100,3 +100,13 @@ The supervisor's My team overview and an agent's history summary, checked agains
 The bug: `members` lists every agent on the team, deactivated ones included, since a deactivated agent keeps their team. The supervisor's Assign popup offers them all, but assigning accepts only an active agent, so picking a former colleague ends in "No such agent on your team." `TeamMember` has no `active` field, so the app could not filter them either. The chosen fix lists only active agents, as the Reports popup's choices already do; it changed the server and the contract, so it was filed as #1027 and fixed in its own PR ([#1030](https://github.com/Terrence721/platform-main/pull/1030)): My team, and so the Assign popup, now lists only active agents.
 
 The doc fix: in `HistorySummary`, `finished` and `open` both began "Of those", so read in order `open` seemed to count among the finished tickets. Both now say "Of `assigned`".
+
+### [`helpdesk-contract/src/lib/ticket-api.ts`](https://github.com/Terrence721/platform-main/blob/a083a80/projects/helpdesk-contract/src/lib/ticket-api.ts)
+
+**Low · Dead code, documentation** — 9 unused names removed, 2 doc comments fixed ([issue #1031](https://github.com/Terrence721/platform-main/issues/1031))
+
+The ticket as the API sends it, the request bodies, the limits and the ticket number's format. This time every export's users were listed across all five projects, the contract included. `TicketDto` and its summaries match what the server builds, `ChangeStatusRequest` and the Done list's 24 hours hold, and `formatTicketNumber` serves six screens.
+
+Nine names served nothing. The five sorting names (`TICKET_SORT_FIELDS`, `TicketSortField`, `TicketSort`, `DEFAULT_TICKET_SORT`, `isTicketSort`) belonged to the list query removed with `page.ts`; no list takes a sort. `CreateTicketRequest` described a route that does not exist (the customer reports of #1026 will need shapes of their own), and `UpdateTicketRequest` promised one route that changes any field, checked by `hasPermission`, when assigning and status have routes of their own and priority, queue and tags cannot change. The tag limits `TICKET_MAX_TAGS` and `TICKET_TAG_MAX_LENGTH` limited nothing: the `tags` column has none, and their only user was a landing spec checking the sample tickets against them, so those two checks went too. All nine are removed with their tests.
+
+Two comments were fixed. The limits were said to be enforced by "the app's forms and the API's validation", but nothing writes a ticket; the subject and description limits are the widths of their columns, and the comment now says so. `AssignTicketRequest` described only supervisors, though the same route is how an agent takes an unassigned ticket, by naming themselves; it now says both.

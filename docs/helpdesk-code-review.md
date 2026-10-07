@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` in progress: 9 of 11 files)
+**Last Updated: October 7, 2026** (`helpdesk-contract` in progress: 10 of 11 files)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -110,3 +110,11 @@ The ticket as the API sends it, the request bodies, the limits and the ticket nu
 Nine names served nothing. The five sorting names (`TICKET_SORT_FIELDS`, `TicketSortField`, `TicketSort`, `DEFAULT_TICKET_SORT`, `isTicketSort`) belonged to the list query removed with `page.ts`; no list takes a sort. `CreateTicketRequest` described a route that does not exist (the customer reports of #1026 will need shapes of their own), and `UpdateTicketRequest` promised one route that changes any field, checked by `hasPermission`, when assigning and status have routes of their own and priority, queue and tags cannot change. The tag limits `TICKET_MAX_TAGS` and `TICKET_TAG_MAX_LENGTH` limited nothing: the `tags` column has none, and their only user was a landing spec checking the sample tickets against them, so those two checks went too. All nine are removed with their tests.
 
 Two comments were fixed. The limits were said to be enforced by "the app's forms and the API's validation", but nothing writes a ticket; the subject and description limits are the widths of their columns, and the comment now says so. `AssignTicketRequest` described only supervisors, though the same route is how an agent takes an unassigned ticket, by naming themselves; it now says both.
+
+### [`helpdesk-contract/src/lib/ticket-message.ts`](https://github.com/Terrence721/platform-main/blob/d5edab9/projects/helpdesk-contract/src/lib/ticket-message.ts)
+
+**Low · Documentation** — 2 doc comments completed ([issue #1033](https://github.com/Terrence721/platform-main/issues/1033))
+
+Replies and internal notes. Every export is used, and every claim holds: a reply stays on the ticket and no email is sent, a note is for staff, the customer's first message is the description and is not repeated, and only the holder or their team's supervisor may write. The form and the API both trim the text, refuse it empty and refuse it over 5,000 characters.
+
+Two comments said less than the code does. `AddTicketMessageRequest` did not say that a closed ticket refuses messages while a resolved one still takes them, nor that the body is trimmed and must not be empty; it now does. And `TICKET_MESSAGE_MAX_LENGTH` also sets the width of the column that holds a message, as `USER_ID_MAX_LENGTH` does for user IDs, so its comment now says the two change together.

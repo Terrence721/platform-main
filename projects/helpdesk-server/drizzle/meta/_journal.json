@@ -29,6 +29,13 @@
       "when": 1791346433385,
       "tag": "0003_ticket_finished_at",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791377871680,
+      "tag": "0004_drop_unused_reporting_views",
+      "breakpoints": true
     }
   ]
 }

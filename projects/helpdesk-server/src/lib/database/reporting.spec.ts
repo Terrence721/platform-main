@@ -4,14 +4,8 @@ import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
 import { fileURLToPath } from 'url';
 import type { Database } from './database-token';
-import {
-  reportingMessages,
-  reportingQueues,
-  reportingTeams,
-  reportingTickets,
-  reportingUsers,
-} from './reporting';
-import { queues, teams, ticketMessages, tickets, users } from './schema';
+import { reportingTeams, reportingTickets, reportingUsers } from './reporting';
+import { teams, ticketMessages, tickets, users } from './schema';
 import { seedDatabase, type SeedSummary } from './seed/seed';
 
 const now = new Date('2026-10-05T12:00:00.000Z');
@@ -58,14 +52,9 @@ describe('the reporting views', { timeout: 60_000 }, () => {
   it('has the columns the report reads, as plain types, and nothing private', async () => {
     const at = 'timestamp with time zone';
 
+    // Only the views the Reports popup reads: the Power BI report's queues
+    // and messages views are gone (#1049).
     expect(await viewColumns()).toEqual({
-      messages: [
-        'ticket_number integer',
-        'author_id character varying',
-        'kind text',
-        `created_at ${at}`,
-      ],
-      queues: ['queue_id text', 'name text'],
       teams: ['team_id text', 'name text', 'lead_id character varying'],
       tickets: [
         'ticket_number integer',
@@ -90,7 +79,7 @@ describe('the reporting views', { timeout: 60_000 }, () => {
     });
   });
 
-  it('has one row per team, user, queue, ticket and message', async () => {
+  it('has one row per team, user and ticket', async () => {
     const rows = async (view: string) =>
       (
         await client.query<{ rows: number }>(
@@ -100,9 +89,7 @@ describe('the reporting views', { timeout: 60_000 }, () => {
 
     expect(await rows('teams')).toBe(summary.teams);
     expect(await rows('users')).toBe(summary.users);
-    expect(await rows('queues')).toBe(summary.queues);
     expect(await rows('tickets')).toBe(summary.tickets);
-    expect(await rows('messages')).toBe(summary.messages);
   });
 
   it('names each team and its lead', async () => {
@@ -137,19 +124,6 @@ describe('the reporting views', { timeout: 60_000 }, () => {
         teamId,
         active,
       }))
-    );
-  });
-
-  it('names each queue', async () => {
-    expect(
-      await database
-        .select()
-        .from(reportingQueues)
-        .orderBy(asc(reportingQueues.queueId))
-    ).toEqual(
-      (await database.select().from(queues).orderBy(asc(queues.id))).map(
-        ({ id, name }) => ({ queueId: id, name })
-      )
     );
   });
 
@@ -218,14 +192,17 @@ describe('the reporting views', { timeout: 60_000 }, () => {
       );
     });
 
-    it('gives a finish time to resolved and closed tickets only: their last change', async () => {
-      const { view } = await both();
+    it('gives resolved and closed tickets the time they were finished, open work none (#1020)', async () => {
+      const { view, table } = await both();
 
       expect(view.some(({ finishedAt }) => finishedAt !== null)).toBe(true);
       expect(view.some(({ finishedAt }) => finishedAt === null)).toBe(true);
-      for (const { status, updatedAt, finishedAt } of view) {
-        expect(finishedAt).toEqual(
-          status === 'resolved' || status === 'closed' ? updatedAt : null
+      expect(view.map(({ finishedAt }) => finishedAt)).toEqual(
+        table.map(({ ticket }) => ticket.finishedAt)
+      );
+      for (const { status, finishedAt } of view) {
+        expect(finishedAt === null).toBe(
+          status !== 'resolved' && status !== 'closed'
         );
       }
     });
@@ -263,32 +240,5 @@ describe('the reporting views', { timeout: 60_000 }, () => {
         expect(firstReplyAt).toEqual(firstReply.get(ticketNumber) ?? null);
       }
     });
-  });
-
-  it('lists each message by ticket number, with no text', async () => {
-    const view = await database
-      .select()
-      .from(reportingMessages)
-      .orderBy(
-        asc(reportingMessages.ticketNumber),
-        asc(reportingMessages.createdAt),
-        asc(reportingMessages.authorId)
-      );
-    const table = await database
-      .select({
-        ticketNumber: tickets.ticketNumber,
-        authorId: ticketMessages.authorId,
-        kind: ticketMessages.kind,
-        createdAt: ticketMessages.createdAt,
-      })
-      .from(ticketMessages)
-      .innerJoin(tickets, eq(tickets.id, ticketMessages.ticketId))
-      .orderBy(
-        asc(tickets.ticketNumber),
-        asc(ticketMessages.createdAt),
-        asc(ticketMessages.authorId)
-      );
-
-    expect(view).toEqual(table);
   });
 });

@@ -9,8 +9,10 @@ import {
 
 // The Reports popup's view of the help desk (#967): a `reporting` schema
 // of read-only views over the tables in ./schema, which ReportsService
-// reads instead of the tables themselves. Only what the reports need, and
-// nothing private: no password hashes, no message text, no customers.
+// reads instead of the tables themselves. Only what the reports need (the
+// queues and messages views, made for a Power BI report that was dropped,
+// went in #1049), and nothing private: no password hashes, no message text,
+// no customers.
 // Statuses, priorities, roles and message kinds are text, not PostgreSQL
 // enums. Times keep their time zone, as in the tables.
 
@@ -41,14 +43,6 @@ export const reportingUsers = reporting
   .as(
     sql`select id as user_id, name, role::text as role, team_id, active from public.users`
   );
-
-/** Where tickets are sorted. */
-export const reportingQueues = reporting
-  .view('queues', {
-    queueId: text('queue_id').notNull(),
-    name: text('name').notNull(),
-  })
-  .as(sql`select id as queue_id, name from public.queues`);
 
 /**
  * Every ticket, keyed by its number. Its team is its assignee's (an
@@ -90,18 +84,4 @@ export const reportingTickets = reporting
   ) as first_reply_at
 from public.tickets t
 left join public.users assignee on assignee.id = t.assignee_id`
-  );
-
-/** Every reply and internal note, by ticket number: no message text. */
-export const reportingMessages = reporting
-  .view('messages', {
-    ticketNumber: integer('ticket_number').notNull(),
-    authorId: text('author_id').notNull(),
-    kind: text('kind').notNull(),
-    createdAt: at('created_at').notNull(),
-  })
-  .as(
-    sql`select t.ticket_number, m.author_id, m.kind::text as kind, m.created_at
-from public.ticket_messages m
-join public.tickets t on t.id = m.ticket_id`
   );

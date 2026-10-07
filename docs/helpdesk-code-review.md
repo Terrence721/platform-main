@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 12 of 23)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` in progress: 13 of 23)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -218,3 +218,9 @@ Also here: the local `OPEN_WORK` list repeated the contract's `OPEN_WORK_STATUSE
 The hand-written part of the seed: the queues, the teams and their supervisors, the named users, and the four showcase tickets the landing page previews. It holds: every showcase ticket goes to Sam, an agent; every message falls within its ticket's life; the one supervisor note is by Sam's own team lead; and the only real names, the four customers, are a tribute to computing pioneers on example addresses.
 
 The showcase lives twice, here and in the app's landing page, which shows it without an API. The copies agreed, but editing one would have failed no test, and the live demo would then show a preview that differs from Sam's seeded My tickets. A spec in the app now compares the two field by field. And the showcase's due times do not follow the SLA rules the generated tickets do (Ada's urgent ticket would already be an hour overdue); they are chosen to show each state on the preview, which the comment now says.
+
+### [`helpdesk-server/src/lib/database/seed/seed.ts`](https://github.com/Terrence721/platform-main/blob/8d989b9/projects/helpdesk-server/src/lib/database/seed/seed.ts)
+
+**No findings** ([issue #1071](https://github.com/Terrence721/platform-main/issues/1071))
+
+Writes the seed into an empty database. It does what it says: everything goes in one transaction, so a failure keeps nothing, and the one slow step, hashing the shared password, comes before it. It refuses a database that already has users; two seeds started at once could both pass that check, but the second would then fail on the users' keys and roll back, so nothing mixes either way. Teams, users and each team's supervisor go in the only order their foreign keys allow; inserts stay well under PostgreSQL's parameter limit; and messages are matched to their tickets by ticket number, which a spec proves on a real database. The summary it returns holds counts and example user IDs, never the password. With it, the seed's three files are reviewed: two bugs fixed (#1020's finish times, #1065's supervisor-held tickets) and the showcase's two copies now tied by a test.

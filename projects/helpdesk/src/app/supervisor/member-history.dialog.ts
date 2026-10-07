@@ -128,8 +128,8 @@ const MemberHistoryStore = signalStore(
               }
             </dl>
             <p class="note">
-              On time and late compare each finished ticket's last change with
-              its due time.
+              On time and late compare when each ticket was finished with its
+              due time.
             </p>
             @if (history.tickets.length === 0) {
               <p class="message">No tickets in the last 3 months.</p>

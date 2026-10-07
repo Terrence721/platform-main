@@ -31,8 +31,9 @@ export interface ReportFigures {
   finishedWithDueTime: number;
   /**
    * Of those, finished by their due time: SLA met % is this over
-   * `finishedWithDueTime`. A finished ticket's last change stands in for
-   * when it was finished.
+   * `finishedWithDueTime`. A ticket was finished when it left open work
+   * for resolved or closed; closing a resolved ticket, or a reply, does
+   * not move that, and reopening it starts again.
    */
   finishedOnTime: number;
   /** Median hours from created to finished, in the window; `null` if none. */

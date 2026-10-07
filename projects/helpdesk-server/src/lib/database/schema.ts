@@ -128,6 +128,12 @@ export const tickets = pgTable(
       .default(sql`'{}'::text[]`),
     /** When it must be resolved by; `null` when no SLA applies. */
     slaDueAt: timestamp('sla_due_at', { withTimezone: true }),
+    /**
+     * When it became resolved or closed; `null` while it is open work.
+     * Closing a resolved ticket, or a reply to it, does not move it, as
+     * `updatedAt` does (#1020); reopening clears it.
+     */
+    finishedAt: timestamp('finished_at', { withTimezone: true }),
     ...timestamps,
   },
   (table) => [

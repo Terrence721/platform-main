@@ -52,9 +52,10 @@ export const reportingQueues = reporting
 
 /**
  * Every ticket, keyed by its number. Its team is its assignee's (an
- * unassigned ticket has none yet). A resolved or closed ticket's last
- * change is when it was finished. `first_reply_at` is the first reply to
- * the customer (notes don't count); `null` until there is one.
+ * unassigned ticket has none yet). `finished_at` is when it became
+ * resolved or closed (#1020); `null` while it is open work.
+ * `first_reply_at` is the first reply to the customer (notes don't count);
+ * `null` until there is one.
  */
 export const reportingTickets = reporting
   .view('tickets', {
@@ -81,7 +82,7 @@ export const reportingTickets = reporting
   t.created_at,
   t.updated_at,
   t.sla_due_at as due_at,
-  case when t.status in ('resolved', 'closed') then t.updated_at end as finished_at,
+  t.finished_at,
   (
     select min(m.created_at)
     from public.ticket_messages m

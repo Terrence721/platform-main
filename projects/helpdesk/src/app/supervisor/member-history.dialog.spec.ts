@@ -110,7 +110,7 @@ describe('MemberHistoryDialog', () => {
     answer(history);
 
     expect(text('.note')?.replace(/\s+/g, ' ')).toBe(
-      "On time and late compare each finished ticket's last change with its due time."
+      'On time and late compare when each ticket was finished with its due time.'
     );
   });
 

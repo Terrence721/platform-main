@@ -94,8 +94,9 @@ export class TicketsService {
 
   /**
    * A user's tickets created or changed since `since`, most recently
-   * changed first, and how they add up. Finished tickets with no due time
-   * count as neither on time nor late.
+   * changed first, and how they add up. A finished ticket is on time when
+   * it was finished by its due time, whatever changed after; one with no
+   * due time counts as neither on time nor late.
    */
   async historyFor(
     userId: string,
@@ -124,7 +125,11 @@ export class TicketsService {
       }
       summary.finished++;
       if (ticket.slaDueAt !== null) {
-        if (ticket.updatedAt <= ticket.slaDueAt) {
+        // By when it was finished, not its last change (#1020).
+        if (
+          ticket.finishedAt !== null &&
+          ticket.finishedAt <= ticket.slaDueAt
+        ) {
           summary.onTime++;
         } else {
           summary.late++;
@@ -310,9 +315,19 @@ export class TicketsService {
             : `${/^[aeiou]/.test(status) ? 'An' : 'A'} ${status} ticket can't become ${to}.`
         );
       }
+      // When it was finished (#1020): set as it leaves open work, kept as a
+      // resolved ticket is closed, cleared as it is reopened.
+      const now = new Date();
+      const finishing = !OPEN_WORK_STATUSES.includes(to);
+      const wasOpenWork = OPEN_WORK_STATUSES.includes(status);
       await tx
         .update(tickets)
-        .set({ status: to })
+        .set({
+          status: to,
+          updatedAt: now,
+          ...(!finishing && { finishedAt: null }),
+          ...(finishing && wasOpenWork && { finishedAt: now }),
+        })
         .where(eq(tickets.id, ticketId));
     });
     await this.changed(ticketId);
@@ -324,9 +339,10 @@ export class TicketsService {
   }
 
   /**
-   * An agent's tickets that became resolved or closed lately (changed
-   * within `RECENTLY_FINISHED_HOURS` of `now`), most recently changed
-   * first: their Done list.
+   * An agent's tickets that became resolved or closed lately (finished
+   * within `RECENTLY_FINISHED_HOURS` of `now`), most recently finished
+   * first: their Done list. Closing or replying to an older one does not
+   * bring it back (#1020).
    */
   async recentlyFinished(
     agentId: string,
@@ -340,10 +356,10 @@ export class TicketsService {
         and(
           eq(tickets.assigneeId, agentId),
           inArray(tickets.status, ['resolved', 'closed']),
-          gte(tickets.updatedAt, since)
+          gte(tickets.finishedAt, since)
         )
       )
-      .orderBy(desc(tickets.updatedAt), asc(tickets.ticketNumber));
+      .orderBy(desc(tickets.finishedAt), asc(tickets.ticketNumber));
     return rows.map(toTicketDto);
   }
 }

@@ -117,6 +117,8 @@ describe('TicketsService: status', { timeout: 30_000 }, () => {
         assigneeId: string | null;
         updatedAt?: string;
       };
+      // A finished ticket here was finished when it last changed.
+      const finished = rest.status === 'resolved' || rest.status === 'closed';
       const [{ id }] = await database
         .insert(tickets)
         .values({
@@ -127,6 +129,7 @@ describe('TicketsService: status', { timeout: 30_000 }, () => {
           queueId: 'accounts',
           ...rest,
           ...(updatedAt && { updatedAt: new Date(updatedAt) }),
+          ...(updatedAt && finished && { finishedAt: new Date(updatedAt) }),
         })
         .returning({ id: tickets.id });
       ids[name as TicketName] = id;
@@ -181,6 +184,38 @@ describe('TicketsService: status', { timeout: 30_000 }, () => {
 
       expect((await stored('samOpen')).updatedAt.getTime()).toBeGreaterThan(
         before.getTime()
+      );
+    });
+
+    // #1020: reports and the history popup time a finished ticket by when it
+    // was finished, so later changes must not move that.
+    it('records when a ticket is finished, and forgets it when reopened', async () => {
+      expect((await stored('samOpen')).finishedAt).toBeNull();
+
+      await service.changeStatus(ids.samOpen, 'resolved', as('sam.rivera'));
+      const resolved = await stored('samOpen');
+      expect(resolved.finishedAt).toEqual(resolved.updatedAt);
+
+      await service.changeStatus(ids.samOpen, 'open', as('sam.rivera'));
+      expect((await stored('samOpen')).finishedAt).toBeNull();
+    });
+
+    it('records when a ticket is closed straight from open work', async () => {
+      await service.changeStatus(ids.samNew, 'closed', as('sam.rivera'));
+
+      const closed = await stored('samNew');
+      expect(closed.finishedAt).toEqual(closed.updatedAt);
+    });
+
+    it('keeps when a resolved ticket was finished when it is closed later', async () => {
+      await service.changeStatus(
+        ids.samResolvedLongAgo,
+        'closed',
+        as('sam.rivera')
+      );
+
+      expect((await stored('samResolvedLongAgo')).finishedAt).toEqual(
+        new Date('2026-10-02T09:00:00.000Z')
       );
     });
 
@@ -252,6 +287,21 @@ describe('TicketsService: status', { timeout: 30_000 }, () => {
         'samResolvedToday',
         'samClosedYesterday',
       ]);
+    });
+
+    it('leaves out a ticket resolved long ago and only closed lately (#1020)', async () => {
+      await service.changeStatus(
+        ids.samResolvedLongAgo,
+        'closed',
+        as('sam.rivera')
+      );
+      const justAfter = new Date(Date.now() + 1000);
+
+      const done = await service.recentlyFinished('sam.rivera', justAfter);
+
+      expect(done.map(({ subject }) => subject)).not.toContain(
+        'samResolvedLongAgo'
+      );
     });
 
     it('has nothing for an agent who finished nothing lately', async () => {

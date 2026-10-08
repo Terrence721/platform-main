@@ -17,6 +17,20 @@ export const OPEN_WORK_STATUSES = [
 export type OpenWorkStatus = (typeof OPEN_WORK_STATUSES)[number];
 
 /**
+ * The statuses of work that is done: every status that is not open work.
+ * A resolved ticket can still be reopened; a closed one cannot.
+ */
+export const FINISHED_STATUSES = [
+  'resolved',
+  'closed',
+] as const satisfies readonly TicketStatus[];
+
+/** Whether a ticket in this status is finished work (resolved or closed). */
+export function isFinished(status: TicketStatus): boolean {
+  return (FINISHED_STATUSES as readonly TicketStatus[]).includes(status);
+}
+
+/**
  * What a report row adds up, whoever it is for: a team, the Unassigned
  * work, or one agent. Open work is as of now; the rest covers the window.
  */

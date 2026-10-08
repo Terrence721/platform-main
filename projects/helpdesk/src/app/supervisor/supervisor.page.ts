@@ -14,6 +14,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import {
   formatTicketNumber,
+  isFinished,
   type PersonSummary,
   type TicketDto,
   type TicketStatus,
@@ -21,7 +22,7 @@ import {
 import { Store } from '@ngrx/store';
 import { STATUS_GUIDE } from '../landing/ticket-workflow.store';
 import { openReports } from '../reports/open-reports';
-import { isFinished, Sounds } from '../sound/sounds';
+import { Sounds } from '../sound/sounds';
 import { sessionFeature } from '../session/session.feature';
 import { openTicket } from '../tickets/open-ticket';
 import { TicketTable } from '../tickets/ticket-table';

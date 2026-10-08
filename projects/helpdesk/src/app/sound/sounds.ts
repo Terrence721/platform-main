@@ -1,5 +1,4 @@
 import { inject, Injectable, InjectionToken, signal } from '@angular/core';
-import type { TicketStatus } from '@helpdesk/contract';
 
 /**
  * The help desk's sounds (#941): `success` when an action of yours goes
@@ -28,14 +27,6 @@ export const TONES: Record<SoundKind, readonly Note[]> = {
   error: [{ frequency: 220, start: 0, duration: 0.3 }],
   arrival: [{ frequency: 988, start: 0, duration: 0.45 }],
 };
-
-/**
- * Whether a status finishes the work (resolved or closed): moving a
- * ticket there plays `success`; other moves (open, pending) stay quiet.
- */
-export function isFinished(status: TicketStatus): boolean {
-  return status === 'resolved' || status === 'closed';
-}
 
 /** How loud at the start of each note, out of 1: quiet. */
 export const VOLUME = 0.08;

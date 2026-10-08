@@ -12,11 +12,23 @@ import { join } from 'path';
 const repoRoot = join(__dirname, '..', '..', '..');
 
 /** Runs `docker compose --profile full ...` here; false if it failed. */
-function compose(...args: string[]): boolean {
+export function compose(...args: string[]): boolean {
+  return composeWith({}, ...args);
+}
+
+/**
+ * Runs `docker compose --profile full ...` here with `env` added to the
+ * environment, which Compose reads (such as HELPDESK_JWT_SECRET); false if
+ * it failed.
+ */
+export function composeWith(
+  env: Record<string, string>,
+  ...args: string[]
+): boolean {
   const result = spawnSync(
     'docker',
     ['compose', '--profile', 'full', ...args],
-    { cwd: repoRoot, stdio: 'inherit' }
+    { cwd: repoRoot, stdio: 'inherit', env: { ...process.env, ...env } }
   );
   return result.status === 0;
 }

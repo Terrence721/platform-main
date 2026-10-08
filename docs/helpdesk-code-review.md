@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 12 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 13 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -560,3 +560,11 @@ The one gap was mine, from #1163. The notice that a session had ended was cleare
 **No findings** ([issue #1172](https://github.com/Terrence721/platform-main/issues/1172))
 
 Opens the sign-in popup, for the two Sign in buttons, the role guard and the ended-session effect. The popup's code and Material's dialogs are fetched on the first open, so visitors who never sign in never download them. Under its spec, two quick clicks open one popup, none opens over another, and it fits narrow screens; and as the ended-session effect opens it only once the landing page is reached, Material's closing of dialogs on navigation does not take it away again. Noted and left: should the popup's code fail to download, offline or in an old tab across a deploy of the demo, the button does nothing and says nothing until a reload, as is so for every page the app loads on demand.
+
+### [`helpdesk/src/app/live/live-updates.ts`](https://github.com/Terrence721/platform-main/blob/d51b960/projects/helpdesk/src/app/live/live-updates.ts)
+
+**Medium-low · Reliability** — 1 fix ([issue #1174](https://github.com/Terrence721/platform-main/issues/1174))
+
+The app's one live updates stream. It holds, under its spec: one stream while someone is signed in, shared by every page that listens and closed when none does; opened on sign-in and closed on sign-out, a fresh one for another person and the same one kept for the same person; only live events passed on; and after a network break, which the browser mends by itself, pages told to load again. The in-browser demo, which has no server, opens none.
+
+The gap was the break the browser does not mend. While the API restarts, after an update or a crash, nginx answers the stream with 502, and a browser gives up on a stream for good after an HTTP error: a probe with Node's `EventSource` against a 502 made one try and closed. So after any API restart every open page stopped hearing about changes, without a word, until it was reloaded. Now, when the stream is closed for good, the app asks who is signed in: still signed in, it opens the stream again and pages load again; nobody, the session has ended (#1163), and the person is told at once instead of at their next action; no answer, it asks again after two seconds, waiting twice as long each time up to a minute, until signed out. Five specs failed first. A new e2e test proves it on the Docker stack: with a fixed sign-in secret, so that sessions outlive the restart, an agent's page is open when the API restarts, and a ticket their lead assigns afterwards still appears on it, live.

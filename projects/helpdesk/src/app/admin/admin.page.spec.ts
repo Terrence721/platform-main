@@ -4,7 +4,7 @@ import {
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { MatDialog } from '@angular/material/dialog';
+import { MatDialog, type MatDialogConfig } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import type { CurrentUser, UserAccount } from '@helpdesk/contract';
 import { provideMockStore } from '@ngrx/store/testing';
@@ -114,16 +114,27 @@ describe('AdminPage', () => {
    * account's true once saved, or nothing when cancelled.
    */
   let closedWith: string | boolean | undefined;
+  /** The IDs of the popups opened, which stay open in these tests. */
+  let openIds: string[];
   /** Stand-ins for Material's dialog and snack bar, to see what they do. */
   const dialog = {
-    open: vi.fn(() => ({ afterClosed: () => of(closedWith) })),
+    open: vi.fn((_: unknown, config?: MatDialogConfig) => {
+      if (config?.id) {
+        openIds.push(config.id);
+      }
+      return { afterClosed: () => of(closedWith) };
+    }),
+    getDialogById: (id: string) => (openIds.includes(id) ? {} : undefined),
   };
+  /** Lets a popup still on its way finish opening, if it is going to. */
+  const settle = () => new Promise((resolve) => setTimeout(resolve));
   const snackBar = { open: vi.fn() };
 
   afterEach(() => TestBed.inject(HttpTestingController).verify());
 
   function render() {
     closedWith = undefined;
+    openIds = [];
     vi.clearAllMocks();
     TestBed.configureTestingModule({
       providers: [
@@ -366,6 +377,23 @@ describe('AdminPage', () => {
       );
     });
 
+    // The first time, the popup's code is still on its way when a second
+    // click comes, with no backdrop yet to stop it.
+    it('opens one popup when Create Account is clicked twice at once', async () => {
+      const { page, answer } = render();
+      answer(ACCOUNTS);
+
+      const create = page.querySelector<HTMLButtonElement>(
+        '.summary-row button'
+      );
+      create?.click();
+      create?.click();
+
+      await vi.waitFor(() => expect(dialog.open).toHaveBeenCalled());
+      await settle();
+      expect(dialog.open).toHaveBeenCalledOnce();
+    });
+
     it('says nothing when the popup is cancelled', async () => {
       const { page, answer } = render();
       answer(ACCOUNTS);
@@ -429,6 +457,18 @@ describe('AdminPage', () => {
           },
         })
       );
+    });
+
+    it('opens one popup when Edit is clicked twice at once', async () => {
+      const { answer, edit } = render();
+      answer(ACCOUNTS);
+
+      edit('Sam Rivera');
+      edit('Sam Rivera');
+
+      await vi.waitFor(() => expect(dialog.open).toHaveBeenCalled());
+      await settle();
+      expect(dialog.open).toHaveBeenCalledOnce();
     });
 
     it('confirms a saved edit, with the tickets handed back', async () => {

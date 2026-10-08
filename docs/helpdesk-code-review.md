@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 27 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 28 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -676,3 +676,11 @@ The gap: it closed with whatever the User ID field said when the save finished, 
 The Edit account popup, whose warnings say what else a change does; each was checked against the server's `UsersService.update`. It holds, under its spec: the account shown as it is, Save off until something changes; open tickets going back to Unassigned when the account stops being an active agent on its team, as the server releases them; a team left with no lead when its lead is deactivated, stops being a supervisor or moves, as the server's `stillLeads`; an admin sending no team, and one made an agent asked for a team; and the API's refusal read out, one save at a time, closing once saved.
 
 The gap: the server makes a supervisor the lead only when they are new to the role or to the team, but the popup warned "X leads the team now… this account will lead it" for any active supervisor on a team who didn't already lead it. A replaced supervisor, a real case, saw that warning as soon as the popup opened, and saving changed no lead. The warning now follows the server's rule; a spec for a replaced supervisor staying put failed first, and another keeps the warning for one moved to a team with a lead.
+
+### [`helpdesk/src/app/admin/admin.page.ts`](https://github.com/Terrence721/platform-main/blob/1324e3f/projects/helpdesk/src/app/admin/admin.page.ts)
+
+**Low · Usability** — 1 fix; **Low · Documentation** — 1 fix ([issue #1209](https://github.com/Terrence721/platform-main/issues/1209))
+
+The admin's Team accounts page. It holds, under its spec: teams by name, each keeping the API's order, admins in a section of their own after them; the summary's counts pluralized, and "No lead" only beside a team without one; no Edit on the admin's own row; loading, failure and Try again; and Create Account and Edit opened with the page's injector, so they save through its store, their snack bars naming what was done, a cancel saying nothing.
+
+The first time, a second click on Create Account or Edit, while the popup's code was on its way and no backdrop was up, opened a second copy, as on the ticket popup (#1183) and the supervisor page (#1195); each popup now has an ID and opens only if none with it is open, and two specs failed first. And the class comment called the green pills team leads, where they are every supervisor (#1204). Noted, not changed, and filed as #1210: the page builds its teams from the accounts on them, so a team emptied of accounts vanishes from the page and from both popups' team lists, with no way back from the app; that needs the API to list the teams. The Reports button's double-click gap belongs to `open-reports.ts`.

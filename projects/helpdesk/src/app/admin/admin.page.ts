@@ -49,8 +49,8 @@ export function groupByTeam(accounts: UserAccount[]): AccountGroup[] {
 
 /**
  * An admin's own page: Team accounts, each team's people in a sortable
- * table of its own, team leads (supervisors) in green and members (agents)
- * in blue; then the admins, who belong to no team, in a section of their
+ * table of its own, supervisors in green and agents in blue; then the
+ * admins, who belong to no team, in a section of their
  * own (#975), so an account made admin can still be found and changed
  * back. Create Account, beside the summary and at the bottom, opens a
  * popup that adds someone straight into their team's table. Each row's
@@ -247,8 +247,9 @@ export default class AdminPage {
   /**
    * Opens the Create Account popup, with this page's injector so it
    * creates through this page's store. The popup's and the snack bar's
-   * code load on the first click (dynamic `import()`), not with the page.
-   * Once created, a snack bar names the new account.
+   * code load on the first click (dynamic `import()`), not with the page;
+   * a second click while it is on its way finds the first popup open, and
+   * leaves it. Once created, a snack bar names the new account.
    */
   protected async openCreateAccount(): Promise<void> {
     const [{ MatDialog }, { MatSnackBar }, { CreateAccountDialog }] =
@@ -257,10 +258,15 @@ export default class AdminPage {
         import('@angular/material/snack-bar'),
         import('./create-account.dialog'),
       ]);
+    const dialog = this.injector.get(MatDialog);
+    const id = 'create-account';
+    if (dialog.getDialogById(id)) {
+      return;
+    }
     const data: CreateAccountData = { teams: this.teamChoices() };
-    this.injector
-      .get(MatDialog)
+    dialog
       .open(CreateAccountDialog, {
+        id,
         data,
         injector: this.injector,
         width: '30rem',
@@ -290,8 +296,9 @@ export default class AdminPage {
   /**
    * Opens the Edit account popup for one account, with this page's
    * injector so it saves through this page's store; its code loads on the
-   * first click, as Create Account's does. Once saved, a snack bar names
-   * the account and how many open tickets went back to Unassigned.
+   * first click, one popup per account, as Create Account's. Once saved, a
+   * snack bar names the account and how many open tickets went back to
+   * Unassigned.
    */
   protected async openEditAccount(account: UserAccount): Promise<void> {
     const [{ MatDialog }, { MatSnackBar }, { EditAccountDialog }] =
@@ -300,10 +307,15 @@ export default class AdminPage {
         import('@angular/material/snack-bar'),
         import('./edit-account.dialog'),
       ]);
+    const dialog = this.injector.get(MatDialog);
+    const id = `edit-${account.id}`;
+    if (dialog.getDialogById(id)) {
+      return;
+    }
     const data: EditAccountData = { account, teams: this.teamChoices() };
-    this.injector
-      .get(MatDialog)
+    dialog
       .open(EditAccountDialog, {
+        id,
         data,
         injector: this.injector,
         width: '30rem',

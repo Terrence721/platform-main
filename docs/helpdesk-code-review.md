@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 3 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 4 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -500,3 +500,9 @@ It turned up two things for later files. The admin store keeps its own copy, for
 The help desk's sounds (#941). It holds, under its spec: three short, quiet tones made in code, each told apart; on until someone mutes them, the choice remembered in this browser, or for the visit where storage is not allowed; the audio opened on the first sound and woken if the browser paused it; and where there is no audio, or it breaks, nothing plays and nothing fails. Each sound goes with something shown, never on its own.
 
 The one thing out of place is `isFinished`, resolved or closed: a ticket rule kept in the sounds file, and written out at least six times, here, in the ticket table and the conversation popup, and on the server in the tickets service (twice) and the seed. The contract holds the matching list for open work, the one copy since #1087 and #1095, but none for finished work. As it spans three projects, it gets its own issue and PR: `FINISHED_STATUSES` and `isFinished` in the contract, with a spec, and every copy switched to it. Done in [#1153](https://github.com/Terrence721/platform-main/pull/1153) ([issue #1152](https://github.com/Terrence721/platform-main/issues/1152)): there were five copies, not six, as one was a check for closed tickets alone; a new contract spec, which failed first, makes sure open and finished work together cover every status, with none in both.
+
+### [`helpdesk/src/app/router.selectors.ts`](https://github.com/Terrence721/platform-main/blob/41acb57/projects/helpdesk/src/app/router.selectors.ts)
+
+**No findings** ([issue #1154](https://github.com/Terrence721/platform-main/issues/1154))
+
+Which landing-page section the URL points at, so the toolbar can mark its link, with `aria-current="location"` for screen readers. It gives the section the fragment names, or nothing for no fragment, an unknown one, or before the router's first navigation, each case under its spec, as is the sections' page order; the three names are the ids the landing page's sections carry. Its comment holds too: the router's slice is read directly because `createFeatureSelector` warns in development while a slice is missing, as this one is until the first navigation. Left for `landing.page.ts`: nothing ties this list to those ids, so renaming one would quietly break its link.

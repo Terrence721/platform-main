@@ -21,7 +21,7 @@ import {
   type TicketDto,
   type TicketStatus,
 } from '@helpdesk/contract';
-import { slaLabel } from '../landing/ticket-preview.store';
+import { slaLabel } from './sla-label';
 import { STATUS_GUIDE } from '../landing/ticket-workflow.store';
 import { minuteClock } from './minute-clock';
 

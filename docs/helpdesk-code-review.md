@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 40 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 41 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -772,3 +772,11 @@ The four example tickets the landing page's "My tickets" preview shows, shaped a
 **Low · Documentation** — 1 fix; **Low · Consistency** — 1 fix ([issue #1236](https://github.com/Terrence721/platform-main/issues/1236))
 
 Where the landing page gets its showcase tickets. It holds, under its spec: `load()` giving the four, timed when subscribed to rather than when called. Its comment said the only part to change "when the API exists" was `load()`; the API has long existed, and what it lacks is a public endpoint for these tickets, as every ticket route needs a signed-in user. The comment now says so, and that the tickets are built in the browser. `TicketDto` is now `import type`.
+
+### [`helpdesk/src/app/landing/ticket-preview.store.ts`](https://github.com/Terrence721/platform-main/blob/e96d725/projects/helpdesk/src/app/landing/ticket-preview.store.ts)
+
+**Low · Maintainability** — 1 fix; **Low · Consistency** — 1 fix ([issue #1238](https://github.com/Terrence721/platform-main/issues/1238))
+
+The landing page's "My tickets" preview card's ComponentStore. It holds, under its spec: each row's SLA label at the current time, kept current once a minute; one row open at a time, a second click closing it; the clock stopping with the card; and `slaLabel` itself, "No SLA", "Overdue 25m", "Due in 2h 15m", "soon" within four hours.
+
+That `slaLabel` was the gap: the signed-in app's ticket table and ticket popup imported it from this landing-page store, so the core ticket screens depended on the marketing preview, and the helper was hard to find. It moves unchanged to `tickets/sla-label.ts`, beside `minute-clock.ts`, whose `MINUTE` it now uses, and its nine specs move with it, passing as they were; the store, the table and the popup import it from there. `TicketDto` is now `import type`. Noted, for its own review: `STATUS_GUIDE` has the same wrong-way dependency, imported from `ticket-workflow.store.ts` by the table, the popup and the agent and supervisor pages.

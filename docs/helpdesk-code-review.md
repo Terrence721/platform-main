@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 16 of 24)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 17 of 24)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -422,3 +422,9 @@ The one gap was wording: a supervisor who leads no team was told "You do not lea
 **No findings** ([issue #1127](https://github.com/Terrence721/platform-main/issues/1127))
 
 Teams for the supervisors who lead them. As its comment says, it imports `AuthModule` for the guard every route here is behind, and `TicketsModule` for the members' tickets and history; `TeamsService` needs only the database, from the global module. Nothing outside the teams files uses that service, so it is rightly not exported, and nothing is provided twice.
+
+### [`helpdesk-api/src/users/users.controller.ts`](https://github.com/Terrence721/platform-main/blob/a57da93/projects/helpdesk-api/src/users/users.controller.ts)
+
+**No findings** ([issue #1129](https://github.com/Terrence721/platform-main/issues/1129))
+
+Helpdesk accounts, for admins. It holds, under its specs: admins alone may list, create or edit accounts, with nothing read, created or changed for anyone else; every body goes through the server library's readers, a wrong field answered 400 with its message; and the service's answers come through as its comments say, 409 for a taken user ID, for the admin's own account or for leaving no active admin, and 404 for no such account. An edit is made as the signed-in admin, which is how the service can refuse their own account. No password hash leaves, as the service reads only what it sends.

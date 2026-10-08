@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 11 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 12 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -554,3 +554,9 @@ The store devtools' action sanitizer. Under its spec, the devtools are shown a s
 The sign-in popup. It holds, under its spec: the user ID and password are checked against the contract's rules before anything is sent, each mistake with its own message; password managers can fill it in; it sends once and waits, its button off meanwhile; a failure shows under the form and is read out, one from before it opened never; the password can be shown and hidden, the button saying which; and it closes once signed in.
 
 The one gap was mine, from #1163. The notice that a session had ended was cleared only by sending the form or signing in, so it outlived its popup: closed with Cancel, a popup opened later from the toolbar still said the session had ended. The popup now says when it goes away, however that happens, and the session state drops the notice; two specs failed first.
+
+### [`helpdesk/src/app/sign-in/sign-in-launcher.ts`](https://github.com/Terrence721/platform-main/blob/41acb57/projects/helpdesk/src/app/sign-in/sign-in-launcher.ts)
+
+**No findings** ([issue #1172](https://github.com/Terrence721/platform-main/issues/1172))
+
+Opens the sign-in popup, for the two Sign in buttons, the role guard and the ended-session effect. The popup's code and Material's dialogs are fetched on the first open, so visitors who never sign in never download them. Under its spec, two quick clicks open one popup, none opens over another, and it fits narrow screens; and as the ended-session effect opens it only once the landing page is reached, Material's closing of dialogs on navigation does not take it away again. Noted and left: should the popup's code fail to download, offline or in an old tab across a deploy of the demo, the button does nothing and says nothing until a reload, as is so for every page the app loads on demand.

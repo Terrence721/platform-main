@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 1 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -478,3 +478,9 @@ What it lacked was a way to stop. The image runs `exec node main.js`, so Node is
 The API's image, and the last of its 24 files. The build stage installs the workspace, its slow step cached until the package list changes, and builds as CI does; the run stage holds only the built API, its migrations and the packages it loads, runs as `node` rather than root, checks `/api/health`, and hands process 1 to Node, which since #1142 stops cleanly. `.dockerignore` keeps `node_modules`, build output, `.env` and `.git` out.
 
 The gap was in what it installed. Only the API's ten direct dependencies were pinned; everything beneath them came from `npm install` with no lockfile, after the generated `yarn.lock` was deleted, so each build took whatever was newest that day rather than what CI had tested. The image built during this review already held four versions never in `yarn.lock`, two of them, `content-type` and `negotiator`, read by Express on every request, and a bad release could have reached the image without passing through a pull request. npm had been chosen because the lockfile Nx generates is incomplete, missing the 22 entries under `qs`, which Yarn's `--immutable` refuses; `webpack.config.cjs` still said the output got "a lockfile pinning them". Agreed with the repo owner (option A of three, the others being a second, committed npm lockfile for the API, or a note only), the run stage now installs with Yarn, into `node_modules`, from the repo's own `yarn.lock`, which has every entry; Yarn drops what the API does not use and is removed, with its caches, in the same step. A first try with Nx's lockfile still left four fresh versions; the repo's leaves none: all 133 packages in the image are now the versions in `yarn.lock`, at 289 MB against 290. The e2e suite passes on the new image, and the API still stops cleanly. Both comments now say how it works.
+
+### [`helpdesk/src/app/tickets/ticket-api-paths.ts`](https://github.com/Terrence721/platform-main/blob/c029217/projects/helpdesk/src/app/tickets/ticket-api-paths.ts)
+
+**No findings** ([issue #1146](https://github.com/Terrence721/platform-main/issues/1146))
+
+The first of the app's 63 files, reviewed after the API's (24 files, complete; the summary is on [#1004](https://github.com/Terrence721/platform-main/issues/1004)). Where the app reads and changes one ticket: its details, its assignee, its status and its conversation, each path the route the API declares for it, with the ticket ID encoded so it cannot leave its place in the path. The three stores that call these use the functions rather than writing the paths themselves. Their specs use the same functions, so a wrong path would pass them, but the e2e tests drive every one through the real API on the Docker stack: an agent takes a ticket, moves it on and replies, a supervisor assigns one and adds a note, and an open popup's details follow the ticket live.

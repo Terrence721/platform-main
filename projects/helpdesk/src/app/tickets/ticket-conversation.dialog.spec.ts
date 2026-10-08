@@ -142,6 +142,39 @@ describe('TicketConversationDialog', () => {
     ]);
   });
 
+  // A popup can stay open a long while: time left keeps up by itself, as
+  // in the ticket tables.
+  it('keeps time left up to date while it stays open', () => {
+    const now = new Date('2026-10-04T10:00:00.000Z');
+    vi.useFakeTimers({ now, toFake: ['Date', 'setInterval', 'clearInterval'] });
+    try {
+      const { dialog, detectChanges } = render({
+        ...ticket,
+        slaDueAt: '2026-10-04T10:01:00.000Z', // in a minute
+      });
+      const due = () => dialog.querySelector('.details > div:last-child dd');
+      expect(due()?.textContent?.trim()).toBe('Due in 1m');
+
+      vi.advanceTimersByTime(2 * 60_000);
+      detectChanges();
+
+      expect(due()?.textContent?.trim()).toBe('Overdue 1m');
+      expect(due()?.classList.contains('overdue')).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // A message someone else writes appears with the arrival tone; a screen
+  // reader says it too.
+  it('reads out new messages as they appear', () => {
+    const { dialog } = render();
+
+    expect(
+      dialog.querySelector('.conversation')?.getAttribute('aria-live')
+    ).toBe('polite');
+  });
+
   it("starts the conversation with the customer's description, then each message in order", () => {
     const { dialog } = render();
     const items = [...dialog.querySelectorAll('.conversation li')];

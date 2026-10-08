@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 15 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 16 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -584,3 +584,11 @@ The gap was time. Time left was worked out once, when the tickets arrived, as th
 The ticket popup's data: the ticket, its replies and notes, and sending one. It holds, under its spec: the conversation loads as the popup opens, a failure saying so and offering another try; a message is sent once however often it is clicked, refusals in the API's own words; while the popup is open, someone else's message fetches the conversation again quietly, with the arrival tone, and a change to the ticket reads its details again, both also when the stream comes back; events for other tickets are ignored and a failed fetch keeps what is shown; and a ticket given to someone the person does not lead is marked as no longer theirs, until a later read finds it theirs again.
 
 The gap was the writer's own message. They hear its live event too, as they hold the ticket or lead the team of the one who does, and the event fetches the whole conversation, the new message in it. If that fetch came back before the send's own answer, which the code's comment already allowed for the sound, the send then added the message a second time. It is unlikely, as the fetch needs one more round trip, but now the send adds its message only if it is not already shown; a spec for that order failed first.
+
+### [`helpdesk/src/app/tickets/ticket-conversation.dialog.ts`](https://github.com/Terrence721/platform-main/blob/8365add/projects/helpdesk/src/app/tickets/ticket-conversation.dialog.ts)
+
+**Low · Usability** — 1 fix; **Low · Accessibility** — 1 fix ([issue #1180](https://github.com/Terrence721/platform-main/issues/1180))
+
+The ticket popup. It holds, under its spec: the ticket's details, its holder shown as "Someone else" once it is no longer the person's; the conversation, the customer's description first, then each reply and note, notes tinted as only staff see them; a spinner while it loads and a way to try again; and a box for a reply or a note, counting up to the contract's limit, its buttons off while it is empty or sending, refusals read out, cleared after a send, and taken away, with a word why, once the ticket is closed or no longer theirs.
+
+Two gaps. Its time left was worked out from when the ticket was last read, as the comment said, so a popup left open went stale just as the table had (#1177). Rather than a second copy of the table's clock, a small `minuteClock()` in `tickets/` now ticks each minute for both, stopping with its component, and the table's own copy is gone. And a message someone else wrote appeared with the arrival tone, but the list was not a live region, so a screen reader said nothing; it is now a polite one, and as messages are tracked by ID only the new ones are added and read. A spec failed first for each.

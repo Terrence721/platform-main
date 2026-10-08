@@ -23,6 +23,7 @@ import {
 } from '@helpdesk/contract';
 import { slaLabel } from '../landing/ticket-preview.store';
 import { STATUS_GUIDE } from '../landing/ticket-workflow.store';
+import { minuteClock } from './minute-clock';
 import { TicketConversationStore } from './ticket-conversation.store';
 
 /**
@@ -89,7 +90,8 @@ import { TicketConversationStore } from './ticket-conversation.store';
       </dl>
 
       <h3>Conversation</h3>
-      <ol class="conversation">
+      <!-- A message someone else writes is read out as it appears. -->
+      <ol class="conversation" aria-live="polite">
         <li class="customer">
           <p class="meta">
             <strong>{{ ticket().requester.name }}</strong> · customer ·
@@ -250,14 +252,13 @@ export class TicketConversationDialog {
   protected readonly status = computed(
     () => STATUS_GUIDE[this.ticket().status].label
   );
-  /**
-   * As of when the ticket was last read; a finished ticket's due time is
-   * past.
-   */
+  /** Now, to the minute, so time left keeps up while the popup is open. */
+  private readonly now = minuteClock();
+  /** Time left, or "Finished": a finished ticket's due time is past. */
   protected readonly due = computed(() =>
     isFinished(this.ticket().status)
       ? { text: 'Finished', tone: 'none' }
-      : slaLabel(this.ticket().slaDueAt, new Date())
+      : slaLabel(this.ticket().slaDueAt, this.now())
   );
 
   /** What is being written. */

@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 19 of 24)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 20 of 24)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -442,3 +442,9 @@ Left for `app.module.ts`: this service and the two ticket services take `LiveEve
 **Low · Documentation** — 1 fix ([issue #1133](https://github.com/Terrence721/platform-main/issues/1133))
 
 The Reports popup's figures. The controller only hands the service the caller and the `?team=` or `?agent=` they picked, by the contract's names, and its spec checks exactly that, with the service's 404 and 400 passed on and agents (403) and the signed out (401) turned away before anything is read. The rules themselves are the service's, as settled in #1095. Its comment still described the time before that: supervisors got "their own team". It now says the team they lead, and that one who leads none gets 404. Noted and left: a repeated parameter, `?team=a&team=b`, reaches the service as a list though declared as text, but PostgreSQL then compares it as the text `{"a","b"}`, matches nothing, and the answer is the usual 404.
+
+### [`helpdesk-api/src/reports/reports.module.ts`](https://github.com/Terrence721/platform-main/blob/4b8d8f1/projects/helpdesk-api/src/reports/reports.module.ts)
+
+**Low · Documentation** — 1 fix ([issue #1135](https://github.com/Terrence721/platform-main/issues/1135))
+
+The Reports figures for supervisors and admins. It imports `AuthModule` for the guard its one route is behind; `ReportsService` needs only the database, from the global module; and as nothing outside the reports files uses the service, nothing is exported or provided twice. Its comment called them the Reports page's figures, from before they moved into a popup (#967); it now says popup, as the controller's comment does.

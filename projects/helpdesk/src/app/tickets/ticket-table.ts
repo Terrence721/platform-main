@@ -2,9 +2,12 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   effect,
+  inject,
   input,
   output,
+  signal,
   viewChild,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
@@ -36,6 +39,9 @@ const COLUMNS = [
 
 type Column = (typeof COLUMNS)[number];
 
+/** How often time left is worked out again: it reads in whole minutes. */
+const MINUTE = 60_000;
+
 /** A ticket as a row: what each cell shows, and what each column sorts by. */
 interface TicketRow {
   /** The ticket itself, for the row's action. */
@@ -55,15 +61,15 @@ interface TicketRow {
  * Shows the tickets in the order given until a column header is clicked;
  * each click sorts by that column, then reverses, then returns to the
  * order given. Priority and status sort in their workflow order, not
- * alphabetically; Due sorts by due time, no SLA last. Time left is as of
- * when the tickets arrive; a resolved or closed ticket reads "Finished"
- * instead, as its due time no longer matters. Given an `actionLabel`
- * (such as "Assign"), each
- * row that `canAct` allows ends with a button that emits its ticket
- * through `action`. With `statusMenu`, each row also gets a Change status
- * menu listing only the moves the workflow allows (none once closed); the
- * choice comes out through `statusChange`. With `subjectLinks`, each
- * subject is a link whose ticket comes out through `open`.
+ * alphabetically; Due sorts by due time, no SLA last. Time left is worked
+ * out again every minute; a resolved or closed ticket reads "Finished"
+ * instead, as its due time no longer matters. Given an `actionLabel` (such
+ * as "Assign"), each row that `canAct` allows ends with a button that emits
+ * its ticket through `action`. With `statusMenu`, each row also gets a
+ * Change status menu listing only the moves the workflow allows (none once
+ * closed); the choice comes out through `statusChange`. With
+ * `subjectLinks`, each subject is a link whose ticket comes out through
+ * `open`.
  */
 @Component({
   selector: 'hd-ticket-table',
@@ -242,8 +248,14 @@ export class TicketTable {
   protected statusLabel(status: TicketStatus): string {
     return STATUS_GUIDE[status].label;
   }
+  /**
+   * Now, to the minute: a page stays open all shift, so time left keeps up
+   * by itself, and a ticket that falls overdue turns red without a reload.
+   */
+  private readonly now = signal(new Date());
+
   private readonly rows = computed(() => {
-    const now = new Date();
+    const now = this.now();
     return this.tickets().map((ticket): TicketRow => ({
       ticket,
       ticketNumber: formatTicketNumber(ticket.ticketNumber),
@@ -275,6 +287,8 @@ export class TicketTable {
   private readonly sort = viewChild.required(MatSort);
 
   constructor() {
+    const clock = setInterval(() => this.now.set(new Date()), MINUTE);
+    inject(DestroyRef).onDestroy(() => clearInterval(clock));
     this.dataSource.sortingDataAccessor = (row, column) =>
       row.sortBy[column as Column];
     effect(() => {

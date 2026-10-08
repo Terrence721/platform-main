@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 20 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 21 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -622,3 +622,11 @@ Two small gaps. Done's failure and its Try again had no spec, unlike the other t
 The supervisor page's store. It holds, under its spec: the team loaded when the page opens, a 404 read as no team rather than a failure; the chosen member's tickets, a new choice cancelling a load still running; assigning and changing a status, a second while one is saving ignored, a refusal keeping the API's message or a fallback; and a quiet refresh on a live update, skipping replies, dropping a member who left, leaving alone a member chosen while it ran, and keeping what is shown if it fails.
 
 The gap was the agent store's (#1185), and one more. After an assignment or a status change, `refreshAfter` re-read the team and the member's tickets in the same step, so a failed re-read made the outcome "failed" though the ticket had been assigned or changed. And it took the chosen member when the change answered: a member chosen while the re-read ran was shown the earlier member's tickets, and one who had left the team was not handled. The store's own `refresh()` already did all this right; the outcome now comes from the change alone, then that refresh runs, and `refreshAfter` is gone. Three specs failed first. And `MY_TEAM_API`'s comment said "through the dev server's proxy"; it now says the app's own origin.
+
+### [`helpdesk/src/app/supervisor/assign-ticket.dialog.ts`](https://github.com/Terrence721/platform-main/blob/93a8e18/projects/helpdesk/src/app/supervisor/assign-ticket.dialog.ts)
+
+**Low · Usability** — 1 fix ([issue #1190](https://github.com/Terrence721/platform-main/issues/1190))
+
+The "Assign to…" popup, which only chooses: it closes with the agent's ID, and the page assigns. It holds, under its spec: the ticket and its subject named; each agent with their open and overdue work, the holder marked "(has it now)" and not selectable; every agent selectable for an unassigned ticket; and Assign waiting for a choice.
+
+The gap: the team lists only its active agents (#1027), so a team can have nobody to give a ticket to, none at all or only its holder, and the popup then showed an empty or wholly disabled list with an Assign that never enabled, and no word why. It now says "No other agent on your team can take it." Specs for both cases failed first, once they compared with the sentence itself: written against a constant not yet exported, they had passed, `undefined` against `undefined`. Noted, not changed: the load counts are those of when the popup opened, and an agent who left meanwhile is refused by the API, which the page reports; and the disabled holder is skipped by the arrow keys, so a screen reader doesn't hear "(has it now)", though the page's row shows the holder.

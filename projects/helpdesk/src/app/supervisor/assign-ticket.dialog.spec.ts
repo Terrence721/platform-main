@@ -4,6 +4,8 @@ import { MatButtonHarness } from '@angular/material/button/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { AssignTicketData, AssignTicketDialog } from './assign-ticket.dialog';
 
+const NOBODY = 'No other agent on your team can take it.';
+
 const DATA: AssignTicketData = {
   ticketNumber: 1312,
   subject: 'Charged after cancelling',
@@ -72,6 +74,25 @@ describe('AssignTicketDialog', () => {
     const choices = render({ ...DATA, currentAssigneeId: null }).choices();
 
     expect(choices.every(([, selectable]) => selectable)).toBe(true);
+  });
+
+  it('says so when no other agent on the team can take it', () => {
+    const onlyTheHolder = render({
+      ...DATA,
+      members: DATA.members.filter(({ id }) => id === 'sam.rivera'),
+    });
+
+    expect(onlyTheHolder.text('.nobody')).toBe(NOBODY);
+  });
+
+  it('says so when the team has no agents at all', () => {
+    const { text } = render({ ...DATA, currentAssigneeId: null, members: [] });
+
+    expect(text('.nobody')).toBe(NOBODY);
+  });
+
+  it('says nothing of the kind while an agent can be chosen', () => {
+    expect(render().dialog.querySelector('.nobody')).toBeNull();
   });
 
   it('waits for a choice before Assign can be pressed', async () => {

@@ -28,8 +28,9 @@ function sortValue(account: UserAccount, column: Column): string | number {
     case 'name':
       return account.name.toLowerCase();
     case 'role':
-      // agent, supervisor, admin: the contract's order, not A to Z.
-      return ROLES.indexOf(account.role);
+      // agent, supervisor, admin: the contract's order, not A to Z; and,
+      // as shown, a team's lead just after its other supervisors.
+      return ROLES.indexOf(account.role) * 2 + (account.leadsTeam ? 1 : 0);
     case 'status':
       return account.active ? 0 : 1;
   }
@@ -40,7 +41,8 @@ function sortValue(account: UserAccount, column: Column): string | number {
  * supervisor who leads the team reads "Supervisor · Lead". Shows them
  * in the order given until a column header is clicked; each click sorts by
  * that column, then reverses, then returns to the order given. Role sorts
- * in role order, not alphabetically; active accounts sort before inactive.
+ * in role order, not alphabetically, the lead after the other supervisors;
+ * active accounts sort before inactive.
  * Each row but the signed-in admin's own has an Edit button.
  */
 @Component({
@@ -99,7 +101,7 @@ function sortValue(account: UserAccount, column: Column): string | number {
     </table>
   `,
   styles: `
-    /* The role as a pill: team leads green, members blue, admins purple.
+    /* The role as a pill: supervisors green, agents blue, admins purple.
        light-dark() keeps each readable in the light and the dark theme. */
     .role {
       display: inline-block;

@@ -102,7 +102,7 @@ describe('AccountsTable', () => {
     ]);
   });
 
-  it('shows each role as a pill: team leads green, members blue', () => {
+  it('shows each role as a pill: supervisors green, agents blue', () => {
     const pills = [...render().table.querySelectorAll('span.role')];
 
     // The colors themselves are in the styles: .supervisor green, .agent blue.
@@ -218,6 +218,27 @@ describe('AccountsTable', () => {
 
       await clickHeader('Role');
       expect(order()[0]).toBe('chris.taylor');
+    });
+
+    it("puts the team's lead after a replaced supervisor, as roles are shown", async () => {
+      const replaced: UserAccount = {
+        ...ACCOUNTS[1],
+        id: 'old.lead',
+        name: 'Old Lead',
+        leadsTeam: false,
+      };
+      // The replaced supervisor comes first, so the lead isn't first by luck.
+      const { order, clickHeader } = render([
+        replaced,
+        ACCOUNTS[1],
+        ACCOUNTS[0],
+      ]);
+
+      await clickHeader('Role');
+      expect(order()).toEqual(['benny.lind', 'old.lead', 'chris.taylor']);
+
+      await clickHeader('Role');
+      expect(order()).toEqual(['chris.taylor', 'old.lead', 'benny.lind']);
     });
 
     it('sorts active accounts before inactive ones', async () => {

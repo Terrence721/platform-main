@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 24 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 25 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -652,3 +652,11 @@ Three small gaps. The first time, a second click on Assign, Reassign or a member
 The admin page's store. It holds, under its spec: every account loaded when the page opens, in the API's order; a created account joining in name order, a second send while saving ignored; an edit changing the account in place, its outcome from the `PUT` alone, then a quiet reload that keeps the edit if it fails; a refusal keeping the API's message for 400, 404 and 409, else a fallback; and a live refresh for account events and reconnects only.
 
 After a saved edit, `update` re-fetched the list with its own `GET`, apart from the store's `refresh()`, so a live refresh at the same moment didn't replace it and the two raced; it now calls that refresh, shared by both, and the two existing reload specs cover it. The review first proposed swapping `refusalMessage` for the shared `apiErrorMessage`, whose only difference is 403; but here the only 403 is the role guard's bare "Forbidden", which the fallback beats, so the helper stays and its comment now says why. And `TEAM_ACCOUNTS_API`'s comment said "through the dev server's proxy"; it now says the app's own origin. Noted, not changed: a new account is placed with `localeCompare` while the API sorts by the database's collation, a rare difference that the next reload settles.
+
+### [`helpdesk/src/app/admin/accounts-table.ts`](https://github.com/Terrence721/platform-main/blob/1324e3f/projects/helpdesk/src/app/admin/accounts-table.ts)
+
+**Low · Usability** — 1 fix; **Low · Documentation** — 1 fix ([issue #1203](https://github.com/Terrence721/platform-main/issues/1203))
+
+The Team accounts table. It holds, under its spec: the columns in the order given; a pill per role, admins their own, the team's lead reading "Supervisor · Lead" and a replaced supervisor not; inactive accounts marked; Edit on every row but the signed-in admin's own, named for its account and not sortable; and each header sorting, reversing, then returning to the order given, active accounts before inactive.
+
+Role sorted every supervisor alike, so with a replaced supervisor on the team, a real case the spec already builds, the lead's place among them was the API's order, and the spec's "team lead first" held only for a team with one supervisor. Role now sorts as roles are shown, a lead just after the other supervisors; a spec with the replaced supervisor listed first failed first. And the pill styles' comment, with a spec's name, said "team leads green, members blue", where green is every supervisor and blue the agents. Noted, not changed: Name sorts by lowercase character code, Material's default, so an accented name would sort after "z"; the seeded names are plain ASCII.

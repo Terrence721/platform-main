@@ -60,6 +60,8 @@ describe('SignInDialog', () => {
       dispatch,
       actions$,
       close,
+      /** The popup goes away, however it was closed. */
+      destroy: () => fixture.destroy(),
       /** What the session reducer would make of the API's answer. */
       setSession: (changes: Partial<SessionState>) => {
         store.setState({ session: { ...initialSessionState, ...changes } });
@@ -188,6 +190,21 @@ describe('SignInDialog', () => {
 
     setSession({ checked: true, signInNotice: null });
     expect(dialog.querySelector('.notice')).toBeNull();
+  });
+
+  // Cancel, Escape or a click outside: the next popup, opened later from
+  // the toolbar, must not still say the session ended.
+  it('says it closed, so its word about an ended session goes with it', async () => {
+    const { dispatch, destroy } = await render({
+      checked: true,
+      signInNotice: SESSION_ENDED_MESSAGE,
+    });
+
+    destroy();
+
+    expect(dispatch).toHaveBeenCalledExactlyOnceWith(
+      SignInDialogActions.closed()
+    );
   });
 
   it('closes once signed in', async () => {

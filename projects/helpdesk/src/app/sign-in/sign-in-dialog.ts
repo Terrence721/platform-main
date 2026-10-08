@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   inject,
   signal,
 } from '@angular/core';
@@ -28,6 +29,7 @@ import { SignInDialogActions } from './sign-in.actions';
  * contract's rules before anything is sent. Sending dispatches
  * `[Sign In Dialog] Submitted`. A failure shows under the form; on
  * success the popup closes, and the session effects go to the user's page.
+ * Opened because a session ended during work, it says so above the form.
  */
 @Component({
   selector: 'hd-sign-in-dialog',
@@ -167,6 +169,11 @@ export class SignInDialog {
     inject(Actions)
       .pipe(ofType(SessionApiActions.signedIn), takeUntilDestroyed())
       .subscribe(() => dialogRef.close());
+    // However it closes (signed in, Cancel, Escape, a click outside), so
+    // what it said about an ended session does not greet a later popup.
+    inject(DestroyRef).onDestroy(() =>
+      this.store.dispatch(SignInDialogActions.closed())
+    );
   }
 
   protected submit(): void {

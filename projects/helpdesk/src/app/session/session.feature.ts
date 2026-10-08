@@ -63,6 +63,11 @@ export const sessionFeature = createFeature({
       signInError: null,
       signInNotice: null,
     })),
+    // Why the popup opened goes with it; a later popup is not about that.
+    on(SignInDialogActions.closed, (state): SessionState => ({
+      ...state,
+      signInNotice: null,
+    })),
     on(
       SessionApiActions.noSession,
       SessionApiActions.signedOut,

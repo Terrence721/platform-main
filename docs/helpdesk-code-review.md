@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 1 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 2 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -484,3 +484,11 @@ The gap was in what it installed. Only the API's ten direct dependencies were pi
 **No findings** ([issue #1146](https://github.com/Terrence721/platform-main/issues/1146))
 
 The first of the app's 63 files, reviewed after the API's (24 files, complete; the summary is on [#1004](https://github.com/Terrence721/platform-main/issues/1004)). Where the app reads and changes one ticket: its details, its assignee, its status and its conversation, each path the route the API declares for it, with the ticket ID encoded so it cannot leave its place in the path. The three stores that call these use the functions rather than writing the paths themselves. Their specs use the same functions, so a wrong path would pass them, but the e2e tests drive every one through the real API on the Docker stack: an agent takes a ticket, moves it on and replies, a supervisor assigns one and adds a note, and an open popup's details follow the ticket live.
+
+### [`helpdesk/src/app/tickets/api-error-message.ts`](https://github.com/Terrence721/platform-main/blob/5b8e937/projects/helpdesk/src/app/tickets/api-error-message.ts)
+
+**No findings** ([issue #1148](https://github.com/Terrence721/platform-main/issues/1148))
+
+The words shown when the API refuses a ticket action: the API's own message for the refusals it explains (400, 403, 404, 409), the action's fallback for anything else. Its spec covers each of those codes, and the fallback for a server error, no answer at all, a refusal without a message or with one that is not text, and an error that is not from HTTP. Taking, status changes, assigning and sending a message all use it, each with a fallback of its own.
+
+It turned up two things for later files. The admin store keeps its own copy, for 400, 404 and 409, to be replaced by this one in its review. And a session that ends while a page is open, after its 8 hours, is never explained: the next action gets 401 and shows that action's fallback, asking the person to try again, which will never work; only the live updates stream reacts to a 401. Treating a 401 from any API call but the session check and sign-in as "signed out", app-wide, is a decision for the session effects or the app's configuration.

@@ -6,11 +6,7 @@ import {
   provideZonelessChangeDetection,
 } from '@angular/core';
 import { DOCUMENT, ViewportScroller } from '@angular/common';
-import {
-  provideHttpClient,
-  withFetch,
-  withInterceptors,
-} from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import {
   provideRouter,
   withComponentInputBinding,
@@ -40,8 +36,9 @@ import { hidePasswords } from './sign-in/hide-passwords';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZonelessChangeDetection(),
-    // A 401 during work means the session ended: say so, and sign in again.
-    provideHttpClient(withFetch(), withInterceptors([sessionEndedInterceptor])),
+    // Over fetch, Angular's default backend. A 401 during work means the
+    // session ended: say so, and sign in again.
+    provideHttpClient(withInterceptors([sessionEndedInterceptor])),
     provideRouter(
       routes,
       withComponentInputBinding(),
@@ -74,8 +71,7 @@ export const appConfig: ApplicationConfig = {
       leaveAfterSignOut,
       signInAgainAfterSessionEnded,
     }),
-    // @ngrx/data's entity cache, for data the app only lists and edits
-    // (the landing page's capabilities now; admin data once there is some).
+    // @ngrx/data's entity cache, for the landing page's capabilities.
     provideEntityData({ entityMetadata: { [CAPABILITY]: {} } }, withEffects()),
     provideStoreDevtools({
       maxAge: 25,

@@ -10,7 +10,11 @@ import { Action } from '@ngrx/store';
 import { MockStore, provideMockStore } from '@ngrx/store/testing';
 import { Subject } from 'rxjs';
 import { SessionApiActions } from '../session/session.actions';
-import { initialSessionState, SessionState } from '../session/session.feature';
+import {
+  initialSessionState,
+  SESSION_ENDED_MESSAGE,
+  SessionState,
+} from '../session/session.feature';
 import { SignInDialog } from './sign-in-dialog';
 import { SignInDialogActions } from './sign-in.actions';
 
@@ -168,6 +172,22 @@ describe('SignInDialog', () => {
 
     expect(errorBox()).toBeNull();
     expect(await (await button('Sign in')).isDisabled()).toBe(false);
+  });
+
+  // A session that ended during work brings the popup back by itself, so it
+  // says why before anything is typed.
+  it('says why it opened when the session ended during work', async () => {
+    const { dialog, setSession } = await render({
+      checked: true,
+      signInNotice: SESSION_ENDED_MESSAGE,
+    });
+
+    const notice = dialog.querySelector('.notice');
+    expect(notice?.textContent?.trim()).toBe(SESSION_ENDED_MESSAGE);
+    expect(notice?.getAttribute('role')).toBe('status');
+
+    setSession({ checked: true, signInNotice: null });
+    expect(dialog.querySelector('.notice')).toBeNull();
   });
 
   it('closes once signed in', async () => {

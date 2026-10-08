@@ -20,12 +20,22 @@ export interface SessionState {
   checked: boolean;
   /** Why the last sign-in failed, for the popup; `null` otherwise. */
   signInError: string | null;
+  /**
+   * Why the popup opened by itself, before anything is typed: the session
+   * ended during work. `null` otherwise.
+   */
+  signInNotice: string | null;
 }
+
+/** What the popup says when a session ended during work. */
+export const SESSION_ENDED_MESSAGE =
+  'Your session has ended. Please sign in again.';
 
 export const initialSessionState: SessionState = {
   user: null,
   checked: false,
   signInError: null,
+  signInNotice: null,
 };
 
 export const sessionFeature = createFeature({
@@ -40,22 +50,29 @@ export const sessionFeature = createFeature({
         user,
         checked: true,
         signInError: null,
+        signInNotice: null,
       })
     ),
     on(SessionApiActions.signInFailed, (state, { message }): SessionState => ({
       ...state,
       signInError: message,
     })),
-    // A new attempt clears the last one's error.
+    // A new attempt clears the last one's error, and why the popup opened.
     on(SignInDialogActions.submitted, (state): SessionState => ({
       ...state,
       signInError: null,
+      signInNotice: null,
     })),
     on(
       SessionApiActions.noSession,
       SessionApiActions.signedOut,
       (): SessionState => ({ ...initialSessionState, checked: true })
-    )
+    ),
+    on(SessionApiActions.sessionEnded, (): SessionState => ({
+      ...initialSessionState,
+      checked: true,
+      signInNotice: SESSION_ENDED_MESSAGE,
+    }))
   ),
   extraSelectors: ({ selectUser }) => ({
     /** The signed-in user's own page; `null` while signed out. */

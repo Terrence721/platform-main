@@ -18,9 +18,11 @@ import {
   restoreSession,
   SIGN_IN_UNAVAILABLE_MESSAGE,
   signIn,
+  signInAgainAfterSessionEnded,
   signInSounds,
   signOut,
 } from './session.effects';
+import { SignInLauncher } from '../sign-in/sign-in-launcher';
 import { Sounds } from '../sound/sounds';
 
 const alex: CurrentUser = {
@@ -37,11 +39,14 @@ describe('session effects', () => {
   const navigateByUrl = vi.fn(async () => true);
   /** A stand-in for the sounds, to hear which play. */
   const sounds = { play: vi.fn() };
+  /** A stand-in for the sign-in popup's opener. */
+  const signInLauncher = { open: vi.fn(async () => undefined) };
 
   beforeEach(() => {
     actions$ = new Subject<Action>();
     navigateByUrl.mockClear();
     sounds.play.mockClear();
+    signInLauncher.open.mockClear();
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
@@ -49,6 +54,7 @@ describe('session effects', () => {
         provideMockActions(() => actions$),
         { provide: Router, useValue: { navigateByUrl } },
         { provide: Sounds, useValue: sounds },
+        { provide: SignInLauncher, useValue: signInLauncher },
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -264,6 +270,18 @@ describe('session effects', () => {
       run(leaveAfterSignOut);
       actions$.next(SessionApiActions.signedOut());
 
+      expect(navigateByUrl).toHaveBeenCalledExactlyOnceWith('/');
+    });
+  });
+
+  describe('signInAgainAfterSessionEnded', () => {
+    it('goes back to the landing page and opens the sign-in popup', async () => {
+      run(signInAgainAfterSessionEnded);
+      actions$.next(SessionApiActions.sessionEnded());
+
+      await vi.waitFor(() =>
+        expect(signInLauncher.open).toHaveBeenCalledOnce()
+      );
       expect(navigateByUrl).toHaveBeenCalledExactlyOnceWith('/');
     });
   });

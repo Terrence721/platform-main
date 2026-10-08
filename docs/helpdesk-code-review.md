@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 49 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 50 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -840,3 +840,9 @@ The app-wide `showErrors` effect. It holds, under its spec: a snack bar with the
 The app's top-level routes. It holds, under its spec: the landing page at `/`, its state and effects registered on its route and its showcase tickets loading, the capabilities served by the app with no request; each role's page at its address with its title; an agent opening `/admin` sent to their own page, and a signed-out visitor to the landing page with the sign-in popup open. Every page is lazy-loaded.
 
 The gap, noted at the role guard's review: no route caught an address that matched nothing, so a typo or an old bookmark made the router throw and a first load showed an empty page under the toolbar. A last route, `{ path: '**', redirectTo: '' }`, now sends it to the landing page; a spec opening `/no-such-page` failed first with the router's error.
+
+### [`helpdesk/src/app/app.config.ts`](https://github.com/Terrence721/platform-main/blob/4499c1c/projects/helpdesk/src/app/app.config.ts)
+
+**Low · Documentation** — 1 fix; **Low · Maintainability** — 1 fix ([issue #1256](https://github.com/Terrence721/platform-main/issues/1256))
+
+The app's providers, each piece tested where it lives and all of it started by the e2e tests. It holds: zoneless change detection; HTTP over `fetch` with the session-ended interceptor; the router, whose anchor links stop short of the sticky toolbar, measured each time as it is shorter on phones; router state in the store; the session feature and all seven session effects, listed by name as the module also exports constants and a helper; @ngrx/data for the capabilities; and the devtools, log-only outside development, with passwords hidden. Its comment had @ngrx/data's cache waiting for "admin data once there is some"; admin data came, in a signal store, so it now says the cache is for the capabilities. And `withFetch()`, spotted in the editor during the review, is deprecated in Angular 22.2, where fetch is the default backend; it goes, changing nothing (the demo backend's spec uses it too, for its own review). Noted, not changed: no spec would catch a new session effect left off the list, as NgRx has no public way to tell an effect from another export, but a missing core one would break the e2e sign-in journeys.

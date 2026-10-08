@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 45 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 46 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -810,3 +810,9 @@ The landing page's "How a ticket moves" section. It holds, under its spec: the s
 The landing page's "Three roles, clear limits" table. It holds, under its spec: a column for the ability, then one per role; every cell from the contract's `ROLE_PERMISSIONS`, every permission in exactly one row, so the page cannot promise more than the API allows; the checks and dashes hidden, a screen reader hearing Yes or No; and an `h2` the page labels the section by. Each row, trimmed in #1023, says only what the app does.
 
 Each row's ability was a plain `<td>`, so a screen reader moving along a row heard only Yes or No, with nothing to say which ability it was about; it is now a row header, `<th scope="row">`, styled as the plain cell it was. A spec failed first. `Permission` and `Role` are `import type`. Noted, not changed: the table leaves out Reports, which supervisors and admins have, as it is not a contract permission; it undersells slightly, and adding it would be a contract change.
+
+### [`helpdesk/src/app/landing/sign-in-cta.ts`](https://github.com/Terrence721/platform-main/blob/41acb57/projects/helpdesk/src/app/landing/sign-in-cta.ts)
+
+**No findings** ([issue #1248](https://github.com/Terrence721/platform-main/issues/1248))
+
+The landing page's closing band: "Ready to pick up the next ticket?" and a Sign in button. It holds, under its spec: an `h2` the page labels the band by, and a button that opens the sign-in popup through the shared `SignInLauncher`, one popup per click. Its icon is hidden from screen readers, as `mat-icon` is by default, and its line, "Sign in with the account your admin set up for you", is true: admins create the accounts.

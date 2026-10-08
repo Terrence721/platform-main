@@ -6,7 +6,11 @@ import type {
   TeamOverview,
   TicketDto,
 } from '@helpdesk/contract';
-import { TeamsService, TicketsService } from '@helpdesk/server';
+import {
+  NO_TEAM_MESSAGE,
+  TeamsService,
+  TicketsService,
+} from '@helpdesk/server';
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import cookieParser from 'cookie-parser';
@@ -125,6 +129,7 @@ describe('/api/teams', () => {
       expect(teams.overviewFor).toHaveBeenCalledExactlyOnceWith('chris.taylor');
     });
 
+    // In the same words as the Reports API's answer to the same supervisor.
     it('answers 404 to a supervisor who leads no team', async () => {
       teams.overviewFor.mockResolvedValueOnce(null);
 
@@ -132,7 +137,7 @@ describe('/api/teams', () => {
 
       expect(response.status).toBe(404);
       expect(await response.json()).toEqual(
-        expect.objectContaining({ message: 'You do not lead a team.' })
+        expect.objectContaining({ message: NO_TEAM_MESSAGE })
       );
     });
 

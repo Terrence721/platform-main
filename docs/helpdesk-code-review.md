@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 23 of 24)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -470,3 +470,11 @@ What nothing checked was the point the `users.module.ts` review raised. The thre
 Starts the API: `.env` from the repo root when there is one, with the environment winning; Express named so the build lists it for the image; the `/api` prefix and the cookie reader the guard needs. A start that fails, such as the refused development secret of #1105, logs why and exits with code 1.
 
 What it lacked was a way to stop. The image runs `exec node main.js`, so Node is process 1, which on Linux ignores SIGTERM unless something handles it, and nothing did, as Nest's shutdown hooks were not enabled. Every `docker stop` waited out Docker's grace period and killed the API, exit code 137: the database connections were cut rather than closed, the pool's `onModuleDestroy` never running, and live updates streams were cut too. Nothing was corrupted, as PostgreSQL rolls back and pages reconnect. Agreed with the repo owner (option A of three, the others being an init process in `compose.yaml`, which would still cut the connections, or a note only), the app now enables its shutdown hooks and is created with `forceCloseConnections`, without which closing would wait on every open stream, as they never end on their own. On the Docker stack, with a signed-in stream open and its first ping received, `docker compose stop api` now takes 0.75 seconds and exits with code 0, the stream ended by the API. This also makes true, on `docker stop`, what `database.module.ts`'s comment says about closing the pool.
+
+### [`helpdesk-api/Dockerfile`](https://github.com/Terrence721/platform-main/blob/49b3676/projects/helpdesk-api/Dockerfile)
+
+**Medium-low · Supply chain** — 1 fix ([issue #1143](https://github.com/Terrence721/platform-main/issues/1143))
+
+The API's image, and the last of its 24 files. The build stage installs the workspace, its slow step cached until the package list changes, and builds as CI does; the run stage holds only the built API, its migrations and the packages it loads, runs as `node` rather than root, checks `/api/health`, and hands process 1 to Node, which since #1142 stops cleanly. `.dockerignore` keeps `node_modules`, build output, `.env` and `.git` out.
+
+The gap was in what it installed. Only the API's ten direct dependencies were pinned; everything beneath them came from `npm install` with no lockfile, after the generated `yarn.lock` was deleted, so each build took whatever was newest that day rather than what CI had tested. The image built during this review already held four versions never in `yarn.lock`, two of them, `content-type` and `negotiator`, read by Express on every request, and a bad release could have reached the image without passing through a pull request. npm had been chosen because the lockfile Nx generates is incomplete, missing the 22 entries under `qs`, which Yarn's `--immutable` refuses; `webpack.config.cjs` still said the output got "a lockfile pinning them". Agreed with the repo owner (option A of three, the others being a second, committed npm lockfile for the API, or a note only), the run stage now installs with Yarn, into `node_modules`, from the repo's own `yarn.lock`, which has every entry; Yarn drops what the API does not use and is removed, with its caches, in the same step. A first try with Nx's lockfile still left four fresh versions; the repo's leaves none: all 133 packages in the image are now the versions in `yarn.lock`, at 289 MB against 290. The e2e suite passes on the new image, and the API still stops cleanly. Both comments now say how it works.

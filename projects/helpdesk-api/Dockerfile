@@ -23,16 +23,23 @@ ENV NX_DAEMON=false NX_NO_CLOUD=true
 RUN yarn nx build helpdesk-api --skip-nx-cache
 
 # Run: only the built API and the packages it loads (webpack.config.cjs
-# lists them in the generated package.json). npm, unlike Yarn, also adds
-# required peers such as rxjs. Its download cache is cleared in the same
-# step, or it would stay in the image (about 300 MB).
+# lists them in the generated package.json). Yarn installs them from this
+# repo's yarn.lock, so the image gets every version CI tested, not whatever
+# is newest on the day of the build. The repo's lockfile, not the one Nx
+# generates beside the package.json, which leaves some out (those under
+# qs). Not --immutable, as Yarn drops the entries the API does not use.
+# Into node_modules, as Node loads them; Yarn and its caches are removed in
+# the same step, or they would stay in the image.
 FROM node:24-alpine
-ENV NODE_ENV=production
+ENV NODE_ENV=production COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 WORKDIR /app
 COPY --from=build /repo/dist/projects/helpdesk-api ./
-RUN npm install --omit=dev --no-package-lock --no-audit --no-fund \
-  && npm cache clean --force \
-  && rm yarn.lock
+COPY --from=build /repo/yarn.lock ./
+RUN corepack enable \
+  && printf '%s\n' 'nodeLinker: node-modules' 'enableGlobalCache: false' \
+    'enableImmutableInstalls: false' 'enableTelemetry: false' > .yarnrc.yml \
+  && yarn install \
+  && rm -rf .yarn .yarnrc.yml yarn.lock /root/.cache /root/.yarn
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=10s --timeout=3s --start-period=30s --retries=3 \

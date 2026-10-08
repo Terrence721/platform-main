@@ -64,7 +64,8 @@ describe('AgentPage', () => {
   /** Stands in for Material's snack bar, to see what it says. */
   const snackBar = { open: vi.fn() };
   /** Stands in for Material's dialogs, to see which popup opens. */
-  const dialog = { open: vi.fn() };
+  // No popup open yet, so a ticket's popup opens (open-ticket.ts asks).
+  const dialog = { open: vi.fn(), getDialogById: () => undefined };
   /** Stands in for the sounds, to hear which play. */
   const sounds = { play: vi.fn() };
 

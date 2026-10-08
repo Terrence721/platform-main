@@ -73,7 +73,8 @@ function paramsFor(pick: ReportPick): HttpParams {
  * created, for INITIAL_REPORT_PICK if the popup was given one. `select`
  * switches who the report is for (the figures go while the new ones load;
  * the "Report for" choices stay). `load` again keeps the current figures on
- * screen until the new ones come. A newer load replaces one still running.
+ * screen until the new ones come, and if it fails keeps them and says so
+ * (`refreshFailed`). A newer load replaces one still running.
  */
 export const ReportsStore = signalStore(
   withState(() => ({
@@ -86,6 +87,8 @@ export const ReportsStore = signalStore(
     loadState: 'loading' as ReportsLoadState,
     /** Whether a refresh is running, with figures already shown. */
     refreshing: false,
+    /** Whether the last refresh failed, the figures shown being older. */
+    refreshFailed: false,
   })),
   withComputed(({ report }) => ({
     /**
@@ -119,8 +122,8 @@ export const ReportsStore = signalStore(
       pipe(
         tap(() =>
           store.report() === null
-            ? patchState(store, { loadState: 'loading' })
-            : patchState(store, { refreshing: true })
+            ? patchState(store, { loadState: 'loading', refreshFailed: false })
+            : patchState(store, { refreshing: true, refreshFailed: false })
         ),
         switchMap(() =>
           http
@@ -136,11 +139,13 @@ export const ReportsStore = signalStore(
                     loadState: 'loaded',
                     refreshing: false,
                   }),
-                // A failed refresh keeps the figures already shown.
+                // A failed refresh keeps the figures already shown, and
+                // says so.
                 error: () =>
                   patchState(store, {
                     loadState: store.report() === null ? 'failed' : 'loaded',
                     refreshing: false,
+                    refreshFailed: store.report() !== null,
                   }),
               })
             )

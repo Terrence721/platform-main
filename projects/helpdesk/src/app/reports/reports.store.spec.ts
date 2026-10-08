@@ -139,6 +139,21 @@ describe('ReportsStore', () => {
     expect(store.report()).toEqual(REPORT);
   });
 
+  it('says a refresh failed, until the next load', () => {
+    const store = TestBed.inject(ReportsStore);
+    request().flush(REPORT);
+    expect(store.refreshFailed()).toBe(false);
+
+    store.load();
+    request().flush(null, failure);
+    expect(store.refreshFailed()).toBe(true);
+
+    store.load();
+    expect(store.refreshFailed()).toBe(false);
+    request().flush(REPORT);
+    expect(store.refreshFailed()).toBe(false);
+  });
+
   it('lets a newer load replace one still running', () => {
     const store = TestBed.inject(ReportsStore);
     const first = request();

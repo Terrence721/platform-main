@@ -14,6 +14,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import {
   OPEN_WORK_STATUSES,
+  REPORT_WINDOW_DAYS,
   type ReportAgentChoice,
   TICKET_PRIORITIES,
   type TicketPriority,
@@ -184,6 +185,11 @@ export function pickFrom(value: string): ReportPick {
           </p>
         }
         @default {
+          @if (store.refreshFailed()) {
+            <p class="refresh-failed" role="status">
+              Couldn't refresh. These are the figures from before.
+            </p>
+          }
           <ul class="tiles">
             @for (tile of tiles(); track tile.label) {
               <li class="tile">
@@ -204,7 +210,9 @@ export function pickFrom(value: string): ReportPick {
                 <div echarts class="chart" [options]="byPriority()"></div>
               </section>
               <section class="chart-card" aria-labelledby="agent-times">
-                <h3 id="agent-times">Median hours, last 30 days</h3>
+                <h3 id="agent-times">
+                  Median hours, last {{ windowDays }} days
+                </h3>
                 <div echarts class="chart" [options]="agentTimes()"></div>
               </section>
             } @else {
@@ -213,11 +221,11 @@ export function pickFrom(value: string): ReportPick {
                 <div echarts class="chart" [options]="byTeam()"></div>
               </section>
               <section class="chart-card" aria-labelledby="sla">
-                <h3 id="sla">SLA met, last 30 days</h3>
+                <h3 id="sla">SLA met, last {{ windowDays }} days</h3>
                 <div echarts class="chart" [options]="sla()"></div>
               </section>
               <section class="chart-card" aria-labelledby="times">
-                <h3 id="times">Median hours, last 30 days</h3>
+                <h3 id="times">Median hours, last {{ windowDays }} days</h3>
                 <div echarts class="chart" [options]="times()"></div>
               </section>
               @if (store.report()?.agents?.length) {
@@ -227,7 +235,8 @@ export function pickFrom(value: string): ReportPick {
                 </section>
                 <section class="chart-card wide" aria-labelledby="agent-sla">
                   <h3 id="agent-sla">
-                    Agents: SLA met and median hours to resolve, last 30 days
+                    Agents: SLA met and median hours to resolve, last
+                    {{ windowDays }} days
                   </h3>
                   <div echarts class="chart tall" [options]="agentSla()"></div>
                 </section>
@@ -310,6 +319,10 @@ export function pickFrom(value: string): ReportPick {
     .message {
       color: var(--mat-sys-on-surface-variant);
     }
+    .refresh-failed {
+      margin: 0.5rem 0 0;
+      color: var(--mat-sys-error);
+    }
     .spinning {
       animation: spin 1s linear infinite;
     }
@@ -336,6 +349,8 @@ export class ReportsDialog {
   private readonly user = inject(Store).selectSignal(sessionFeature.selectUser);
 
   protected readonly isAdmin = computed(() => this.user()?.role === 'admin');
+  /** The window finished work is counted over, as the API counts it. */
+  protected readonly windowDays = REPORT_WINDOW_DAYS;
 
   /** Whether the report is about one agent, not a team or every team. */
   protected readonly isAgentReport = computed(
@@ -401,7 +416,11 @@ export class ReportsDialog {
         value: slaMetPercent === null ? '–' : `${slaMetPercent}%`,
         hint: 'finished by the due time',
       },
-      { label: 'Finished', value: `${finished}`, hint: 'in the last 30 days' },
+      {
+        label: 'Finished',
+        value: `${finished}`,
+        hint: `in the last ${REPORT_WINDOW_DAYS} days`,
+      },
     ];
   });
 

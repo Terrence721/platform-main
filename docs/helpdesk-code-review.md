@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 32 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 33 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -716,3 +716,11 @@ The gap, noted at the supervisor page (#1195) and the admin page (#1211): the fi
 The landing page's six feature cards, served through @ngrx/data, each with its own id. Each card was checked against the running app: Clear ownership and Live updates hold; the rest promised more than the app does, on the public page and in the live demo beside it, where a visitor can compare.
 
 Tickets and queues offered queues, filters and search, and the ticket contract has no queues and no list has filters or search; Replies and internal notes offered canned replies; Admin in the same app had admins managing queues, customers and canned replies, where they manage accounts, and see Reports; and Deadlines had nearly-due work standing out, where overdue work is marked and lists put the most urgent first, but nothing marks "nearly due". The cards now say what the app does: Tickets and priorities, Replies and internal notes, Accounts and reports in the same app, and Deadlines without "nearly-due". A spec fails any card naming queues, filters, search, canned replies or nearly-due work, and four failed it first. #1024 stays open for the hero, in `landing.page.ts`.
+
+### [`helpdesk/src/app/landing/features.ts`](https://github.com/Terrence721/platform-main/blob/a169d2d/projects/helpdesk/src/app/landing/features.ts)
+
+**Low · Correctness** — 1 fix ([issue #1220](https://github.com/Terrence721/platform-main/issues/1220), part of [#1024](https://github.com/Terrence721/platform-main/issues/1024))
+
+The landing page's features section. It holds, under its spec: the capabilities asked for when it is created and shown as cards in order, from @ngrx/data's cache; a list, so a screen reader can count them; an `h2` with the id the page labels the section by, an `h3` per card, and the icons hidden from screen readers. Three columns become one on a narrow screen.
+
+Its intro promised too much, as the cards did: "fast lists, clear deadlines, and no ticket left without an owner", where the app keeps an Unassigned list by design and nothing measures how fast a list is. It now reads "clear deadlines, the most urgent work first, and the tickets nobody holds yet in plain view"; a spec on it failed first. Noted, not changed: the file is `features.ts` while the component is `CapabilitiesSection`, a mismatch not worth a rename.

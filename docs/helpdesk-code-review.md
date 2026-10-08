@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 12 of 24)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 13 of 24)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -396,3 +396,9 @@ The live updates stream, `/api/events`, as reworked by #1073 during the server's
 **No findings** ([issue #1119](https://github.com/Terrence721/platform-main/issues/1119))
 
 Live updates: the one `LiveEvents` and the stream's controller. It holds. `LiveEvents` is provided here and nowhere else, which matters, as a second copy would have its own listeners and the stream would never hear what was published; the module is global, so the publishers (`TicketsService` and `TicketMessagesService` in the tickets module, `UsersService` in the users module) share it without importing it, and the e2e live-update tests on the Docker stack show one person's change reaching another's open stream. It imports `AuthModule` for the guard the stream is behind, as its comment says.
+
+### [`helpdesk-api/src/tickets/tickets.controller.ts`](https://github.com/Terrence721/platform-main/blob/e93b7d6/projects/helpdesk-api/src/tickets/tickets.controller.ts)
+
+**No findings** ([issue #1121](https://github.com/Terrence721/platform-main/issues/1121))
+
+`/api/tickets`, for the people who work them. It holds, under its specs. Each route is open to the roles of the page that uses it: agents alone for their own tickets, the unassigned ones and their finished ones; agents and supervisors for assigning, one ticket, its status and its conversation. A supervisor assigns within the team they lead, and an agent may only take a ticket for themselves, refused with 403 before anything is read. A ticket ID that is not a UUID would make PostgreSQL throw, but every path checks its form first and answers 404: assigning, taking, and the one access rule behind a ticket's details, status and conversation. `GET :ticketId` comes after `mine` and `unassigned`, as its comment says, and every body is read through the server library's readers, a bad one answered 400 with nothing changed. The status codes its comments list match the service's, as reviewed with the server.

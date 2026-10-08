@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 13 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 14 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -568,3 +568,11 @@ Opens the sign-in popup, for the two Sign in buttons, the role guard and the end
 The app's one live updates stream. It holds, under its spec: one stream while someone is signed in, shared by every page that listens and closed when none does; opened on sign-in and closed on sign-out, a fresh one for another person and the same one kept for the same person; only live events passed on; and after a network break, which the browser mends by itself, pages told to load again. The in-browser demo, which has no server, opens none.
 
 The gap was the break the browser does not mend. While the API restarts, after an update or a crash, nginx answers the stream with 502, and a browser gives up on a stream for good after an HTTP error: a probe with Node's `EventSource` against a 502 made one try and closed. So after any API restart every open page stopped hearing about changes, without a word, until it was reloaded. Now, when the stream is closed for good, the app asks who is signed in: still signed in, it opens the stream again and pages load again; nobody, the session has ended (#1163), and the person is told at once instead of at their next action; no answer, it asks again after two seconds, waiting twice as long each time up to a minute, until signed out. Five specs failed first. A new e2e test proves it on the Docker stack: with a fixed sign-in secret, so that sessions outlive the restart, an agent's page is open when the API restarts, and a ticket their lead assigns afterwards still appears on it, live.
+
+### [`helpdesk/src/app/tickets/ticket-table.ts`](https://github.com/Terrence721/platform-main/blob/8365add/projects/helpdesk/src/app/tickets/ticket-table.ts)
+
+**Medium-low · Usability** — 1 fix; **Low · Documentation** — 1 fix ([issue #1176](https://github.com/Terrence721/platform-main/issues/1176))
+
+The ticket table on the agent's and the supervisor's pages. It holds, under its spec: a column for each thing a worker needs to pick a ticket, priority as a chip tinted for high and urgent, and time left against the SLA, overdue in the error color and in words, or "Finished" once resolved or closed; the order given until a header is clicked, priority and status sorting in workflow order, Due soonest first with no SLA last, numbers as numbers; and, as asked for, an action button on the rows allowed it, still the right ticket after sorting, a menu of only the status moves the workflow allows, and subject links that open the ticket.
+
+The gap was time. Time left was worked out once, when the tickets arrived, as the comment said, but a page stays open all shift and loads again only when a live update concerns it: "Due in 10 min" could still read so an hour later, and a ticket that fell overdue never turned red, which is the one thing that column is for. The table now keeps its own clock, ticking every minute as the label reads in whole minutes, so the text and color keep up by themselves; a spec failed first, a ticket due in a minute reading "Overdue 1m" two minutes on with no new data. The class comment, which had a stray line break mid-sentence, now says so. Left for later files: the ticket popup's Due label goes stale the same way, and this table and both pages take `slaLabel` and the status guide from the landing page's stores, a question for the landing reviews.

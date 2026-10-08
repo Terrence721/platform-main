@@ -51,6 +51,8 @@ describe('TicketTable', () => {
     fixture.detectChanges();
     const table = fixture.nativeElement as HTMLElement;
     return {
+      /** Shows what has changed, as Angular would after a tick. */
+      update: () => fixture.detectChanges(),
       /** The tickets whose action button was clicked, in order. */
       actioned,
       /** The rows' action buttons. */
@@ -154,6 +156,26 @@ describe('TicketTable', () => {
         ['overdue', 'soon', 'ok', 'none'].find((tone) => classes.contains(tone))
       )
     ).toEqual(['overdue', 'soon', 'ok', 'none']);
+  });
+
+  // A page stays open all shift and loads again only when a live update
+  // concerns it: time left must keep up by itself, or a ticket that falls
+  // overdue never turns red.
+  it('keeps time left up to date while the page stays open', () => {
+    vi.useFakeTimers({
+      now: NOW,
+      toFake: ['Date', 'setInterval', 'clearInterval'],
+    });
+    const { rows, classesIn, update } = render([
+      ticket(1001, '2026-10-03T12:01:00.000Z'), // in a minute
+    ]);
+    expect(rows()[0].at(-1)).toBe('Due in 1m');
+
+    vi.advanceTimersByTime(2 * 60_000);
+    update();
+
+    expect(rows()[0].at(-1)).toBe('Overdue 1m');
+    expect(classesIn('due')[0].contains('overdue')).toBe(true);
   });
 
   it('shows priority as a chip, tinted for high and urgent', () => {

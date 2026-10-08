@@ -22,7 +22,7 @@ describe('TicketPreview', () => {
     TestBed.configureTestingModule({ providers: [provideMockStore()] });
     const store = TestBed.inject(MockStore);
     store.overrideSelector(landingFeature.selectLoadState, loadState);
-    store.overrideSelector(landingFeature.selectVisibleTickets, visible);
+    store.overrideSelector(landingFeature.selectAllTickets, visible);
 
     fixture = TestBed.createComponent(TicketPreview);
     fixture.detectChanges();

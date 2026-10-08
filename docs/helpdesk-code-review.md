@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 36 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 37 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -715,7 +715,7 @@ The gap, noted at the supervisor page (#1195) and the admin page (#1211): the fi
 
 The landing page's six feature cards, served through @ngrx/data, each with its own id. Each card was checked against the running app: Clear ownership and Live updates hold; the rest promised more than the app does, on the public page and in the live demo beside it, where a visitor can compare.
 
-Tickets and queues offered queues, filters and search, and the ticket contract has no queues and no list has filters or search; Replies and internal notes offered canned replies; Admin in the same app had admins managing queues, customers and canned replies, where they manage accounts, and see Reports; and Deadlines had nearly-due work standing out, where overdue work is marked and lists put the most urgent first, but nothing marks "nearly due". The cards now say what the app does: Tickets and priorities, Replies and internal notes, Accounts and reports in the same app, and Deadlines without "nearly-due". A spec fails any card naming queues, filters, search, canned replies or nearly-due work, and four failed it first. #1024 stays open for the hero, in `landing.page.ts`.
+Tickets and queues offered queues, filters and search, and no screen shows a ticket's queue and no list has filters or search (each ticket does carry a queue in the contract and the database, as this entry first said it didn't: corrected in #1230's review); Replies and internal notes offered canned replies; Admin in the same app had admins managing queues, customers and canned replies, where they manage accounts, and see Reports; and Deadlines had nearly-due work standing out, where overdue work is marked and lists put the most urgent first, but nothing marks "nearly due". The cards now say what the app does: Tickets and priorities, Replies and internal notes, Accounts and reports in the same app, and Deadlines without "nearly-due". A spec fails any card naming queues, filters, search, canned replies or nearly-due work, and four failed it first. #1024 stays open for the hero, in `landing.page.ts`.
 
 ### [`helpdesk/src/app/landing/features.ts`](https://github.com/Terrence721/platform-main/blob/a169d2d/projects/helpdesk/src/app/landing/features.ts)
 
@@ -746,3 +746,11 @@ The capabilities' @ngrx/data entity collection service. It holds, under its spec
 The landing page's two action groups: the showcase tickets' API results, and what the visitor does. Both comments hold: a failed load's `error` reaches the visitor through the app's `showErrors` effect, which shows any action with a string `error`; and the page dispatches `Opened` as it is created, the tickets loading in response.
 
 `Status Filter Changed` is dispatched by nothing but specs: the page has no status filter, though a `statusFilter` field, a reducer case and a `selectStatusFilter` selector in `landing.feature.ts` stand behind it, a planned feature never wired. It is to go, action and state together, in that file's review, as removing the action alone would break the reducer. And the contract's types were imported as values; they are now `import type`, as #1167 made `sign-in.actions.ts`.
+
+### [`helpdesk/src/app/landing/landing.feature.ts`](https://github.com/Terrence721/platform-main/blob/8dcdfdf/projects/helpdesk/src/app/landing/landing.feature.ts)
+
+**Low · Maintainability** — 1 fix; **Low · Consistency** — 1 fix ([issue #1230](https://github.com/Terrence721/platform-main/issues/1230))
+
+The landing page's NgRx feature: the showcase tickets in an entity adapter and their load state. It holds, under its spec: `compareBySlaDue` putting the earliest due time first and tickets without an SLA last, ties broken by number, ISO times compared as text; loaded tickets stored in that order, a reload replacing them; and a failed load marked while the tickets it had are kept.
+
+The status filter that `landing.actions.ts`'s review found unwired goes, as agreed there: the action, the `statusFilter` field, its reducer case and `selectVisibleTickets`, the preview store now reading `selectAllTickets`, which is the same list without a filter. A spec of the state, holding only the tickets and their load, failed first; the filter's own specs go, and the effects spec's "other action" is now a loaded result. The types are `import type`. This review also found that `capability.ts`'s entry, above, said the ticket contract has no queues: it has (`TicketDto.queue`), though no screen shows them, which is what the card change rests on; that entry is corrected and #1218 says so.

@@ -1,10 +1,10 @@
-import { TicketDto } from '@helpdesk/contract';
-import { LandingApiActions, LandingPageActions } from './landing.actions';
+import type { TicketDto } from '@helpdesk/contract';
+import { LandingApiActions } from './landing.actions';
 import {
   compareBySlaDue,
   initialLandingState,
   landingFeature,
-  LandingState,
+  type LandingState,
 } from './landing.feature';
 
 function ticket(overrides: Partial<TicketDto>): TicketDto {
@@ -69,11 +69,11 @@ describe('compareBySlaDue', () => {
 });
 
 describe('landing reducer', () => {
-  it('starts empty, loading and unfiltered', () => {
+  // The preview shows every showcase ticket: there is no status filter.
+  it('starts empty and loading, holding only the tickets and their load', () => {
     expect(initialLandingState).toEqual({
       ids: [],
       entities: {},
-      statusFilter: null,
       loadState: 'loading',
     });
   });
@@ -109,58 +109,26 @@ describe('landing reducer', () => {
     expect(state.loadState).toBe('failed');
     expect(state.ids).toEqual(['t1']);
   });
-
-  it('changes the status filter', () => {
-    const filtered = reducer(
-      initialLandingState,
-      LandingPageActions.statusFilterChanged({ status: 'pending' })
-    );
-    const cleared = reducer(
-      filtered,
-      LandingPageActions.statusFilterChanged({ status: null })
-    );
-
-    expect(filtered.statusFilter).toBe('pending');
-    expect(cleared.statusFilter).toBeNull();
-  });
 });
 
 describe('landing selectors', () => {
-  const tickets = [
-    ticket({ ticketNumber: 1, status: 'open', slaDueAt: null }),
-    ticket({
-      ticketNumber: 2,
-      status: 'pending',
-      slaDueAt: '2026-10-03T10:00:00.000Z',
-    }),
-    ticket({
-      ticketNumber: 3,
-      status: 'open',
-      slaDueAt: '2026-10-02T10:00:00.000Z',
-    }),
-  ];
-
-  function select(statusFilter: LandingState['statusFilter']) {
-    const landing = { ...loaded(tickets), statusFilter };
-    return {
-      all: landingFeature.selectAllTickets({ landing }),
-      visible: landingFeature.selectVisibleTickets({ landing }),
-    };
-  }
-
   it('lists every ticket in SLA order', () => {
-    expect(numbers(select(null).all)).toEqual([3, 2, 1]);
-  });
+    const landing = loaded([
+      ticket({ ticketNumber: 1, status: 'open', slaDueAt: null }),
+      ticket({
+        ticketNumber: 2,
+        status: 'pending',
+        slaDueAt: '2026-10-03T10:00:00.000Z',
+      }),
+      ticket({
+        ticketNumber: 3,
+        status: 'open',
+        slaDueAt: '2026-10-02T10:00:00.000Z',
+      }),
+    ]);
 
-  it('shows every ticket when no status is chosen', () => {
-    expect(numbers(select(null).visible)).toEqual([3, 2, 1]);
-  });
-
-  it('shows only the chosen status, still in SLA order', () => {
-    expect(numbers(select('open').visible)).toEqual([3, 1]);
-  });
-
-  it('shows nothing when no ticket has the chosen status', () => {
-    expect(select('closed').visible).toEqual([]);
+    expect(numbers(landingFeature.selectAllTickets({ landing }))).toEqual([
+      3, 2, 1,
+    ]);
   });
 });

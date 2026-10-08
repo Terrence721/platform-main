@@ -10,8 +10,9 @@ import { TicketPreviewStore } from './ticket-preview.store';
 
 /**
  * The landing page's "My tickets" card: the showcase tickets by SLA, their
- * labels kept current by the card's own TicketPreviewStore. A ticket's
- * subject opens it to show its description.
+ * labels kept current by the card's own TicketPreviewStore, each with what
+ * the app's own ticket table shows (number, subject, time left, priority,
+ * requester). A ticket's subject opens it to show its description.
  */
 @Component({
   selector: 'hd-ticket-preview',
@@ -24,12 +25,16 @@ import { TicketPreviewStore } from './ticket-preview.store';
   ],
   providers: [TicketPreviewStore],
   template: `
-    <mat-card appearance="raised" aria-labelledby="preview-title">
+    <!-- A region: a name only reaches a screen reader with a role. -->
+    <mat-card appearance="raised" role="region" aria-labelledby="preview-title">
       <header>
         <mat-icon aria-hidden="true">inbox</mat-icon>
         <h2 id="preview-title">My tickets</h2>
         <span class="count">
-          Example data · {{ (preview.rows$ | ngrxPush)?.length ?? 0 }} tickets
+          Example data
+          @if ((loadState$ | ngrxPush) === 'loaded') {
+            · {{ (preview.rows$ | ngrxPush)?.length ?? 0 }} tickets
+          }
         </span>
       </header>
       @switch (loadState$ | ngrxPush) {
@@ -64,7 +69,6 @@ import { TicketPreviewStore } from './ticket-preview.store';
                       {{ row.ticket.priority }}
                     </mat-chip>
                   </mat-chip-set>
-                  <span>{{ row.ticket.queue.name }}</span>
                   <span>{{ row.ticket.requester.name }}</span>
                 </span>
                 <p

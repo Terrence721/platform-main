@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 41 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 42 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -780,3 +780,11 @@ Where the landing page gets its showcase tickets. It holds, under its spec: `loa
 The landing page's "My tickets" preview card's ComponentStore. It holds, under its spec: each row's SLA label at the current time, kept current once a minute; one row open at a time, a second click closing it; the clock stopping with the card; and `slaLabel` itself, "No SLA", "Overdue 25m", "Due in 2h 15m", "soon" within four hours.
 
 That `slaLabel` was the gap: the signed-in app's ticket table and ticket popup imported it from this landing-page store, so the core ticket screens depended on the marketing preview, and the helper was hard to find. It moves unchanged to `tickets/sla-label.ts`, beside `minute-clock.ts`, whose `MINUTE` it now uses, and its nine specs move with it, passing as they were; the store, the table and the popup import it from there. `TicketDto` is now `import type`. Noted, for its own review: `STATUS_GUIDE` has the same wrong-way dependency, imported from `ticket-workflow.store.ts` by the table, the popup and the agent and supervisor pages.
+
+### [`helpdesk/src/app/landing/ticket-preview.ts`](https://github.com/Terrence721/platform-main/blob/94ebcf2/projects/helpdesk/src/app/landing/ticket-preview.ts)
+
+**Low · Accessibility** — 1 fix; **Low · Correctness** — 2 fixes ([issue #1240](https://github.com/Terrence721/platform-main/issues/1240))
+
+The landing page's "My tickets" card. It holds, under its spec: the tickets in the store's order, their SLA labels colored by urgency and kept current; loading and failure messages; and subjects as buttons that open a ticket's description, with `aria-expanded` and `aria-controls`. Its fixed SLA colors are readable, the app having only the light `azure-blue` theme.
+
+Three small gaps. The card carried `aria-labelledby` but no role, and a name on a generic element never reaches a screen reader; it is now a region, which its heading names. It showed each ticket's queue, which the app's own ticket table never shows, the preview promising a column the product lacks; the queue is gone, and what stays is what the table shows. And its count read "Example data · 0 tickets" beside "Loading…" or the failure message; it now shows only once the tickets have loaded. Specs for each failed first.

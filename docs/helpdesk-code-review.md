@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 25 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 26 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -660,3 +660,11 @@ After a saved edit, `update` re-fetched the list with its own `GET`, apart from 
 The Team accounts table. It holds, under its spec: the columns in the order given; a pill per role, admins their own, the team's lead reading "Supervisor · Lead" and a replaced supervisor not; inactive accounts marked; Edit on every row but the signed-in admin's own, named for its account and not sortable; and each header sorting, reversing, then returning to the order given, active accounts before inactive.
 
 Role sorted every supervisor alike, so with a replaced supervisor on the team, a real case the spec already builds, the lead's place among them was the API's order, and the spec's "team lead first" held only for a team with one supervisor. Role now sorts as roles are shown, a lead just after the other supervisors; a spec with the replaced supervisor listed first failed first. And the pill styles' comment, with a spec's name, said "team leads green, members blue", where green is every supervisor and blue the agents. Noted, not changed: Name sorts by lowercase character code, Material's default, so an accented name would sort after "z"; the seeded names are plain ASCII.
+
+### [`helpdesk/src/app/admin/create-account.dialog.ts`](https://github.com/Terrence721/platform-main/blob/207f732/projects/helpdesk/src/app/admin/create-account.dialog.ts)
+
+**Low · Correctness** — 1 fix ([issue #1205](https://github.com/Terrence721/platform-main/issues/1205))
+
+The Create Account popup. It holds, under its spec: every field checked against the contract before anything is sent, the user ID message matching `USER_ID_PATTERN`; a blank name refused and a good one trimmed; an admin given no team and sending none; a new supervisor warned of the lead they'd replace, and no warning otherwise; the password shown or hidden with `aria-pressed`; and the API's refusal read out, one save at a time, the store reset as the popup opens.
+
+The gap: it closed with whatever the User ID field said when the save finished, and as the fields stay editable while saving, typing then made the page's snack bar name an account that wasn't created. It now closes with the user ID it sent; a spec that changes the field during the save failed first. Noted, not changed: a double click on the page's Create account button can open two popups, as #1183 and #1195 closed elsewhere, for the admin page's review.

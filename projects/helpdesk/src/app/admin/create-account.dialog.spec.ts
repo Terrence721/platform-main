@@ -250,4 +250,18 @@ describe('CreateAccountDialog', () => {
 
     expect(dialogRef.close).toHaveBeenCalledExactlyOnceWith('nia.new');
   });
+
+  it('closes with the user ID it sent, even if the field changed meanwhile', async () => {
+    const form = await render();
+    await fillAgent(form);
+
+    await form.create();
+    const call = post(form.http);
+    // Typed into while the account was saving.
+    await form.fill('User ID', 'nia.newer');
+    call.flush(nia, { status: 201, statusText: 'Created' });
+    form.fixture.detectChanges();
+
+    expect(dialogRef.close).toHaveBeenCalledExactlyOnceWith('nia.new');
+  });
 });

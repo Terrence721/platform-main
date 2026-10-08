@@ -83,7 +83,7 @@ describe('loadShowcaseTickets', () => {
   it('does not react to other actions', () => {
     const { actions$, service, emitted } = run(() => of(tickets));
 
-    actions$.next(LandingPageActions.statusFilterChanged({ status: 'open' }));
+    actions$.next(LandingApiActions.showcaseTicketsLoaded({ tickets }));
 
     expect(service.load).not.toHaveBeenCalled();
     expect(emitted).toEqual([]);

@@ -1,4 +1,4 @@
-import type { TicketDto, TicketStatus } from '@helpdesk/contract';
+import type { TicketDto } from '@helpdesk/contract';
 import { createActionGroup, emptyProps, props } from '@ngrx/store';
 
 /** Results of loading the showcase tickets the landing page's preview shows. */
@@ -17,7 +17,5 @@ export const LandingPageActions = createActionGroup({
   events: {
     /** The page was opened; its showcase tickets load in response. */
     Opened: emptyProps(),
-    /** `null` shows tickets of every status. */
-    'Status Filter Changed': props<{ status: TicketStatus | null }>(),
   },
 });

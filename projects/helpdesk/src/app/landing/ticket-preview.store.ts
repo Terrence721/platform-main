@@ -67,7 +67,7 @@ interface TicketPreviewState {
 @Injectable()
 export class TicketPreviewStore extends ComponentStore<TicketPreviewState> {
   private readonly tickets$ = inject(Store).select(
-    landingFeature.selectVisibleTickets
+    landingFeature.selectAllTickets
   );
 
   readonly setNow = this.updater((state, now: Date): TicketPreviewState => ({

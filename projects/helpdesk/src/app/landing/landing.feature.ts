@@ -1,12 +1,10 @@
-import { TicketDto, TicketStatus } from '@helpdesk/contract';
-import { createEntityAdapter, EntityState } from '@ngrx/entity';
-import { createFeature, createReducer, createSelector, on } from '@ngrx/store';
-import { LandingApiActions, LandingPageActions } from './landing.actions';
+import type { TicketDto } from '@helpdesk/contract';
+import { createEntityAdapter, type EntityState } from '@ngrx/entity';
+import { createFeature, createReducer, on } from '@ngrx/store';
+import { LandingApiActions } from './landing.actions';
 
 /** The landing page's state: the showcase tickets its preview shows. */
 export interface LandingState extends EntityState<TicketDto> {
-  /** The status the preview shows; `null` shows every status. */
-  statusFilter: TicketStatus | null;
   loadState: 'loading' | 'loaded' | 'failed';
 }
 
@@ -34,7 +32,7 @@ export const landingAdapter = createEntityAdapter<TicketDto>({
 });
 
 export const initialLandingState: LandingState = landingAdapter.getInitialState(
-  { statusFilter: null, loadState: 'loading' }
+  { loadState: 'loading' }
 );
 
 export const landingFeature = createFeature({
@@ -49,25 +47,13 @@ export const landingFeature = createFeature({
     on(LandingApiActions.showcaseTicketsLoadFailed, (state): LandingState => ({
       ...state,
       loadState: 'failed',
-    })),
-    on(
-      LandingPageActions.statusFilterChanged,
-      (state, { status }): LandingState => ({ ...state, statusFilter: status })
-    )
+    }))
   ),
-  extraSelectors: ({ selectLandingState, selectStatusFilter }) => {
+  extraSelectors: ({ selectLandingState }) => {
     const { selectAll } = landingAdapter.getSelectors(selectLandingState);
     return {
+      /** Every showcase ticket, most urgent first: what the preview shows. */
       selectAllTickets: selectAll,
-      /** The tickets the preview shows: those matching the status filter. */
-      selectVisibleTickets: createSelector(
-        selectAll,
-        selectStatusFilter,
-        (tickets, status) =>
-          status === null
-            ? tickets
-            : tickets.filter((ticket) => ticket.status === status)
-      ),
     };
   },
 });

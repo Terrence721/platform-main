@@ -41,7 +41,7 @@ describe('TicketPreviewStore', () => {
       providers: [provideMockStore(), TicketPreviewStore],
     });
     TestBed.inject(MockStore).overrideSelector(
-      landingFeature.selectVisibleTickets,
+      landingFeature.selectAllTickets,
       tickets
     );
     const store = TestBed.inject(TicketPreviewStore);

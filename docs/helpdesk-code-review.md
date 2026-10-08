@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 16 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 17 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -592,3 +592,9 @@ The gap was the writer's own message. They hear its live event too, as they hold
 The ticket popup. It holds, under its spec: the ticket's details, its holder shown as "Someone else" once it is no longer the person's; the conversation, the customer's description first, then each reply and note, notes tinted as only staff see them; a spinner while it loads and a way to try again; and a box for a reply or a note, counting up to the contract's limit, its buttons off while it is empty or sending, refusals read out, cleared after a send, and taken away, with a word why, once the ticket is closed or no longer theirs.
 
 Two gaps. Its time left was worked out from when the ticket was last read, as the comment said, so a popup left open went stale just as the table had (#1177). Rather than a second copy of the table's clock, a small `minuteClock()` in `tickets/` now ticks each minute for both, stopping with its component, and the table's own copy is gone. And a message someone else wrote appeared with the arrival tone, but the list was not a live region, so a screen reader said nothing; it is now a polite one, and as messages are tracked by ID only the new ones are added and read. A spec failed first for each.
+
+### [`helpdesk/src/app/tickets/open-ticket.ts`](https://github.com/Terrence721/platform-main/blob/5b8e937/projects/helpdesk/src/app/tickets/open-ticket.ts)
+
+**Low · Usability** — 1 fix ([issue #1182](https://github.com/Terrence721/platform-main/issues/1182))
+
+Opens the ticket popup for the agent's and the supervisor's pages, fetching its code and Material's dialogs on the first open only, with the ticket as its data, sized to fit narrow screens; both pages' specs open it from a subject, and the e2e tests open it and reply. The gap: the first time, the popup's code is still on its way when a second click or Enter comes, and with no backdrop yet to stop it, both opens finished and two copies of the same popup stacked up. The sign-in launcher guards against just this; now the ticket popup has an ID for its ticket, and is opened only if none with that ID is open, which the second open, coming after the first has opened, finds. The file had no spec of its own: a new one failed first, two opens at once giving two popups, and the two page specs' stand-in dialog learned to answer that question.

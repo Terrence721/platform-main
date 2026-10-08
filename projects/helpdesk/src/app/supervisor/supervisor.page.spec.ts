@@ -67,6 +67,8 @@ describe('SupervisorPage', () => {
   /** Stand-ins for Material's dialog and snack bar, to see what they do. */
   const dialog = {
     open: vi.fn(() => ({ afterClosed: () => of(closedWith) })),
+    // No popup open yet, so a ticket's popup opens (open-ticket.ts asks).
+    getDialogById: () => undefined,
   };
   const snackBar = { open: vi.fn() };
   /** Stands in for the sounds, to hear which play. */

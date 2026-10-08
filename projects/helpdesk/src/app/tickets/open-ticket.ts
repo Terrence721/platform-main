@@ -5,6 +5,8 @@ import type { TicketConversationData } from './ticket-conversation.store';
 /**
  * Opens a ticket's popup: its details and conversation. The popup's code
  * is loaded on the first click (dynamic `import()`), not with the page.
+ * One popup per ticket: a second click while its code is still on its way
+ * (no backdrop yet to stop it) finds the first open and leaves it.
  */
 export async function openTicket(
   injector: Injector,
@@ -14,8 +16,14 @@ export async function openTicket(
     import('@angular/material/dialog'),
     import('./ticket-conversation.dialog'),
   ]);
+  const dialog = injector.get(MatDialog);
+  const id = `ticket-${ticket.id}`;
+  if (dialog.getDialogById(id)) {
+    return;
+  }
   const data: TicketConversationData = { ticket };
-  injector.get(MatDialog).open(TicketConversationDialog, {
+  dialog.open(TicketConversationDialog, {
+    id,
     data,
     width: '44rem',
     maxWidth: 'calc(100vw - 2rem)',

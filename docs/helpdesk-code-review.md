@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 9 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 10 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -540,3 +540,9 @@ Which role may open each page. Each of the three role pages uses it, and it hold
 **Low · Documentation** — 1 fix ([issue #1166](https://github.com/Terrence721/platform-main/issues/1166))
 
 The sign-in popup's one action, Submitted, with the user ID and password. The popup dispatches it, the session effects send it to the API, the session state clears the last error and notice on it, and the devtools are shown a copy with the password hidden, never the password itself, which is not kept in the state either. Its comment, though, still said a later "auth phase" would add the effect that calls the API, long since done; it now names that effect and the sanitizer. The contract's `SignInRequest`, an interface, is now imported as a type, as the session's actions import theirs.
+
+### [`helpdesk/src/app/sign-in/hide-passwords.ts`](https://github.com/Terrence721/platform-main/blob/41acb57/projects/helpdesk/src/app/sign-in/hide-passwords.ts)
+
+**No findings** ([issue #1168](https://github.com/Terrence721/platform-main/issues/1168))
+
+The store devtools' action sanitizer. Under its spec, the devtools are shown a sign-in with the password replaced by dots and the user ID kept, while the store and effects get the real action, untouched, and every other action passes as it is. It is the only action that needs it: the admin's starting password in Create account goes from the accounts signal store straight to the API, not as an action, and that store is not connected to the devtools. The devtools run in production builds too, log-only, with the same sanitizer, so a password reaches them in neither.

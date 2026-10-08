@@ -229,6 +229,11 @@ export class CreateAccountDialog {
     ],
   });
   protected readonly passwordHidden = signal(true);
+  /**
+   * The user ID last sent, which the popup closes with: the field stays
+   * editable while saving, so it may no longer say what was created.
+   */
+  private sentUserId = '';
   protected readonly role = toSignal(this.form.controls.role.valueChanges, {
     initialValue: this.form.controls.role.value,
   });
@@ -263,7 +268,7 @@ export class CreateAccountDialog {
     });
     effect(() => {
       if (this.store.createState() === 'created') {
-        this.dialogRef.close(this.form.controls.userId.value);
+        this.dialogRef.close(this.sentUserId);
       }
     });
   }
@@ -274,6 +279,7 @@ export class CreateAccountDialog {
       return;
     }
     const { userId, name, role, teamId, password } = this.form.getRawValue();
+    this.sentUserId = userId;
     this.store.create({
       userId,
       name: name.trim(),

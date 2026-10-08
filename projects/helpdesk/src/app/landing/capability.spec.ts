@@ -3,14 +3,25 @@ import { CAPABILITIES } from './capability';
 describe('CAPABILITIES', () => {
   it('lists the six capabilities in the order the page shows them', () => {
     expect(CAPABILITIES.map(({ title }) => title)).toEqual([
-      'Tickets and queues',
+      'Tickets and priorities',
       'Deadlines you can see',
       'Replies and internal notes',
       'Clear ownership',
       'Live updates',
-      'Admin in the same app',
+      'Accounts and reports in the same app',
     ]);
   });
+
+  // The public page, and the live demo beside it, promise only what the
+  // app does (#1024): it has no queues, filters, search or canned replies.
+  it.each(CAPABILITIES)(
+    'promises in "$title" nothing the app lacks',
+    ({ title, summary }) => {
+      expect(`${title} ${summary}`).not.toMatch(
+        /queue|filter|search|canned|customers,|nearly-due/i
+      );
+    }
+  );
 
   it('gives each capability its own id, which @ngrx/data keys them by', () => {
     const ids = CAPABILITIES.map(({ id }) => id);

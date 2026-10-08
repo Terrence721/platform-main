@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 31 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 32 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -708,3 +708,11 @@ Two gaps. A failed refresh was silent: the old figures stayed and the icon stopp
 Opens the Reports popup for the supervisor's and the admin's pages. It holds, under its spec: the popup's code fetched on the first click, ECharts only when it draws; a popup 72rem wide, never wider than the screen; and a pick, such as the agent chosen in Team member, handed to the popup's store through a child injector, the default without one. Its `autoFocus: false` was checked against the CDK, which treats `false` as `'dialog'`: focus goes to the popup itself, which is announced, rather than to Refresh.
 
 The gap, noted at the supervisor page (#1195) and the admin page (#1211): the first time, a second click while the popup's code was on its way, with no backdrop yet to stop it, opened a second Reports popup. It now has an ID and opens only if none with it is open, as the ticket, assign, history, Create Account and Edit popups do; a spec with two opens at once failed first. That closes the double-click gap on every popup in the app.
+
+### [`helpdesk/src/app/landing/capability.ts`](https://github.com/Terrence721/platform-main/blob/a169d2d/projects/helpdesk/src/app/landing/capability.ts)
+
+**Medium · Correctness** — 1 fix ([issue #1218](https://github.com/Terrence721/platform-main/issues/1218), part of [#1024](https://github.com/Terrence721/platform-main/issues/1024))
+
+The landing page's six feature cards, served through @ngrx/data, each with its own id. Each card was checked against the running app: Clear ownership and Live updates hold; the rest promised more than the app does, on the public page and in the live demo beside it, where a visitor can compare.
+
+Tickets and queues offered queues, filters and search, and the ticket contract has no queues and no list has filters or search; Replies and internal notes offered canned replies; Admin in the same app had admins managing queues, customers and canned replies, where they manage accounts, and see Reports; and Deadlines had nearly-due work standing out, where overdue work is marked and lists put the most urgent first, but nothing marks "nearly due". The cards now say what the app does: Tickets and priorities, Replies and internal notes, Accounts and reports in the same app, and Deadlines without "nearly-due". A spec fails any card naming queues, filters, search, canned replies or nearly-due work, and four failed it first. #1024 stays open for the hero, in `landing.page.ts`.

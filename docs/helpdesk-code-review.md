@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 37 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 38 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -754,3 +754,9 @@ The landing page's two action groups: the showcase tickets' API results, and wha
 The landing page's NgRx feature: the showcase tickets in an entity adapter and their load state. It holds, under its spec: `compareBySlaDue` putting the earliest due time first and tickets without an SLA last, ties broken by number, ISO times compared as text; loaded tickets stored in that order, a reload replacing them; and a failed load marked while the tickets it had are kept.
 
 The status filter that `landing.actions.ts`'s review found unwired goes, as agreed there: the action, the `statusFilter` field, its reducer case and `selectVisibleTickets`, the preview store now reading `selectAllTickets`, which is the same list without a filter. A spec of the state, holding only the tickets and their load, failed first; the filter's own specs go, and the effects spec's "other action" is now a loaded result. The types are `import type`. This review also found that `capability.ts`'s entry, above, said the ticket contract has no queues: it has (`TicketDto.queue`), though no screen shows them, which is what the card change rests on; that entry is corrected and #1218 says so.
+
+### [`helpdesk/src/app/landing/landing.effects.ts`](https://github.com/Terrence721/platform-main/blob/8dcdfdf/projects/helpdesk/src/app/landing/landing.effects.ts)
+
+**No findings** ([issue #1232](https://github.com/Terrence721/platform-main/issues/1232))
+
+The effect that loads the showcase tickets when the landing page opens. It holds, under its spec: a load on "opened" and nothing else; a failure turned into an action with words a visitor can read; the effect still working after one; and a repeat "opened" ignored while a load runs. Noted, not changed: a failure would be reported twice in the same words, inline by the preview and in a snack bar by the app's `showErrors`, and the sentence is written in both files; the tickets are built in the browser today and cannot fail, so one or the other is worth choosing when the load becomes an HTTP call.

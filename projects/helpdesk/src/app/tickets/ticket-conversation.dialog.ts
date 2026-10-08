@@ -22,7 +22,7 @@ import {
   type TicketMessageKind,
 } from '@helpdesk/contract';
 import { slaLabel } from './sla-label';
-import { STATUS_GUIDE } from '../landing/ticket-workflow.store';
+import { STATUS_LABELS } from './status-labels';
 import { minuteClock } from './minute-clock';
 import { TicketConversationStore } from './ticket-conversation.store';
 
@@ -250,7 +250,7 @@ export class TicketConversationDialog {
     formatTicketNumber(this.ticket().ticketNumber)
   );
   protected readonly status = computed(
-    () => STATUS_GUIDE[this.ticket().status].label
+    () => STATUS_LABELS[this.ticket().status]
   );
   /** Now, to the minute, so time left keeps up while the popup is open. */
   private readonly now = minuteClock();

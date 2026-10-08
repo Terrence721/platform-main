@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 42 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 43 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -788,3 +788,11 @@ That `slaLabel` was the gap: the signed-in app's ticket table and ticket popup i
 The landing page's "My tickets" card. It holds, under its spec: the tickets in the store's order, their SLA labels colored by urgency and kept current; loading and failure messages; and subjects as buttons that open a ticket's description, with `aria-expanded` and `aria-controls`. Its fixed SLA colors are readable, the app having only the light `azure-blue` theme.
 
 Three small gaps. The card carried `aria-labelledby` but no role, and a name on a generic element never reaches a screen reader; it is now a region, which its heading names. It showed each ticket's queue, which the app's own ticket table never shows, the preview promising a column the product lacks; the queue is gone, and what stays is what the table shows. And its count read "Example data · 0 tickets" beside "Loading…" or the failure message; it now shows only once the tickets have loaded. Specs for each failed first.
+
+### [`helpdesk/src/app/landing/ticket-workflow.store.ts`](https://github.com/Terrence721/platform-main/blob/2352579/projects/helpdesk/src/app/landing/ticket-workflow.store.ts)
+
+**Medium · Correctness** — 1 fix; **Low · Maintainability** — 1 fix; **Low · Consistency** — 1 fix ([issue #1242](https://github.com/Terrence721/platform-main/issues/1242), part of [#1024](https://github.com/Terrence721/platform-main/issues/1024))
+
+The landing page's "How a ticket moves" store, and `STATUS_GUIDE`, each status's label, icon and meaning. It holds, under its spec: where a ticket can go from the picked status, from the contract's `canTransition`, so the section shows exactly what the API allows; every status in order, from New, only the picked one picked; and Closed final. Open's, Resolved's and Closed's meanings are true.
+
+Two meanings, on the public page, were not. New had "Just arrived from a customer's email", and there is no email intake; Pending had "Their reply moves the ticket back to open", where customers don't reply in the app and nothing reopens a ticket by itself. They now read "Just raised. Nobody has picked it up yet." and "Waiting on the customer. Whoever holds it moves it back to open when they hear back."; a spec that no meaning promises either failed first, on those two. And as with `slaLabel` (#1239), the ticket table, the ticket popup and both pages imported `STATUS_GUIDE` from this landing store, only for its labels: a new `tickets/status-labels.ts`, with its spec, now names each status for them, and `STATUS_GUIDE` takes its labels from it, a spec checking they agree. With that, no file outside `landing/` imports landing code. `TicketStatus` is `import type`.

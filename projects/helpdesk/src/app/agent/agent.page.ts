@@ -15,7 +15,7 @@ import {
   type TicketStatus,
 } from '@helpdesk/contract';
 import { Store } from '@ngrx/store';
-import { STATUS_GUIDE } from '../landing/ticket-workflow.store';
+import { STATUS_LABELS } from '../tickets/status-labels';
 import { sessionFeature } from '../session/session.feature';
 import { Sounds } from '../sound/sounds';
 import { openTicket } from '../tickets/open-ticket';
@@ -235,7 +235,7 @@ export default class AgentPage {
             this.sounds.play('success');
           }
           void this.report(
-            `${formatTicketNumber(ticket.ticketNumber)} is now ${STATUS_GUIDE[ticket.status].label}`
+            `${formatTicketNumber(ticket.ticketNumber)} is now ${STATUS_LABELS[ticket.status]}`
           );
         } else if (state === 'failed') {
           this.sounds.play('error');

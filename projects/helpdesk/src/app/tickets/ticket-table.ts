@@ -22,7 +22,7 @@ import {
   type TicketStatus,
 } from '@helpdesk/contract';
 import { slaLabel } from './sla-label';
-import { STATUS_GUIDE } from '../landing/ticket-workflow.store';
+import { STATUS_LABELS } from './status-labels';
 import { minuteClock } from './minute-clock';
 
 /** The columns, in order; each one can be sorted by. */
@@ -241,7 +241,7 @@ export class TicketTable {
 
   /** How a status reads, such as "Pending". */
   protected statusLabel(status: TicketStatus): string {
-    return STATUS_GUIDE[status].label;
+    return STATUS_LABELS[status];
   }
   /** Now, to the minute, so time left keeps up while the page is open. */
   private readonly now = minuteClock();
@@ -254,7 +254,7 @@ export class TicketTable {
       subject: ticket.subject,
       customer: ticket.requester.name,
       priority: ticket.priority,
-      status: STATUS_GUIDE[ticket.status].label,
+      status: STATUS_LABELS[ticket.status],
       // A finished ticket's due time no longer matters.
       sla: isFinished(ticket.status)
         ? { text: 'Finished', tone: 'none' }

@@ -19,7 +19,7 @@ import {
 import { rxMethod } from '@ngrx/signals/rxjs-interop';
 import { pipe, switchMap, tap } from 'rxjs';
 
-/** Where the figures come from, through the dev server's proxy. */
+/** Where the figures come from, on the app's own origin. */
 export const REPORTS_API = '/api/reports';
 
 /** `loading` until an answer; a refresh keeps the figures shown. */
@@ -46,11 +46,12 @@ export function openTickets(row: ReportFigures): number {
 }
 
 /**
- * SLA met %: finished on time over finished with a due time, rounded to a
- * whole percent; `null` when nothing with a due time was finished.
+ * SLA met %: finished on time over finished with a due time, rounded down
+ * to a whole percent, so 100% means every one was on time; `null` when
+ * nothing with a due time was finished.
  */
 export function slaMetPercent(onTime: number, withDueTime: number) {
-  return withDueTime === 0 ? null : Math.round((onTime / withDueTime) * 100);
+  return withDueTime === 0 ? null : Math.floor((onTime / withDueTime) * 100);
 }
 
 /** GET /api/reports's query for a pick. */

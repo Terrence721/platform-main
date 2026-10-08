@@ -597,7 +597,7 @@ describe('ReportsDialog', () => {
       detectChanges();
 
       expect(tiles()[0]).toBe('2 | Open | new, open or pending');
-      expect(tiles()[2]).toBe('67% | SLA met | finished by the due time');
+      expect(tiles()[2]).toBe('66% | SLA met | finished by the due time');
       expect(charts().map(({ title }) => title)).toEqual([
         'Open work by status',
         'Open work by priority',

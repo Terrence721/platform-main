@@ -287,7 +287,7 @@ describe('ReportsStore: who the report is for', () => {
       open: 2,
       overdue: 1,
       finished: 3,
-      slaMetPercent: 67,
+      slaMetPercent: 66,
     });
   });
 });
@@ -307,12 +307,23 @@ describe('openTickets', () => {
 describe('slaMetPercent', () => {
   it.each([
     [1, 2, 50],
-    [2, 3, 67],
+    [2, 3, 66],
     [0, 4, 0],
     [5, 5, 100],
-  ])('%i on time of %i is %i%%', (onTime, withDueTime, percent) => {
+  ])('%i on time of %i is %i percent', (onTime, withDueTime, percent) => {
     expect(slaMetPercent(onTime, withDueTime)).toBe(percent);
   });
+
+  // Rounded down: 100% only when every one was on time.
+  it.each([
+    [995, 1000, 99],
+    [199, 200, 99],
+  ])(
+    '%i on time of %i is %i percent, not 100',
+    (onTime, withDueTime, percent) => {
+      expect(slaMetPercent(onTime, withDueTime)).toBe(percent);
+    }
+  );
 
   it('is none when nothing with a due time was finished', () => {
     expect(slaMetPercent(0, 0)).toBeNull();

@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 39 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 40 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -766,3 +766,9 @@ The effect that loads the showcase tickets when the landing page opens. It holds
 **Low · Consistency** — 1 fix ([issue #1234](https://github.com/Terrence721/platform-main/issues/1234))
 
 The four example tickets the landing page's "My tickets" preview shows, shaped as the API's `TicketDto`. It holds, under its spec: times relative to the moment the page opens, so the overdue ticket stays overdue whenever it is opened; the same four as the database seed's showcase tickets, field by field; each with its own id and number, all one agent's. Nothing in their text promises what the app lacks. `TicketDto` is now `import type`, as in the last two files. Noted, not changed: `MINUTE` is also exported by `tickets/minute-clock.ts`, but importing it would tie the landing data to the ticket screens for one obvious number.
+
+### [`helpdesk/src/app/landing/showcase-tickets.service.ts`](https://github.com/Terrence721/platform-main/blob/8dcdfdf/projects/helpdesk/src/app/landing/showcase-tickets.service.ts)
+
+**Low · Documentation** — 1 fix; **Low · Consistency** — 1 fix ([issue #1236](https://github.com/Terrence721/platform-main/issues/1236))
+
+Where the landing page gets its showcase tickets. It holds, under its spec: `load()` giving the four, timed when subscribed to rather than when called. Its comment said the only part to change "when the API exists" was `load()`; the API has long existed, and what it lacks is a public endpoint for these tickets, as every ticket route needs a signed-in user. The comment now says so, and that the tickets are built in the browser. `TicketDto` is now `import type`.

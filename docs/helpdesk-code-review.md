@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 22 of 24)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 23 of 24)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -462,3 +462,11 @@ The Reports figures for supervisors and admins. It imports `AuthModule` for the 
 The API's root module: the seven feature modules and the health check, each named in its comment with its route. The global database and live-events modules are imported once, so the whole API shares one pool and one `LiveEvents`, as the module reviews before it checked one by one, and the route walk (#1111) starts here, so every route it can reach is checked for its roles.
 
 What nothing checked was the point the `users.module.ts` review raised. The three services that publish live events, two for tickets and one for accounts, take `LiveEvents` as optional, because the in-browser demo builds them without it; in the API, a mis-wiring such as a module providing its own would start without a word, and live updates, and the ending of a deactivated person's stream (#1073), would quietly stop. Only the e2e tests would have noticed. A new `app.module.spec.ts` builds the real `AppModule`, which reaches no database until a query runs, and checks that all three services hold the very `LiveEvents` the `/api/events` controller listens to; a second spec builds a module with its own `LiveEvents` and shows the check would catch it.
+
+### [`helpdesk-api/src/main.ts`](https://github.com/Terrence721/platform-main/blob/077674a/projects/helpdesk-api/src/main.ts)
+
+**Low · Reliability** — 1 fix ([issue #1141](https://github.com/Terrence721/platform-main/issues/1141))
+
+Starts the API: `.env` from the repo root when there is one, with the environment winning; Express named so the build lists it for the image; the `/api` prefix and the cookie reader the guard needs. A start that fails, such as the refused development secret of #1105, logs why and exits with code 1.
+
+What it lacked was a way to stop. The image runs `exec node main.js`, so Node is process 1, which on Linux ignores SIGTERM unless something handles it, and nothing did, as Nest's shutdown hooks were not enabled. Every `docker stop` waited out Docker's grace period and killed the API, exit code 137: the database connections were cut rather than closed, the pool's `onModuleDestroy` never running, and live updates streams were cut too. Nothing was corrupted, as PostgreSQL rolls back and pages reconnect. Agreed with the repo owner (option A of three, the others being an init process in `compose.yaml`, which would still cut the connections, or a note only), the app now enables its shutdown hooks and is created with `forceCloseConnections`, without which closing would wait on every open stream, as they never end on their own. On the Docker stack, with a signed-in stream open and its first ping received, `docker compose stop api` now takes 0.75 seconds and exits with code 0, the stream ended by the API. This also makes true, on `docker stop`, what `database.module.ts`'s comment says about closing the pool.

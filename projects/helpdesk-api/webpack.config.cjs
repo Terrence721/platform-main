@@ -3,8 +3,10 @@
 // so NestJS gets decorator metadata, and bundles the source-only
 // @helpdesk/contract into the output, so dist/ runs on its own; packages
 // from node_modules stay external and load at run time. The output also gets
-// a package.json listing just those packages (and a lockfile pinning them),
-// so the Docker image installs only what the API uses, plus the migrations.
+// a package.json listing just those packages, so the Docker image installs
+// only what the API uses (at the versions in the repo's yarn.lock; the
+// lockfile Nx writes beside it is incomplete, see the Dockerfile), plus the
+// migrations.
 const { NxAppWebpackPlugin } = require('@nx/webpack/app-plugin');
 const { join } = require('path');
 

@@ -64,11 +64,17 @@ const atlas: TeamOverview = {
 describe('SupervisorPage', () => {
   /** What a popup closes with: the chosen agent, or nothing. */
   let closedWith: string | undefined;
+  /** The IDs of the popups opened, which stay open in these tests. */
+  let openIds: string[];
   /** Stand-ins for Material's dialog and snack bar, to see what they do. */
   const dialog = {
-    open: vi.fn(() => ({ afterClosed: () => of(closedWith) })),
-    // No popup open yet, so a ticket's popup opens (open-ticket.ts asks).
-    getDialogById: () => undefined,
+    open: vi.fn((_: unknown, config?: MatDialogConfig) => {
+      if (config?.id) {
+        openIds.push(config.id);
+      }
+      return { afterClosed: () => of(closedWith) };
+    }),
+    getDialogById: (id: string) => (openIds.includes(id) ? {} : undefined),
   };
   const snackBar = { open: vi.fn() };
   /** Stands in for the sounds, to hear which play. */
@@ -76,8 +82,12 @@ describe('SupervisorPage', () => {
 
   afterEach(() => TestBed.inject(HttpTestingController).verify());
 
+  /** Lets a popup still on its way finish opening, if it is going to. */
+  const settle = () => new Promise((resolve) => setTimeout(resolve));
+
   function render() {
     closedWith = undefined;
+    openIds = [];
     dialog.open.mockClear();
     snackBar.open.mockClear();
     sounds.play.mockClear();
@@ -313,6 +323,26 @@ describe('SupervisorPage', () => {
       );
     });
 
+    // The first time, the popup's code is still on its way when a second
+    // click comes, with no backdrop yet to stop it.
+    it('opens one history when the name is clicked twice at once', async () => {
+      const { answer, chooseMember, http, page, detectChanges } = render();
+      answer(atlas);
+      await chooseMember('Benny Lind (5 open · 3 overdue)');
+      http.expectOne(memberTicketsApi('benny.lind')).flush([]);
+      detectChanges();
+
+      const link = page.querySelector<HTMLButtonElement>(
+        '.member-title .name-link'
+      );
+      link?.click();
+      link?.click();
+
+      await vi.waitFor(() => expect(dialog.open).toHaveBeenCalled());
+      await settle();
+      expect(dialog.open).toHaveBeenCalledOnce();
+    });
+
     it("hides the member's tickets again when None is chosen", async () => {
       const { answer, chooseMember, http, page, detectChanges } = render();
       answer(atlas);
@@ -479,6 +509,19 @@ describe('SupervisorPage', () => {
           },
         })
       );
+    });
+
+    it('opens one "Assign to…" when Assign is clicked twice at once', async () => {
+      const { answer, page } = render();
+      answer(atlas);
+
+      const assign = actionButtons(page, 'unassigned')[0];
+      assign.click();
+      assign.click();
+
+      await vi.waitFor(() => expect(dialog.open).toHaveBeenCalled());
+      await settle();
+      expect(dialog.open).toHaveBeenCalledOnce();
     });
 
     it('assigns to the chosen agent, then says so', async () => {

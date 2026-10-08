@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 18 of 24)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 19 of 24)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -436,3 +436,9 @@ Helpdesk accounts, for admins. It holds, under its specs: admins alone may list,
 Helpdesk accounts for admins. It imports `AuthModule` for the guard every route here is behind, as its comment says; `UsersService` takes the database from the global module, and `LiveEvents`, through which an account edit ends that person's streams (#1073), from the global `LiveModule`. Nothing outside the users files uses the service, so nothing is exported or provided twice.
 
 Left for `app.module.ts`: this service and the two ticket services take `LiveEvents` as optional, since the in-browser demo builds them without it, so in the API a wiring mistake, such as a second `LiveEvents` provided elsewhere, would fail without a word: live updates would stop reaching anyone, and a deactivated person's stream would no longer end. A spec there can check that all three share the stream's `LiveEvents`.
+
+### [`helpdesk-api/src/reports/reports.controller.ts`](https://github.com/Terrence721/platform-main/blob/27cb6af/projects/helpdesk-api/src/reports/reports.controller.ts)
+
+**Low · Documentation** — 1 fix ([issue #1133](https://github.com/Terrence721/platform-main/issues/1133))
+
+The Reports popup's figures. The controller only hands the service the caller and the `?team=` or `?agent=` they picked, by the contract's names, and its spec checks exactly that, with the service's 404 and 400 passed on and agents (403) and the signed out (401) turned away before anything is read. The rules themselves are the service's, as settled in #1095. Its comment still described the time before that: supervisors got "their own team". It now says the team they lead, and that one who leads none gets 404. Noted and left: a repeated parameter, `?team=a&team=b`, reaches the service as a list though declared as text, but PostgreSQL then compares it as the text `{"a","b"}`, matches nothing, and the answer is the usual 404.

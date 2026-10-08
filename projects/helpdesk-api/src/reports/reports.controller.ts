@@ -20,9 +20,10 @@ export class ReportsController {
   /**
    * Open work, SLA and reply times: for every team, one team (`?team=`)
    * with its agents, or one agent (`?agent=`); plus what the caller may
-   * pick. Admins may pick any team or agent; supervisors get their own
-   * team, and may pick one of its agents (anything else 404). Both a team
-   * and an agent: 400. Agents get 403, signed out 401.
+   * pick. Admins may pick any team or agent; supervisors get the team they
+   * lead, and may pick one of its agents (anything else 404), and one who
+   * leads no team gets 404. Both a team and an agent: 400. Agents get 403,
+   * signed out 401.
    */
   @Get()
   @OnlyFor('supervisor', 'admin')

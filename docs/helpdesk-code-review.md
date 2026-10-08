@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 29 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 30 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -692,3 +692,11 @@ The first time, a second click on Create Account or Edit, while the popup's code
 The Reports popup's store. It holds, under its spec: the figures loaded on opening, for the pick given or the caller's own default; a failed first load said, and Try again showing loading; a refresh keeping the figures shown until the new ones come, and when it fails; a newer load replacing one still running, so picking someone never shows an older answer, the figures going and the choices staying; the summary summed from the team rows, or an agent's own row; and the team or agent query from the contract's constants.
 
 SLA met % was rounded to the nearest percent, so 995 tickets on time of 1,000 read 100%, a claim that every one was; it now rounds down, in the one function every SLA figure in the app goes through. Specs for 995 of 1,000 and 199 of 200 failed first, three expectations of 2 of 3 moved from 67% to 66%, and the spec's titles, written with `%%`, which Vitest printed as "66% undefined", now say "percent". And `REPORTS_API`'s comment was the fourth to say "through the dev server's proxy". Noted, for the popup's review: a failed refresh is silent, as the old figures stay and nothing says so.
+
+### [`helpdesk/src/app/reports/reports.dialog.ts`](https://github.com/Terrence721/platform-main/blob/3c07d05/projects/helpdesk/src/app/reports/reports.dialog.ts)
+
+**Low · Usability** — 1 fix; **Low · Maintainability** — 1 fix ([issue #1214](https://github.com/Terrence721/platform-main/issues/1214))
+
+The Reports popup. It holds, under its spec: a spinner, a failure with Try again, and Refresh keeping the charts up while its icon spins; Report for offering a supervisor their team then its agents, and an admin every team with its lead then the agents by team, a pick switching the report and scrolling to its top, with `pickValue` and `pickFrom` keeping IDs that hold a colon; the scope line naming the team or agent and the window's start; the tiles; and charts in the page's theme colors, a gap where nothing was due rather than a zero, empty donut slices kept in the legend only, each described to screen readers. ECharts comes with the popup, with only the parts these charts use.
+
+Two gaps. A failed refresh was silent: the old figures stayed and the icon stopped, as if they were current. The store now keeps `refreshFailed`, set by a failed refresh and cleared by the next load, and the popup says "Couldn't refresh. These are the figures from before."; a spec in each file failed first. And "last 30 days" was written five times, in the headings and the Finished tile, while the contract has `REPORT_WINDOW_DAYS`, which the server uses; they now take it from there. Noted, not changed: the agents' "SLA met and median hours" chart puts percent and hours on two y-axes in one chart, which is easy to misread, a design change left as it is; and theme colors are read when a chart is built, so an OS theme switch while the popup is open shows until the next refresh.

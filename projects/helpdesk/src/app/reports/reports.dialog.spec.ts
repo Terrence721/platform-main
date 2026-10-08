@@ -354,6 +354,31 @@ describe('ReportsDialog', () => {
     expect(dialog.querySelector('mat-icon.spinning')).toBeNull();
   });
 
+  it('says when a refresh failed, keeping the figures from before', () => {
+    const { dialog, http, answer, refreshButton, detectChanges } = render();
+    answer(REPORT);
+    expect(dialog.querySelector('.refresh-failed')).toBeNull();
+
+    refreshButton().click();
+    http
+      .expectOne(REPORTS_API)
+      .flush(null, { status: 500, statusText: 'Server Error' });
+    detectChanges();
+
+    const note = dialog.querySelector('.refresh-failed');
+    expect(note?.getAttribute('role')).toBe('status');
+    expect(note?.textContent?.trim()).toBe(
+      "Couldn't refresh. These are the figures from before."
+    );
+    expect(dialog.querySelector('.tiles')).not.toBeNull();
+
+    // The next refresh clears it.
+    refreshButton().click();
+    detectChanges();
+    expect(dialog.querySelector('.refresh-failed')).toBeNull();
+    http.expectOne(REPORTS_API).flush(REPORT);
+  });
+
   describe('charts', () => {
     it('has four, each with a heading', () => {
       const { charts, answer } = render();

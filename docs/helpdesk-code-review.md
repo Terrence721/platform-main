@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 13 of 24)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 14 of 24)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -402,3 +402,9 @@ Live updates: the one `LiveEvents` and the stream's controller. It holds. `LiveE
 **No findings** ([issue #1121](https://github.com/Terrence721/platform-main/issues/1121))
 
 `/api/tickets`, for the people who work them. It holds, under its specs. Each route is open to the roles of the page that uses it: agents alone for their own tickets, the unassigned ones and their finished ones; agents and supervisors for assigning, one ticket, its status and its conversation. A supervisor assigns within the team they lead, and an agent may only take a ticket for themselves, refused with 403 before anything is read. A ticket ID that is not a UUID would make PostgreSQL throw, but every path checks its form first and answers 404: assigning, taking, and the one access rule behind a ticket's details, status and conversation. `GET :ticketId` comes after `mine` and `unassigned`, as its comment says, and every body is read through the server library's readers, a bad one answered 400 with nothing changed. The status codes its comments list match the service's, as reviewed with the server.
+
+### [`helpdesk-api/src/tickets/tickets.module.ts`](https://github.com/Terrence721/platform-main/blob/b5da27a/projects/helpdesk-api/src/tickets/tickets.module.ts)
+
+**No findings** ([issue #1123](https://github.com/Terrence721/platform-main/issues/1123))
+
+Tickets for the people who work them. It provides the controller's two services, whose database and live events come from the global modules, and exports `TicketsService` for features that show someone's tickets, as its comment says: its one user outside is the teams controller, whose module imports this one, so both share the same service. It imports `AuthModule` for the guard every route here is behind, and nothing is provided twice.

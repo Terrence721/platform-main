@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 5 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 6 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -512,3 +512,9 @@ Which landing-page section the URL points at, so the toolbar can mark its link, 
 **No findings** ([issue #1156](https://github.com/Terrence721/platform-main/issues/1156))
 
 The session's actions: what the API says (signed in, a failed sign-in, a session restored or none on start-up, signed out) and the toolbar's Sign out. Each is used, by the session's effects and reducer and, for a sign-in, by the popup and the in-browser demo. Its one comment holds: a failed sign-in carries a `message`, not an `error`, because the app-wide snack bar shows any action with an `error`, and the popup already shows it. If a session that ends during work is to be handled app-wide, the open question from `api-error-message.ts`, an action for it would most likely join these; that is decided with the session's effects.
+
+### [`helpdesk/src/app/session/session.feature.ts`](https://github.com/Terrence721/platform-main/blob/a8a2046/projects/helpdesk/src/app/session/session.feature.ts)
+
+**No findings** ([issue #1158](https://github.com/Terrence721/platform-main/issues/1158))
+
+The session's state: who is signed in, whether the start-up check has answered, so a reload is not taken for being signed out, and why the last sign-in failed. Each change is under its spec: signing in or a restored session sets the user and clears any error, a failed sign-in keeps its message until the form is sent again, and no session or signing out returns to signed out. Each role's home page is the route `app.routes.ts` declares for it, and the spec makes sure there is one for exactly the contract's roles. A failed attempt's message does not come back when the popup is opened again, as the popup shows it only after its own send. Left for `sign-in.actions.ts`: its comment still speaks of a later "auth phase" adding the sign-in effect, which has long been done.

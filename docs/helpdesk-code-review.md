@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 2 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 3 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -492,3 +492,11 @@ The first of the app's 63 files, reviewed after the API's (24 files, complete; t
 The words shown when the API refuses a ticket action: the API's own message for the refusals it explains (400, 403, 404, 409), the action's fallback for anything else. Its spec covers each of those codes, and the fallback for a server error, no answer at all, a refusal without a message or with one that is not text, and an error that is not from HTTP. Taking, status changes, assigning and sending a message all use it, each with a fallback of its own.
 
 It turned up two things for later files. The admin store keeps its own copy, for 400, 404 and 409, to be replaced by this one in its review. And a session that ends while a page is open, after its 8 hours, is never explained: the next action gets 401 and shows that action's fallback, asking the person to try again, which will never work; only the live updates stream reacts to a 401. Treating a 401 from any API call but the session check and sign-in as "signed out", app-wide, is a decision for the session effects or the app's configuration.
+
+### [`helpdesk/src/app/sound/sounds.ts`](https://github.com/Terrence721/platform-main/blob/959a519/projects/helpdesk/src/app/sound/sounds.ts)
+
+**Low · Design** — 1 fix to follow in its own PR ([issue #1150](https://github.com/Terrence721/platform-main/issues/1150))
+
+The help desk's sounds (#941). It holds, under its spec: three short, quiet tones made in code, each told apart; on until someone mutes them, the choice remembered in this browser, or for the visit where storage is not allowed; the audio opened on the first sound and woken if the browser paused it; and where there is no audio, or it breaks, nothing plays and nothing fails. Each sound goes with something shown, never on its own.
+
+The one thing out of place is `isFinished`, resolved or closed: a ticket rule kept in the sounds file, and written out at least six times, here, in the ticket table and the conversation popup, and on the server in the tickets service (twice) and the seed. The contract holds the matching list for open work, the one copy since #1087 and #1095, but none for finished work. As it spans three projects, it gets its own issue and PR: `FINISHED_STATUSES` and `isFinished` in the contract, with a spec, and every copy switched to it.

@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 17 of 24)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 18 of 24)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -428,3 +428,11 @@ Teams for the supervisors who lead them. As its comment says, it imports `AuthMo
 **No findings** ([issue #1129](https://github.com/Terrence721/platform-main/issues/1129))
 
 Helpdesk accounts, for admins. It holds, under its specs: admins alone may list, create or edit accounts, with nothing read, created or changed for anyone else; every body goes through the server library's readers, a wrong field answered 400 with its message; and the service's answers come through as its comments say, 409 for a taken user ID, for the admin's own account or for leaving no active admin, and 404 for no such account. An edit is made as the signed-in admin, which is how the service can refuse their own account. No password hash leaves, as the service reads only what it sends.
+
+### [`helpdesk-api/src/users/users.module.ts`](https://github.com/Terrence721/platform-main/blob/b5da27a/projects/helpdesk-api/src/users/users.module.ts)
+
+**No findings** ([issue #1131](https://github.com/Terrence721/platform-main/issues/1131))
+
+Helpdesk accounts for admins. It imports `AuthModule` for the guard every route here is behind, as its comment says; `UsersService` takes the database from the global module, and `LiveEvents`, through which an account edit ends that person's streams (#1073), from the global `LiveModule`. Nothing outside the users files uses the service, so nothing is exported or provided twice.
+
+Left for `app.module.ts`: this service and the two ticket services take `LiveEvents` as optional, since the in-browser demo builds them without it, so in the API a wiring mistake, such as a second `LiveEvents` provided elsewhere, would fail without a word: live updates would stop reaching anyone, and a deactivated person's stream would no longer end. A spec there can check that all three share the stream's `LiveEvents`.

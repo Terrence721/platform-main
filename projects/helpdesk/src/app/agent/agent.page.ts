@@ -28,8 +28,9 @@ import { MyTicketsStore } from './my-tickets.store';
  * which they may take for themselves ("Take it"); then Done, what they
  * finished in the last 24 hours, where a resolved ticket can be reopened.
  * A subject in My tickets or Done opens that ticket's details and
- * conversation, to reply or add an internal note. Only agents get here (the route's `canMatchRole('agent')`). The page
- * provides `MyTicketsStore`, which loads all three when the page opens.
+ * conversation, to reply or add an internal note. Only agents get here
+ * (the route's `canMatchRole('agent')`). The page provides
+ * `MyTicketsStore`, which loads all three when the page opens.
  */
 @Component({
   selector: 'hd-agent-page',

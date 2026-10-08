@@ -27,7 +27,7 @@ export interface AssignTicketData {
  * The "Assign to…" popup: the team's agents with their open and overdue
  * work, to choose one. It only chooses: it closes with the chosen agent's
  * user ID, and the page does the assigning. The agent who holds the ticket
- * now cannot be chosen again.
+ * now cannot be chosen again; when nobody else can be, it says so.
  */
 @Component({
   selector: 'hd-assign-ticket-dialog',
@@ -58,6 +58,9 @@ export interface AssignTicketData {
           </mat-radio-button>
         }
       </mat-radio-group>
+      @if (nobodyToChoose) {
+        <p class="nobody">No other agent on your team can take it.</p>
+      }
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button matButton type="button" mat-dialog-close>Cancel</button>
@@ -80,7 +83,8 @@ export interface AssignTicketData {
       display: flex;
       flex-direction: column;
     }
-    .load {
+    .load,
+    .nobody {
       color: var(--mat-sys-on-surface-variant);
     }
   `,
@@ -91,6 +95,13 @@ export class AssignTicketDialog {
   private readonly dialogRef = inject(MatDialogRef<AssignTicketDialog>);
 
   protected readonly ticketNumber = formatTicketNumber(this.data.ticketNumber);
+  /**
+   * No agent can be chosen: the team has no active agent, or only the one
+   * who holds the ticket (deactivated agents are left out, #1027).
+   */
+  protected readonly nobodyToChoose = this.data.members.every(
+    ({ id }) => id === this.data.currentAssigneeId
+  );
   /** The agent chosen; nobody until the supervisor picks. */
   protected readonly chosen = signal<string | null>(null);
 

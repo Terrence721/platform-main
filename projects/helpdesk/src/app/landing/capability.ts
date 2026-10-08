@@ -13,25 +13,25 @@ export const CAPABILITY = 'Capability';
 /** What Helpdesk does, in the order the landing page shows it. */
 export const CAPABILITIES: readonly Capability[] = [
   {
-    id: 'tickets-and-queues',
+    id: 'tickets',
     icon: 'confirmation_number',
-    title: 'Tickets and queues',
+    title: 'Tickets and priorities',
     summary:
-      'Every request gets a number, a priority and a queue. Filter by status, assignee or queue, and search subjects and descriptions.',
+      'Every request gets a number, a priority and a due time. Agents see their own work most urgent first, beside the work nobody holds yet.',
   },
   {
     id: 'deadlines',
     icon: 'schedule',
     title: 'Deadlines you can see',
     summary:
-      'Each ticket carries its SLA due time, so overdue and nearly-due work stands out before a customer has to chase it.',
+      'Each ticket carries its SLA due time and shows the time left, so overdue work is marked and the most urgent comes first.',
   },
   {
     id: 'replies-and-notes',
     icon: 'forum',
     title: 'Replies and internal notes',
     summary:
-      'Answer the customer and leave notes for colleagues on the same ticket, with canned replies for the questions you hear every day.',
+      'Answer the customer and leave internal notes for colleagues on the same ticket; customers never see the notes.',
   },
   {
     id: 'ownership',
@@ -50,8 +50,8 @@ export const CAPABILITIES: readonly Capability[] = [
   {
     id: 'admin',
     icon: 'admin_panel_settings',
-    title: 'Admin in the same app',
+    title: 'Accounts and reports in the same app',
     summary:
-      "Admins manage queues, customers, canned replies and the team's accounts without a separate console.",
+      "Admins create accounts, change roles and teams, and deactivate people; supervisors and admins see each team's reports.",
   },
 ];

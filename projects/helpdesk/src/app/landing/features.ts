@@ -19,8 +19,8 @@ import { CapabilitiesService } from './capabilities.service';
         Everything a support team works with, in one place
       </h2>
       <p>
-        Built for the people answering requests all day: fast lists, clear
-        deadlines, and no ticket left without an owner.
+        Built for the people answering requests all day: clear deadlines, the
+        most urgent work first, and the tickets nobody holds yet in plain view.
       </p>
     </header>
     <ul *ngrxLet="capabilities.entities$ as capabilities">

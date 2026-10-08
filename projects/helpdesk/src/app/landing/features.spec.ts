@@ -68,6 +68,20 @@ describe('CapabilitiesSection', () => {
     );
   });
 
+  // As with the cards (#1024): unassigned tickets are kept in view, not
+  // made impossible, and nothing measures how fast a list is.
+  it('introduces the cards with nothing the app lacks', () => {
+    const intro = render()
+      .section.querySelector('header p')
+      ?.textContent?.replace(/\s+/g, ' ')
+      .trim();
+
+    expect(intro).toBe(
+      'Built for the people answering requests all day: clear deadlines, the most urgent work first, and the tickets nobody holds yet in plain view.'
+    );
+    expect(intro).not.toMatch(/without an owner|fast/i);
+  });
+
   it('keeps the icons out of what a screen reader says', () => {
     const icons = [...render().section.querySelectorAll('mat-icon')];
 

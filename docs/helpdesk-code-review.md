@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 26 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 27 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -668,3 +668,11 @@ Role sorted every supervisor alike, so with a replaced supervisor on the team, a
 The Create Account popup. It holds, under its spec: every field checked against the contract before anything is sent, the user ID message matching `USER_ID_PATTERN`; a blank name refused and a good one trimmed; an admin given no team and sending none; a new supervisor warned of the lead they'd replace, and no warning otherwise; the password shown or hidden with `aria-pressed`; and the API's refusal read out, one save at a time, the store reset as the popup opens.
 
 The gap: it closed with whatever the User ID field said when the save finished, and as the fields stay editable while saving, typing then made the page's snack bar name an account that wasn't created. It now closes with the user ID it sent; a spec that changes the field during the save failed first. Noted, not changed: a double click on the page's Create account button can open two popups, as #1183 and #1195 closed elsewhere, for the admin page's review.
+
+### [`helpdesk/src/app/admin/edit-account.dialog.ts`](https://github.com/Terrence721/platform-main/blob/786491a/projects/helpdesk/src/app/admin/edit-account.dialog.ts)
+
+**Low · Correctness** — 1 fix ([issue #1207](https://github.com/Terrence721/platform-main/issues/1207))
+
+The Edit account popup, whose warnings say what else a change does; each was checked against the server's `UsersService.update`. It holds, under its spec: the account shown as it is, Save off until something changes; open tickets going back to Unassigned when the account stops being an active agent on its team, as the server releases them; a team left with no lead when its lead is deactivated, stops being a supervisor or moves, as the server's `stillLeads`; an admin sending no team, and one made an agent asked for a team; and the API's refusal read out, one save at a time, closing once saved.
+
+The gap: the server makes a supervisor the lead only when they are new to the role or to the team, but the popup warned "X leads the team now… this account will lead it" for any active supervisor on a team who didn't already lead it. A replaced supervisor, a real case, saw that warning as soon as the popup opened, and saving changed no lead. The warning now follows the server's rule; a spec for a replaced supervisor staying put failed first, and another keeps the warning for one moved to a team with a lead.

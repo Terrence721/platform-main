@@ -24,6 +24,7 @@ import { TEAM_ACCOUNTS_API, TeamAccountsStore } from './team-accounts.store';
 const TEAMS: TeamChoice[] = [
   { id: 'atlas', name: 'Team Atlas', leadName: 'Chris Taylor' },
   { id: 'echo', name: 'Team Echo', leadName: null },
+  { id: 'nova', name: 'Team Nova', leadName: 'Nina Lead' },
 ];
 
 const atlas = { id: 'atlas', name: 'Team Atlas' };
@@ -45,6 +46,16 @@ const chris: UserAccount = {
   role: 'supervisor',
   team: atlas,
   leadsTeam: true,
+  active: true,
+};
+
+/** A supervisor Chris replaced: still on Atlas, no longer its lead. */
+const oldLead: UserAccount = {
+  id: 'old.lead',
+  name: 'Old Lead',
+  role: 'supervisor',
+  team: atlas,
+  leadsTeam: false,
   active: true,
 };
 
@@ -197,6 +208,28 @@ describe('EditAccountDialog', () => {
 
     expect(form.warnings()).toEqual([
       'Any open tickets Sam Rivera holds will go back to Unassigned.',
+    ]);
+  });
+
+  // The server makes a supervisor the lead only when they are new to the
+  // role or to the team, so one who was replaced stays replaced.
+  it('gives a replaced supervisor no lead warning while they stay on their team', async () => {
+    const form = await render(oldLead);
+
+    expect(form.warnings()).toEqual([]);
+
+    await (await form.activeSwitch()).toggle();
+    await (await form.activeSwitch()).toggle();
+    expect(form.warnings()).toEqual([]);
+  });
+
+  it('warns that a replaced supervisor moved to a team with a lead would lead it', async () => {
+    const form = await render(oldLead);
+
+    await form.choose('Team', 'Team Nova');
+
+    expect(form.warnings()).toEqual([
+      "Nina Lead leads Team Nova now. They'll stay on the team, but Old Lead will lead it.",
     ]);
   });
 

@@ -207,11 +207,17 @@ export class EditAccountDialog {
       this.value().role === 'supervisor' &&
       this.teamId() !== null
   );
-  /** The lead this account would replace, if its team has another. */
+  /**
+   * The lead this account would replace, if its team has another. As on the
+   * server, an active supervisor becomes the lead only when new to the role
+   * or to the team: one replaced earlier stays replaced while they stay put.
+   */
   protected readonly replacedLead = computed(() => {
-    const unchanged =
-      this.account.leadsTeam && this.teamId() === this.account.team?.id;
-    if (!this.leads() || unchanged) {
+    const becomesLead =
+      this.leads() &&
+      (this.account.role !== 'supervisor' ||
+        this.teamId() !== (this.account.team?.id ?? null));
+    if (!becomesLead) {
       return null;
     }
     const team = this.data.teams.find(({ id }) => id === this.teamId());

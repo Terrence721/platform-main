@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 6 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 7 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -518,3 +518,13 @@ The session's actions: what the API says (signed in, a failed sign-in, a session
 **No findings** ([issue #1158](https://github.com/Terrence721/platform-main/issues/1158))
 
 The session's state: who is signed in, whether the start-up check has answered, so a reload is not taken for being signed out, and why the last sign-in failed. Each change is under its spec: signing in or a restored session sets the user and clears any error, a failed sign-in keeps its message until the form is sent again, and no session or signing out returns to signed out. Each role's home page is the route `app.routes.ts` declares for it, and the spec makes sure there is one for exactly the contract's roles. A failed attempt's message does not come back when the popup is opened again, as the popup shows it only after its own send. Left for `sign-in.actions.ts`: its comment still speaks of a later "auth phase" adding the sign-in effect, which has long been done.
+
+### [`helpdesk/src/app/session/session.effects.ts`](https://github.com/Terrence721/platform-main/blob/959a519/projects/helpdesk/src/app/session/session.effects.ts)
+
+**Low · Usability** — 1 fix; **Low · Documentation** — 1 fix ([issue #1160](https://github.com/Terrence721/platform-main/issues/1160))
+
+Signing in and out, and the session check on start-up. It holds, under its spec: a session the browser still has is restored, and nobody, a 401 or an API that cannot be reached means none; a second send while signing in is ignored; wrong details get the contract's one message and anything else a different one, so nobody retypes a correct password; a chime or a low tone goes with the result, and then the person's own page; and signing out counts even when the API cannot be reached.
+
+The gap was the sign-in limit from #1113. After too many tries the API answers 429 with how long to wait, but the popup said only that signing in "isn't available right now. Please try again", inviting more tries that would each be refused, for up to fifteen minutes. It now says "Too many sign-in attempts. Please try again in 15 minutes.", the minutes from `Retry-After`, "in a moment" for a minute or less, "later" without a usable header; five specs failed first. Also here, the comment on where the auth endpoints are named only the dev server's proxy; it now names nginx in the image and the in-browser demo's API too.
+
+Decided with the repo owner, from the open question in `api-error-message.ts`: a session that ends during work will be handled app-wide, an interceptor turning a 401 from any API call but the session check, sign-in and sign-out into "session ended": signed out, back to the landing page, the sign-in popup saying so. It touches several files, so it follows in its own issue and PR.

@@ -19,12 +19,43 @@ import { Sounds } from '../sound/sounds';
 import { SessionApiActions, ToolbarActions } from './session.actions';
 import { HOME_PAGES } from './session.feature';
 
-/** Where the API's sign-in endpoints are, through the dev server's proxy. */
+/**
+ * Where the API's sign-in endpoints are, on the app's own origin: through
+ * the dev server's proxy, nginx in the Docker image, or the in-browser
+ * demo's API.
+ */
 export const AUTH_API = '/api/auth';
 
 /** When signing in fails for a reason other than wrong details. */
 export const SIGN_IN_UNAVAILABLE_MESSAGE =
   "Signing in isn't available right now. Please try again.";
+
+/**
+ * When the API refuses for now after too many tries (429), and when to try
+ * again, from its Retry-After seconds: retrying at once would only be
+ * refused again.
+ */
+export function tooManyTriesMessage(retryAfter: string | null): string {
+  const seconds = Number(retryAfter);
+  const when =
+    retryAfter === null || !Number.isFinite(seconds) || seconds <= 0
+      ? 'later'
+      : seconds <= 60
+        ? 'in a moment'
+        : `in ${Math.ceil(seconds / 60)} minutes`;
+  return `Too many sign-in attempts. Please try again ${when}.`;
+}
+
+/** What the popup says when signing in failed. */
+function signInFailureMessage(error: unknown): string {
+  if (error instanceof HttpErrorResponse && error.status === 401) {
+    return SIGN_IN_FAILED_MESSAGE;
+  }
+  if (error instanceof HttpErrorResponse && error.status === 429) {
+    return tooManyTriesMessage(error.headers.get('Retry-After'));
+  }
+  return SIGN_IN_UNAVAILABLE_MESSAGE;
+}
 
 /**
  * On start-up, asks the API whether the browser still has a session: a
@@ -53,9 +84,9 @@ export const restoreSession = createEffect(
 
 /**
  * Signs in with what the popup sent. A second send while one is running is
- * ignored. Wrong details get the contract's one message; anything else
- * (the API down, say) gets a different one, so nobody retypes a correct
- * password.
+ * ignored. Wrong details get the contract's one message; too many tries,
+ * when to try again; anything else (the API down, say) a different one, so
+ * nobody retypes a correct password.
  */
 export const signIn = createEffect(
   (actions$ = inject(Actions), http = inject(HttpClient)) => {
@@ -67,10 +98,7 @@ export const signIn = createEffect(
             next: ({ user }) => SessionApiActions.signedIn({ user }),
             error: (error: unknown) =>
               SessionApiActions.signInFailed({
-                message:
-                  error instanceof HttpErrorResponse && error.status === 401
-                    ? SIGN_IN_FAILED_MESSAGE
-                    : SIGN_IN_UNAVAILABLE_MESSAGE,
+                message: signInFailureMessage(error),
               }),
           })
         )

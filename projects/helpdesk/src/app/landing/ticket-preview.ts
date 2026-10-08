@@ -29,7 +29,8 @@ import { TicketPreviewStore } from './ticket-preview.store';
     <mat-card appearance="raised" role="region" aria-labelledby="preview-title">
       <header>
         <mat-icon aria-hidden="true">inbox</mat-icon>
-        <h2 id="preview-title">My tickets</h2>
+        <!-- An h3: on the page, the card sits under its band's h2. -->
+        <h3 id="preview-title">My tickets</h3>
         <span class="count">
           Example data
           @if ((loadState$ | ngrxPush) === 'loaded') {
@@ -93,7 +94,7 @@ import { TicketPreviewStore } from './ticket-preview.store';
       padding: 1rem 1.25rem;
       border-bottom: 1px solid var(--mat-sys-outline-variant);
     }
-    h2 {
+    h3 {
       margin: 0;
       font: var(--mat-sys-title-medium);
     }

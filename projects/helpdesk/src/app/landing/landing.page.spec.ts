@@ -57,11 +57,15 @@ describe('LandingPage', () => {
       photo?.getAttribute('height'),
     ]).toEqual(['960', '640']);
     expect(photo?.alt).toContain('support agent wearing a headset');
-    expect(page.querySelector('hd-ticket-preview')).toBeNull();
+    expect(page.querySelector('section.hero hd-ticket-preview')).toBeNull();
   });
 
-  it('says what Helpdesk is for', () => {
+  it('says what Helpdesk is for, and nothing it lacks', () => {
     const { page } = render();
+    const lede = page
+      .querySelector('.lede')
+      ?.textContent?.replace(/\s+/g, ' ')
+      .trim();
 
     expect(page.querySelector('.eyebrow')?.textContent?.trim()).toBe(
       'Customer support, organized'
@@ -69,9 +73,11 @@ describe('LandingPage', () => {
     expect(page.querySelector('h1')?.textContent?.trim()).toBe(
       'Every request answered, on time, by the right person'
     );
-    expect(page.querySelector('.lede')?.textContent).toContain(
-      'Helpdesk turns customer emails into tickets'
+    expect(lede).toBe(
+      'Helpdesk gives every customer request a ticket your team can assign and resolve before its deadline, with every change showing up for everyone at once.'
     );
+    // There is no email intake, and no sorting into queues (#1024).
+    expect(lede).not.toMatch(/email|queue/i);
   });
 
   it('names the hero section by its heading', () => {
@@ -111,15 +117,30 @@ describe('LandingPage', () => {
     );
   });
 
-  it('shows how a ticket moves below the features, named by its heading', () => {
+  // The example "My tickets" card: what an agent sees after signing in.
+  it("shows a look at an agent's day below the features, named by its heading", () => {
     const { page } = render();
-    const workflow = page.querySelector('section#features + section#workflow');
+    const preview = page.querySelector('section#features + section#preview');
+    const heading = preview?.querySelector('h2');
+
+    expect(preview?.querySelector('.column hd-ticket-preview')).not.toBeNull();
+    expect(preview?.getAttribute('aria-labelledby')).toBe(heading?.id);
+    expect(heading?.textContent?.trim()).toBe('A look at your day');
+    expect(preview?.querySelector('header p')?.textContent).toContain(
+      'examples'
+    );
+    expect(preview?.classList).not.toContain('alt');
+  });
+
+  it('shows how a ticket moves below that, named by its heading', () => {
+    const { page } = render();
+    const workflow = page.querySelector('section#preview + section#workflow');
 
     expect(
       workflow?.querySelector('.column > hd-ticket-workflow')
     ).not.toBeNull();
     expect(workflow?.getAttribute('aria-labelledby')).toBe('workflow-title');
-    expect(workflow?.classList).not.toContain('alt');
+    expect(workflow?.classList).toContain('alt');
   });
 
   it('shows the roles below the workflow, named by its heading', () => {
@@ -128,7 +149,7 @@ describe('LandingPage', () => {
 
     expect(roles?.querySelector('.column > hd-roles-table')).not.toBeNull();
     expect(roles?.getAttribute('aria-labelledby')).toBe('roles-title');
-    expect(roles?.classList).toContain('alt');
+    expect(roles?.classList).not.toContain('alt');
   });
 
   it('ends with a sign-in band, named by its heading', () => {

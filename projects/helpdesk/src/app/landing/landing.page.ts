@@ -6,13 +6,16 @@ import { CapabilitiesSection } from './features';
 import { LandingPageActions } from './landing.actions';
 import { RolesTable } from './roles-table';
 import { SignInCta } from './sign-in-cta';
+import { TicketPreview } from './ticket-preview';
 import { TicketWorkflowSection } from './ticket-workflow';
 
 /**
  * The public product page: what Helpdesk does, for someone who has not
  * signed in. Each section is its own component, in a full-width band that
- * alternates with a tinted one. Signing in is offered in the toolbar, which
- * stays visible as the page scrolls, and again at the end of the page.
+ * alternates with a tinted one; "A look at your day" shows the example My
+ * tickets card, whose tickets load as the page opens. Signing in is offered
+ * in the toolbar, which stays visible as the page scrolls, and again at the
+ * end of the page.
  */
 @Component({
   selector: 'hd-landing-page',
@@ -22,6 +25,7 @@ import { TicketWorkflowSection } from './ticket-workflow';
     RolesTable,
     RouterLink,
     SignInCta,
+    TicketPreview,
     TicketWorkflowSection,
   ],
   template: `
@@ -33,9 +37,9 @@ import { TicketWorkflowSection } from './ticket-workflow';
             Every request answered, on time, by the right person
           </h1>
           <p class="lede">
-            Helpdesk turns customer emails into tickets your team can sort into
-            queues, assign, and resolve before their deadline, with every change
-            showing up for everyone at once.
+            Helpdesk gives every customer request a ticket your team can assign
+            and resolve before its deadline, with every change showing up for
+            everyone at once.
           </p>
           <a
             class="tour"
@@ -71,17 +75,29 @@ import { TicketWorkflowSection } from './ticket-workflow';
         <hd-capabilities />
       </div>
     </section>
-    <section class="band" id="workflow" aria-labelledby="workflow-title">
+    <section class="band" id="preview" aria-labelledby="day-title">
+      <div class="column day">
+        <header>
+          <h2 id="day-title">A look at your day</h2>
+          <p>
+            What an agent sees after signing in: their tickets, most urgent
+            first, with the time left on each. The tickets here are examples.
+          </p>
+        </header>
+        <hd-ticket-preview />
+      </div>
+    </section>
+    <section class="band alt" id="workflow" aria-labelledby="workflow-title">
       <div class="column">
         <hd-ticket-workflow />
       </div>
     </section>
-    <section class="band alt" id="roles" aria-labelledby="roles-title">
+    <section class="band" id="roles" aria-labelledby="roles-title">
       <div class="column">
         <hd-roles-table />
       </div>
     </section>
-    <section class="band" id="signin" aria-labelledby="signin-title">
+    <section class="band alt" id="signin" aria-labelledby="signin-title">
       <div class="column">
         <hd-sign-in-cta />
       </div>
@@ -153,6 +169,28 @@ import { TicketWorkflowSection } from './ticket-workflow';
       width: 100%;
       height: auto;
       border-radius: 1.75rem;
+    }
+
+    /* "A look at your day": a heading like the other bands', then the
+       example My tickets card, no wider than reads well. */
+    .day header {
+      max-width: 40em;
+      margin-bottom: 1.75rem;
+    }
+    .day h2 {
+      margin: 0;
+      font: var(--mat-sys-headline-medium);
+      font-size: clamp(1.625rem, 3.4vw, 2.125rem);
+      line-height: 1.2;
+    }
+    .day header p {
+      margin: 0.625rem 0 0;
+      font: var(--mat-sys-body-large);
+      color: var(--mat-sys-on-surface-variant);
+    }
+    .day hd-ticket-preview {
+      display: block;
+      max-width: 48rem;
     }
 
     @media (max-width: 860px) {

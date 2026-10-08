@@ -10,6 +10,7 @@ import {
   type Database,
   DEFAULT_SEED_PASSWORD,
   historySince,
+  NO_TEAM_MESSAGE,
   readAssigneeId,
   readCreateAccount,
   readMessage,
@@ -223,7 +224,7 @@ export class DemoApi {
         run: async ({ user }) => {
           const overview = await this.teams.overviewFor(user.id);
           if (overview === null) {
-            throw new NotFoundException('You do not lead a team.');
+            throw new NotFoundException(NO_TEAM_MESSAGE);
           }
           return overview;
         },

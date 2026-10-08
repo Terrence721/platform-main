@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 14 of 24)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 15 of 24)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -408,3 +408,11 @@ Live updates: the one `LiveEvents` and the stream's controller. It holds. `LiveE
 **No findings** ([issue #1123](https://github.com/Terrence721/platform-main/issues/1123))
 
 Tickets for the people who work them. It provides the controller's two services, whose database and live events come from the global modules, and exports `TicketsService` for features that show someone's tickets, as its comment says: its one user outside is the teams controller, whose module imports this one, so both share the same service. It imports `AuthModule` for the guard every route here is behind, and nothing is provided twice.
+
+### [`helpdesk-api/src/teams/teams.controller.ts`](https://github.com/Terrence721/platform-main/blob/ff2bace/projects/helpdesk-api/src/teams/teams.controller.ts)
+
+**Low · Consistency** — 1 fix ([issue #1125](https://github.com/Terrence721/platform-main/issues/1125))
+
+`/api/teams`, for the supervisors who lead them. It holds, under its specs: supervisors only, with the team not even read for anyone else; `GET mine` gives the team the supervisor leads, the rule settled in #1095, or 404 for none; and one agent's tickets or history are given only for an agent on that team, another team's agent and a user ID nobody has getting the same 404 with nothing read, so a supervisor cannot learn who exists elsewhere. The three months of history come from `historySince`, whose month-end handling was fixed earlier in this audit.
+
+The one gap was wording: a supervisor who leads no team was told "You do not lead a team." here, and "You don't lead a team." by the Reports API (#1095), which exports the message as `NO_TEAM_MESSAGE` for this case. This controller, and the in-browser demo's copy of it, now use that constant; the spec expects it, and failed first. The app's My team page shows its own words, "You don't lead a team yet."

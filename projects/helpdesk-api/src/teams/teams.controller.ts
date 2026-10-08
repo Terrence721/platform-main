@@ -8,7 +8,12 @@ import type {
   TeamOverview,
   TicketDto,
 } from '@helpdesk/contract';
-import { historySince, TeamsService, TicketsService } from '@helpdesk/server';
+import {
+  historySince,
+  NO_TEAM_MESSAGE,
+  TeamsService,
+  TicketsService,
+} from '@helpdesk/server';
 import { Controller, Get, NotFoundException, Param } from '@nestjs/common';
 import { SignedInUser } from '../auth/auth.guard';
 import { OnlyFor } from '../auth/role.guard';
@@ -31,7 +36,7 @@ export class TeamsController {
   async mine(@SignedInUser() user: CurrentUser): Promise<TeamOverview> {
     const overview = await this.teams.overviewFor(user.id);
     if (overview === null) {
-      throw new NotFoundException('You do not lead a team.');
+      throw new NotFoundException(NO_TEAM_MESSAGE);
     }
     return overview;
   }

@@ -21,7 +21,7 @@ import {
   TICKET_MESSAGE_MAX_LENGTH,
   type TicketMessageKind,
 } from '@helpdesk/contract';
-import { slaLabel } from '../landing/ticket-preview.store';
+import { slaLabel } from './sla-label';
 import { STATUS_GUIDE } from '../landing/ticket-workflow.store';
 import { minuteClock } from './minute-clock';
 import { TicketConversationStore } from './ticket-conversation.store';

@@ -3,7 +3,11 @@ import { Actions, createEffect } from '@ngrx/effects';
 import { Action } from '@ngrx/store';
 import { concatMap, filter, from, map, tap } from 'rxjs';
 
-/** An action that reports a failure, such as `[Books API] Load Failure`. */
+/**
+ * An action that reports a failure, such as `[Landing API] Showcase Tickets
+ * Load Failed`. A failure shown where it happened carries `message` instead,
+ * so it isn't shown twice: sign-in's, which its popup shows.
+ */
 type ErrorAction = Action & { error: string };
 
 function isErrorAction(action: Action): action is ErrorAction {

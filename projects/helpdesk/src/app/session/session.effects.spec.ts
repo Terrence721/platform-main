@@ -158,6 +158,37 @@ describe('session effects', () => {
       ]);
     });
 
+    // After too many failed tries the API answers 429 with Retry-After
+    // (#1113): retrying at once would only be refused again, so say when.
+    it.each([
+      ['898', 'Please try again in 15 minutes.'],
+      ['61', 'Please try again in 2 minutes.'],
+      ['30', 'Please try again in a moment.'],
+      [null, 'Please try again later.'],
+      ['soon', 'Please try again later.'],
+    ])(
+      'says there were too many tries on 429, with Retry-After %s',
+      (retryAfter, when) => {
+        const dispatched = run(signIn);
+        actions$.next(SignInDialogActions.submitted({ request }));
+
+        http.expectOne('/api/auth/sign-in').flush(
+          { message: 'Too many sign-in attempts. Please try again later.' },
+          {
+            status: 429,
+            statusText: 'Too Many Requests',
+            headers: retryAfter === null ? {} : { 'Retry-After': retryAfter },
+          }
+        );
+
+        expect(dispatched).toEqual([
+          SessionApiActions.signInFailed({
+            message: `Too many sign-in attempts. ${when}`,
+          }),
+        ]);
+      }
+    );
+
     it('ignores a second send while the first is still on its way', () => {
       run(signIn);
       actions$.next(SignInDialogActions.submitted({ request }));

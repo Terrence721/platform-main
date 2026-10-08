@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 7 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 8 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -528,3 +528,9 @@ Signing in and out, and the session check on start-up. It holds, under its spec:
 The gap was the sign-in limit from #1113. After too many tries the API answers 429 with how long to wait, but the popup said only that signing in "isn't available right now. Please try again", inviting more tries that would each be refused, for up to fifteen minutes. It now says "Too many sign-in attempts. Please try again in 15 minutes.", the minutes from `Retry-After`, "in a moment" for a minute or less, "later" without a usable header; five specs failed first. Also here, the comment on where the auth endpoints are named only the dev server's proxy; it now names nginx in the image and the in-browser demo's API too.
 
 Decided with the repo owner, from the open question in `api-error-message.ts`: a session that ends during work will be handled app-wide, an interceptor turning a 401 from any API call but the session check, sign-in and sign-out into "session ended": signed out, back to the landing page, the sign-in popup saying so. It touches several files, so it follows in its own issue and PR. Done in [#1163](https://github.com/Terrence721/platform-main/pull/1163) ([issue #1162](https://github.com/Terrence721/platform-main/issues/1162)): a new interceptor turns that 401 into Session Ended, once however many calls fail together, the popup opens on the landing page with "Your session has ended. Please sign in again.", and an e2e test closes an agent's account while their page is open and checks their next action brings them there.
+
+### [`helpdesk/src/app/session/role.guard.ts`](https://github.com/Terrence721/platform-main/blob/a8a2046/projects/helpdesk/src/app/session/role.guard.ts)
+
+**No findings** ([issue #1164](https://github.com/Terrence721/platform-main/issues/1164))
+
+Which role may open each page. Each of the three role pages uses it, and it holds under its spec: the page's own role gets in, another role is sent to its own page, and someone signed out to the landing page with the sign-in popup open. It waits for the start-up session check first, so reloading a role's page is not taken for being signed out. Being a `canMatch` guard, it keeps a page's code and state from loading until the visitor is let in, and it sits apart from the new ended-session handling, whose effect goes to the landing page itself. Left for `app.routes.ts`: there is no catch-all route, so a mistyped address matches nothing and shows an empty page.

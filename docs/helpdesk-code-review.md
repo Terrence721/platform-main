@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 28 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 29 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -684,3 +684,11 @@ The gap: the server makes a supervisor the lead only when they are new to the ro
 The admin's Team accounts page. It holds, under its spec: teams by name, each keeping the API's order, admins in a section of their own after them; the summary's counts pluralized, and "No lead" only beside a team without one; no Edit on the admin's own row; loading, failure and Try again; and Create Account and Edit opened with the page's injector, so they save through its store, their snack bars naming what was done, a cancel saying nothing.
 
 The first time, a second click on Create Account or Edit, while the popup's code was on its way and no backdrop was up, opened a second copy, as on the ticket popup (#1183) and the supervisor page (#1195); each popup now has an ID and opens only if none with it is open, and two specs failed first. And the class comment called the green pills team leads, where they are every supervisor (#1204). Noted, not changed, and filed as #1210: the page builds its teams from the accounts on them, so a team emptied of accounts vanishes from the page and from both popups' team lists, with no way back from the app; that needs the API to list the teams. The Reports button's double-click gap belongs to `open-reports.ts`.
+
+### [`helpdesk/src/app/reports/reports.store.ts`](https://github.com/Terrence721/platform-main/blob/9b2b8ea/projects/helpdesk/src/app/reports/reports.store.ts)
+
+**Low · Correctness** — 1 fix; **Low · Documentation** — 1 fix ([issue #1212](https://github.com/Terrence721/platform-main/issues/1212))
+
+The Reports popup's store. It holds, under its spec: the figures loaded on opening, for the pick given or the caller's own default; a failed first load said, and Try again showing loading; a refresh keeping the figures shown until the new ones come, and when it fails; a newer load replacing one still running, so picking someone never shows an older answer, the figures going and the choices staying; the summary summed from the team rows, or an agent's own row; and the team or agent query from the contract's constants.
+
+SLA met % was rounded to the nearest percent, so 995 tickets on time of 1,000 read 100%, a claim that every one was; it now rounds down, in the one function every SLA figure in the app goes through. Specs for 995 of 1,000 and 199 of 200 failed first, three expectations of 2 of 3 moved from 67% to 66%, and the spec's titles, written with `%%`, which Vitest printed as "66% undefined", now say "percent". And `REPORTS_API`'s comment was the fourth to say "through the dev server's proxy". Noted, for the popup's review: a failed refresh is silent, as the old figures stay and nothing says so.

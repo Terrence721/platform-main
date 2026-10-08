@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 18 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 19 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -606,3 +606,11 @@ Opens the ticket popup for the agent's and the supervisor's pages, fetching its 
 The agent page's store. It holds, under its spec: My tickets, Unassigned and Done, each loaded when the page opens, in the API's order, with its own loading and failed state; taking a ticket and changing a status, a second while one is saving ignored, a refusal keeping the API's message or a fallback; a quiet refresh of all three on a live ticket event or a reconnect, keeping what is shown if it fails; and the arrival tone for a ticket someone else gave the agent, not one they are taking.
 
 The gap: after a take or a status change, both lists were re-read in the same step as the change, so if a re-read failed the whole step was "failed", with "isn't available right now", though the ticket had been taken or changed; a retry would then be refused by the API. The outcome now comes from the change alone, and the lists are refreshed with the same quiet `refresh()` the live updates use, which keeps what is shown if it fails. A spec for each failed first. And `MY_TICKETS_API`'s comment said "through the dev server's proxy"; the app calls its own origin, whatever serves it. Noted, not changed: the tone is skipped for a ticket given back to an agent who once took it themselves.
+
+### [`helpdesk/src/app/agent/agent.page.ts`](https://github.com/Terrence721/platform-main/blob/8365add/projects/helpdesk/src/app/agent/agent.page.ts)
+
+**Low · Test coverage** — 1 fix; **Low · Documentation** — 1 fix ([issue #1186](https://github.com/Terrence721/platform-main/issues/1186))
+
+The agent's page. It holds, under its spec: My tickets, Unassigned and Done (24 h), each with a spinner, an empty message and a failure read out with Try again; a take sent with the agent's own ID, "#N is yours" with a chime, a refusal keeping the API's message with a low tone; a status change from each row's menu, the chime for finished work only, a resolved ticket reopened from Done; subjects in My tickets and Done opening the popup, Unassigned's kept as plain text; and the snack bar's code loaded when first needed.
+
+Two small gaps. Done's failure and its Try again had no spec, unlike the other two lists; one now covers it, passing as the code was right. And a line of the class comment ran to about 120 characters; it is rewrapped. Noted, not changed: while a take or a change is saving, a click on another row is ignored silently, for a split second, and the table can only hide a row's button, not disable it; the outcome effects are repeated in the supervisor page, for its review. The review covers `8365add`, the file's last change (#1153), not the `959a519` the plan named.

@@ -419,6 +419,29 @@ describe('AgentPage', () => {
       ).toContain('Nothing finished in the last 24 hours.');
     });
 
+    it('says when they could not be loaded, and tries again', () => {
+      const view = render();
+      view.answer([]);
+      view.http.expectOne(UNASSIGNED_API).flush([]);
+      view.http
+        .expectOne(FINISHED_API)
+        .flush(null, { status: 500, statusText: 'Error' });
+      view.detectChanges();
+
+      const message = [...view.page.querySelectorAll('.message')].find((m) =>
+        m.textContent?.includes("Your finished tickets couldn't be loaded.")
+      );
+      expect(message?.getAttribute('role')).toBe('alert');
+      message?.querySelector('button')?.click();
+      view.detectChanges();
+      expect(
+        view.page.querySelector(
+          'mat-spinner[aria-label="Loading your finished tickets"]'
+        )
+      ).not.toBeNull();
+      view.http.expectOne(FINISHED_API).flush([]);
+    });
+
     it('resolves a ticket from its menu, then says so', async () => {
       const view = renderWithDone([ticket(1003, 'Overdue', null)], []);
 

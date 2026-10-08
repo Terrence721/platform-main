@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 20 of 24)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 21 of 24)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -448,3 +448,9 @@ The Reports popup's figures. The controller only hands the service the caller an
 **Low · Documentation** — 1 fix ([issue #1135](https://github.com/Terrence721/platform-main/issues/1135))
 
 The Reports figures for supervisors and admins. It imports `AuthModule` for the guard its one route is behind; `ReportsService` needs only the database, from the global module; and as nothing outside the reports files uses the service, nothing is exported or provided twice. Its comment called them the Reports page's figures, from before they moved into a popup (#967); it now says popup, as the controller's comment does.
+
+### [`helpdesk-api/src/app/health.controller.ts`](https://github.com/Terrence721/platform-main/blob/a1aab60/projects/helpdesk-api/src/app/health.controller.ts)
+
+**No findings** ([issue #1137](https://github.com/Terrence721/platform-main/issues/1137))
+
+`GET /api/health`. It answers 200 while the API runs and says whether the database answers, a database that is down being reported rather than turned into an error; its specs show both over real HTTP, and that it answers only under `/api`. That fits the Docker health check: a silent database fails the `select 1` after the 2-second connection timeout, inside the check's 3 seconds, and after a database restart (#1101) it answered `database: up` again. It is open to anyone on purpose, one of the four routes the route walk allows (#1111), and shows only up or down. Noted and left: a database that accepts connections but never answers would leave the `select 1` waiting, with no statement timeout, so Docker would mark the API unhealthy instead; a rare fault, and still a visible one.

@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 21 of 24)
+**Last Updated: October 7, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` in progress: 22 of 24)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -454,3 +454,11 @@ The Reports figures for supervisors and admins. It imports `AuthModule` for the 
 **No findings** ([issue #1137](https://github.com/Terrence721/platform-main/issues/1137))
 
 `GET /api/health`. It answers 200 while the API runs and says whether the database answers, a database that is down being reported rather than turned into an error; its specs show both over real HTTP, and that it answers only under `/api`. That fits the Docker health check: a silent database fails the `select 1` after the 2-second connection timeout, inside the check's 3 seconds, and after a database restart (#1101) it answered `database: up` again. It is open to anyone on purpose, one of the four routes the route walk allows (#1111), and shows only up or down. Noted and left: a database that accepts connections but never answers would leave the `select 1` waiting, with no statement timeout, so Docker would mark the API unhealthy instead; a rare fault, and still a visible one.
+
+### [`helpdesk-api/src/app/app.module.ts`](https://github.com/Terrence721/platform-main/blob/6f52d53/projects/helpdesk-api/src/app/app.module.ts)
+
+**Low · Test coverage** — 1 spec added ([issue #1139](https://github.com/Terrence721/platform-main/issues/1139))
+
+The API's root module: the seven feature modules and the health check, each named in its comment with its route. The global database and live-events modules are imported once, so the whole API shares one pool and one `LiveEvents`, as the module reviews before it checked one by one, and the route walk (#1111) starts here, so every route it can reach is checked for its roles.
+
+What nothing checked was the point the `users.module.ts` review raised. The three services that publish live events, two for tickets and one for accounts, take `LiveEvents` as optional, because the in-browser demo builds them without it; in the API, a mis-wiring such as a module providing its own would start without a word, and live updates, and the ending of a deactivated person's stream (#1073), would quietly stop. Only the e2e tests would have noticed. A new `app.module.spec.ts` builds the real `AppModule`, which reaches no database until a query runs, and checks that all three services hold the very `LiveEvents` the `/api/events` controller listens to; a second spec builds a module with its own `LiveEvents` and shows the check would catch it.

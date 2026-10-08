@@ -1,12 +1,16 @@
 import { Injector } from '@angular/core';
 import type { ReportPick } from './reports.store';
 
+/** The Reports popup's dialog ID: there is one at a time. */
+const REPORTS_DIALOG_ID = 'reports';
+
 /**
  * Opens the Reports popup, for the supervisor's and the admin's pages: on
  * `pick` when given (say, the agent picked in Team member), otherwise on
  * the caller's own default. The popup's code (and the charts', when it
  * draws them) is loaded on the first click (dynamic `import()`), not with
- * the page.
+ * the page; a second click while it is on its way finds the first popup
+ * open, and leaves it.
  */
 export async function openReports(
   injector: Injector,
@@ -18,7 +22,12 @@ export async function openReports(
       import('./reports.dialog'),
       import('./reports.store'),
     ]);
-  injector.get(MatDialog).open(ReportsDialog, {
+  const dialog = injector.get(MatDialog);
+  if (dialog.getDialogById(REPORTS_DIALOG_ID)) {
+    return;
+  }
+  dialog.open(ReportsDialog, {
+    id: REPORTS_DIALOG_ID,
     width: '72rem',
     maxWidth: 'calc(100vw - 2rem)',
     // The charts, not the Refresh button, are what to see first.

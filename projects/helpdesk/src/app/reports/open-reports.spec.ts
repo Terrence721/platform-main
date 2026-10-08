@@ -6,9 +6,17 @@ import { ReportsDialog } from './reports.dialog';
 import { INITIAL_REPORT_PICK } from './reports.store';
 
 describe('openReports', () => {
-  const dialog = { open: vi.fn() };
+  /** The popups open now, by their dialog ID. */
+  let opened: string[];
+  const dialog = {
+    open: vi.fn((_: unknown, config: MatDialogConfig) => {
+      opened.push(String(config.id));
+    }),
+    getDialogById: (id: string) => (opened.includes(id) ? {} : undefined),
+  };
 
   beforeEach(() => {
+    opened = [];
     dialog.open.mockClear();
     TestBed.configureTestingModule({
       providers: [{ provide: MatDialog, useValue: dialog }],
@@ -22,6 +30,7 @@ describe('openReports', () => {
     await openReports(TestBed.inject(Injector));
 
     expect(dialog.open).toHaveBeenCalledExactlyOnceWith(ReportsDialog, {
+      id: 'reports',
       width: '72rem',
       maxWidth: 'calc(100vw - 2rem)',
       // The charts, not the Refresh button, are what to see first.
@@ -39,5 +48,15 @@ describe('openReports', () => {
       kind: 'agent',
       agentId: 'sam.rivera',
     });
+  });
+
+  // The first time, the popup's code is still on its way when a second
+  // click comes, with no backdrop yet to stop it.
+  it('opens one popup when Reports is clicked twice at once', async () => {
+    const injector = TestBed.inject(Injector);
+
+    await Promise.all([openReports(injector), openReports(injector)]);
+
+    expect(dialog.open).toHaveBeenCalledOnce();
   });
 });

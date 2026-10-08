@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 46 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 47 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -816,3 +816,13 @@ Each row's ability was a plain `<td>`, so a screen reader moving along a row hea
 **No findings** ([issue #1248](https://github.com/Terrence721/platform-main/issues/1248))
 
 The landing page's closing band: "Ready to pick up the next ticket?" and a Sign in button. It holds, under its spec: an `h2` the page labels the band by, and a button that opens the sign-in popup through the shared `SignInLauncher`, one popup per click. Its icon is hidden from screen readers, as `mat-icon` is by default, and its line, "Sign in with the account your admin set up for you", is true: admins create the accounts.
+
+### [`helpdesk/src/app/landing/landing.page.ts`](https://github.com/Terrence721/platform-main/blob/cc57755/projects/helpdesk/src/app/landing/landing.page.ts)
+
+**Medium · Correctness** — 1 fix; **Medium · Maintainability** — 1 fix ([issue #1250](https://github.com/Terrence721/platform-main/issues/1250); closes [#1024](https://github.com/Terrence721/platform-main/issues/1024))
+
+The public product page. It holds, under its spec: each section named by its heading, and one for every toolbar link; "See what it does" leading down to the features; a hero photo with `srcset`, sizes, width and height and a description; and Sign in once on the page, in the closing band.
+
+Its lede was the last of #1024: "turns customer emails into tickets your team can sort into queues", with no email intake and no queues to sort into. It now reads "gives every customer request a ticket your team can assign and resolve before its deadline", and a spec with neither word failed first; with it #1024 is done.
+
+The larger gap: the page dispatched `opened()`, loading the showcase tickets, but since the hero photo took the "My tickets" card's place on Oct 2 nothing rendered that card. The card, its store, the showcase tickets and their service, and the landing actions, feature and effects were off screen, and they were the app's only use of `@ngrx/component-store` and `@ngrx/entity`. The card now returns in a band of its own after the features, "A look at your day", introduced as what an agent sees after signing in, with example tickets; its heading becomes an `h3` under the band's, and the bands still alternate. A spec for the band failed first. This is also a miss in this audit: the reviews of `landing.actions.ts` through `ticket-preview.ts`, above, reviewed and changed that chain without first checking that its component was on screen. Their changes stand, and are live now; `slaLabel` and `STATUS_LABELS`, moved out along the way, were in use throughout.

@@ -97,15 +97,16 @@ describe('TicketPreview', () => {
     );
   });
 
-  // A name only reaches a screen reader on an element with a role.
+  // A name only reaches a screen reader on an element with a role. An h3:
+  // the card sits under its band's h2 on the landing page.
   it('is a region labelled by its heading', () => {
     const card = render('loaded');
 
     expect(card.querySelector('mat-card')?.getAttribute('role')).toBe('region');
     expect(
       card.querySelector('mat-card')?.getAttribute('aria-labelledby')
-    ).toBe(card.querySelector('h2')?.id);
-    expect(card.querySelector('h2')?.textContent).toBe('My tickets');
+    ).toBe(card.querySelector('h3')?.id);
+    expect(card.querySelector('h3')?.textContent).toBe('My tickets');
   });
 
   it('opens a ticket to show its description, and closes it again', () => {

@@ -86,7 +86,9 @@ export const TicketConversationStore = signalStore(
 
       /**
        * Sends a reply or an internal note. While one is on its way, more
-       * sends are ignored, so a double-click sends it once.
+       * sends are ignored, so a double-click sends it once. The message is
+       * added unless already shown: its live event, and the fetch it starts,
+       * can come back before this answer does.
        */
       send: rxMethod<AddTicketMessageRequest>(
         pipe(
@@ -98,7 +100,11 @@ export const TicketConversationStore = signalStore(
                 tapResponse({
                   next: (message) =>
                     patchState(store, {
-                      messages: [...store.messages(), message],
+                      messages: store
+                        .messages()
+                        .some(({ id }) => id === message.id)
+                        ? store.messages()
+                        : [...store.messages(), message],
                       sendState: 'sent',
                     }),
                   error: (error) =>

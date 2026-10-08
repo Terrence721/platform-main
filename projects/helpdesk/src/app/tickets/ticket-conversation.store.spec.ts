@@ -204,6 +204,21 @@ describe('TicketConversationStore', () => {
       expect(store.messages()).toEqual([reply, note]);
     });
 
+    // The other order: the event, and the fetch it starts, come back before
+    // the send's own answer.
+    it('never shows its own message twice when the event for it comes first', () => {
+      loaded();
+      store.send({ kind: 'note', body: note.body });
+      const post = http.expectOne({ method: 'POST', url: API });
+
+      live.next(messageOn(ticket.id));
+      http.expectOne({ method: 'GET', url: API }).flush([reply, note]);
+      post.flush(note);
+
+      expect(store.messages()).toEqual([reply, note]);
+      expect(store.sendState()).toBe('sent');
+    });
+
     it('fetches it again when the stream comes back after a break', () => {
       loaded();
 

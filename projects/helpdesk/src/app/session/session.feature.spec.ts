@@ -127,6 +127,8 @@ describe('session state', () => {
       }),
     ],
     ['signed in', SessionApiActions.signedIn({ user: alex })],
+    // Cancel, Escape or a click outside: a later popup is not about that.
+    ['the popup closed', SignInDialogActions.closed()],
   ])('drops that word once %s', (_, action) => {
     expect(
       after(SessionApiActions.sessionEnded(), action).signInNotice

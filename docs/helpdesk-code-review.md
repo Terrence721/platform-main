@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 10 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 11 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -546,3 +546,11 @@ The sign-in popup's one action, Submitted, with the user ID and password. The po
 **No findings** ([issue #1168](https://github.com/Terrence721/platform-main/issues/1168))
 
 The store devtools' action sanitizer. Under its spec, the devtools are shown a sign-in with the password replaced by dots and the user ID kept, while the store and effects get the real action, untouched, and every other action passes as it is. It is the only action that needs it: the admin's starting password in Create account goes from the accounts signal store straight to the API, not as an action, and that store is not connected to the devtools. The devtools run in production builds too, log-only, with the same sanitizer, so a password reaches them in neither.
+
+### [`helpdesk/src/app/sign-in/sign-in-dialog.ts`](https://github.com/Terrence721/platform-main/blob/4499c1c/projects/helpdesk/src/app/sign-in/sign-in-dialog.ts)
+
+**Low · Usability** — 1 fix ([issue #1170](https://github.com/Terrence721/platform-main/issues/1170))
+
+The sign-in popup. It holds, under its spec: the user ID and password are checked against the contract's rules before anything is sent, each mistake with its own message; password managers can fill it in; it sends once and waits, its button off meanwhile; a failure shows under the form and is read out, one from before it opened never; the password can be shown and hidden, the button saying which; and it closes once signed in.
+
+The one gap was mine, from #1163. The notice that a session had ended was cleared only by sending the form or signing in, so it outlived its popup: closed with Cancel, a popup opened later from the toolbar still said the session had ended. The popup now says when it goes away, however that happens, and the session state drops the notice; two specs failed first.

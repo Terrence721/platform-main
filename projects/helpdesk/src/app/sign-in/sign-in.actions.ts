@@ -1,5 +1,5 @@
 import type { SignInRequest } from '@helpdesk/contract';
-import { createActionGroup, props } from '@ngrx/store';
+import { createActionGroup, emptyProps, props } from '@ngrx/store';
 
 /** What the person does in the sign-in popup. */
 export const SignInDialogActions = createActionGroup({
@@ -11,5 +11,10 @@ export const SignInDialogActions = createActionGroup({
      * as it is (`hidePasswords`).
      */
     Submitted: props<{ request: SignInRequest }>(),
+    /**
+     * The popup went away (signed in, Cancel, Escape or a click outside), so
+     * what it said about an ended session goes too.
+     */
+    Closed: emptyProps(),
   },
 });

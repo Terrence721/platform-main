@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 30 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 31 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -700,3 +700,11 @@ SLA met % was rounded to the nearest percent, so 995 tickets on time of 1,000 re
 The Reports popup. It holds, under its spec: a spinner, a failure with Try again, and Refresh keeping the charts up while its icon spins; Report for offering a supervisor their team then its agents, and an admin every team with its lead then the agents by team, a pick switching the report and scrolling to its top, with `pickValue` and `pickFrom` keeping IDs that hold a colon; the scope line naming the team or agent and the window's start; the tiles; and charts in the page's theme colors, a gap where nothing was due rather than a zero, empty donut slices kept in the legend only, each described to screen readers. ECharts comes with the popup, with only the parts these charts use.
 
 Two gaps. A failed refresh was silent: the old figures stayed and the icon stopped, as if they were current. The store now keeps `refreshFailed`, set by a failed refresh and cleared by the next load, and the popup says "Couldn't refresh. These are the figures from before."; a spec in each file failed first. And "last 30 days" was written five times, in the headings and the Finished tile, while the contract has `REPORT_WINDOW_DAYS`, which the server uses; they now take it from there. Noted, not changed: the agents' "SLA met and median hours" chart puts percent and hours on two y-axes in one chart, which is easy to misread, a design change left as it is; and theme colors are read when a chart is built, so an OS theme switch while the popup is open shows until the next refresh.
+
+### [`helpdesk/src/app/reports/open-reports.ts`](https://github.com/Terrence721/platform-main/blob/9b2b8ea/projects/helpdesk/src/app/reports/open-reports.ts)
+
+**Low · Usability** — 1 fix ([issue #1216](https://github.com/Terrence721/platform-main/issues/1216))
+
+Opens the Reports popup for the supervisor's and the admin's pages. It holds, under its spec: the popup's code fetched on the first click, ECharts only when it draws; a popup 72rem wide, never wider than the screen; and a pick, such as the agent chosen in Team member, handed to the popup's store through a child injector, the default without one. Its `autoFocus: false` was checked against the CDK, which treats `false` as `'dialog'`: focus goes to the popup itself, which is announced, rather than to Refresh.
+
+The gap, noted at the supervisor page (#1195) and the admin page (#1211): the first time, a second click while the popup's code was on its way, with no backdrop yet to stop it, opened a second Reports popup. It now has an ID and opens only if none with it is open, as the ticket, assign, history, Create Account and Edit popups do; a spec with two opens at once failed first. That closes the double-click gap on every popup in the app.

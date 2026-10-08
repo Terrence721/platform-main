@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 4 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 5 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -506,3 +506,9 @@ The one thing out of place is `isFinished`, resolved or closed: a ticket rule ke
 **No findings** ([issue #1154](https://github.com/Terrence721/platform-main/issues/1154))
 
 Which landing-page section the URL points at, so the toolbar can mark its link, with `aria-current="location"` for screen readers. It gives the section the fragment names, or nothing for no fragment, an unknown one, or before the router's first navigation, each case under its spec, as is the sections' page order; the three names are the ids the landing page's sections carry. Its comment holds too: the router's slice is read directly because `createFeatureSelector` warns in development while a slice is missing, as this one is until the first navigation. Left for `landing.page.ts`: nothing ties this list to those ids, so renaming one would quietly break its link.
+
+### [`helpdesk/src/app/session/session.actions.ts`](https://github.com/Terrence721/platform-main/blob/a8a2046/projects/helpdesk/src/app/session/session.actions.ts)
+
+**No findings** ([issue #1156](https://github.com/Terrence721/platform-main/issues/1156))
+
+The session's actions: what the API says (signed in, a failed sign-in, a session restored or none on start-up, signed out) and the toolbar's Sign out. Each is used, by the session's effects and reducer and, for a sign-in, by the popup and the in-browser demo. Its one comment holds: a failed sign-in carries a `message`, not an `error`, because the app-wide snack bar shows any action with an `error`, and the popup already shows it. If a session that ends during work is to be handled app-wide, the open question from `api-error-message.ts`, an action for it would most likely join these; that is decided with the session's effects.

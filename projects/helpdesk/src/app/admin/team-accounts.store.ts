@@ -23,7 +23,7 @@ import { rxMethod } from '@ngrx/signals/rxjs-interop';
 import { exhaustMap, filter, map, pipe, switchMap, tap } from 'rxjs';
 import { LiveUpdates } from '../live/live-updates';
 
-/** Where the accounts come from, through the dev server's proxy. */
+/** Where the accounts come from, on the app's own origin. */
 export const TEAM_ACCOUNTS_API = '/api/users';
 
 /** When creating fails for a reason the API did not explain. */
@@ -57,7 +57,9 @@ function byName(a: UserAccount, b: UserAccount): number {
  * The message for a refused Create Account or Edit account: the API's own
  * for a wrong field (400), no such account (404) or a conflict (409: a
  * taken user ID, the admin's own account, the last admin), `fallback`
- * otherwise.
+ * otherwise. Unlike the shared `apiErrorMessage`, it leaves out 403 on
+ * purpose: here the only 403 is the role guard's bare "Forbidden", and
+ * the fallback says more.
  */
 function refusalMessage(error: unknown, fallback: string): string {
   if (
@@ -89,120 +91,14 @@ export const TeamAccountsStore = signalStore(
     /** The last saved edit and what it handed back; `null` until one. */
     updated: null as UpdateAccountResponse | null,
   }),
-  withMethods((store, http = inject(HttpClient)) => ({
-    /** Loads the accounts again; a newer load replaces one still running. */
-    load: rxMethod<void>(
-      pipe(
-        tap(() => patchState(store, { loadState: 'loading' })),
-        switchMap(() =>
-          http.get<UserAccount[]>(TEAM_ACCOUNTS_API).pipe(
-            tapResponse({
-              next: (accounts) =>
-                patchState(store, setAllEntities(accounts), {
-                  loadState: 'loaded',
-                }),
-              error: () => patchState(store, { loadState: 'failed' }),
-            })
-          )
-        )
-      )
-    ),
-    /**
-     * Creates an account. On success it joins the list in name order, so
-     * its team's table and the counts update straight away. A second send
-     * while one is saving is ignored.
-     */
-    create: rxMethod<CreateAccountRequest>(
-      pipe(
-        exhaustMap((request) => {
-          patchState(store, { createState: 'saving', createError: null });
-          return http.post<UserAccount>(TEAM_ACCOUNTS_API, request).pipe(
-            tapResponse({
-              next: (account) =>
-                patchState(
-                  store,
-                  setAllEntities([...store.entities(), account].sort(byName)),
-                  { createState: 'created' }
-                ),
-              error: (error: unknown) =>
-                patchState(store, {
-                  createState: 'failed',
-                  createError: refusalMessage(
-                    error,
-                    CREATE_UNAVAILABLE_MESSAGE
-                  ),
-                }),
-            })
-          );
-        })
-      )
-    ),
-    /** Back to no Create Account in progress, as a new form opens. */
-    resetCreate(): void {
-      patchState(store, { createState: 'idle', createError: null });
-    },
-    /**
-     * Saves an Edit account. On success the account changes in place
-     * straight away; then the list loads again quietly (no loading state),
-     * since an edit can also change who else leads a team. A second send
-     * while one is saving is ignored.
-     */
-    update: rxMethod<AccountUpdate>(
-      pipe(
-        exhaustMap(({ userId, request }) => {
-          patchState(store, {
-            updateState: 'saving',
-            updateError: null,
-            updated: null,
-          });
-          return http
-            .put<UpdateAccountResponse>(
-              `${TEAM_ACCOUNTS_API}/${encodeURIComponent(userId)}`,
-              request
-            )
-            .pipe(
-              tapResponse({
-                next: (response) =>
-                  patchState(store, setEntity(response.account), {
-                    updateState: 'saved',
-                    updated: response,
-                  }),
-                error: (error: unknown) =>
-                  patchState(store, {
-                    updateState: 'failed',
-                    updateError: refusalMessage(
-                      error,
-                      UPDATE_UNAVAILABLE_MESSAGE
-                    ),
-                  }),
-              }),
-              // Only after a save: a refused one completes above.
-              switchMap(() => http.get<UserAccount[]>(TEAM_ACCOUNTS_API)),
-              tapResponse({
-                next: (accounts) => patchState(store, setAllEntities(accounts)),
-                // The edited account is already shown; the rest can wait
-                // for the next load.
-                error: () => undefined,
-              })
-            );
-        })
-      )
-    ),
-    /** Back to no Edit account in progress, as a new form opens. */
-    resetUpdate(): void {
-      patchState(store, {
-        updateState: 'idle',
-        updateError: null,
-        updated: null,
-      });
-    },
+  withMethods((store, http = inject(HttpClient)) => {
     /**
      * Fetches the accounts again and swaps them in quietly, with no
-     * spinner: for a live update (#950), when another admin created or
-     * changed one. A newer refresh replaces one still running; a failed
-     * one keeps the tables as they are.
+     * spinner: after a saved edit, and for a live update (#950), when
+     * another admin created or changed one. A newer refresh replaces one
+     * still running; a failed one keeps the tables as they are.
      */
-    refresh: rxMethod<void>(
+    const refresh = rxMethod<void>(
       pipe(
         switchMap(() =>
           http.get<UserAccount[]>(TEAM_ACCOUNTS_API).pipe(
@@ -216,8 +112,113 @@ export const TeamAccountsStore = signalStore(
           )
         )
       )
-    ),
-  })),
+    );
+    return {
+      /** Loads the accounts again; a newer load replaces one still running. */
+      load: rxMethod<void>(
+        pipe(
+          tap(() => patchState(store, { loadState: 'loading' })),
+          switchMap(() =>
+            http.get<UserAccount[]>(TEAM_ACCOUNTS_API).pipe(
+              tapResponse({
+                next: (accounts) =>
+                  patchState(store, setAllEntities(accounts), {
+                    loadState: 'loaded',
+                  }),
+                error: () => patchState(store, { loadState: 'failed' }),
+              })
+            )
+          )
+        )
+      ),
+      /**
+       * Creates an account. On success it joins the list in name order, so
+       * its team's table and the counts update straight away. A second send
+       * while one is saving is ignored.
+       */
+      create: rxMethod<CreateAccountRequest>(
+        pipe(
+          exhaustMap((request) => {
+            patchState(store, { createState: 'saving', createError: null });
+            return http.post<UserAccount>(TEAM_ACCOUNTS_API, request).pipe(
+              tapResponse({
+                next: (account) =>
+                  patchState(
+                    store,
+                    setAllEntities([...store.entities(), account].sort(byName)),
+                    { createState: 'created' }
+                  ),
+                error: (error: unknown) =>
+                  patchState(store, {
+                    createState: 'failed',
+                    createError: refusalMessage(
+                      error,
+                      CREATE_UNAVAILABLE_MESSAGE
+                    ),
+                  }),
+              })
+            );
+          })
+        )
+      ),
+      /** Back to no Create Account in progress, as a new form opens. */
+      resetCreate(): void {
+        patchState(store, { createState: 'idle', createError: null });
+      },
+      /**
+       * Saves an Edit account. On success the account changes in place
+       * straight away; then the list is refreshed quietly (no loading
+       * state), since an edit can also change who else leads a team. A
+       * second send while one is saving is ignored.
+       */
+      update: rxMethod<AccountUpdate>(
+        pipe(
+          exhaustMap(({ userId, request }) => {
+            patchState(store, {
+              updateState: 'saving',
+              updateError: null,
+              updated: null,
+            });
+            return http
+              .put<UpdateAccountResponse>(
+                `${TEAM_ACCOUNTS_API}/${encodeURIComponent(userId)}`,
+                request
+              )
+              .pipe(
+                tapResponse({
+                  next: (response) =>
+                    patchState(store, setEntity(response.account), {
+                      updateState: 'saved',
+                      updated: response,
+                    }),
+                  error: (error: unknown) =>
+                    patchState(store, {
+                      updateState: 'failed',
+                      updateError: refusalMessage(
+                        error,
+                        UPDATE_UNAVAILABLE_MESSAGE
+                      ),
+                    }),
+                }),
+                // Only after a save: a refused one completes above. The
+                // edited account is already shown; a failed refresh leaves
+                // the rest for the next.
+                tap(() => refresh())
+              );
+          })
+        )
+      ),
+      /** Back to no Edit account in progress, as a new form opens. */
+      resetUpdate(): void {
+        patchState(store, {
+          updateState: 'idle',
+          updateError: null,
+          updated: null,
+        });
+      },
+      refresh,
+    };
+  }),
   withHooks({
     onInit: (store, live = inject(LiveUpdates)) => {
       store.load();

@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 23 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 24 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -644,3 +644,11 @@ A team member's last three months, for their supervisor. It holds, under its spe
 The supervisor's page. It holds, under its spec: the team's loading, failed and no-team states, with no Reports without a team; the member picker with each agent's load, None hiding their tickets again; the member's tickets with their own spinner, failure and empty message, Reassign on open work only; Assign on every unassigned ticket, "Assign to…" given the holder and the team, a cancel assigning nothing; a snack bar and a sound for each outcome, the chime for finished work only; and Reports on the chosen agent, else the team.
 
 Three small gaps. The first time, a second click on Assign, Reassign or a member's name, while the popup's code was on its way and no backdrop was up, opened a second copy, as the ticket popup did before #1183; "Assign to…" and the history now have an ID per ticket or member and open only if none with it is open, and two specs failed first, against a stand-in dialog that now remembers what it opened. A local `OPEN_WORK` was one more copy of which statuses are open work after #1153; Reassign now shows for `!isFinished(status)`. And `report()`'s comment named only assignments. Noted, not changed: the outcome effects closely repeat the agent page's, two short copies with different messages; and the Reports popup's opener has the same double-click gap, for its own review.
+
+### [`helpdesk/src/app/admin/team-accounts.store.ts`](https://github.com/Terrence721/platform-main/blob/ae549ee/projects/helpdesk/src/app/admin/team-accounts.store.ts)
+
+**Low · Simplification** — 1 fix; **Low · Documentation** — 2 fixes ([issue #1196](https://github.com/Terrence721/platform-main/issues/1196))
+
+The admin page's store. It holds, under its spec: every account loaded when the page opens, in the API's order; a created account joining in name order, a second send while saving ignored; an edit changing the account in place, its outcome from the `PUT` alone, then a quiet reload that keeps the edit if it fails; a refusal keeping the API's message for 400, 404 and 409, else a fallback; and a live refresh for account events and reconnects only.
+
+After a saved edit, `update` re-fetched the list with its own `GET`, apart from the store's `refresh()`, so a live refresh at the same moment didn't replace it and the two raced; it now calls that refresh, shared by both, and the two existing reload specs cover it. The review first proposed swapping `refusalMessage` for the shared `apiErrorMessage`, whose only difference is 403; but here the only 403 is the role guard's bare "Forbidden", which the fallback beats, so the helper stays and its comment now says why. And `TEAM_ACCOUNTS_API`'s comment said "through the dev server's proxy"; it now says the app's own origin. Noted, not changed: a new account is placed with `localeCompare` while the API sorts by the database's collation, a rare difference that the next reload settles.

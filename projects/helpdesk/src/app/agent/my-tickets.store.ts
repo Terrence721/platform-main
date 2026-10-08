@@ -22,7 +22,7 @@ import { Sounds } from '../sound/sounds';
 import { apiErrorMessage } from '../tickets/api-error-message';
 import { assigneeApi, statusApi } from '../tickets/ticket-api-paths';
 
-/** Where the agent's own tickets come from, through the dev server's proxy. */
+/** Where the agent's own tickets come from, on the app's own origin. */
 export const MY_TICKETS_API = '/api/tickets/mine';
 
 /** Where the tickets nobody holds come from. */
@@ -111,48 +111,6 @@ export const MyTicketsStore = signalStore(
         )
       )
     ),
-    /**
-     * The agent takes an unassigned ticket for themselves. Once done, both
-     * lists are fetched again and swapped in quietly, with no spinner, so
-     * the ticket moves from Unassigned into My tickets. A second take while
-     * one is saving is ignored.
-     */
-    take: rxMethod<{ ticketId: string; agentId: string }>(
-      pipe(
-        exhaustMap(({ ticketId, agentId }) => {
-          patchState(store, {
-            takeState: 'saving',
-            takeError: null,
-            takingId: ticketId,
-          });
-          const body: AssignTicketRequest = { assigneeId: agentId };
-          return http.put<TicketDto>(assigneeApi(ticketId), body).pipe(
-            switchMap((ticket) =>
-              forkJoin({
-                ticket: [ticket],
-                mine: http.get<TicketDto[]>(MY_TICKETS_API),
-                unassigned: http.get<TicketDto[]>(UNASSIGNED_API),
-              })
-            ),
-            tapResponse({
-              next: ({ ticket, mine, unassigned }) =>
-                patchState(store, setAllEntities(mine), {
-                  unassigned,
-                  takeState: 'taken',
-                  lastTaken: ticket,
-                  takingId: null,
-                }),
-              error: (error: unknown) =>
-                patchState(store, {
-                  takeState: 'failed',
-                  takeError: apiErrorMessage(error, TAKE_UNAVAILABLE_MESSAGE),
-                  takingId: null,
-                }),
-            })
-          );
-        })
-      )
-    ),
     /** Loads the recently finished tickets (Done) again. */
     loadFinished: rxMethod<void>(
       pipe(
@@ -166,45 +124,6 @@ export const MyTicketsStore = signalStore(
             })
           )
         )
-      )
-    ),
-    /**
-     * Moves one of the agent's tickets to another status. Once done, My
-     * tickets and Done are fetched again and swapped in quietly, with no
-     * spinner: a resolved ticket moves down into Done, a reopened one back
-     * up. A second change while one is saving is ignored.
-     */
-    changeStatus: rxMethod<{ ticketId: string; status: TicketStatus }>(
-      pipe(
-        exhaustMap(({ ticketId, status }) => {
-          patchState(store, { statusState: 'saving', statusError: null });
-          const body: ChangeStatusRequest = { status };
-          return http.put<TicketDto>(statusApi(ticketId), body).pipe(
-            switchMap((ticket) =>
-              forkJoin({
-                ticket: [ticket],
-                mine: http.get<TicketDto[]>(MY_TICKETS_API),
-                finished: http.get<TicketDto[]>(FINISHED_API),
-              })
-            ),
-            tapResponse({
-              next: ({ ticket, mine, finished }) =>
-                patchState(store, setAllEntities(mine), {
-                  finished,
-                  statusState: 'changed',
-                  lastChanged: ticket,
-                }),
-              error: (error: unknown) =>
-                patchState(store, {
-                  statusState: 'failed',
-                  statusError: apiErrorMessage(
-                    error,
-                    STATUS_UNAVAILABLE_MESSAGE
-                  ),
-                }),
-            })
-          );
-        })
       )
     ),
     /**
@@ -248,6 +167,79 @@ export const MyTicketsStore = signalStore(
             })
           )
         )
+      )
+    ),
+  })),
+  withMethods((store, http = inject(HttpClient)) => ({
+    /**
+     * The agent takes an unassigned ticket for themselves. The outcome is
+     * the API's answer to the take alone; then the lists are refreshed, so
+     * the ticket moves from Unassigned into My tickets. A refresh that fails
+     * keeps the lists as they are, and the take still stands. A second take
+     * while one is saving is ignored.
+     */
+    take: rxMethod<{ ticketId: string; agentId: string }>(
+      pipe(
+        exhaustMap(({ ticketId, agentId }) => {
+          patchState(store, {
+            takeState: 'saving',
+            takeError: null,
+            takingId: ticketId,
+          });
+          const body: AssignTicketRequest = { assigneeId: agentId };
+          return http.put<TicketDto>(assigneeApi(ticketId), body).pipe(
+            tapResponse({
+              next: (ticket) => {
+                patchState(store, {
+                  takeState: 'taken',
+                  lastTaken: ticket,
+                  takingId: null,
+                });
+                store.refresh();
+              },
+              error: (error: unknown) =>
+                patchState(store, {
+                  takeState: 'failed',
+                  takeError: apiErrorMessage(error, TAKE_UNAVAILABLE_MESSAGE),
+                  takingId: null,
+                }),
+            })
+          );
+        })
+      )
+    ),
+    /**
+     * Moves one of the agent's tickets to another status. The outcome is
+     * the API's answer to the change alone; then the lists are refreshed:
+     * a resolved ticket moves down into Done, a reopened one back up. A
+     * refresh that fails keeps the lists as they are, and the change still
+     * stands. A second change while one is saving is ignored.
+     */
+    changeStatus: rxMethod<{ ticketId: string; status: TicketStatus }>(
+      pipe(
+        exhaustMap(({ ticketId, status }) => {
+          patchState(store, { statusState: 'saving', statusError: null });
+          const body: ChangeStatusRequest = { status };
+          return http.put<TicketDto>(statusApi(ticketId), body).pipe(
+            tapResponse({
+              next: (ticket) => {
+                patchState(store, {
+                  statusState: 'changed',
+                  lastChanged: ticket,
+                });
+                store.refresh();
+              },
+              error: (error: unknown) =>
+                patchState(store, {
+                  statusState: 'failed',
+                  statusError: apiErrorMessage(
+                    error,
+                    STATUS_UNAVAILABLE_MESSAGE
+                  ),
+                }),
+            })
+          );
+        })
       )
     ),
   })),

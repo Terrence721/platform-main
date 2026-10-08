@@ -133,11 +133,12 @@ describe('MyTicketsStore', () => {
       assignee: { id: 'sam.rivera', name: 'Sam Rivera' },
     } as TicketDto;
 
-    /** A store with both lists loaded, as the page has them. */
+    /** A store with all three lists loaded, as the page has them. */
     function loadedStore() {
       const store = TestBed.inject(MyTicketsStore);
       http.expectOne(MY_TICKETS_API).flush([ticket(1003)]);
       http.expectOne(UNASSIGNED_API).flush([ticket(1312), ticket(1290)]);
+      http.expectOne(FINISHED_API).flush([]);
       return store;
     }
 
@@ -162,6 +163,7 @@ describe('MyTicketsStore', () => {
       call.flush(taken);
       http.expectOne(MY_TICKETS_API).flush([taken, ticket(1003)]);
       http.expectOne(UNASSIGNED_API).flush([ticket(1290)]);
+      http.expectOne(FINISHED_API).flush([]);
     });
 
     it('moves the ticket into My tickets, quietly, with no spinner', () => {
@@ -171,6 +173,7 @@ describe('MyTicketsStore', () => {
       put().flush(taken);
       http.expectOne(MY_TICKETS_API).flush([taken, ticket(1003)]);
       http.expectOne(UNASSIGNED_API).flush([ticket(1290)]);
+      http.expectOne(FINISHED_API).flush([]);
 
       expect(store.loadState()).toBe('loaded');
       expect(numbers(store)).toEqual([1312, 1003]);
@@ -203,6 +206,22 @@ describe('MyTicketsStore', () => {
       expect(store.takeError()).toBe(TAKE_UNAVAILABLE_MESSAGE);
     });
 
+    it('says taken when the take succeeded but fetching the lists again failed', () => {
+      const store = loadedStore();
+
+      store.take({ ticketId: 'ticket-1312', agentId: 'sam.rivera' });
+      put().flush(taken);
+      http
+        .expectOne(MY_TICKETS_API)
+        .flush(null, { status: 500, statusText: 'Server Error' });
+
+      expect(store.takeState()).toBe('taken');
+      expect(store.takeError()).toBeNull();
+      expect(store.lastTaken()).toEqual(taken);
+      // The lists stay as they are until the next refresh.
+      expect(numbers(store)).toEqual([1003]);
+    });
+
     it('ignores a second take while one is saving', () => {
       const store = loadedStore();
 
@@ -212,6 +231,7 @@ describe('MyTicketsStore', () => {
       put().flush(taken);
       http.expectOne(MY_TICKETS_API).flush([taken]);
       http.expectOne(UNASSIGNED_API).flush([]);
+      http.expectOne(FINISHED_API).flush([]);
     });
   });
 
@@ -276,6 +296,7 @@ describe('MyTicketsStore', () => {
       expect(call.request.body).toEqual({ status: 'resolved' });
       call.flush(resolved);
       http.expectOne(MY_TICKETS_API).flush([ticket(1006)]);
+      http.expectOne(UNASSIGNED_API).flush([]);
       http.expectOne(FINISHED_API).flush([resolved]);
     });
 
@@ -285,6 +306,7 @@ describe('MyTicketsStore', () => {
       store.changeStatus({ ticketId: 'ticket-1003', status: 'resolved' });
       put().flush(resolved);
       http.expectOne(MY_TICKETS_API).flush([ticket(1006)]);
+      http.expectOne(UNASSIGNED_API).flush([]);
       http.expectOne(FINISHED_API).flush([resolved]);
 
       expect(store.loadState()).toBe('loaded');
@@ -317,6 +339,22 @@ describe('MyTicketsStore', () => {
       expect(store.statusError()).toBe(STATUS_UNAVAILABLE_MESSAGE);
     });
 
+    it('says changed when the change succeeded but fetching the lists again failed', () => {
+      const store = loadedStore();
+
+      store.changeStatus({ ticketId: 'ticket-1003', status: 'resolved' });
+      put().flush(resolved);
+      http
+        .expectOne(MY_TICKETS_API)
+        .flush(null, { status: 500, statusText: 'Server Error' });
+
+      expect(store.statusState()).toBe('changed');
+      expect(store.statusError()).toBeNull();
+      expect(store.lastChanged()).toEqual(resolved);
+      // The lists stay as they are until the next refresh.
+      expect(numbers(store)).toEqual([1003, 1006]);
+    });
+
     it('ignores a second change while one is saving', () => {
       const store = loadedStore();
 
@@ -325,6 +363,7 @@ describe('MyTicketsStore', () => {
 
       put().flush(resolved);
       http.expectOne(MY_TICKETS_API).flush([]);
+      http.expectOne(UNASSIGNED_API).flush([]);
       http.expectOne(FINISHED_API).flush([resolved]);
     });
   });
@@ -434,8 +473,8 @@ describe('MyTicketsStore', () => {
         http
           .expectOne({ method: 'PUT', url: assigneeApi('ticket-1005') })
           .flush(ticket(1005));
-        http.expectOne(MY_TICKETS_API).flush([ticket(1001), ticket(1005)]);
-        http.expectOne(UNASSIGNED_API).flush([]);
+        refreshWith(ticket(1001), ticket(1005));
+        expect(sounds.play).not.toHaveBeenCalled();
       });
 
       it('dings once for a ticket that came during a break in the stream', () => {

@@ -3,7 +3,7 @@ import {
   canTransition,
   TICKET_STATUS_TRANSITIONS,
   TICKET_STATUSES,
-  TicketStatus,
+  type TicketStatus,
 } from '@helpdesk/contract';
 import {
   patchState,
@@ -12,35 +12,38 @@ import {
   withMethods,
   withState,
 } from '@ngrx/signals';
+import { STATUS_LABELS } from '../tickets/status-labels';
 
-/** How the landing page names and explains each status. */
+/**
+ * How the landing page names and explains each status: the app's own label
+ * (`STATUS_LABELS`), an icon, and what it means, in what the app does.
+ */
 export const STATUS_GUIDE: Readonly<
   Record<TicketStatus, { label: string; icon: string; meaning: string }>
 > = {
   new: {
-    label: 'New',
+    label: STATUS_LABELS.new,
     icon: 'fiber_new',
-    meaning:
-      "Just arrived from a customer's email. Nobody has picked it up yet.",
+    meaning: 'Just raised. Nobody has picked it up yet.',
   },
   open: {
-    label: 'Open',
+    label: STATUS_LABELS.open,
     icon: 'play_circle',
     meaning: 'Someone on the team is working on it.',
   },
   pending: {
-    label: 'Pending',
+    label: STATUS_LABELS.pending,
     icon: 'hourglass_top',
     meaning:
-      'Waiting on the customer. Their reply moves the ticket back to open.',
+      'Waiting on the customer. Whoever holds it moves it back to open when they hear back.',
   },
   resolved: {
-    label: 'Resolved',
+    label: STATUS_LABELS.resolved,
     icon: 'task_alt',
     meaning: "Answered. If the customer says it isn't fixed, reopen it.",
   },
   closed: {
-    label: 'Closed',
+    label: STATUS_LABELS.closed,
     icon: 'lock',
     meaning: 'Final. A new problem gets a new ticket and a new number.',
   },

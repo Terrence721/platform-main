@@ -19,7 +19,7 @@ import {
   type TicketDto,
 } from '@helpdesk/contract';
 import { Store } from '@ngrx/store';
-import { STATUS_GUIDE } from '../landing/ticket-workflow.store';
+import { STATUS_LABELS } from '../tickets/status-labels';
 import { openReports } from '../reports/open-reports';
 import { Sounds } from '../sound/sounds';
 import { sessionFeature } from '../session/session.feature';
@@ -366,7 +366,7 @@ export default class SupervisorPage {
             this.sounds.play('success');
           }
           void this.report(
-            `${formatTicketNumber(ticket.ticketNumber)} is now ${STATUS_GUIDE[ticket.status].label}`
+            `${formatTicketNumber(ticket.ticketNumber)} is now ${STATUS_LABELS[ticket.status]}`
           );
         } else if (state === 'failed') {
           this.sounds.play('error');

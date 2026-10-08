@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { TICKET_STATUS_TRANSITIONS, TICKET_STATUSES } from '@helpdesk/contract';
+import { STATUS_LABELS } from '../tickets/status-labels';
 import { STATUS_GUIDE, TicketWorkflowStore } from './ticket-workflow.store';
 
 describe('TicketWorkflowStore', () => {
@@ -87,4 +88,19 @@ describe('STATUS_GUIDE', () => {
       expect(meaning).toMatch(/\.$/);
     }
   );
+
+  // The public page, beside the live demo, says only what the app does
+  // (#1024): tickets don't come from email, and customers don't reply in it.
+  it.each(TICKET_STATUSES)(
+    'explains %s with nothing the app lacks',
+    (status) => {
+      expect(STATUS_GUIDE[status].meaning).not.toMatch(
+        /email|their reply moves/i
+      );
+    }
+  );
+
+  it.each(TICKET_STATUSES)('labels %s as the app does everywhere', (status) => {
+    expect(STATUS_GUIDE[status].label).toBe(STATUS_LABELS[status]);
+  });
 });

@@ -1,4 +1,4 @@
-import { TicketDto, TicketStatus } from '@helpdesk/contract';
+import type { TicketDto, TicketStatus } from '@helpdesk/contract';
 import { createActionGroup, emptyProps, props } from '@ngrx/store';
 
 /** Results of loading the showcase tickets the landing page's preview shows. */

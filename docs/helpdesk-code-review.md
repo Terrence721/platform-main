@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 35 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 36 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -738,3 +738,11 @@ It extended `DefaultDataService` and overrode `getAll` alone, under a comment th
 **No findings** ([issue #1226](https://github.com/Terrence721/platform-main/issues/1226))
 
 The capabilities' @ngrx/data entity collection service. It holds, under its spec: no capabilities and not loading at first; `load()` bringing all six, in order, through the app's own data service; and loading only while they are on their way. Its comment matches: the section uses `load()` and `entities$`. Noted, not changed: it is an empty subclass of `EntityCollectionServiceBase`, and @ngrx/data's factory would give the same service without a class, closer to the composition taken in #1225; but extending this base is the library's documented way to a typed, injectable collection service, and unlike `DefaultDataService` it brings nothing unwanted.
+
+### [`helpdesk/src/app/landing/landing.actions.ts`](https://github.com/Terrence721/platform-main/blob/8dcdfdf/projects/helpdesk/src/app/landing/landing.actions.ts)
+
+**Low · Maintainability** — 1 finding, fixed with the next file; **Low · Consistency** — 1 fix ([issue #1228](https://github.com/Terrence721/platform-main/issues/1228))
+
+The landing page's two action groups: the showcase tickets' API results, and what the visitor does. Both comments hold: a failed load's `error` reaches the visitor through the app's `showErrors` effect, which shows any action with a string `error`; and the page dispatches `Opened` as it is created, the tickets loading in response.
+
+`Status Filter Changed` is dispatched by nothing but specs: the page has no status filter, though a `statusFilter` field, a reducer case and a `selectStatusFilter` selector in `landing.feature.ts` stand behind it, a planned feature never wired. It is to go, action and state together, in that file's review, as removing the action alone would break the reducer. And the contract's types were imported as values; they are now `import type`, as #1167 made `sign-in.actions.ts`.

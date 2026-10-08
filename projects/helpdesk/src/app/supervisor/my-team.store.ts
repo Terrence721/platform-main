@@ -31,7 +31,7 @@ import { LiveUpdates } from '../live/live-updates';
 import { apiErrorMessage } from '../tickets/api-error-message';
 import { assigneeApi, statusApi } from '../tickets/ticket-api-paths';
 
-/** Where the supervisor's team comes from, through the dev server's proxy. */
+/** Where the supervisor's team comes from, on the app's own origin. */
 export const MY_TEAM_API = '/api/teams/mine';
 
 /** Where one team member's tickets come from. */
@@ -156,26 +156,61 @@ export const MyTeamStore = signalStore(
   })),
   withMethods((store, http = inject(HttpClient)) => {
     /**
-     * After a ticket changed: the team (Unassigned, each member's counts)
-     * and the chosen member's tickets, fetched again, with the ticket.
+     * Fetches the team and the chosen member's tickets again and swaps
+     * them in quietly, with no spinner: after the supervisor's own change,
+     * and for a live update (#950), when something changed elsewhere. A
+     * member who left the team is no longer chosen; one chosen while it ran
+     * keeps their own tickets. A newer refresh replaces one still running;
+     * a failed one keeps what is shown, until the next.
      */
-    const refreshAfter = (ticket: TicketDto) => {
-      const memberId = store.selectedMemberId();
-      return forkJoin({
-        ticket: of(ticket),
-        team: http.get<TeamOverview>(MY_TEAM_API),
-        memberTickets:
-          memberId === null
-            ? of(store.memberTickets())
-            : http.get<TicketDto[]>(memberTicketsApi(memberId)),
-      });
-    };
+    const refresh = rxMethod<void>(
+      pipe(
+        switchMap(() => {
+          const memberId = store.selectedMemberId();
+          return http.get<TeamOverview>(MY_TEAM_API).pipe(
+            switchMap((team) => {
+              const stillOnTeam =
+                memberId !== null &&
+                team.members.some(({ id }) => id === memberId);
+              return forkJoin({
+                team: of(team),
+                memberTickets: stillOnTeam
+                  ? http.get<TicketDto[]>(memberTicketsApi(memberId))
+                  : of([]),
+                stillOnTeam: of(stillOnTeam),
+              });
+            }),
+            tapResponse({
+              next: ({ team, memberTickets, stillOnTeam }) => {
+                patchState(store, { team, loadState: 'loaded' });
+                if (store.selectedMemberId() !== memberId) {
+                  return;
+                }
+                patchState(
+                  store,
+                  stillOnTeam
+                    ? { memberTickets, memberTicketsState: 'loaded' }
+                    : {
+                        selectedMemberId: null,
+                        memberTickets: [],
+                        memberTicketsState: 'idle',
+                      }
+                );
+              },
+              error: () => undefined,
+            })
+          );
+        })
+      )
+    );
     return {
       /**
        * Gives a ticket to an agent on the team (assigning or reassigning).
-       * Once done, the team (Unassigned, each member's counts) and the
-       * chosen member's tickets are fetched again and swapped in quietly,
-       * with no spinner. A second assignment while one is saving is ignored.
+       * The outcome is the API's answer to the assignment alone; then the
+       * team (Unassigned, each member's counts) and the chosen member's
+       * tickets are refreshed. A refresh that fails keeps what is shown,
+       * and the assignment still stands. A second assignment while one is
+       * saving is ignored.
        */
       assign: rxMethod<{ ticketId: string; agentId: string }>(
         pipe(
@@ -183,15 +218,14 @@ export const MyTeamStore = signalStore(
             patchState(store, { assignState: 'saving', assignError: null });
             const body: AssignTicketRequest = { assigneeId: agentId };
             return http.put<TicketDto>(assigneeApi(ticketId), body).pipe(
-              switchMap(refreshAfter),
               tapResponse({
-                next: ({ ticket, team, memberTickets }) =>
+                next: (ticket) => {
                   patchState(store, {
-                    team,
-                    memberTickets,
                     assignState: 'assigned',
                     lastAssigned: ticket,
-                  }),
+                  });
+                  refresh();
+                },
                 error: (error: unknown) =>
                   patchState(store, {
                     assignState: 'failed',
@@ -207,9 +241,9 @@ export const MyTeamStore = signalStore(
       ),
       /**
        * Moves a team member's ticket to another status, as the workflow
-       * allows. Once done, the team and the chosen member's tickets are
-       * fetched again and swapped in quietly, as after assigning. A second
-       * change while one is saving is ignored.
+       * allows. The outcome is the API's answer to the change alone; then
+       * what is shown is refreshed, as after assigning. A second change
+       * while one is saving is ignored.
        */
       changeStatus: rxMethod<{ ticketId: string; status: TicketStatus }>(
         pipe(
@@ -217,15 +251,14 @@ export const MyTeamStore = signalStore(
             patchState(store, { statusState: 'saving', statusError: null });
             const body: ChangeStatusRequest = { status };
             return http.put<TicketDto>(statusApi(ticketId), body).pipe(
-              switchMap(refreshAfter),
               tapResponse({
-                next: ({ ticket, team, memberTickets }) =>
+                next: (ticket) => {
                   patchState(store, {
-                    team,
-                    memberTickets,
                     statusState: 'changed',
                     lastChanged: ticket,
-                  }),
+                  });
+                  refresh();
+                },
                 error: (error: unknown) =>
                   patchState(store, {
                     statusState: 'failed',
@@ -239,54 +272,7 @@ export const MyTeamStore = signalStore(
           })
         )
       ),
-      /**
-       * Fetches the team and the chosen member's tickets again and swaps
-       * them in quietly, with no spinner: for a live update (#950), when
-       * something changed elsewhere. A member who left the team is no
-       * longer chosen; one chosen while it ran keeps their own tickets. A
-       * newer refresh replaces one still running; a failed one keeps what
-       * is shown, until the next.
-       */
-      refresh: rxMethod<void>(
-        pipe(
-          switchMap(() => {
-            const memberId = store.selectedMemberId();
-            return http.get<TeamOverview>(MY_TEAM_API).pipe(
-              switchMap((team) => {
-                const stillOnTeam =
-                  memberId !== null &&
-                  team.members.some(({ id }) => id === memberId);
-                return forkJoin({
-                  team: of(team),
-                  memberTickets: stillOnTeam
-                    ? http.get<TicketDto[]>(memberTicketsApi(memberId))
-                    : of([]),
-                  stillOnTeam: of(stillOnTeam),
-                });
-              }),
-              tapResponse({
-                next: ({ team, memberTickets, stillOnTeam }) => {
-                  patchState(store, { team, loadState: 'loaded' });
-                  if (store.selectedMemberId() !== memberId) {
-                    return;
-                  }
-                  patchState(
-                    store,
-                    stillOnTeam
-                      ? { memberTickets, memberTicketsState: 'loaded' }
-                      : {
-                          selectedMemberId: null,
-                          memberTickets: [],
-                          memberTicketsState: 'idle',
-                        }
-                  );
-                },
-                error: () => undefined,
-              })
-            );
-          })
-        )
-      ),
+      refresh,
     };
   }),
   withHooks({

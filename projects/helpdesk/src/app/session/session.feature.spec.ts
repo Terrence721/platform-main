@@ -5,6 +5,7 @@ import { SessionApiActions } from './session.actions';
 import {
   HOME_PAGES,
   initialSessionState,
+  SESSION_ENDED_MESSAGE,
   sessionFeature,
   SessionState,
 } from './session.feature';
@@ -22,7 +23,12 @@ const after = (...actions: Action[]): SessionState =>
 
 describe('session state', () => {
   it('starts signed out, not yet checked', () => {
-    expect(after()).toEqual({ user: null, checked: false, signInError: null });
+    expect(after()).toEqual({
+      user: null,
+      checked: false,
+      signInError: null,
+      signInNotice: null,
+    });
   });
 
   it('holds the user after signing in', () => {
@@ -30,6 +36,7 @@ describe('session state', () => {
       user: alex,
       checked: true,
       signInError: null,
+      signInNotice: null,
     });
   });
 
@@ -44,6 +51,7 @@ describe('session state', () => {
       user: null,
       checked: true,
       signInError: null,
+      signInNotice: null,
     });
   });
 
@@ -59,6 +67,7 @@ describe('session state', () => {
       user: null,
       checked: true,
       signInError: 'User ID or password is incorrect.',
+      signInNotice: null,
     });
   });
 
@@ -88,7 +97,40 @@ describe('session state', () => {
         SessionApiActions.signedIn({ user: alex }),
         SessionApiActions.signedOut()
       )
-    ).toEqual({ user: null, checked: true, signInError: null });
+    ).toEqual({
+      user: null,
+      checked: true,
+      signInError: null,
+      signInNotice: null,
+    });
+  });
+
+  it('is signed out when the session ends during work, with a word for the popup', () => {
+    expect(
+      after(
+        SessionApiActions.signedIn({ user: alex }),
+        SessionApiActions.sessionEnded()
+      )
+    ).toEqual({
+      user: null,
+      checked: true,
+      signInError: null,
+      signInNotice: SESSION_ENDED_MESSAGE,
+    });
+  });
+
+  it.each([
+    [
+      'the form is sent again',
+      SignInDialogActions.submitted({
+        request: { userId: 'alex.morgan', password: 'helpdesk-dev-only' },
+      }),
+    ],
+    ['signed in', SessionApiActions.signedIn({ user: alex })],
+  ])('drops that word once %s', (_, action) => {
+    expect(
+      after(SessionApiActions.sessionEnded(), action).signInNotice
+    ).toBeNull();
   });
 });
 

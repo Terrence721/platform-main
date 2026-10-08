@@ -14,6 +14,7 @@ import {
 } from '@ngrx/effects';
 import { mapResponse } from '@ngrx/operators';
 import { catchError, exhaustMap, map, of, tap } from 'rxjs';
+import { SignInLauncher } from '../sign-in/sign-in-launcher';
 import { SignInDialogActions } from '../sign-in/sign-in.actions';
 import { Sounds } from '../sound/sounds';
 import { SessionApiActions, ToolbarActions } from './session.actions';
@@ -163,6 +164,27 @@ export const leaveAfterSignOut = createEffect(
     return actions$.pipe(
       ofType(SessionApiActions.signedOut),
       tap(() => void router.navigateByUrl('/'))
+    );
+  },
+  { functional: true, dispatch: false }
+);
+
+/**
+ * When the session ended during work: back to the landing page, which
+ * closes any open popup, and the sign-in popup, saying why.
+ */
+export const signInAgainAfterSessionEnded = createEffect(
+  (
+    actions$ = inject(Actions),
+    router = inject(Router),
+    signInLauncher = inject(SignInLauncher)
+  ) => {
+    return actions$.pipe(
+      ofType(SessionApiActions.sessionEnded),
+      exhaustMap(async () => {
+        await router.navigateByUrl('/');
+        await signInLauncher.open();
+      })
     );
   },
   { functional: true, dispatch: false }

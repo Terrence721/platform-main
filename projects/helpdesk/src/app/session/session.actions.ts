@@ -18,6 +18,11 @@ export const SessionApiActions = createActionGroup({
     'No Session': emptyProps(),
     /** The session has been ended. */
     'Signed Out': emptyProps(),
+    /**
+     * The API refused a call while signed in (401): the session ran out, or
+     * the account was deactivated or changed. Sign in again.
+     */
+    'Session Ended': emptyProps(),
   },
 });
 

@@ -43,6 +43,9 @@ import { SignInDialogActions } from './sign-in.actions';
     <h2 mat-dialog-title>Sign in to Helpdesk</h2>
     <form [formGroup]="form" (ngSubmit)="submit()">
       <mat-dialog-content>
+        @if (notice(); as notice) {
+          <p class="notice" role="status">{{ notice }}</p>
+        }
         <mat-form-field appearance="outline">
           <mat-label>User ID</mat-label>
           <input
@@ -110,13 +113,21 @@ import { SignInDialogActions } from './sign-in.actions';
       width: 100%;
       margin-top: 0.5rem;
     }
-    .error {
+    .error,
+    .notice {
       margin: 0.75rem 0 0;
       padding: 0.75rem 1rem;
       border-radius: 0.75rem;
+      font: var(--mat-sys-body-medium);
+    }
+    .error {
       background: var(--mat-sys-error-container);
       color: var(--mat-sys-on-error-container);
-      font: var(--mat-sys-body-medium);
+    }
+    .notice {
+      margin: 0 0 0.25rem;
+      background: var(--mat-sys-secondary-container);
+      color: var(--mat-sys-on-secondary-container);
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -141,6 +152,10 @@ export class SignInDialog {
   /** Why the last sign-in from this popup failed, if it did. */
   protected readonly error = computed(() =>
     this.sent() ? this.signInError() : null
+  );
+  /** Why the popup opened by itself (the session ended), until a send. */
+  protected readonly notice = this.store.selectSignal(
+    sessionFeature.selectSignInNotice
   );
   /** Sent, and no answer yet: a send clears the error, a failure sets it. */
   protected readonly sending = computed(

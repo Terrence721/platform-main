@@ -6,7 +6,11 @@ import {
   provideZonelessChangeDetection,
 } from '@angular/core';
 import { DOCUMENT, ViewportScroller } from '@angular/common';
-import { provideHttpClient, withFetch } from '@angular/common/http';
+import {
+  provideHttpClient,
+  withFetch,
+  withInterceptors,
+} from '@angular/common/http';
 import {
   provideRouter,
   withComponentInputBinding,
@@ -25,16 +29,19 @@ import {
   leaveAfterSignOut,
   restoreSession,
   signIn,
+  signInAgainAfterSessionEnded,
   signInSounds,
   signOut,
 } from './session/session.effects';
+import { sessionEndedInterceptor } from './session/session-ended.interceptor';
 import { sessionFeature } from './session/session.feature';
 import { hidePasswords } from './sign-in/hide-passwords';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZonelessChangeDetection(),
-    provideHttpClient(withFetch()),
+    // A 401 during work means the session ended: say so, and sign in again.
+    provideHttpClient(withFetch(), withInterceptors([sessionEndedInterceptor])),
     provideRouter(
       routes,
       withComponentInputBinding(),
@@ -65,6 +72,7 @@ export const appConfig: ApplicationConfig = {
       goHomeAfterSignIn,
       signOut,
       leaveAfterSignOut,
+      signInAgainAfterSessionEnded,
     }),
     // @ngrx/data's entity cache, for data the app only lists and edits
     // (the landing page's capabilities now; admin data once there is some).

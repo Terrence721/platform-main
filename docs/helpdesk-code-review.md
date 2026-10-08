@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 8 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 9 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -534,3 +534,9 @@ Decided with the repo owner, from the open question in `api-error-message.ts`: a
 **No findings** ([issue #1164](https://github.com/Terrence721/platform-main/issues/1164))
 
 Which role may open each page. Each of the three role pages uses it, and it holds under its spec: the page's own role gets in, another role is sent to its own page, and someone signed out to the landing page with the sign-in popup open. It waits for the start-up session check first, so reloading a role's page is not taken for being signed out. Being a `canMatch` guard, it keeps a page's code and state from loading until the visitor is let in, and it sits apart from the new ended-session handling, whose effect goes to the landing page itself. Left for `app.routes.ts`: there is no catch-all route, so a mistyped address matches nothing and shows an empty page.
+
+### [`helpdesk/src/app/sign-in/sign-in.actions.ts`](https://github.com/Terrence721/platform-main/blob/41acb57/projects/helpdesk/src/app/sign-in/sign-in.actions.ts)
+
+**Low · Documentation** — 1 fix ([issue #1166](https://github.com/Terrence721/platform-main/issues/1166))
+
+The sign-in popup's one action, Submitted, with the user ID and password. The popup dispatches it, the session effects send it to the API, the session state clears the last error and notice on it, and the devtools are shown a copy with the password hidden, never the password itself, which is not kept in the state either. Its comment, though, still said a later "auth phase" would add the effect that calls the API, long since done; it now names that effect and the sanitizer. The contract's `SignInRequest`, an interface, is now imported as a type, as the session's actions import theirs.

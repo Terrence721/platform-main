@@ -14,6 +14,7 @@ import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import {
   formatTicketNumber,
+  isFinished,
   TICKET_PRIORITIES,
   TICKET_STATUS_TRANSITIONS,
   TICKET_STATUSES,
@@ -34,9 +35,6 @@ const COLUMNS = [
 ] as const;
 
 type Column = (typeof COLUMNS)[number];
-
-/** The statuses of work that is done. */
-const FINISHED: readonly TicketStatus[] = ['resolved', 'closed'];
 
 /** A ticket as a row: what each cell shows, and what each column sorts by. */
 interface TicketRow {
@@ -254,7 +252,7 @@ export class TicketTable {
       priority: ticket.priority,
       status: STATUS_GUIDE[ticket.status].label,
       // A finished ticket's due time no longer matters.
-      sla: FINISHED.includes(ticket.status)
+      sla: isFinished(ticket.status)
         ? { text: 'Finished', tone: 'none' }
         : slaLabel(ticket.slaDueAt, now),
       sortBy: {

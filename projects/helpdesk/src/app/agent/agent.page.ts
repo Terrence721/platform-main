@@ -10,13 +10,14 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import {
   formatTicketNumber,
+  isFinished,
   type TicketDto,
   type TicketStatus,
 } from '@helpdesk/contract';
 import { Store } from '@ngrx/store';
 import { STATUS_GUIDE } from '../landing/ticket-workflow.store';
 import { sessionFeature } from '../session/session.feature';
-import { isFinished, Sounds } from '../sound/sounds';
+import { Sounds } from '../sound/sounds';
 import { openTicket } from '../tickets/open-ticket';
 import { TicketTable } from '../tickets/ticket-table';
 import { MyTicketsStore } from './my-tickets.store';

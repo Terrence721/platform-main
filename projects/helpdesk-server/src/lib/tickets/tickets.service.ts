@@ -1,6 +1,7 @@
 import {
   canTransition,
   type CurrentUser,
+  FINISHED_STATUSES,
   type HistorySummary,
   OPEN_WORK_STATUSES,
   RECENTLY_FINISHED_HOURS,
@@ -381,7 +382,7 @@ export class TicketsService {
       .where(
         and(
           eq(tickets.assigneeId, agentId),
-          inArray(tickets.status, ['resolved', 'closed']),
+          inArray(tickets.status, [...FINISHED_STATUSES]),
           gte(tickets.finishedAt, since)
         )
       )

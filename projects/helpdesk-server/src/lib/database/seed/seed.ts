@@ -1,3 +1,4 @@
+import { isFinished } from '@helpdesk/contract';
 import { count, eq } from 'drizzle-orm';
 import { hashPassword } from '../../auth/password';
 import type { Database } from '../database-token';
@@ -64,10 +65,7 @@ export function ticketRow(
     createdAt: minutesFrom(now, -ticket.createdMinutesAgo),
     updatedAt,
     // A seed ticket that is finished last changed when it was finished.
-    finishedAt:
-      ticket.status === 'resolved' || ticket.status === 'closed'
-        ? updatedAt
-        : null,
+    finishedAt: isFinished(ticket.status) ? updatedAt : null,
   };
 }
 

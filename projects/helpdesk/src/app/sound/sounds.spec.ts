@@ -1,7 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import {
   AUDIO_CONTEXT,
-  isFinished,
   SOUND_MUTED_KEY,
   SOUND_STORAGE,
   Sounds,
@@ -72,18 +71,6 @@ function fakeStorage(saved: Record<string, string> = {}) {
     saved,
   };
 }
-
-describe('isFinished', () => {
-  it.each([
-    ['new', false],
-    ['open', false],
-    ['pending', false],
-    ['resolved', true],
-    ['closed', true],
-  ] as const)('says %s finishes the work: %s', (status, finished) => {
-    expect(isFinished(status)).toBe(finished);
-  });
-});
 
 describe('Sounds', () => {
   function create({

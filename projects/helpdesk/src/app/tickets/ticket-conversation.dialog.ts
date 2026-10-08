@@ -17,6 +17,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import {
   formatTicketNumber,
+  isFinished,
   TICKET_MESSAGE_MAX_LENGTH,
   type TicketMessageKind,
 } from '@helpdesk/contract';
@@ -254,7 +255,7 @@ export class TicketConversationDialog {
    * past.
    */
   protected readonly due = computed(() =>
-    ['resolved', 'closed'].includes(this.ticket().status)
+    isFinished(this.ticket().status)
       ? { text: 'Finished', tone: 'none' }
       : slaLabel(this.ticket().slaDueAt, new Date())
   );

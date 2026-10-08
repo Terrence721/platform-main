@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 19 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 20 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -614,3 +614,11 @@ The gap: after a take or a status change, both lists were re-read in the same st
 The agent's page. It holds, under its spec: My tickets, Unassigned and Done (24 h), each with a spinner, an empty message and a failure read out with Try again; a take sent with the agent's own ID, "#N is yours" with a chime, a refusal keeping the API's message with a low tone; a status change from each row's menu, the chime for finished work only, a resolved ticket reopened from Done; subjects in My tickets and Done opening the popup, Unassigned's kept as plain text; and the snack bar's code loaded when first needed.
 
 Two small gaps. Done's failure and its Try again had no spec, unlike the other two lists; one now covers it, passing as the code was right. And a line of the class comment ran to about 120 characters; it is rewrapped. Noted, not changed: while a take or a change is saving, a click on another row is ignored silently, for a split second, and the table can only hide a row's button, not disable it; the outcome effects are repeated in the supervisor page, for its review. The review covers `8365add`, the file's last change (#1153), not the `959a519` the plan named.
+
+### [`helpdesk/src/app/supervisor/my-team.store.ts`](https://github.com/Terrence721/platform-main/blob/d51b960/projects/helpdesk/src/app/supervisor/my-team.store.ts)
+
+**Low · Correctness** — 1 fix; **Low · Documentation** — 1 fix ([issue #1188](https://github.com/Terrence721/platform-main/issues/1188))
+
+The supervisor page's store. It holds, under its spec: the team loaded when the page opens, a 404 read as no team rather than a failure; the chosen member's tickets, a new choice cancelling a load still running; assigning and changing a status, a second while one is saving ignored, a refusal keeping the API's message or a fallback; and a quiet refresh on a live update, skipping replies, dropping a member who left, leaving alone a member chosen while it ran, and keeping what is shown if it fails.
+
+The gap was the agent store's (#1185), and one more. After an assignment or a status change, `refreshAfter` re-read the team and the member's tickets in the same step, so a failed re-read made the outcome "failed" though the ticket had been assigned or changed. And it took the chosen member when the change answered: a member chosen while the re-read ran was shown the earlier member's tickets, and one who had left the team was not handled. The store's own `refresh()` already did all this right; the outcome now comes from the change alone, then that refresh runs, and `refreshAfter` is gone. Three specs failed first. And `MY_TEAM_API`'s comment said "through the dev server's proxy"; it now says the app's own origin.

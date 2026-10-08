@@ -265,6 +265,53 @@ describe('MyTeamStore', () => {
       expect(store.memberTicketsState()).toBe('loaded');
     });
 
+    it('says assigned when the assignment worked but fetching the team again failed', () => {
+      const store = loadedStore();
+
+      store.assign({ ticketId: TICKET_ID, agentId: 'sam.rivera' });
+      put().flush(assigned);
+      http
+        .expectOne(MY_TEAM_API)
+        .flush(null, { status: 500, statusText: 'Server Error' });
+
+      expect(store.assignState()).toBe('assigned');
+      expect(store.assignError()).toBeNull();
+      expect(store.lastAssigned()).toEqual(assigned);
+      // The team stays as it is until the next refresh.
+      expect(store.team()).toEqual(atlas);
+    });
+
+    it('keeps the tickets of a member chosen while fetching again', () => {
+      const benny = {
+        id: 'benny.lind',
+        name: 'Benny Lind',
+        openTickets: 1,
+        overdueTickets: 0,
+      };
+      const store = TestBed.inject(MyTeamStore);
+      http
+        .expectOne(MY_TEAM_API)
+        .flush({ ...atlas, members: [...atlas.members, benny] });
+      store.selectMember('sam.rivera');
+      http.expectOne(memberTicketsApi('sam.rivera')).flush([]);
+
+      store.assign({ ticketId: TICKET_ID, agentId: 'sam.rivera' });
+      put().flush(assigned);
+      // The supervisor chooses Benny while the lists are fetched again.
+      store.selectMember('benny.lind');
+      const bennyTicket = { ...assigned, ticketNumber: 1290 } as TicketDto;
+      http.expectOne(memberTicketsApi('benny.lind')).flush([bennyTicket]);
+      http
+        .expectOne(MY_TEAM_API)
+        .flush({ ...atlasAfter, members: [...atlasAfter.members, benny] });
+      for (const late of http.match(memberTicketsApi('sam.rivera'))) {
+        late.flush([assigned]);
+      }
+
+      expect(store.selectedMemberId()).toBe('benny.lind');
+      expect(store.memberTickets()).toEqual([bennyTicket]);
+    });
+
     it.each([
       [404, 'No such agent on your team.'],
       [409, "This ticket is finished, so it can't be assigned."],
@@ -365,6 +412,22 @@ describe('MyTeamStore', () => {
       put().error(new ProgressEvent('error'));
 
       expect(store.statusError()).toBe(STATUS_UNAVAILABLE_MESSAGE);
+    });
+
+    it('says changed when the change worked but fetching the team again failed', () => {
+      const store = storeWithSam();
+
+      store.changeStatus({ ticketId: TICKET_ID, status: 'resolved' });
+      put().flush(resolved);
+      http
+        .expectOne(MY_TEAM_API)
+        .flush(null, { status: 500, statusText: 'Server Error' });
+
+      expect(store.statusState()).toBe('changed');
+      expect(store.statusError()).toBeNull();
+      expect(store.lastChanged()).toEqual(resolved);
+      // Sam's tickets stay as they are until the next refresh.
+      expect(store.memberTickets()).toEqual([{ ...resolved, status: 'open' }]);
     });
 
     it('ignores a second change while one is saving', () => {

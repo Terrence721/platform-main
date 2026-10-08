@@ -17,7 +17,6 @@ import {
   isFinished,
   type PersonSummary,
   type TicketDto,
-  type TicketStatus,
 } from '@helpdesk/contract';
 import { Store } from '@ngrx/store';
 import { STATUS_GUIDE } from '../landing/ticket-workflow.store';
@@ -28,9 +27,6 @@ import { openTicket } from '../tickets/open-ticket';
 import { TicketTable } from '../tickets/ticket-table';
 import type { AssignTicketData } from './assign-ticket.dialog';
 import { MyTeamStore } from './my-team.store';
-
-/** The statuses that still need work, and so can be assigned. */
-const OPEN_WORK: readonly TicketStatus[] = ['new', 'open', 'pending'];
 
 /**
  * A supervisor's own page: My team, their agents' workload, one agent's
@@ -249,14 +245,21 @@ export default class SupervisorPage {
 
   /**
    * Opens the member's 3-month history. The popup's code is loaded on the
-   * first click (dynamic `import()`), not with the page.
+   * first click (dynamic `import()`), not with the page; a second click
+   * while it is on its way finds the first popup open, and leaves it.
    */
   protected async openHistory({ id, name }: PersonSummary): Promise<void> {
     const [{ MatDialog }, { MemberHistoryDialog }] = await Promise.all([
       import('@angular/material/dialog'),
       import('./member-history.dialog'),
     ]);
-    this.injector.get(MatDialog).open(MemberHistoryDialog, {
+    const dialog = this.injector.get(MatDialog);
+    const dialogId = `history-${id}`;
+    if (dialog.getDialogById(dialogId)) {
+      return;
+    }
+    dialog.open(MemberHistoryDialog, {
+      id: dialogId,
       data: { id, name },
       width: '60rem',
       maxWidth: 'calc(100vw - 2rem)',
@@ -282,12 +285,13 @@ export default class SupervisorPage {
 
   /** Whether a ticket still needs work, so it can be (re)assigned. */
   protected readonly isOpenWork = (ticket: TicketDto): boolean =>
-    OPEN_WORK.includes(ticket.status);
+    !isFinished(ticket.status);
 
   /**
    * Opens "Assign to…" for a ticket, with the team's agents and their
    * load; if one is chosen, the store assigns it. The popup's code is
-   * loaded on the first click.
+   * loaded on the first click; a second click while it is on its way
+   * finds the first popup open, and leaves it.
    */
   protected async openAssign(ticket: TicketDto): Promise<void> {
     const team = this.store.team();
@@ -298,15 +302,20 @@ export default class SupervisorPage {
       import('@angular/material/dialog'),
       import('./assign-ticket.dialog'),
     ]);
+    const dialog = this.injector.get(MatDialog);
+    const id = `assign-${ticket.id}`;
+    if (dialog.getDialogById(id)) {
+      return;
+    }
     const data: AssignTicketData = {
       ticketNumber: ticket.ticketNumber,
       subject: ticket.subject,
       currentAssigneeId: ticket.assignee?.id ?? null,
       members: team.members,
     };
-    this.injector
-      .get(MatDialog)
+    dialog
       .open(AssignTicketDialog, {
+        id,
         data,
         width: '28rem',
         maxWidth: 'calc(100vw - 2rem)',
@@ -321,9 +330,9 @@ export default class SupervisorPage {
   }
 
   /**
-   * Says how an assignment went, in a snack bar: who has the ticket now,
-   * or why it was refused. The snack bar's code is loaded when first
-   * needed.
+   * Says how an assignment or a status change went, in a snack bar: who
+   * has the ticket now, its new status, or why it was refused. The snack
+   * bar's code is loaded when first needed.
    */
   private async report(message: string): Promise<void> {
     const { MatSnackBar } = await import('@angular/material/snack-bar');

@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 22 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 23 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -636,3 +636,11 @@ The gap: the team lists only its active agents (#1027), so a team can have nobod
 **No findings** ([issue #1192](https://github.com/Terrence721/platform-main/issues/1192))
 
 A team member's last three months, for their supervisor. It holds, under its spec: the history loaded fresh, once, each time the popup opens, from a small store that lives with it; user IDs safe in the address; the period with its start, then Assigned, Finished, Open, On time and Late, in order, with a note on how on time and late are judged that matches the contract (#1020); a message for a period with no tickets; a failure read out with Try again; and closing with its button or Esc. Its "Last 3 months" matches the server's `HISTORY_MONTHS`. Noted, not changed: that "3 months" is written twice in the app, as the server's constant lives where the app can't import it, but the period line shows the real start, so a drift would show; the history doesn't update live while open, a three-month look-back that reopening loads fresh; and Late is red even at 0, a styling choice.
+
+### [`helpdesk/src/app/supervisor/supervisor.page.ts`](https://github.com/Terrence721/platform-main/blob/8365add/projects/helpdesk/src/app/supervisor/supervisor.page.ts)
+
+**Low · Usability** — 1 fix; **Low · Maintainability** — 1 fix; **Low · Documentation** — 1 fix ([issue #1194](https://github.com/Terrence721/platform-main/issues/1194))
+
+The supervisor's page. It holds, under its spec: the team's loading, failed and no-team states, with no Reports without a team; the member picker with each agent's load, None hiding their tickets again; the member's tickets with their own spinner, failure and empty message, Reassign on open work only; Assign on every unassigned ticket, "Assign to…" given the holder and the team, a cancel assigning nothing; a snack bar and a sound for each outcome, the chime for finished work only; and Reports on the chosen agent, else the team.
+
+Three small gaps. The first time, a second click on Assign, Reassign or a member's name, while the popup's code was on its way and no backdrop was up, opened a second copy, as the ticket popup did before #1183; "Assign to…" and the history now have an ID per ticket or member and open only if none with it is open, and two specs failed first, against a stand-in dialog that now remembers what it opened. A local `OPEN_WORK` was one more copy of which statuses are open work after #1153; Reassign now shows for `!isFinished(status)`. And `report()`'s comment named only assignments. Noted, not changed: the outcome effects closely repeat the agent page's, two short copies with different messages; and the Reports popup's opener has the same double-click gap, for its own review.

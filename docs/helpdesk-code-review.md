@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 34 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 35 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -732,3 +732,9 @@ Its intro promised too much, as the cards did: "fast lists, clear deadlines, and
 Serves the landing page's capabilities to @ngrx/data from the app itself, in place of the HTTP default, registered for the `Capability` entity in the landing route's providers. It holds, under its spec: `getAll` serving every capability with no request, fresh copies on each subscription so the store never holds the shared constant, and a name after the entity; and the section only ever calls `getAll`.
 
 It extended `DefaultDataService` and overrode `getAll` alone, under a comment that only reading was served. But `getById` and `getWithQuery` are reads too, and they and every write fell through to the inherited HTTP methods, asking a `/api/capability…` that doesn't exist, which would fail with a 404 rather than say why; and `HttpClient` and `HttpUrlGenerator` were injected only to satisfy the base class. The class now implements `EntityCollectionDataService<Capability>` instead, composition over inheritance as in the repo's own redesign: `getAll` is unchanged, the other six return a failing Observable saying capabilities are read-only and only `getAll` is supported, which @ngrx/data reports as an error action, and no HTTP dependency remains. Specs for the six failed first, each waiting a minute on a request nobody answered.
+
+### [`helpdesk/src/app/landing/capabilities.service.ts`](https://github.com/Terrence721/platform-main/blob/a169d2d/projects/helpdesk/src/app/landing/capabilities.service.ts)
+
+**No findings** ([issue #1226](https://github.com/Terrence721/platform-main/issues/1226))
+
+The capabilities' @ngrx/data entity collection service. It holds, under its spec: no capabilities and not loading at first; `load()` bringing all six, in order, through the app's own data service; and loading only while they are on their way. Its comment matches: the section uses `load()` and `entities$`. Noted, not changed: it is an empty subclass of `EntityCollectionServiceBase`, and @ngrx/data's factory would give the same service without a class, closer to the composition taken in #1225; but extending this base is the library's documented way to a typed, injectable collection service, and unlike `DefaultDataService` it brings nothing unwanted.

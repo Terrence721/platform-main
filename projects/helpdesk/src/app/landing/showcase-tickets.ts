@@ -1,4 +1,4 @@
-import { TicketDto } from '@helpdesk/contract';
+import type { TicketDto } from '@helpdesk/contract';
 
 const MINUTE = 60_000;
 

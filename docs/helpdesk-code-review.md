@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 21 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 22 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -630,3 +630,9 @@ The gap was the agent store's (#1185), and one more. After an assignment or a st
 The "Assign to…" popup, which only chooses: it closes with the agent's ID, and the page assigns. It holds, under its spec: the ticket and its subject named; each agent with their open and overdue work, the holder marked "(has it now)" and not selectable; every agent selectable for an unassigned ticket; and Assign waiting for a choice.
 
 The gap: the team lists only its active agents (#1027), so a team can have nobody to give a ticket to, none at all or only its holder, and the popup then showed an empty or wholly disabled list with an Assign that never enabled, and no word why. It now says "No other agent on your team can take it." Specs for both cases failed first, once they compared with the sentence itself: written against a constant not yet exported, they had passed, `undefined` against `undefined`. Noted, not changed: the load counts are those of when the popup opened, and an agent who left meanwhile is refused by the API, which the page reports; and the disabled holder is skipped by the arrow keys, so a screen reader doesn't hear "(has it now)", though the page's row shows the holder.
+
+### [`helpdesk/src/app/supervisor/member-history.dialog.ts`](https://github.com/Terrence721/platform-main/blob/5a9b084/projects/helpdesk/src/app/supervisor/member-history.dialog.ts)
+
+**No findings** ([issue #1192](https://github.com/Terrence721/platform-main/issues/1192))
+
+A team member's last three months, for their supervisor. It holds, under its spec: the history loaded fresh, once, each time the popup opens, from a small store that lives with it; user IDs safe in the address; the period with its start, then Assigned, Finished, Open, On time and Late, in order, with a note on how on time and late are judged that matches the contract (#1020); a message for a period with no tickets; a failure read out with Try again; and closing with its button or Esc. Its "Last 3 months" matches the server's `HISTORY_MONTHS`. Noted, not changed: that "3 months" is written twice in the app, as the server's constant lives where the app can't import it, but the period line shows the real start, so a drift would show; the history doesn't update live while open, a three-month look-back that reopening loads fresh; and Late is red even at 0, a styling choice.

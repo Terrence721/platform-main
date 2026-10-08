@@ -58,18 +58,31 @@ describe('TicketPreview', () => {
     expect(tones).toEqual(['overdue', 'soon', 'ok', 'ok']);
   });
 
-  it('shows each ticket queue and requester', () => {
+  // Only what the app's own ticket table shows: it has no queue column.
+  it("shows each ticket's requester, and not its queue", () => {
     const first = render('loaded').querySelector('li .meta')?.textContent;
 
-    expect(first).toContain('Accounts');
     expect(first).toContain('Ada Lovelace');
+    expect(first).not.toContain('Accounts');
   });
 
   it('counts the tickets it shows', () => {
     expect(
-      render('loaded', tickets.slice(0, 2)).querySelector('.count')?.textContent
-    ).toContain('Example data · 2 tickets');
+      render('loaded', tickets.slice(0, 2))
+        .querySelector('.count')
+        ?.textContent?.replace(/\s+/g, ' ')
+        .trim()
+    ).toBe('Example data · 2 tickets');
   });
+
+  it.each(['loading', 'failed'] as const)(
+    'gives no count while %s, only that it is example data',
+    (loadState) => {
+      expect(
+        render(loadState, []).querySelector('.count')?.textContent?.trim()
+      ).toBe('Example data');
+    }
+  );
 
   it('says so while the tickets load', () => {
     const card = render('loading', []);
@@ -84,9 +97,11 @@ describe('TicketPreview', () => {
     );
   });
 
-  it('is labelled by its heading', () => {
+  // A name only reaches a screen reader on an element with a role.
+  it('is a region labelled by its heading', () => {
     const card = render('loaded');
 
+    expect(card.querySelector('mat-card')?.getAttribute('role')).toBe('region');
     expect(
       card.querySelector('mat-card')?.getAttribute('aria-labelledby')
     ).toBe(card.querySelector('h2')?.id);

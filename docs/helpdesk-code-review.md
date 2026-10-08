@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 14 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 15 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -576,3 +576,11 @@ The gap was the break the browser does not mend. While the API restarts, after a
 The ticket table on the agent's and the supervisor's pages. It holds, under its spec: a column for each thing a worker needs to pick a ticket, priority as a chip tinted for high and urgent, and time left against the SLA, overdue in the error color and in words, or "Finished" once resolved or closed; the order given until a header is clicked, priority and status sorting in workflow order, Due soonest first with no SLA last, numbers as numbers; and, as asked for, an action button on the rows allowed it, still the right ticket after sorting, a menu of only the status moves the workflow allows, and subject links that open the ticket.
 
 The gap was time. Time left was worked out once, when the tickets arrived, as the comment said, but a page stays open all shift and loads again only when a live update concerns it: "Due in 10 min" could still read so an hour later, and a ticket that fell overdue never turned red, which is the one thing that column is for. The table now keeps its own clock, ticking every minute as the label reads in whole minutes, so the text and color keep up by themselves; a spec failed first, a ticket due in a minute reading "Overdue 1m" two minutes on with no new data. The class comment, which had a stray line break mid-sentence, now says so. Left for later files: the ticket popup's Due label goes stale the same way, and this table and both pages take `slaLabel` and the status guide from the landing page's stores, a question for the landing reviews.
+
+### [`helpdesk/src/app/tickets/ticket-conversation.store.ts`](https://github.com/Terrence721/platform-main/blob/c029217/projects/helpdesk/src/app/tickets/ticket-conversation.store.ts)
+
+**Low · Correctness** — 1 fix ([issue #1178](https://github.com/Terrence721/platform-main/issues/1178))
+
+The ticket popup's data: the ticket, its replies and notes, and sending one. It holds, under its spec: the conversation loads as the popup opens, a failure saying so and offering another try; a message is sent once however often it is clicked, refusals in the API's own words; while the popup is open, someone else's message fetches the conversation again quietly, with the arrival tone, and a change to the ticket reads its details again, both also when the stream comes back; events for other tickets are ignored and a failed fetch keeps what is shown; and a ticket given to someone the person does not lead is marked as no longer theirs, until a later read finds it theirs again.
+
+The gap was the writer's own message. They hear its live event too, as they hold the ticket or lead the team of the one who does, and the event fetches the whole conversation, the new message in it. If that fetch came back before the send's own answer, which the code's comment already allowed for the sound, the send then added the message a second time. It is unlikely, as the fetch needs one more round trip, but now the send adds its message only if it is not already shown; a spec for that order failed first.

@@ -2,12 +2,9 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
-  DestroyRef,
   effect,
-  inject,
   input,
   output,
-  signal,
   viewChild,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
@@ -26,6 +23,7 @@ import {
 } from '@helpdesk/contract';
 import { slaLabel } from '../landing/ticket-preview.store';
 import { STATUS_GUIDE } from '../landing/ticket-workflow.store';
+import { minuteClock } from './minute-clock';
 
 /** The columns, in order; each one can be sorted by. */
 const COLUMNS = [
@@ -38,9 +36,6 @@ const COLUMNS = [
 ] as const;
 
 type Column = (typeof COLUMNS)[number];
-
-/** How often time left is worked out again: it reads in whole minutes. */
-const MINUTE = 60_000;
 
 /** A ticket as a row: what each cell shows, and what each column sorts by. */
 interface TicketRow {
@@ -248,11 +243,8 @@ export class TicketTable {
   protected statusLabel(status: TicketStatus): string {
     return STATUS_GUIDE[status].label;
   }
-  /**
-   * Now, to the minute: a page stays open all shift, so time left keeps up
-   * by itself, and a ticket that falls overdue turns red without a reload.
-   */
-  private readonly now = signal(new Date());
+  /** Now, to the minute, so time left keeps up while the page is open. */
+  private readonly now = minuteClock();
 
   private readonly rows = computed(() => {
     const now = this.now();
@@ -287,8 +279,6 @@ export class TicketTable {
   private readonly sort = viewChild.required(MatSort);
 
   constructor() {
-    const clock = setInterval(() => this.now.set(new Date()), MINUTE);
-    inject(DestroyRef).onDestroy(() => clearInterval(clock));
     this.dataSource.sortingDataAccessor = (row, column) =>
       row.sortBy[column as Column];
     effect(() => {

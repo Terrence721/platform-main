@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 17 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 18 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -598,3 +598,11 @@ Two gaps. Its time left was worked out from when the ticket was last read, as th
 **Low · Usability** — 1 fix ([issue #1182](https://github.com/Terrence721/platform-main/issues/1182))
 
 Opens the ticket popup for the agent's and the supervisor's pages, fetching its code and Material's dialogs on the first open only, with the ticket as its data, sized to fit narrow screens; both pages' specs open it from a subject, and the e2e tests open it and reply. The gap: the first time, the popup's code is still on its way when a second click or Enter comes, and with no backdrop yet to stop it, both opens finished and two copies of the same popup stacked up. The sign-in launcher guards against just this; now the ticket popup has an ID for its ticket, and is opened only if none with that ID is open, which the second open, coming after the first has opened, finds. The file had no spec of its own: a new one failed first, two opens at once giving two popups, and the two page specs' stand-in dialog learned to answer that question.
+
+### [`helpdesk/src/app/agent/my-tickets.store.ts`](https://github.com/Terrence721/platform-main/blob/0a31d38/projects/helpdesk/src/app/agent/my-tickets.store.ts)
+
+**Low · Correctness** — 1 fix; **Low · Documentation** — 1 fix ([issue #1184](https://github.com/Terrence721/platform-main/issues/1184))
+
+The agent page's store. It holds, under its spec: My tickets, Unassigned and Done, each loaded when the page opens, in the API's order, with its own loading and failed state; taking a ticket and changing a status, a second while one is saving ignored, a refusal keeping the API's message or a fallback; a quiet refresh of all three on a live ticket event or a reconnect, keeping what is shown if it fails; and the arrival tone for a ticket someone else gave the agent, not one they are taking.
+
+The gap: after a take or a status change, both lists were re-read in the same step as the change, so if a re-read failed the whole step was "failed", with "isn't available right now", though the ticket had been taken or changed; a retry would then be refused by the API. The outcome now comes from the change alone, and the lists are refreshed with the same quiet `refresh()` the live updates use, which keeps what is shown if it fails. A spec for each failed first. And `MY_TICKETS_API`'s comment said "through the dev server's proxy"; the app calls its own origin, whatever serves it. Noted, not changed: the tone is skipped for a ticket given back to an agent who once took it themselves.

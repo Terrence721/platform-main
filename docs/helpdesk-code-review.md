@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 48 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 49 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -832,3 +832,11 @@ The larger gap: the page dispatched `opened()`, loading the showcase tickets, bu
 **Low · Documentation** — 1 fix ([issue #1252](https://github.com/Terrence721/platform-main/issues/1252))
 
 The app-wide `showErrors` effect. It holds, under its spec: a snack bar with the message of any action whose `error` is a string, others ignored, one per error in order, nothing dispatched; and its snack bar code fetched with the first error rather than with the page. One action carries an `error` today, the landing page's "Showcase Tickets Load Failed"; sign-in's failure uses `message` on purpose, as its popup shows it. The type's example, `[Books API] Load Failure`, was from the project's books days; it is now the real one, and the comment says why a failure shown where it happened carries `message`. Noted, not changed: the landing failure is also shown inline by the preview card, as noted for the landing effects; it cannot happen while those tickets are built in the browser.
+
+### [`helpdesk/src/app/app.routes.ts`](https://github.com/Terrence721/platform-main/blob/a8a2046/projects/helpdesk/src/app/app.routes.ts)
+
+**Low · Usability** — 1 fix ([issue #1254](https://github.com/Terrence721/platform-main/issues/1254))
+
+The app's top-level routes. It holds, under its spec: the landing page at `/`, its state and effects registered on its route and its showcase tickets loading, the capabilities served by the app with no request; each role's page at its address with its title; an agent opening `/admin` sent to their own page, and a signed-out visitor to the landing page with the sign-in popup open. Every page is lazy-loaded.
+
+The gap, noted at the role guard's review: no route caught an address that matched nothing, so a typo or an old bookmark made the router throw and a first load showed an empty page under the toolbar. A last route, `{ path: '**', redirectTo: '' }`, now sends it to the landing page; a spec opening `/no-such-page` failed first with the router's error.

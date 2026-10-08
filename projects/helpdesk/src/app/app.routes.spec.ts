@@ -71,6 +71,16 @@ describe('routes', () => {
     ).toEqual([1042, 1039, 1035, 1031]);
   });
 
+  // A typo or an old bookmark lands somewhere, not on an empty page.
+  it('sends an address that matches nothing to the landing page', async () => {
+    const harness = await RouterTestingHarness.create('/no-such-page');
+
+    expect(TestBed.inject(Router).url).toBe('/');
+    expect(
+      harness.routeNativeElement?.querySelector('h1')?.textContent
+    ).toContain('Every request answered');
+  });
+
   it('serves the capabilities from the app, not the server', async () => {
     await RouterTestingHarness.create('/');
 

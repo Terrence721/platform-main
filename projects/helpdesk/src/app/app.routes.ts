@@ -13,8 +13,9 @@ import { canMatchRole } from './session/role.guard';
  * The app's top-level routes, each page lazy-loaded. The public landing page
  * is the first page. Each role then has its own page, which only that role
  * can open: anyone else is sent to their own page, or, signed out, to the
- * landing page with the sign-in popup open. A page's state and effects are
- * registered on its route, so they exist only once it is visited.
+ * landing page with the sign-in popup open. Any other address goes to the
+ * landing page. A page's state and effects are registered on its route, so
+ * they exist only once it is visited.
  */
 export const routes: Routes = [
   {
@@ -51,4 +52,7 @@ export const routes: Routes = [
     loadComponent: () => import('./admin/admin.page'),
     title: 'Team accounts · Helpdesk',
   },
+  // An address that matches nothing, a typo or an old bookmark, goes to
+  // the landing page rather than an empty one.
+  { path: '**', redirectTo: '' },
 ];

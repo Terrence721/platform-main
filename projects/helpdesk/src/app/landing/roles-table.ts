@@ -2,7 +2,12 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
-import { hasPermission, Permission, Role, ROLES } from '@helpdesk/contract';
+import {
+  hasPermission,
+  type Permission,
+  type Role,
+  ROLES,
+} from '@helpdesk/contract';
 
 /** One row of the table: something a person can do, in the contract's terms. */
 export interface Ability {
@@ -62,7 +67,8 @@ interface AbilityRow {
           <th mat-header-cell *matHeaderCellDef scope="col">
             What they can do
           </th>
-          <td mat-cell *matCellDef="let row">{{ row.label }}</td>
+          <!-- A row header: each Yes or No is read with its ability. -->
+          <th mat-cell *matCellDef="let row" scope="row">{{ row.label }}</th>
         </ng-container>
         @for (role of roles; track role) {
           <ng-container [matColumnDef]="role">
@@ -107,6 +113,12 @@ interface AbilityRow {
     table {
       min-width: 32.5rem;
       --mat-table-background-color: transparent;
+    }
+    /* The row headers look as the plain cells they were: a th is bold and
+       centered by default. */
+    th.mat-mdc-cell {
+      text-align: start;
+      font-weight: inherit;
     }
     .role {
       width: 7.5rem;

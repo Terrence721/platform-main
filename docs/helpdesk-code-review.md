@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 44 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 45 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -802,3 +802,11 @@ Two meanings, on the public page, were not. New had "Just arrived from a custome
 **No findings** ([issue #1244](https://github.com/Terrence721/platform-main/issues/1244))
 
 The landing page's "How a ticket moves" section. It holds, under its spec: the statuses in order with New picked at first, where a ticket can go highlighted and spelled out, the picked status followed and kept when clicked again, and Closed final with nothing highlighted; a labelled listbox, its arrows hidden from screen readers, and the explanation a polite live region. Its copy, with the meanings fixed in the store's review, promises nothing the app lacks. Noted, not changed: the intro says "Five statuses" in text while the chips come from the contract, which a new status would need this page reviewed for anyway.
+
+### [`helpdesk/src/app/landing/roles-table.ts`](https://github.com/Terrence721/platform-main/blob/0f370e6/projects/helpdesk/src/app/landing/roles-table.ts)
+
+**Low · Accessibility** — 1 fix; **Low · Consistency** — 1 fix ([issue #1246](https://github.com/Terrence721/platform-main/issues/1246))
+
+The landing page's "Three roles, clear limits" table. It holds, under its spec: a column for the ability, then one per role; every cell from the contract's `ROLE_PERMISSIONS`, every permission in exactly one row, so the page cannot promise more than the API allows; the checks and dashes hidden, a screen reader hearing Yes or No; and an `h2` the page labels the section by. Each row, trimmed in #1023, says only what the app does.
+
+Each row's ability was a plain `<td>`, so a screen reader moving along a row heard only Yes or No, with nothing to say which ability it was about; it is now a row header, `<th scope="row">`, styled as the plain cell it was. A spec failed first. `Permission` and `Role` are `import type`. Noted, not changed: the table leaves out Reports, which supervisors and admins have, as it is not a contract permission; it undersells slightly, and adding it would be a contract change.

@@ -13,7 +13,7 @@ describe('RolesTable', () => {
     element?.textContent?.trim();
 
   it('has a column for what people can do, then one per role', () => {
-    const headers = [...render().querySelectorAll('th')].map(text);
+    const headers = [...render().querySelectorAll('thead th')].map(text);
 
     expect(headers).toEqual([
       'What they can do',
@@ -25,7 +25,7 @@ describe('RolesTable', () => {
 
   it("matches each role's permissions in the contract", () => {
     const rows = [...render().querySelectorAll('tbody tr')].map((row) => [
-      text(row.querySelector('td')),
+      text(row.querySelector('th')),
       ...[...row.querySelectorAll('td.role')].map((cell) =>
         text(cell.querySelector('.cdk-visually-hidden'))
       ),
@@ -58,6 +58,20 @@ describe('RolesTable', () => {
       expect(text(cell.querySelector('.cdk-visually-hidden'))).toMatch(
         /^(Yes|No)$/
       );
+    }
+  });
+
+  // So a screen reader moving along a row hears which ability each Yes or
+  // No is about.
+  it('heads each row with its ability', () => {
+    const firstCells = [...render().querySelectorAll('tbody tr')].map(
+      (row) => row.firstElementChild
+    );
+
+    expect(firstCells).toHaveLength(ABILITIES.length);
+    for (const cell of firstCells) {
+      expect(cell?.tagName).toBe('TH');
+      expect(cell?.getAttribute('scope')).toBe('row');
     }
   });
 

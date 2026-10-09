@@ -19,6 +19,8 @@ import {
   type TicketDto,
 } from '@helpdesk/contract';
 import { Store } from '@ngrx/store';
+import { NewRequests } from '../new-requests/new-requests';
+import { NewRequestsStore } from '../new-requests/new-requests.store';
 import { STATUS_LABELS } from '../tickets/status-labels';
 import { openReports } from '../reports/open-reports';
 import { Sounds } from '../sound/sounds';
@@ -36,10 +38,11 @@ import { MyTeamStore } from './my-team.store';
  * through "Assign to…", and moves a member's tickets through the workflow
  * with their Change status menu. A member's ticket subject opens that
  * ticket's details and conversation, to reply or add an internal note.
- * Reports, beside the title, opens the team's charts.
+ * Reports, beside the title, opens the team's charts. New requests, above
+ * the team, are what customers reported, to turn into tickets or dismiss.
  * Only supervisors get here (the route's `canMatchRole('supervisor')`).
- * The page provides `MyTeamStore`, which loads the team when the page
- * opens.
+ * The page provides `MyTeamStore` and `NewRequestsStore`, which load the
+ * team and the new requests when the page opens.
  */
 @Component({
   selector: 'hd-supervisor-page',
@@ -49,9 +52,10 @@ import { MyTeamStore } from './my-team.store';
     MatIconModule,
     MatProgressSpinnerModule,
     MatSelectModule,
+    NewRequests,
     TicketTable,
   ],
-  providers: [MyTeamStore],
+  providers: [MyTeamStore, NewRequestsStore],
   template: `
     <section class="column" aria-labelledby="supervisor-title">
       <p class="eyebrow">Supervisor</p>
@@ -67,6 +71,8 @@ import { MyTeamStore } from './my-team.store';
       @if (user(); as user) {
         <p class="greeting">Signed in as {{ user.name }}</p>
       }
+      <!-- What customers reported, waiting to become tickets (#1026). -->
+      <hd-new-requests />
       @switch (store.loadState()) {
         @case ('loading') {
           <mat-spinner diameter="40" aria-label="Loading your team" />

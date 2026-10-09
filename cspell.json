@@ -107,6 +107,7 @@
     "ngrx",
     "ngrxpush",
     "nitropack",
+    "nosniff",
     "ondestroy",
     "opencollective",
     "orta",

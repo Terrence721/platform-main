@@ -1,9 +1,11 @@
 // The demo build's stand-in for Node's crypto (tsconfig.demo.json points the
-// import here). Only the API's hashPassword runs in the demo (the seed and
-// Create Account), never verifyPassword: demo sign-in checks the shared,
-// published demo password instead (#942). Every password lives in the
-// visitor's browser and resets on reload, so a slow key derivation would
-// only delay the start; this one is quick, and marked as not a real key.
+// import here). Only the server library's hashPassword runs in the demo (the
+// seed and Create Account), never verifyPassword: demo sign-in checks the
+// shared, published demo password instead, or the one Create Account set
+// during the visit, which the demo API keeps in memory (#942). Every
+// password lives in the visitor's browser and resets on reload, so a slow
+// key derivation would only delay the start; this one is quick, and marked
+// as not a real key.
 
 /** Bytes that print themselves as Node's Buffer does, in base64 or hex. */
 export class DemoBytes {
@@ -34,9 +36,9 @@ type ScryptCallback = (error: Error | null, key: DemoBytes) => void;
 
 /**
  * Node's callback signature, with or without its cost options (which the
- * API passes, #1039, and this ignores), and a quick stand-in key: the
- * password and salt marked "demo", padded to the length asked for. Not a
- * real key.
+ * password helpers pass, #1039, and this ignores), and a quick stand-in
+ * key: the password and salt marked "demo", padded to the length asked
+ * for. Not a real key.
  */
 export function scrypt(
   password: string,

@@ -17,7 +17,11 @@ import {
 } from './create-account.dialog';
 import { NEVER } from 'rxjs';
 import { LiveUpdates } from '../live/live-updates';
-import { TEAM_ACCOUNTS_API, TeamAccountsStore } from './team-accounts.store';
+import {
+  TEAM_ACCOUNTS_API,
+  TEAMS_API,
+  TeamAccountsStore,
+} from './team-accounts.store';
 
 const DATA: CreateAccountData = {
   teams: [
@@ -56,8 +60,9 @@ describe('CreateAccountDialog', () => {
     });
     const http = TestBed.inject(HttpTestingController);
     TestBed.inject(TeamAccountsStore);
-    // The page has its accounts already.
+    // The page has its accounts and teams already.
     http.expectOne({ method: 'GET', url: TEAM_ACCOUNTS_API }).flush([]);
+    http.expectOne({ method: 'GET', url: TEAMS_API }).flush([]);
 
     const fixture = TestBed.createComponent(CreateAccountDialog);
     fixture.detectChanges();
@@ -126,6 +131,12 @@ describe('CreateAccountDialog', () => {
   const post = (http: HttpTestingController) =>
     http.expectOne({ method: 'POST', url: TEAM_ACCOUNTS_API });
 
+  /** Answers the quiet reload that follows a create (#1210). */
+  function reloaded(http: HttpTestingController) {
+    http.expectOne({ method: 'GET', url: TEAM_ACCOUNTS_API }).flush([]);
+    http.expectOne({ method: 'GET', url: TEAMS_API }).flush([]);
+  }
+
   it('says what is missing and sends nothing when the form is empty', async () => {
     const { create, errors } = await render();
 
@@ -170,6 +181,7 @@ describe('CreateAccountDialog', () => {
       password: 'a-starting-password',
     });
     call.flush(nia, { status: 201, statusText: 'Created' });
+    reloaded(form.http);
   });
 
   it('asks an admin for no team, and sends none', async () => {
@@ -192,6 +204,7 @@ describe('CreateAccountDialog', () => {
       { ...nia, role: 'admin', team: null },
       { status: 201, statusText: 'Created' }
     );
+    reloaded(form.http);
   });
 
   it("warns that a new supervisor replaces the team's lead", async () => {
@@ -246,6 +259,7 @@ describe('CreateAccountDialog', () => {
 
     await form.create();
     post(form.http).flush(nia, { status: 201, statusText: 'Created' });
+    reloaded(form.http);
     form.fixture.detectChanges();
 
     expect(dialogRef.close).toHaveBeenCalledExactlyOnceWith('nia.new');
@@ -260,6 +274,7 @@ describe('CreateAccountDialog', () => {
     // Typed into while the account was saving.
     await form.fill('User ID', 'nia.newer');
     call.flush(nia, { status: 201, statusText: 'Created' });
+    reloaded(form.http);
     form.fixture.detectChanges();
 
     expect(dialogRef.close).toHaveBeenCalledExactlyOnceWith('nia.new');

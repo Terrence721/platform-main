@@ -5,6 +5,7 @@ import {
   isFinished,
   type ReportsResponse,
   SIGN_IN_FAILED_MESSAGE,
+  type TeamListing,
   type TeamOverview,
   type TicketDto,
   type TicketMessage,
@@ -225,6 +226,7 @@ describe('DemoApi', { timeout: 60_000 }, () => {
         body: { statusCode: 403, message: 'Forbidden' },
       });
       expect((await call('GET', '/api/teams/mine')).status).toBe(403);
+      expect((await call('GET', '/api/teams')).status).toBe(403);
       expect((await call('GET', '/api/reports')).status).toBe(403);
     });
 
@@ -346,6 +348,20 @@ describe('DemoApi', { timeout: 60_000 }, () => {
 
       expect(status).toBe(200);
       expect((body as UserAccount[]).length).toBe(48);
+    });
+
+    // As the API's TeamsController: Team accounts lists the teams
+    // themselves, so an emptied one is not lost (#1210).
+    it('lists every team by name, each with its lead', async () => {
+      const { status, body } = await call('GET', '/api/teams');
+      const teams = body as TeamListing[];
+
+      expect(status).toBe(200);
+      expect(teams.map(({ name }) => name)).toEqual(
+        teams.map(({ name }) => name).sort((a, b) => a.localeCompare(b))
+      );
+      expect(teams).toHaveLength(4);
+      expect(teams.every(({ lead }) => lead !== null)).toBe(true);
     });
 
     it('reports on every team, the open work adding up across them', async () => {

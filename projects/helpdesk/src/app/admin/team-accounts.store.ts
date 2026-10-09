@@ -2,6 +2,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
 import type {
   CreateAccountRequest,
+  TeamListing,
   UpdateAccountRequest,
   UpdateAccountResponse,
   UserAccount,
@@ -20,11 +21,17 @@ import {
   withEntities,
 } from '@ngrx/signals/entities';
 import { rxMethod } from '@ngrx/signals/rxjs-interop';
-import { exhaustMap, filter, map, pipe, switchMap, tap } from 'rxjs';
+import { exhaustMap, filter, forkJoin, map, pipe, switchMap, tap } from 'rxjs';
 import { LiveUpdates } from '../live/live-updates';
 
 /** Where the accounts come from, on the app's own origin. */
 export const TEAM_ACCOUNTS_API = '/api/users';
+
+/**
+ * Where every team comes from, one with no accounts too, so Team accounts
+ * and its team choices never lose one (#1210).
+ */
+export const TEAMS_API = '/api/teams';
 
 /** When creating fails for a reason the API did not explain. */
 export const CREATE_UNAVAILABLE_MESSAGE =
@@ -74,13 +81,17 @@ function refusalMessage(error: unknown, fallback: string): string {
 
 /**
  * Every Helpdesk account, for the admin page's Team accounts, kept by name
- * (the API's order); and creating new ones. Provided by the page, so it
- * lives only while the page is open; it loads when created, and again,
- * quietly, whenever a live update says an account changed (#950).
+ * (the API's order), with every team, one with no accounts too (#1210);
+ * and creating and editing accounts. Provided by the page, so it lives
+ * only while the page is open; it loads when created, and again, quietly,
+ * after a create or an edit and whenever a live update says an account
+ * changed (#950).
  */
 export const TeamAccountsStore = signalStore(
   withEntities<UserAccount>(),
   withState({
+    /** Every team by name, with its lead; loaded with the accounts. */
+    teams: [] as TeamListing[],
     loadState: 'loading' as TeamAccountsLoadState,
     createState: 'idle' as CreateState,
     /** Why the last Create Account failed; `null` otherwise. */
@@ -93,38 +104,52 @@ export const TeamAccountsStore = signalStore(
   }),
   withMethods((store, http = inject(HttpClient)) => {
     /**
-     * Fetches the accounts again and swaps them in quietly, with no
-     * spinner: after a saved edit, and for a live update (#950), when
-     * another admin created or changed one. A newer refresh replaces one
-     * still running; a failed one keeps the tables as they are.
+     * The accounts and the teams, together: neither is any use without
+     * the other, so if one fails, the other is dropped too.
+     */
+    const fetchAll = () =>
+      forkJoin({
+        accounts: http.get<UserAccount[]>(TEAM_ACCOUNTS_API),
+        teams: http.get<TeamListing[]>(TEAMS_API),
+      });
+    /** Swaps in what `fetchAll` brought, as loaded. */
+    const show = ({
+      accounts,
+      teams,
+    }: {
+      accounts: UserAccount[];
+      teams: TeamListing[];
+    }) =>
+      patchState(store, setAllEntities(accounts), {
+        teams,
+        loadState: 'loaded',
+      });
+    /**
+     * Fetches the accounts and teams again and swaps them in quietly, with
+     * no spinner: after a create or a saved edit, which can change who leads
+     * a team, and for a live update (#950), when another admin created or
+     * changed an account. A newer refresh replaces one still running; a
+     * failed one keeps the tables as they are.
      */
     const refresh = rxMethod<void>(
       pipe(
         switchMap(() =>
-          http.get<UserAccount[]>(TEAM_ACCOUNTS_API).pipe(
-            tapResponse({
-              next: (accounts) =>
-                patchState(store, setAllEntities(accounts), {
-                  loadState: 'loaded',
-                }),
-              error: () => undefined,
-            })
-          )
+          fetchAll().pipe(tapResponse({ next: show, error: () => undefined }))
         )
       )
     );
     return {
-      /** Loads the accounts again; a newer load replaces one still running. */
+      /**
+       * Loads the accounts and teams again; a newer load replaces one still
+       * running.
+       */
       load: rxMethod<void>(
         pipe(
           tap(() => patchState(store, { loadState: 'loading' })),
           switchMap(() =>
-            http.get<UserAccount[]>(TEAM_ACCOUNTS_API).pipe(
+            fetchAll().pipe(
               tapResponse({
-                next: (accounts) =>
-                  patchState(store, setAllEntities(accounts), {
-                    loadState: 'loaded',
-                  }),
+                next: show,
                 error: () => patchState(store, { loadState: 'failed' }),
               })
             )
@@ -133,8 +158,9 @@ export const TeamAccountsStore = signalStore(
       ),
       /**
        * Creates an account. On success it joins the list in name order, so
-       * its team's table and the counts update straight away. A second send
-       * while one is saving is ignored.
+       * its team's table and the counts update straight away; then the
+       * accounts and teams are refreshed quietly, since a new supervisor can
+       * become a team's lead. A second send while one is saving is ignored.
        */
       create: rxMethod<CreateAccountRequest>(
         pipe(
@@ -156,7 +182,9 @@ export const TeamAccountsStore = signalStore(
                       CREATE_UNAVAILABLE_MESSAGE
                     ),
                   }),
-              })
+              }),
+              // Only after a create: a refused one completes above.
+              tap(() => refresh())
             );
           })
         )

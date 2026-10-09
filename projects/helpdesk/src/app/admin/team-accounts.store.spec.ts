@@ -7,12 +7,14 @@ import { TestBed } from '@angular/core/testing';
 import {
   type CreateAccountRequest,
   OWN_ACCOUNT_MESSAGE,
+  type TeamListing,
   type UserAccount,
 } from '@helpdesk/contract';
 import {
   type AccountUpdate,
   CREATE_UNAVAILABLE_MESSAGE,
   TEAM_ACCOUNTS_API,
+  TEAMS_API,
   TeamAccountsStore,
   UPDATE_UNAVAILABLE_MESSAGE,
 } from './team-accounts.store';
@@ -23,6 +25,16 @@ import { type LiveUpdate, LiveUpdates } from '../live/live-updates';
 /** An account with just what these tests look at. */
 const account = (id: string) =>
   ({ id, name: id, role: 'agent', team: null, active: true }) as UserAccount;
+
+/** Every team: Atlas led by Chris, and Comet with nobody on it (#1210). */
+const TEAMS: TeamListing[] = [
+  {
+    id: 'atlas',
+    name: 'Atlas',
+    lead: { id: 'chris.taylor', name: 'Chris Taylor' },
+  },
+  { id: 'comet', name: 'Comet', lead: null },
+];
 
 describe('TeamAccountsStore', () => {
   let http: HttpTestingController;
@@ -48,20 +60,35 @@ describe('TeamAccountsStore', () => {
   const ids = (store: InstanceType<typeof TeamAccountsStore>) =>
     store.entities().map(({ id }) => id);
 
-  /** A store with these accounts loaded, as the page has it. */
+  /**
+   * Answers the request for the teams, which goes with every request for
+   * the accounts (#1210).
+   */
+  const answerTeams = (teams: TeamListing[] = TEAMS) =>
+    http.expectOne({ method: 'GET', url: TEAMS_API }).flush(teams);
+
+  /** Answers a quiet reload: these accounts, and the teams. */
+  function answerReload(accounts: UserAccount[], teams = TEAMS) {
+    http.expectOne({ method: 'GET', url: TEAM_ACCOUNTS_API }).flush(accounts);
+    answerTeams(teams);
+  }
+
+  /** A store with these accounts and every team loaded, as the page has it. */
   function loadedStore(...accountIds: string[]) {
     const store = TestBed.inject(TeamAccountsStore);
     http
       .expectOne({ method: 'GET', url: TEAM_ACCOUNTS_API })
       .flush(accountIds.map(account));
+    answerTeams();
     return store;
   }
 
-  it('starts loading the accounts as soon as it is created', () => {
+  it('starts loading the accounts and the teams as soon as it is created', () => {
     const store = TestBed.inject(TeamAccountsStore);
 
     expect(store.loadState()).toBe('loading');
     expect(http.expectOne(TEAM_ACCOUNTS_API).request.method).toBe('GET');
+    expect(http.expectOne(TEAMS_API).request.method).toBe('GET');
   });
 
   it('keeps the accounts in the order the API sends them', () => {
@@ -70,13 +97,22 @@ describe('TeamAccountsStore', () => {
     http
       .expectOne(TEAM_ACCOUNTS_API)
       .flush([account('alex.morgan'), account('chris.taylor')]);
+    answerTeams();
 
     expect(store.loadState()).toBe('loaded');
     expect(ids(store)).toEqual(['alex.morgan', 'chris.taylor']);
   });
 
+  // The teams themselves, so one emptied of its accounts is not lost (#1210).
+  it('holds every team the API sends, one with nobody on it too', () => {
+    const store = loadedStore('sam.rivera');
+
+    expect(store.teams()).toEqual(TEAMS);
+  });
+
   it('says loading failed, holding no accounts', () => {
     const store = TestBed.inject(TeamAccountsStore);
+    const teams = http.expectOne(TEAMS_API);
 
     http
       .expectOne(TEAM_ACCOUNTS_API)
@@ -84,17 +120,33 @@ describe('TeamAccountsStore', () => {
 
     expect(store.loadState()).toBe('failed');
     expect(store.entities()).toEqual([]);
+    // Neither is any use without the other.
+    expect(teams.cancelled).toBe(true);
+  });
+
+  it('says loading failed when the teams cannot load', () => {
+    const store = TestBed.inject(TeamAccountsStore);
+
+    http.expectOne(TEAM_ACCOUNTS_API).flush([account('sam.rivera')]);
+    http
+      .expectOne(TEAMS_API)
+      .flush(null, { status: 500, statusText: 'Server Error' });
+
+    expect(store.loadState()).toBe('failed');
   });
 
   it('lets a newer load replace one still running', () => {
     const store = TestBed.inject(TeamAccountsStore);
     const first = http.expectOne(TEAM_ACCOUNTS_API);
+    const firstTeams = http.expectOne(TEAMS_API);
 
     store.load();
     const second = http.expectOne(TEAM_ACCOUNTS_API);
 
     expect(first.cancelled).toBe(true);
+    expect(firstTeams.cancelled).toBe(true);
     second.flush([account('sam.rivera')]);
+    answerTeams();
     expect(ids(store)).toEqual(['sam.rivera']);
   });
 
@@ -126,6 +178,7 @@ describe('TeamAccountsStore', () => {
       const call = post();
       expect(call.request.body).toEqual(request);
       call.flush(account('nia.new'), { status: 201, statusText: 'Created' });
+      answerReload([account('nia.new')]);
     });
 
     it('adds the new account in name order', () => {
@@ -136,6 +189,24 @@ describe('TeamAccountsStore', () => {
 
       expect(store.createState()).toBe('created');
       expect(ids(store)).toEqual(['alex.morgan', 'nia.new', 'sam.rivera']);
+      answerReload([account('alex.morgan'), account('nia.new')]);
+    });
+
+    // A new supervisor leads a team that had no lead: the team choices must
+    // say so the next time the form opens.
+    it('then reloads the accounts and the teams quietly', () => {
+      const store = loadedStore('alex.morgan');
+      const ledByNia: TeamListing[] = [
+        TEAMS[0],
+        { ...TEAMS[1], lead: { id: 'nia.new', name: 'Nia New' } },
+      ];
+
+      store.create(request);
+      post().flush(account('nia.new'), { status: 201, statusText: 'Created' });
+
+      expect(store.loadState()).toBe('loaded');
+      answerReload([account('alex.morgan'), account('nia.new')], ledByNia);
+      expect(store.teams()).toEqual(ledByNia);
     });
 
     it.each([
@@ -168,6 +239,7 @@ describe('TeamAccountsStore', () => {
       store.create(request);
 
       post().flush(account('nia.new'), { status: 201, statusText: 'Created' });
+      answerReload([account('nia.new')]);
     });
 
     it('resets for a new form', () => {
@@ -218,6 +290,7 @@ describe('TeamAccountsStore', () => {
       expect(call.request.body).toEqual(edit.request);
       call.flush({ account: deactivated, releasedTickets: 0 });
       reload().flush([deactivated]);
+      answerTeams();
     });
 
     it('changes the account in place, then reloads quietly', () => {
@@ -237,6 +310,7 @@ describe('TeamAccountsStore', () => {
       const call = reload();
       expect(store.loadState()).toBe('loaded');
       call.flush([account('alex.morgan'), deactivated, account('nia.new')]);
+      answerTeams();
       expect(ids(store)).toEqual(['alex.morgan', 'sam.rivera', 'nia.new']);
     });
 
@@ -245,8 +319,10 @@ describe('TeamAccountsStore', () => {
 
       store.update(edit);
       put().flush({ account: deactivated, releasedTickets: 0 });
+      const teams = http.expectOne(TEAMS_API);
       reload().flush(null, { status: 500, statusText: 'Server Error' });
 
+      expect(teams.cancelled).toBe(true);
       expect(store.loadState()).toBe('loaded');
       expect(store.updateState()).toBe('saved');
       expect(store.entities()).toEqual([deactivated]);
@@ -290,6 +366,7 @@ describe('TeamAccountsStore', () => {
 
       put().flush({ account: deactivated, releasedTickets: 0 });
       reload().flush([deactivated]);
+      answerTeams();
     });
 
     it('resets for a new form', () => {
@@ -297,6 +374,7 @@ describe('TeamAccountsStore', () => {
       store.update(edit);
       put().flush({ account: deactivated, releasedTickets: 2 });
       reload().flush([deactivated]);
+      answerTeams();
 
       store.resetUpdate();
 
@@ -325,7 +403,23 @@ describe('TeamAccountsStore', () => {
           account('nia.new'),
           account('sam.rivera'),
         ]);
+      answerTeams();
       expect(ids(store)).toEqual(['alex.morgan', 'nia.new', 'sam.rivera']);
+    });
+
+    // Another admin may have moved a team's last account away: the team
+    // stays listed, from the teams themselves (#1210).
+    it('fetches the teams again with them', () => {
+      const store = loadedStore('alex.morgan');
+      const atlasWithoutLead: TeamListing[] = [
+        { ...TEAMS[0], lead: null },
+        TEAMS[1],
+      ];
+
+      live.next(accountsChanged);
+      answerReload([account('alex.morgan')], atlasWithoutLead);
+
+      expect(store.teams()).toEqual(atlasWithoutLead);
     });
 
     it('fetches them again when the stream comes back after a break', () => {
@@ -333,7 +427,7 @@ describe('TeamAccountsStore', () => {
 
       live.next({ kind: 'reconnected' });
 
-      http.expectOne(TEAM_ACCOUNTS_API).flush([account('alex.morgan')]);
+      answerReload([account('alex.morgan')]);
     });
 
     it('leaves them alone for a ticket or a reply', () => {
@@ -343,18 +437,22 @@ describe('TeamAccountsStore', () => {
       live.next({ kind: 'event', event: { type: 'message', ticketId: 't-1' } });
 
       http.expectNone(TEAM_ACCOUNTS_API);
+      http.expectNone(TEAMS_API);
     });
 
     it('keeps the tables as they are when fetching them again fails', () => {
       const store = loadedStore('alex.morgan', 'sam.rivera');
 
       live.next(accountsChanged);
+      const teams = http.expectOne(TEAMS_API);
       http
         .expectOne(TEAM_ACCOUNTS_API)
         .flush(null, { status: 500, statusText: 'Server Error' });
 
+      expect(teams.cancelled).toBe(true);
       expect(store.loadState()).toBe('loaded');
       expect(ids(store)).toEqual(['alex.morgan', 'sam.rivera']);
+      expect(store.teams()).toEqual(TEAMS);
     });
   });
 });

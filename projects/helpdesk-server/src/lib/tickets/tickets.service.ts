@@ -19,7 +19,7 @@ import {
 import { and, asc, desc, eq, gte, inArray, isNull, or, sql } from 'drizzle-orm';
 import { DATABASE, type Database } from '../database/database-token';
 import { teams, tickets, users } from '../database/schema';
-import { LiveEvents } from '../live/live-events';
+import { LiveHub } from '../live/live-hub';
 import { ticketAudience } from '../live/ticket-audience';
 import { lockWorkable, UUID } from './ticket-access';
 import { MOST_URGENT_FIRST, selectTickets, toTicketDto } from './ticket-dto';
@@ -42,7 +42,7 @@ export class TicketsService {
   constructor(
     @Inject(DATABASE) private readonly database: Database,
     // Named, as an optional parameter's recorded type is only `Object`.
-    @Optional() @Inject(LiveEvents) private readonly live?: LiveEvents
+    @Optional() @Inject(LiveHub) private readonly live?: LiveHub
   ) {}
 
   /** Tells the pages a change concerns that this ticket changed. */

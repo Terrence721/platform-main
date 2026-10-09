@@ -7,7 +7,7 @@ import { CapabilitiesDataService } from './landing/capabilities.data-service';
 import { CAPABILITY } from './landing/capability';
 import * as landingEffects from './landing/landing.effects';
 import { landingFeature } from './landing/landing.feature';
-import { canMatchRole } from './session/role.guard';
+import { canMatchRole } from './session/role-match.guard';
 
 /**
  * The app's top-level routes, each page lazy-loaded. The public landing page

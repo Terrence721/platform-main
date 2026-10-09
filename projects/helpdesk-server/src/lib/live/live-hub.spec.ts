@@ -1,5 +1,5 @@
 import type { CurrentUser, LiveEvent } from '@helpdesk/contract';
-import { concerns, type LiveAudience, LiveEvents } from './live-events';
+import { concerns, type LiveAudience, LiveHub } from './live-hub';
 
 const sam: CurrentUser = {
   id: 'sam.rivera',
@@ -94,7 +94,7 @@ describe('concerns', () => {
   });
 });
 
-describe('LiveEvents', () => {
+describe('LiveHub', () => {
   const event: LiveEvent = { type: 'ticket', ticketId: 'ticket-1' };
   /** A session that outlasts every test. */
   const later = () => new Date(Date.now() + 60 * 60_000);
@@ -102,7 +102,7 @@ describe('LiveEvents', () => {
   /** What `user` hears while `act` runs. */
   function heardBy(
     user: CurrentUser,
-    events: LiveEvents,
+    events: LiveHub,
     act: () => void
   ): LiveEvent[] {
     const heard: LiveEvent[] = [];
@@ -115,7 +115,7 @@ describe('LiveEvents', () => {
   }
 
   it('hands on only the event, not who it concerns', () => {
-    const events = new LiveEvents();
+    const events = new LiveHub();
 
     const heard = heardBy(sam, events, () =>
       events.publish({ event, audience: ticket(['sam.rivera'], ['atlas']) })
@@ -125,7 +125,7 @@ describe('LiveEvents', () => {
   });
 
   it('hands each person only what concerns them', () => {
-    const events = new LiveEvents();
+    const events = new LiveHub();
     const forSam: LiveEvent[] = [];
     const forBea: LiveEvent[] = [];
     const subscriptions = [
@@ -145,7 +145,7 @@ describe('LiveEvents', () => {
   });
 
   it('hands on nothing from before someone listened', () => {
-    const events = new LiveEvents();
+    const events = new LiveHub();
     events.publish({ event, audience: ticket([], [], true) });
 
     expect(heardBy(sam, events, () => undefined)).toEqual([]);
@@ -157,7 +157,7 @@ describe('LiveEvents', () => {
     afterEach(() => vi.useRealTimers());
 
     /** A stream for `user`, with what it heard and whether it ended. */
-    function listen(events: LiveEvents, user: CurrentUser, endsAt: Date) {
+    function listen(events: LiveHub, user: CurrentUser, endsAt: Date) {
       const stream = { heard: [] as LiveEvent[], ended: false };
       events.for(user, endsAt).subscribe({
         next: (e) => stream.heard.push(e),
@@ -168,7 +168,7 @@ describe('LiveEvents', () => {
 
     it('ends a stream when its session does, and not before', () => {
       vi.useFakeTimers();
-      const events = new LiveEvents();
+      const events = new LiveHub();
       const stream = listen(events, sam, new Date(Date.now() + 60_000));
 
       vi.advanceTimersByTime(59_999);
@@ -182,14 +182,14 @@ describe('LiveEvents', () => {
 
     it('ends a stream at once if its session has already ended', () => {
       vi.useFakeTimers();
-      const stream = listen(new LiveEvents(), sam, new Date(Date.now() - 1));
+      const stream = listen(new LiveHub(), sam, new Date(Date.now() - 1));
 
       vi.advanceTimersByTime(0);
       expect(stream.ended).toBe(true);
     });
 
     it("ends all of a person's streams when their account changes, and only theirs", () => {
-      const events = new LiveEvents();
+      const events = new LiveHub();
       const samTab = listen(events, sam, later());
       const samOtherTab = listen(events, sam, later());
       const bennyTab = listen(events, benny, later());

@@ -11,7 +11,7 @@ import {
   readStatus,
   readTurnIntoTicket,
   readUpdateAccount,
-} from './requests';
+} from './request-bodies';
 
 describe('readSignIn', () => {
   it('reads the user ID and password a body holds', () => {

@@ -9,7 +9,7 @@ import { customers, queues, teams, tickets, users } from '../database/schema';
 import { TicketMessagesService } from '../tickets/ticket-messages.service';
 import { TicketsService } from '../tickets/tickets.service';
 import { UsersService } from '../users/users.service';
-import { LiveEvents, type LiveNotice } from './live-events';
+import { LiveHub, type LiveNotice } from './live-hub';
 
 // What each write tells the open pages (#950): the event, and who it
 // concerns. The rules for who hears what are in live-events.spec.
@@ -38,7 +38,7 @@ const as = (id: string): CurrentUser => {
 
 describe('what each write tells the open pages', { timeout: 60_000 }, () => {
   let client: PGlite;
-  let live: LiveEvents;
+  let live: LiveHub;
   let published: LiveNotice[];
   let ticketsService: TicketsService;
   let messages: TicketMessagesService;
@@ -98,7 +98,7 @@ describe('what each write tells the open pages', { timeout: 60_000 }, () => {
         ])
         .returning({ id: tickets.id });
 
-    live = new LiveEvents();
+    live = new LiveHub();
     published = [];
     vi.spyOn(live, 'publish').mockImplementation((notice) => {
       published.push(notice);

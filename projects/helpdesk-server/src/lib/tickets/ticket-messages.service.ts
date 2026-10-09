@@ -12,7 +12,7 @@ import {
 import { asc, eq } from 'drizzle-orm';
 import { DATABASE, type Database } from '../database/database-token';
 import { ticketMessages, tickets, users } from '../database/schema';
-import { LiveEvents } from '../live/live-events';
+import { LiveHub } from '../live/live-hub';
 import { ticketAudience } from '../live/ticket-audience';
 import { lockWorkable } from './ticket-access';
 
@@ -37,7 +37,7 @@ export class TicketMessagesService {
   constructor(
     @Inject(DATABASE) private readonly database: Database,
     // Named, as an optional parameter's recorded type is only `Object`.
-    @Optional() @Inject(LiveEvents) private readonly live?: LiveEvents
+    @Optional() @Inject(LiveHub) private readonly live?: LiveHub
   ) {}
 
   /**

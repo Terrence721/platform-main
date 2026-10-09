@@ -10,7 +10,7 @@ import { CurrentUser, Role } from '@helpdesk/contract';
 import { MockStore, provideMockStore } from '@ngrx/store/testing';
 import { Observable } from 'rxjs';
 import { SignInLauncher } from '../sign-in/sign-in-launcher';
-import { canMatchRole } from './role.guard';
+import { canMatchRole } from './role-match.guard';
 import { initialSessionState, SessionState } from './session.feature';
 
 const userWith = (role: Role): CurrentUser => ({

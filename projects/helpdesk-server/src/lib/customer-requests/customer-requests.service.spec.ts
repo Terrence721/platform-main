@@ -18,7 +18,7 @@ import {
   users,
 } from '../database/schema';
 import { SLA_MINUTES } from '../database/seed/generate';
-import type { LiveEvents } from '../live/live-events';
+import type { LiveHub } from '../live/live-hub';
 import { CustomerRequestsService } from './customer-requests.service';
 
 const MIGRATIONS = fileURLToPath(new URL('../../../drizzle', import.meta.url));
@@ -93,10 +93,7 @@ describe('CustomerRequestsService', { timeout: 60_000 }, () => {
     await database
       .insert(tickets)
       .values(ticket('resolved', 'An old question'));
-    service = new CustomerRequestsService(
-      database,
-      live as unknown as LiveEvents
-    );
+    service = new CustomerRequestsService(database, live as unknown as LiveHub);
   });
 
   beforeEach(async () => {

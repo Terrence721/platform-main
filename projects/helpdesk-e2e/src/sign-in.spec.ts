@@ -33,6 +33,24 @@ test.describe('signing in', () => {
     });
   }
 
+  // On a phone the toolbar keeps the logo, the sound toggle and Sign out on
+  // screen; who is signed in is left to their own page.
+  test('fits the signed-in toolbar on a phone, Sign out in reach', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    // The longest of the three: "Chris Taylor · supervisor".
+    await signIn(page, 'chris.taylor');
+    await expect(page).toHaveURL('/supervisor');
+
+    // Sign out is the toolbar's last control: on screen, the toolbar fits.
+    await expect(page.getByRole('button', { name: 'Sign out' })).toBeInViewport(
+      {
+        ratio: 1,
+      }
+    );
+  });
+
   test('refuses a wrong password, and stays signed out', async ({ page }) => {
     const dialog = await signIn(page, 'sam.rivera', 'not-the-password');
 

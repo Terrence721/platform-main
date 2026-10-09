@@ -188,6 +188,14 @@ import { Sounds } from './sound/sounds';
         display: none;
       }
     }
+
+    /* A phone keeps the logo, the sound toggle and Sign out in reach; who
+       is signed in is left to their own page, which says so. */
+    @media (max-width: 600px) {
+      .who {
+        display: none;
+      }
+    }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

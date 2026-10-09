@@ -8,8 +8,10 @@
 
 # Build: install the workspace and build the API, as CI does. Node is the
 # same major version as .node-version (24), at its newest on the day of the
-# build, so each build gets its fixes.
-FROM node:24-alpine AS build
+# build, so each build gets its fixes. Docker's official image, from Amazon
+# ECR Public's mirror: Docker Hub limits anonymous pulls per address, which
+# CI's shared runners hit (#1318).
+FROM public.ecr.aws/docker/library/node:24-alpine AS build
 WORKDIR /repo
 RUN corepack enable
 # The package list first, then the install, then the source: Docker reuses
@@ -31,7 +33,7 @@ RUN yarn nx build helpdesk-api --skip-nx-cache
 # qs). Not --immutable, as Yarn drops the entries the API does not use.
 # Into node_modules, as Node loads them; Yarn and its caches are removed in
 # the same step, or they would stay in the image.
-FROM node:24-alpine
+FROM public.ecr.aws/docker/library/node:24-alpine
 ENV NODE_ENV=production COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 WORKDIR /app
 COPY --from=build /repo/dist/projects/helpdesk-api ./

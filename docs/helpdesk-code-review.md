@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 9, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 53 of 63)
+**Last Updated: October 9, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 54 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -863,6 +863,12 @@ The app's entry point: it starts the shell, `AppComponent`, with `appConfig`, an
 
 ### [`helpdesk/src/demo/util-shim.ts`](https://github.com/Terrence721/platform-main/blob/a1d8457/projects/helpdesk/src/demo/util-shim.ts)
 
-**Low · Documentation** — 1 fix; **Low · Test coverage** — 1 fix ([issue #1264](https://github.com/Terrence721/platform-main/issues/1264))
+**Low · Documentation** — 1 fix ([issue #1264](https://github.com/Terrence721/platform-main/issues/1264))
 
-The demo build's stand-in for Node's `util`, which `tsconfig.demo.json` points the import at: only `promisify`, taking the callback's first argument as the error, as Node does. It holds, under the crypto stand-in's spec: `promisify(scrypt)` derives a key with and without the cost options, as the password helpers call it. Its comment had those helpers in the API; they are in the server library the API uses, `helpdesk-server`'s `auth/password.ts`, and it now says so. Nothing tested the failure path; a spec of its own now checks that a callback's result resolves the promise and its error rejects it. As the code already did both, the spec passed at once, so it was run against a copy that ignores the error, outside the checkout, where it failed.
+The demo build's stand-in for Node's `util`, which `tsconfig.demo.json` points the import at: only `promisify`, taking the callback's first argument as the error, as Node does. It holds, under the crypto stand-in's spec: `promisify(scrypt)` derives a key with and without the cost options, as the password helpers call it. Its comment had those helpers in the API; they are in the server library the API uses, `helpdesk-server`'s `auth/password.ts`, and it now says so. It also gained a spec of its own: a callback's result resolves the promise and its error rejects it. This review took the failure path for untested and so filed it as a finding, but the crypto stand-in's spec already tested it, so the new spec repeated that test; the next review, of `crypto-shim.ts`, moved it here, leaving one.
+
+### [`helpdesk/src/demo/crypto-shim.ts`](https://github.com/Terrence721/platform-main/blob/8d989b9/projects/helpdesk/src/demo/crypto-shim.ts)
+
+**Low · Documentation** — 2 fixes; **Low · Tests** — 1 fix ([issue #1266](https://github.com/Terrence721/platform-main/issues/1266))
+
+The demo build's stand-in for Node's `crypto`, with exactly what the server library's `auth/password.ts` imports: `randomBytes` from the browser's own generator, a quick `scrypt` whose key is marked as not a real one, and `timingSafeEqual`, over bytes that print as Node's `Buffer` does. It holds, under its spec: base64 and hex as Node prints them, random salts of the size asked for, and a key of the length asked for, with or without the cost options, through `promisify` as the password helpers call it. Its comments had `hashPassword` in the API and its cost options passed by the API; both are the server library's, and they now say so. They also had demo sign-in checking only the published demo password; an account made with Create Account during the visit signs in with its own, which the demo API keeps in memory, and the comment now says both. Its spec held `promisify`'s rejection test, which belongs to the util stand-in and which `util-shim.spec.ts` had just repeated; it is now only there, and this spec names crypto alone. Noted, not changed: the stand-in key keeps only about the first 26 characters of a password, and `timingSafeEqual` answers false where Node throws on different lengths; neither matters, as the demo never checks a stored hash.

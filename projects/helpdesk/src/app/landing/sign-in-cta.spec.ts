@@ -1,6 +1,7 @@
 import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { TestBed } from '@angular/core/testing';
 import { MatButtonHarness } from '@angular/material/button/testing';
+import { provideRouter } from '@angular/router';
 import { SignInLauncher } from '../sign-in/sign-in-launcher';
 import { SignInCta } from './sign-in-cta';
 
@@ -10,7 +11,10 @@ describe('SignInCta', () => {
   function render() {
     launcher.open.mockClear();
     TestBed.configureTestingModule({
-      providers: [{ provide: SignInLauncher, useValue: launcher }],
+      providers: [
+        provideRouter([]),
+        { provide: SignInLauncher, useValue: launcher },
+      ],
     });
     const fixture = TestBed.createComponent(SignInCta);
     fixture.detectChanges();
@@ -29,6 +33,19 @@ describe('SignInCta', () => {
     expect(panel.querySelector('p')?.textContent).toBe(
       'Sign in with the account your admin set up for you.'
     );
+  });
+
+  // A customer who has read this far has no account to sign in with (#1026).
+  it('points someone not on the team to Report an issue', () => {
+    const { panel } = render();
+    const line = panel.querySelector('.customers');
+    const link = line?.querySelector('a');
+
+    expect(line?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      'Not on the team? Report an issue with your account or an order.'
+    );
+    expect(link?.textContent?.trim()).toBe('Report an issue');
+    expect(link?.getAttribute('href')).toBe('/report');
   });
 
   it('offers a filled Sign in button that opens the sign-in popup', async () => {

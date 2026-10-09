@@ -1,21 +1,28 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { RouterLink } from '@angular/router';
 import { SignInLauncher } from '../sign-in/sign-in-launcher';
 
 /**
  * The landing page's closing call to action: for the support team member
- * who has read this far, the way in. The page puts it in its `#signin`
- * band.
+ * who has read this far, the way in; for a customer, Report an issue
+ * (#1026). The page puts it in its `#signin` band.
  */
 @Component({
   selector: 'hd-sign-in-cta',
-  imports: [MatButtonModule, MatIconModule],
+  imports: [MatButtonModule, MatIconModule, RouterLink],
   template: `
     <div class="panel">
       <div>
         <h2 id="signin-title">Ready to pick up the next ticket?</h2>
         <p>Sign in with the account your admin set up for you.</p>
+        <!-- A customer who has read this far has no account (#1026). -->
+        <p class="customers">
+          Not on the team?
+          <a routerLink="/report">Report an issue</a> with your account or an
+          order.
+        </p>
       </div>
       <button matButton="filled" type="button" (click)="signIn.open()">
         <mat-icon>login</mat-icon>
@@ -43,6 +50,13 @@ import { SignInLauncher } from '../sign-in/sign-in-launcher';
     p {
       margin: 0.375rem 0 0;
       font: var(--mat-sys-body-large);
+    }
+    .customers {
+      font: var(--mat-sys-body-medium);
+    }
+    .customers a {
+      color: inherit;
+      font-weight: 500;
     }
     @media (max-width: 520px) {
       .panel {

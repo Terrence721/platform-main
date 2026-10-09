@@ -44,6 +44,64 @@ describe('DemoApi', { timeout: 60_000 }, () => {
   const signIn = (userId: string, password = DEFAULT_SEED_PASSWORD) =>
     call('POST', '/api/auth/sign-in', { userId, password });
 
+  // The public Report an issue page (#1026), open to anyone, as in the
+  // API's CustomerRequestsController. One visitor, so no limits.
+  describe('customer requests, for anyone', () => {
+    const sent = {
+      name: 'Dana Whitfield',
+      email: 'dana@example.com',
+      category: 'billing',
+      impact: 'blocked',
+      subject: 'Charged twice',
+      description: 'My card was charged twice this month.',
+      where: null,
+      consent: true,
+      website: '',
+      fillMilliseconds: 45_000,
+    };
+
+    it('keeps a request sent signed out, answering 201 with its reference', async () => {
+      await call('POST', '/api/auth/sign-out');
+
+      const { status, body } = await call('POST', '/api/requests', sent);
+
+      expect(status).toBe(201);
+      expect((body as { reference: string }).reference).toMatch(/^R-\d+$/);
+    });
+
+    it("refuses a wrong field with 400, in the API's words", async () => {
+      expect(
+        await call('POST', '/api/requests', { ...sent, email: 'dana' })
+      ).toMatchObject({
+        status: 400,
+        body: {
+          message: 'Enter your email address, such as dana@example.com.',
+        },
+      });
+    });
+
+    it('tells where a request is up to, by its reference and email, and 404 otherwise', async () => {
+      const { body } = await call('POST', '/api/requests', sent);
+      const { reference } = body as { reference: string };
+
+      expect(
+        await call(
+          'GET',
+          `/api/requests/status?reference=${reference}&email=DANA@example.com`
+        )
+      ).toEqual({ status: 200, body: { reference, status: 'pending' } });
+      expect(
+        await call(
+          'GET',
+          `/api/requests/status?reference=${reference}&email=x@example.com`
+        )
+      ).toMatchObject({
+        status: 404,
+        body: { message: 'No request matches that reference and email.' },
+      });
+    });
+  });
+
   describe('signing in and out', () => {
     it('answers "nobody" (200) for who is signed in, before anyone is', async () => {
       expect(await call('GET', '/api/auth/me')).toEqual({

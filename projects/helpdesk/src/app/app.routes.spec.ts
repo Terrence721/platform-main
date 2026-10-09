@@ -81,6 +81,18 @@ describe('routes', () => {
     ).toContain('Every request answered');
   });
 
+  // Customers have no account: the page is open to anyone (#1026).
+  it('opens Report an issue at /report, for anyone, with its own title', async () => {
+    const harness = await RouterTestingHarness.create('/report');
+
+    expect(TestBed.inject(Router).url).toBe('/report');
+    expect(
+      harness.routeNativeElement?.querySelector('h1')?.textContent
+    ).toContain('Report an issue');
+    expect(TestBed.inject(Title).getTitle()).toBe('Report an issue · Helpdesk');
+    expect(launcher.open).not.toHaveBeenCalled();
+  });
+
   it('serves the capabilities from the app, not the server', async () => {
     await RouterTestingHarness.create('/');
 

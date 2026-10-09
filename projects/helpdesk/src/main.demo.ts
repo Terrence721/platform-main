@@ -50,7 +50,11 @@ demoApi.catch((error: unknown) =>
 /**
  * Adds the demo's banner along the bottom of the page, outside the app,
  * and keeps the page's end clear of it as its height changes (it wraps on
- * narrow screens).
+ * narrow screens). The room is made after the app's `main`, which grows
+ * with the page: `body` is one screen tall (styles.css), so room made after
+ * it lay under a taller page's end, and the banner hid Report an issue's
+ * Send button (#1026). And whatever the keyboard moves to is scrolled
+ * above the banner, not behind it.
  */
 function addBanner(app: ApplicationRef): void {
   const host = document.createElement('hd-demo-banner');
@@ -62,9 +66,11 @@ function addBanner(app: ApplicationRef): void {
   app.attachView(banner.hostView);
   banner.changeDetectorRef.detectChanges();
   const bar = host.firstElementChild;
-  if (bar) {
+  const main = document.querySelector<HTMLElement>('hd-root main');
+  if (bar && main) {
     new ResizeObserver(() => {
-      document.body.style.paddingBottom = `${bar.clientHeight}px`;
+      main.style.paddingBottom = `${bar.clientHeight}px`;
+      document.documentElement.style.scrollPaddingBottom = `${bar.clientHeight}px`;
     }).observe(bar);
   }
 }

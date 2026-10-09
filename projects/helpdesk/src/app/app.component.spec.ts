@@ -85,6 +85,22 @@ describe('AppComponent', () => {
       current: link.getAttribute('aria-current'),
     }));
 
+  // For customers, who have no account to sign in with (#1026).
+  it('links to Report an issue before Sign in, signed out', () => {
+    const { shell } = render();
+
+    const report = shell.querySelector<HTMLAnchorElement>(
+      'mat-toolbar nav a.report-link'
+    );
+    expect(report?.textContent?.trim()).toBe('Report an issue');
+    expect(report?.getAttribute('href')).toBe('/report');
+    const signIn = shell.querySelector('mat-toolbar nav button') as Node;
+    expect(
+      (report?.compareDocumentPosition(signIn) ?? 0) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
+
   it('links to each section of the landing page from a "Page" nav', () => {
     const { shell } = render();
 

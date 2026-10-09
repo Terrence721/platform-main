@@ -1,4 +1,5 @@
 import {
+  AttachmentsService,
   CustomerRequestsService,
   LiveHub,
   TicketMessagesService,
@@ -7,6 +8,7 @@ import {
 } from '@helpdesk/server';
 import { Module, type Type } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
+import { SharpReEncoder } from '../attachments/sharp-re-encoder';
 import { AuthModule } from '../auth/auth.module';
 import { DatabaseModule } from '../database/database.module';
 import { EventsController } from '../live/events.controller';
@@ -77,5 +79,23 @@ describe('AppModule', () => {
     } finally {
       await wrong.close();
     }
+  });
+
+  // The re-encoder is optional too, as the demo brings its own: without
+  // one, every image a customer sends would be refused (#1026).
+  it('gives the requests service the attachments that sharp redraws images for', () => {
+    const attachments = (
+      moduleRef.get(CustomerRequestsService, { strict: false }) as {
+        attachments?: AttachmentsService;
+      }
+    ).attachments;
+
+    expect(attachments).toBeInstanceOf(AttachmentsService);
+    expect(
+      (attachments as unknown as { reEncoder?: unknown }).reEncoder
+    ).toBeInstanceOf(SharpReEncoder);
+    expect(attachments).toBe(
+      moduleRef.get(AttachmentsService, { strict: false })
+    );
   });
 });

@@ -5,6 +5,7 @@ import type {
   CurrentUser,
   MemberHistory,
   PersonSummary,
+  TeamListing,
   TeamOverview,
   TicketDto,
 } from '@helpdesk/contract';
@@ -18,13 +19,27 @@ import { Controller, Get, NotFoundException, Param } from '@nestjs/common';
 import { SignedInUser } from '../auth/auth.guard';
 import { OnlyFor } from '../auth/role.guard';
 
-/** Teams, for the supervisors who lead them (/api/teams). */
+/**
+ * Teams (/api/teams): every team, for admins; and a team's members and
+ * workload, for the supervisor who leads it.
+ */
 @Controller('teams')
 export class TeamsController {
   constructor(
     private readonly teams: TeamsService,
     private readonly tickets: TicketsService
   ) {}
+
+  /**
+   * Every team by name, each with its lead (`null` while none): Team
+   * accounts and its team choices, which an emptied team must stay in
+   * (#1210). Only admins: other roles get 403, signed out 401.
+   */
+  @Get()
+  @OnlyFor('admin')
+  all(): Promise<TeamListing[]> {
+    return this.teams.all();
+  }
 
   /**
    * The supervisor's own team and its workload: the supervisor page's My

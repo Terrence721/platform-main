@@ -238,8 +238,8 @@ describe('every route of the API', () => {
   });
 
   it('is found, every one of them', () => {
-    // health 1, auth 3, events 1, reports 1, teams 3, tickets 8, users 3.
-    expect(routesOf(AppModule)).toHaveLength(20);
+    // health 1, auth 3, events 1, reports 1, teams 4, tickets 8, users 3.
+    expect(routesOf(AppModule)).toHaveLength(21);
   });
 
   it('would show a route that forgot OnlyFor, in an imported module', () => {

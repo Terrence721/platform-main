@@ -292,4 +292,29 @@ describe('TeamsService', () => {
       await database.delete(users).where(eq(users.id, 'aaa.idle'));
     }
   });
+
+  // Team accounts and the team choices list the teams themselves, so one
+  // emptied of its accounts is not lost (#1210).
+  describe('all', () => {
+    it('lists every team by name with its lead, one with no accounts and no lead too', async () => {
+      await database.insert(teams).values({ id: 'comet', name: 'Comet' });
+      try {
+        expect(await service.all()).toEqual([
+          {
+            id: 'atlas',
+            name: 'Atlas',
+            lead: { id: 'chris.taylor', name: 'Chris Taylor' },
+          },
+          {
+            id: 'beacon',
+            name: 'Beacon',
+            lead: { id: 'nina.patel', name: 'Nina Patel' },
+          },
+          { id: 'comet', name: 'Comet', lead: null },
+        ]);
+      } finally {
+        await database.delete(teams).where(eq(teams.id, 'comet'));
+      }
+    });
+  });
 });

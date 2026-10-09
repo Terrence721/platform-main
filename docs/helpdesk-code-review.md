@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 9, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 58 of 63)
+**Last Updated: October 9, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 59 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -896,3 +896,9 @@ The in-browser demo's API: it answers the app's `/api` requests in the page, fro
 **Low · Maintainability** — 1 fix ([issue #1274](https://github.com/Terrence721/platform-main/issues/1274))
 
 The demo's `HttpBackend`: the app's `/api` requests go to the in-page demo API, everything else over the network, and as it stands in for HttpClient's backend, the app, its interceptors and its error handling run as they are. It holds, under its spec: the API's requests answered by the demo API with the method, query and body passed on, the network untouched; a refusal as the `HttpErrorResponse` the app expects, with the API's own status and body; answers sent through JSON as over the network; requests made while the demo starts waiting for it; and everything else sent over the network. `FetchBackend` is still there to inject without `withFetch()`, gone from `app.config.ts` since that file's review. The spec still set HttpClient up with the deprecated `withFetch()`, as noted then; it now sets it up as the app does, its six tests unchanged, and no `withFetch` is left in the repository. Noted, not changed: if the demo fails to start, a waiting request fails with a plain error rather than an `HttpErrorResponse`, but the banner already says the demo could not start; and it leaves out the "sent" event, `statusText` and headers a real backend gives, which the app never reads.
+
+### [`helpdesk/src/demo/demo-banner.ts`](https://github.com/Terrence721/platform-main/blob/9529efa/projects/helpdesk/src/demo/demo-banner.ts)
+
+**No findings** ([issue #1276](https://github.com/Terrence721/platform-main/issues/1276))
+
+The in-browser demo's bar along the bottom of the page, added by `main.demo.ts` and unknown to the app. It holds, under its spec: what the demo is, and "Preparing the demo…" as a status while its database starts, the spinner hidden from screen readers; then a button per role, and the password; a button signing in through the API and reporting it with the app's own Signed In action, so the app plays its tone and opens the role's page as after any sign-in; the buttons disabled meanwhile; and an alert when signing in fails or the demo cannot start. It keeps its own copies of the password and the three accounts, so the server code stays out of the app's first download, and a spec holds both to the seed's. Noted, not changed: a failed banner sign-in plays no error tone, as the banner shows its own message rather than the app's Sign In Failed action; and "any user ID and the password …" is about the seed's accounts, every one of them active when the page opens.

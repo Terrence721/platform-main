@@ -715,6 +715,77 @@
     </div>
   </div>
 
+  <h2>Helpdesk Status</h2>
+  <p class="dek">
+    The same pipeline, run again on the Helpdesk app (#1001): 123 files across
+    its five projects, bottom-up through the dependency chain, each file with
+    its own sub-issue and PR, merged by hand. A bug fix came with a test that
+    failed without it; where a unit test could not show it, the fix was shown on
+    the real Docker stack or in the browser first.
+  </p>
+  <div class="status-table">
+    <div class="status-row head">
+      <div class="status-cell">Project</div>
+      <div class="status-cell">Files</div>
+      <div class="status-cell">Result</div>
+    </div>
+    <div class="status-row">
+      <div class="status-cell">
+        <span class="pill pill--done">done</span> helpdesk-contract
+      </div>
+      <div class="status-cell"><code>11/11</code></div>
+      <div class="status-cell">
+        4 bugs fixed, about 10 doc fixes, 1 missing spec added, dead code
+        removed (#1002)
+      </div>
+    </div>
+    <div class="status-row">
+      <div class="status-cell">
+        <span class="pill pill--done">done</span> helpdesk-server
+      </div>
+      <div class="status-cell"><code>23/23</code></div>
+      <div class="status-cell">
+        7 bugs and gaps fixed in their own PRs, among them the password hashing
+        cost, an assign/take race and a CI check for missing migrations, 3 more
+        in the files' own PRs; the SQL migrations reviewed (#1003)
+      </div>
+    </div>
+    <div class="status-row">
+      <div class="status-cell">
+        <span class="pill pill--done">done</span> helpdesk-api
+      </div>
+      <div class="status-cell"><code>24/24</code></div>
+      <div class="status-cell">
+        7 bugs and gaps fixed, among them the published development sign-in
+        secret usable in production, no sign-in limit, a crash on a database
+        restart and an image whose packages were not the tested versions (#1004)
+      </div>
+    </div>
+    <div class="status-row">
+      <div class="status-cell">
+        <span class="pill pill--done">done</span> helpdesk
+      </div>
+      <div class="status-cell"><code>63/63</code></div>
+      <div class="status-cell">
+        15 files clean; fixes include a landing-page section that had dropped
+        off screen, a catch-all route, phone layouts, one popup per click, the
+        in-browser demo built by CI before a merge, and nginx security headers
+        and compression (#1005)
+      </div>
+    </div>
+    <div class="status-row">
+      <div class="status-cell">
+        <span class="pill pill--done">done</span> helpdesk-e2e
+      </div>
+      <div class="status-cell"><code>2/2</code></div>
+      <div class="status-cell">
+        2 bugs fixed, each shown on the Docker stack first: a run cut short no
+        longer leaves the next one testing stale data, and an empty seed
+        password setting means the default (#1006)
+      </div>
+    </div>
+  </div>
+
   <footer>
     <a href="https://github.com/Terrence721/platform-main">Repository</a>
     <a
@@ -722,9 +793,17 @@
       >Findings index</a
     >
     <a href="https://github.com/users/Terrence721/projects/2">Project board</a>
+    <a
+      href="https://github.com/Terrence721/platform-main/blob/main/docs/helpdesk-code-review.md"
+      >Helpdesk findings</a
+    >
+    <a href="https://github.com/users/Terrence721/projects/11"
+      >HelpDesk board</a
+    >
     <a href="https://terrence721.github.io/platform-main/portfolio.html"
       >Portfolio page</a
     >
-    platform-main · issue #32 · all 270 files reviewed, audit complete
+    platform-main · issue #32 · all 270 files reviewed, audit complete · issue
+    #1001 · all 123 Helpdesk files reviewed, audit complete
   </footer>
 </div>

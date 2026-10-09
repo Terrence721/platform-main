@@ -2,14 +2,19 @@
 // at run time (emitDecoratorMetadata), and an interface has no run-time
 // value to record.
 import {
+  ATTACHMENT_MAX_BYTES,
+  ATTACHMENTS_MAX_COUNT,
   type CreateRequestResponse,
   type CurrentUser,
   formatRequestReference,
+  REQUEST_FIELDS_PART,
+  REQUEST_FILES_PART,
   type PendingRequest,
   type RequestStatusResponse,
   type TicketDto,
 } from '@helpdesk/contract';
 import {
+  AttachmentsService,
   CustomerRequestsService,
   NO_MATCHING_REQUEST,
   readCustomerRequest,
@@ -17,6 +22,7 @@ import {
   readTurnIntoTicket,
 } from '@helpdesk/server';
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -27,7 +33,10 @@ import {
   Query,
   Req,
   Res,
+  UploadedFiles,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { randomInt } from 'crypto';
 import { SignedInUser } from '../auth/auth.guard';
 import { OnlyFor } from '../auth/role.guard';
@@ -36,11 +45,50 @@ import {
   RequestLimits,
   TooManyRequestsException,
 } from './request-limits';
+import {
+  FIELDS_PART,
+  UploadErrorsInterceptor,
+} from './upload-errors.interceptor';
 
-/** The part of Express's request the limits need. */
+/** The part of Express's request the send needs. */
 interface VisitorRequest {
   /** The visitor's address; behind one proxy, as main.ts trusts it. */
   ip?: string;
+  headers: Record<string, string | string[] | undefined>;
+}
+
+/** A file as multer holds it in memory: what the send reads of it. */
+interface ReceivedFile {
+  originalname: string;
+  buffer: Buffer;
+}
+
+/**
+ * The most the fields part may hold: the longest description and subject
+ * with room to spare, far below a file's limit.
+ */
+const FIELDS_MAX_BYTES = 64 * 1024;
+
+/**
+ * The request's fields: the JSON body as it is, or, sent as multipart,
+ * the JSON in its `request` part; 400 if that is missing or not JSON.
+ */
+function fieldsOf(body: unknown, request: VisitorRequest): unknown {
+  const type = request.headers['content-type'];
+  if (typeof type !== 'string' || !type.startsWith('multipart/form-data')) {
+    return body;
+  }
+  const part = (body as Record<string, unknown> | undefined)?.[
+    REQUEST_FIELDS_PART
+  ];
+  if (typeof part === 'string') {
+    try {
+      return JSON.parse(part) as unknown;
+    } catch {
+      // As for no part at all.
+    }
+  }
+  throw new BadRequestException(FIELDS_PART);
 }
 
 /** The part of Express's response a 429 needs. */
@@ -57,28 +105,69 @@ interface HeaderResponse {
 export class CustomerRequestsController {
   constructor(
     private readonly requests: CustomerRequestsService,
-    private readonly limits: RequestLimits
+    private readonly limits: RequestLimits,
+    private readonly attachments: AttachmentsService
   ) {}
 
   /**
    * Keeps a request from the public form: 201 with its reference only;
-   * 400 for a field that is wrong. One that looks sent by a program (the
-   * hidden field filled in, or sent faster than a person could) gets a
-   * made-up reference and is not kept, so a bot cannot tell. At most
-   * MAX_SENDS an hour from one address: then 429, with Retry-After.
+   * 400 for a field that is wrong. Sent as JSON, or, with files, as
+   * multipart: the fields as JSON in the `request` part, up to
+   * ATTACHMENTS_MAX_COUNT files in `files` parts, each held in memory
+   * only up to ATTACHMENT_MAX_BYTES. A file that won't do is a 400 naming
+   * it, and nothing is kept. One that looks sent by a program (the hidden
+   * field filled in, or sent faster than a person could) gets a made-up
+   * reference, and nothing is checked or kept, so a bot cannot tell. At
+   * most MAX_SENDS an hour from one address, and MAX_FILE_BYTES of files
+   * (counted as sent, before any is checked): then 429, with Retry-After.
    */
   @Post()
+  @UseInterceptors(
+    UploadErrorsInterceptor,
+    FilesInterceptor(REQUEST_FILES_PART, ATTACHMENTS_MAX_COUNT, {
+      limits: {
+        fileSize: ATTACHMENT_MAX_BYTES,
+        files: ATTACHMENTS_MAX_COUNT,
+        fields: 1,
+        fieldSize: FIELDS_MAX_BYTES,
+        parts: ATTACHMENTS_MAX_COUNT + 1,
+      },
+      // Browsers send a file's name as UTF-8; multer's default is Latin-1.
+      defParamCharset: 'utf8',
+    })
+  )
   async send(
     @Body() body: unknown,
+    @UploadedFiles() files: ReceivedFile[] | undefined,
     @Req() request: VisitorRequest,
     @Res({ passthrough: true }) response: HeaderResponse
   ): Promise<CreateRequestResponse> {
     withRetryAfter(response, () => this.limits.send(addressOf(request)));
-    const sent = readCustomerRequest(body);
+    const sent = readCustomerRequest(fieldsOf(body, request));
     if (isLikelySpam(sent)) {
       return { reference: formatRequestReference(randomInt(1001, 1_000_000)) };
     }
-    return this.requests.send(sent);
+    const received = files ?? [];
+    withRetryAfter(response, () =>
+      this.limits.sendBytes(
+        addressOf(request),
+        received.reduce((total, { buffer }) => total + buffer.byteLength, 0)
+      )
+    );
+    const prepared =
+      received.length === 0
+        ? []
+        : await this.attachments.prepare(
+            received.map(({ originalname, buffer }) => ({
+              name: originalname,
+              bytes: new Uint8Array(
+                buffer.buffer,
+                buffer.byteOffset,
+                buffer.byteLength
+              ),
+            }))
+          );
+    return this.requests.send(sent, new Date(), prepared);
   }
 
   /**

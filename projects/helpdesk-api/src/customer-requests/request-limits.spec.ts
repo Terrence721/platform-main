@@ -1,6 +1,7 @@
 import { HttpStatus } from '@nestjs/common';
 import {
   isLikelySpam,
+  MAX_FILE_BYTES,
   MAX_SENDS,
   MAX_STATUS_CHECKS,
   MIN_FILL_MS,
@@ -109,6 +110,64 @@ describe('RequestLimits', () => {
       now += windowMs;
 
       expect(() => take('203.0.113.7')).not.toThrow();
+    });
+  });
+
+  // Files, by their size as sent (#1026): a few sends of large files
+  // could otherwise fill the database within the count's limit.
+  describe('sending files', () => {
+    const MB = 1024 * 1024;
+    const MINUTE = 60_000;
+
+    it(`allows ${MAX_FILE_BYTES / MB} MB an hour from one address, then answers 429 with how long until it fits`, () => {
+      limits.sendBytes('203.0.113.7', 5 * MB);
+      now += 10 * MINUTE;
+      limits.sendBytes('203.0.113.7', 15 * MB);
+      now += 10 * MINUTE;
+
+      // 5 + 15 + 10 is over 25: it fits once the first 5 MB are an hour old.
+      let refused: unknown;
+      try {
+        limits.sendBytes('203.0.113.7', 10 * MB);
+      } catch (error) {
+        refused = error;
+      }
+      expect(refused).toBeInstanceOf(TooManyRequestsException);
+      expect((refused as TooManyRequestsException).retryAfterSeconds).toBe(
+        40 * 60
+      );
+
+      now += 40 * MINUTE;
+      expect(() => limits.sendBytes('203.0.113.7', 10 * MB)).not.toThrow();
+    });
+
+    it('allows exactly the limit', () => {
+      expect(() =>
+        limits.sendBytes('203.0.113.7', MAX_FILE_BYTES)
+      ).not.toThrow();
+      expect(() => limits.sendBytes('203.0.113.7', 1)).toThrow(
+        TooManyRequestsException
+      );
+    });
+
+    it('counts each address on its own, and not a refused send', () => {
+      limits.sendBytes('203.0.113.7', 20 * MB);
+      expect(() => limits.sendBytes('203.0.113.7', 10 * MB)).toThrow();
+
+      expect(() => limits.sendBytes('203.0.113.7', 5 * MB)).not.toThrow();
+      expect(() => limits.sendBytes('198.51.100.20', 25 * MB)).not.toThrow();
+    });
+
+    it('never refuses, or counts, a send with no files', () => {
+      limits.sendBytes('203.0.113.7', MAX_FILE_BYTES);
+
+      expect(() => limits.sendBytes('203.0.113.7', 0)).not.toThrow();
+    });
+
+    it('keeps apart from the count of sends', () => {
+      limits.sendBytes('203.0.113.7', MAX_FILE_BYTES);
+
+      expect(() => limits.send('203.0.113.7')).not.toThrow();
     });
   });
 

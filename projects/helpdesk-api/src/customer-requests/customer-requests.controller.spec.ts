@@ -6,8 +6,17 @@ import type {
   Role,
   TicketDto,
 } from '@helpdesk/contract';
-import { CustomerRequestsService } from '@helpdesk/server';
-import { ConflictException } from '@nestjs/common';
+import {
+  ATTACHMENT_MAX_BYTES,
+  REQUEST_FIELDS_PART,
+  REQUEST_FILES_PART,
+} from '@helpdesk/contract';
+import {
+  AttachmentsService,
+  CustomerRequestsService,
+  type UploadedFile,
+} from '@helpdesk/server';
+import { BadRequestException, ConflictException } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import cookieParser from 'cookie-parser';
@@ -81,6 +90,16 @@ describe('/api/requests', () => {
     turnIntoTicket: vi.fn(async () => newTicket),
     dismiss: vi.fn(async () => undefined),
   };
+  /** Checks files as the real one does (tested with it): here, as given. */
+  const attachments = {
+    prepare: vi.fn(async (files: readonly UploadedFile[]) =>
+      files.map(({ name, bytes }) => ({
+        fileName: name,
+        mediaType: 'text/plain' as const,
+        content: bytes,
+      }))
+    ),
+  };
   let app: NestExpressApplication;
   let base: string;
 
@@ -93,6 +112,7 @@ describe('/api/requests', () => {
         RequestLimits,
         { provide: AuthService, useValue: fakeAuth },
         { provide: CustomerRequestsService, useValue: service },
+        { provide: AttachmentsService, useValue: attachments },
       ],
     }).compile();
     app = moduleRef.createNestApplication<NestExpressApplication>({
@@ -138,7 +158,12 @@ describe('/api/requests', () => {
 
       expect(response.status).toBe(201);
       expect(await response.json()).toEqual({ reference: 'R-1001' });
-      expect(service.send).toHaveBeenCalledExactlyOnceWith(SENT);
+      expect(service.send).toHaveBeenCalledExactlyOnceWith(
+        SENT,
+        expect.any(Date),
+        []
+      );
+      expect(attachments.prepare).not.toHaveBeenCalled();
     });
 
     it('refuses a wrong field with 400, saying what is expected, keeping nothing', async () => {
@@ -182,6 +207,160 @@ describe('/api/requests', () => {
       expect(
         (await call('POST', '', { body: SENT, from: '198.51.100.20' })).status
       ).toBe(201);
+    });
+  });
+
+  // A request with files (#1026): the fields as JSON in one part, each
+  // file in a "files" part, as the form's FormData sends them.
+  describe('POST / with files (public)', () => {
+    /** Text bytes, as a file's contents. */
+    const text = (content: string) => new TextEncoder().encode(content);
+
+    /** Sends `fields` (as JSON, or as given) and `files` as multipart. */
+    const sendWith = (
+      files: { name: string; content: Uint8Array; part?: string }[],
+      fields: unknown = SENT
+    ) => {
+      const form = new FormData();
+      if (fields !== null) {
+        form.append(
+          REQUEST_FIELDS_PART,
+          typeof fields === 'string' ? fields : JSON.stringify(fields)
+        );
+      }
+      for (const { name, content, part = REQUEST_FILES_PART } of files) {
+        form.append(part, new Blob([content]), name);
+      }
+      return fetch(base, {
+        method: 'POST',
+        headers: { 'x-forwarded-for': '203.0.113.7' },
+        body: form,
+      });
+    };
+
+    /** The 400's message, after checking nothing was kept. */
+    const refusal = async (response: Response) => {
+      expect(response.status).toBe(400);
+      expect(service.send).not.toHaveBeenCalled();
+      return ((await response.json()) as { message: string }).message;
+    };
+
+    it('checks the files and keeps them with the request', async () => {
+      const response = await sendWith([
+        { name: 'rows.txt', content: text('Rows: 1,000') },
+        { name: 'steps.txt', content: text('Export, then count') },
+      ]);
+
+      expect(response.status).toBe(201);
+      expect(await response.json()).toEqual({ reference: 'R-1001' });
+      expect(attachments.prepare).toHaveBeenCalledExactlyOnceWith([
+        { name: 'rows.txt', bytes: text('Rows: 1,000') },
+        { name: 'steps.txt', bytes: text('Export, then count') },
+      ]);
+      expect(service.send).toHaveBeenCalledExactlyOnceWith(
+        SENT,
+        expect.any(Date),
+        await attachments.prepare.mock.results[0].value
+      );
+    });
+
+    it('reads a file name in any language', async () => {
+      await sendWith([{ name: 'Zoë’s 東京 notes.txt', content: text('Hi') }]);
+
+      expect(attachments.prepare.mock.calls[0][0][0].name).toBe(
+        'Zoë’s 東京 notes.txt'
+      );
+    });
+
+    it('keeps a request sent as multipart with no files', async () => {
+      expect((await sendWith([])).status).toBe(201);
+      expect(service.send).toHaveBeenCalledExactlyOnceWith(
+        SENT,
+        expect.any(Date),
+        []
+      );
+    });
+
+    it('checks nothing for spam, and keeps nothing', async () => {
+      const response = await sendWith(
+        [{ name: 'rows.txt', content: text('Rows') }],
+        { ...SENT, website: 'https://spam.example' }
+      );
+
+      expect(response.status).toBe(201);
+      expect(attachments.prepare).not.toHaveBeenCalled();
+      expect(service.send).not.toHaveBeenCalled();
+    });
+
+    it("passes on the files' refusal", async () => {
+      attachments.prepare.mockRejectedValueOnce(
+        new BadRequestException(
+          '"tool.exe" isn\'t a PNG, JPEG, WebP, PDF or text file.'
+        )
+      );
+
+      const response = await sendWith([
+        { name: 'tool.exe', content: text('MZ') },
+      ]);
+
+      expect(await refusal(response)).toBe(
+        '"tool.exe" isn\'t a PNG, JPEG, WebP, PDF or text file.'
+      );
+    });
+
+    it.each([
+      ['no fields part', null],
+      ['fields that are not JSON', 'name=Dana'],
+    ])('refuses %s', async (_, fields) => {
+      expect(
+        await refusal(
+          await sendWith([{ name: 'rows.txt', content: text('Rows') }], fields)
+        )
+      ).toBe('Send the request\'s fields as JSON, in a "request" part.');
+    });
+
+    it('refuses more than 3 files, reading no more', async () => {
+      const four = Array.from({ length: 4 }, (_, index) => ({
+        name: `${index}.txt`,
+        content: text('Rows'),
+      }));
+
+      expect(await refusal(await sendWith(four))).toBe(
+        'Attach at most 3 files.'
+      );
+      expect(attachments.prepare).not.toHaveBeenCalled();
+    });
+
+    it('refuses a file over 5 MB with 400, not reading it all', async () => {
+      const response = await sendWith([
+        { name: 'huge.txt', content: new Uint8Array(ATTACHMENT_MAX_BYTES + 1) },
+      ]);
+
+      expect(await refusal(response)).toBe('Each file must be 5 MB or less.');
+      expect(attachments.prepare).not.toHaveBeenCalled();
+    });
+
+    it('answers 429 with Retry-After once an address has sent too many bytes of files, checking none of them', async () => {
+      const largest = Array.from({ length: 3 }, (_, index) => ({
+        name: `${index}.txt`,
+        content: new Uint8Array(ATTACHMENT_MAX_BYTES),
+      }));
+      expect((await sendWith(largest)).status).toBe(201);
+
+      const refused = await sendWith(largest);
+
+      expect(refused.status).toBe(429);
+      expect(Number(refused.headers.get('retry-after'))).toBeGreaterThan(0);
+      expect(attachments.prepare).toHaveBeenCalledOnce();
+      expect(service.send).toHaveBeenCalledOnce();
+    });
+
+    it('refuses a file sent under another part name', async () => {
+      const response = await sendWith([
+        { name: 'rows.txt', content: text('Rows'), part: 'file' },
+      ]);
+
+      expect(await refusal(response)).toBe('Send each file in a "files" part.');
     });
   });
 

@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 9, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 55 of 63)
+**Last Updated: October 9, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 56 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -878,3 +878,9 @@ The demo build's stand-in for Node's `crypto`, with exactly what the server libr
 **Low · Documentation** — 2 fixes; **Low · Test coverage** — 1 fix ([issue #1268](https://github.com/Terrence721/platform-main/issues/1268))
 
 The demo build's stand-in for `@nestjs/common`, with everything the server library's eight files take from it: `Injectable`, `Inject` and `Optional`, which do nothing as the demo creates the services itself, and the HTTP exceptions, which the in-browser API answers with by their `getStatus()` and `message`. It holds, under its spec: each exception with its status and Nest's default message, an `HttpException` and an `Error`, named after its class; and a decorated service left as it is. Its header had the services as the API's; they are the server library's, and it now says so. The 401's comment had only "nobody is signed in"; a refused sign-in is a 401 too, in the API and the demo, and it now says both. The spec ran `Injectable` and `Inject` but not `Optional`, which three services use for the live events the demo leaves out; it runs all three now, and failed against a copy, outside the checkout, whose `Optional` throws.
+
+### [`helpdesk/src/demo/demo-database.ts`](https://github.com/Terrence721/platform-main/blob/3451c7d/projects/helpdesk/src/demo/demo-database.ts)
+
+**Low · Documentation** — 2 fixes ([issue #1270](https://github.com/Terrence721/platform-main/issues/1270))
+
+Starts the in-browser demo's database: PostgreSQL in the page (PGlite), migrated with the real migrations, split at drizzle-kit's breakpoints as the real migrator splits them, and filled with the real seed, fresh on every visit as `yarn start:helpdesk` is on every run. It holds, under its spec: the journal read first, then each migration in its order; every table the real stack has; the seed's 48 users, 4 teams, 1000 tickets and their messages, due times counted from `now`; and the services answering from it. Its comments had the migrations, the seed and the services as the API's; they are the server library's, as the comment's own `helpdesk-server/drizzle` shows, and they now say so. `client` was "to close when the demo ends"; the demo never closes it, keeping it as long as the page is open, and only the specs do, which it now says. Noted, not changed: a migration failing partway leaves PGlite open, but the banner says the demo could not start and a reload starts over; and no table records the migrations run, as the real migrator's does, since every visit starts empty.

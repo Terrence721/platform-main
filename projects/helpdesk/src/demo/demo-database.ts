@@ -15,9 +15,12 @@ const STATEMENT_BREAKPOINT = '--> statement-breakpoint';
 
 /** The database the in-browser demo (#942) runs on, ready to use. */
 export interface DemoDatabase {
-  /** PGlite itself, to close when the demo ends. */
+  /**
+   * PGlite itself. The demo keeps it as long as the page is open; the
+   * specs close it when they are done.
+   */
   client: PGlite;
-  /** The Drizzle client the API's services take. */
+  /** The Drizzle client the server library's services take. */
   database: Database;
   /** What the seed made, such as how many tickets. */
   summary: SeedSummary;
@@ -25,8 +28,8 @@ export interface DemoDatabase {
 
 /**
  * Starts the demo's database: PostgreSQL in the page (PGlite), migrated
- * with the API's own migrations and filled with the API's own seed, as
- * `yarn start:helpdesk` does on every run, so each visit starts fresh and
+ * with the server library's own migrations and filled with its own seed,
+ * as `yarn start:helpdesk` does on every run, so each visit starts fresh and
  * due times are counted from `now`. `readFile` reads a file from the
  * migrations folder (projects/helpdesk-server/drizzle): over the network in
  * the browser, from disk in the specs.

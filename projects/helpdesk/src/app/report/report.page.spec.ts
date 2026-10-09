@@ -262,6 +262,10 @@ describe('ReportPage', () => {
           element.textContent?.trim()
         )
       ).toEqual(['Check my request', 'Report another issue']);
+      // To Check my request, with the reference filled in.
+      expect(page.querySelector('.sent a')?.getAttribute('href')).toBe(
+        '/report/status?reference=R-1042'
+      );
     });
 
     it('starts again with an empty form for another issue', async () => {

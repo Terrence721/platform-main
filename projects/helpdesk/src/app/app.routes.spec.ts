@@ -93,6 +93,18 @@ describe('routes', () => {
     expect(launcher.open).not.toHaveBeenCalled();
   });
 
+  it('opens Check my request at /report/status, for anyone, with its own title', async () => {
+    const harness = await RouterTestingHarness.create('/report/status');
+
+    expect(
+      harness.routeNativeElement?.querySelector('h1')?.textContent
+    ).toContain('Check my request');
+    expect(TestBed.inject(Title).getTitle()).toBe(
+      'Check my request · Helpdesk'
+    );
+    expect(launcher.open).not.toHaveBeenCalled();
+  });
+
   it('serves the capabilities from the app, not the server', async () => {
     await RouterTestingHarness.create('/');
 

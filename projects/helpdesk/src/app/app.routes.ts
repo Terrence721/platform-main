@@ -42,6 +42,11 @@ export const routes: Routes = [
     title: 'Report an issue · Helpdesk',
   },
   {
+    path: 'report/status',
+    loadComponent: () => import('./report/request-status.page'),
+    title: 'Check my request · Helpdesk',
+  },
+  {
     path: 'agent',
     canMatch: [canMatchRole('agent')],
     loadComponent: () => import('./agent/agent.page'),

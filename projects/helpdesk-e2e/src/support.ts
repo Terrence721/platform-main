@@ -6,9 +6,13 @@ import { expect, type Locator, type Page } from '@playwright/test';
 // signing in. `signInAs` asks the API directly, as the popup does, then
 // opens the person's page: quicker, for specs about what comes after.
 
-/** The seed's password for everyone (.env can change it, as for Compose). */
+/**
+ * The seed's password for everyone (.env can change it, as for Compose).
+ * Left empty, it is the default, as Compose and the API's seed read it
+ * (#1288).
+ */
 export const PASSWORD =
-  process.env['HELPDESK_SEED_PASSWORD'] ?? 'helpdesk-dev-only';
+  process.env['HELPDESK_SEED_PASSWORD'] || 'helpdesk-dev-only';
 
 /** Each role's own page. */
 export const HOME_PAGES: Record<Role, string> = {

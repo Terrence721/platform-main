@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 9, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` complete: 63 of 63; `helpdesk-e2e` in progress: 1 of 2)
+**Last Updated: October 9, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` complete: 63 of 63; `helpdesk-e2e` complete: 2 of 2)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -932,3 +932,9 @@ The app's image, and the last of its 63 files: built in a Node stage, served by 
 **Medium · Correctness** — 1 fix ([issue #1286](https://github.com/Terrence721/platform-main/issues/1286))
 
 Playwright's global setup: it starts the whole help desk in Docker Compose before the run and removes it, database included, after. It holds: a help desk already answering stops the run with a message, rather than tests running on its old data, which caught a stack an interrupted run had left up during this audit; `up --build --wait` gives fresh images and every service healthy, and the app must then answer through to `/api/health`; a failed start prints the API's and app's logs, removes the stack and says why; and `E2E_BASE_URL` leaves a running stack as it is. The gap was in its promise that every run starts from a fresh seed. The API seeds only a database with no users, so a run cut short (a crash, a reboot) that left its containers stopped and its database behind passed the guard, nothing answering, and the next run tested what the last one had changed; the guard's own advice, `down` without `--volumes`, left the database too. Shown on the real stack: with the containers stopped, the volume kept and Sam's account made inactive in it, Sam's sign-in test failed. Leftovers are now cleared before the stack starts, the advice says `--volumes`, and the same test then passes on a fresh seed. Noted, not changed: a killed run never reaches its teardown, so the stack stays up until the next run's guard reports it.
+
+### [`helpdesk-e2e/src/support.ts`](https://github.com/Terrence721/platform-main/blob/72ca919/projects/helpdesk-e2e/src/support.ts)
+
+**Low · Correctness** — 1 fix ([issue #1288](https://github.com/Terrence721/platform-main/issues/1288))
+
+What the e2e specs share, and the last of the audit's 123 files: the seed's password, each role's page, finders for a ticket's row and a snack bar, and two ways in. It holds: each of the eight specs imports only what it uses; `signIn` goes through the toolbar's popup, as a person does; `signInAs` asks the API with the page's own cookies, so the page is signed in, in the JSON the API requires; `HOME_PAGES` repeats the app's on purpose, so a changed address fails the tests; the snack bar is found by its text, as the last may still be leaving; and a ticket's row cannot be confused with another's, every seeded number having four digits. The password was read with `??`, keeping an empty value, where Compose (`:-`) and the API's seed (`||`) fall back to the default; with `HELPDESK_SEED_PASSWORD=` left empty in `.env`, the stack seeded the default and every journey failed at sign-in. Shown on the real stack, Sam's sign-in test failed that way; with `||` it passes. Noted, not changed: the default password is written out here and in the seed, as importing the server library into Playwright for one string would load all of it, and a mismatch fails every journey at once.

@@ -16,9 +16,11 @@ import {
   readAssigneeId,
   readCreateAccount,
   readCustomerRequest,
+  readDismissal,
   readMessage,
   readSignIn,
   readStatus,
+  readTurnIntoTicket,
   readUpdateAccount,
   ReportsService,
   TeamsService,
@@ -308,6 +310,48 @@ export class DemoApi {
         access: ['admin'],
         run: ({ user, params: [userId], body }) =>
           this.accounts.update(userId, readUpdateAccount(body), user.id),
+      },
+      // CustomerRequestsController's supervisors' routes, and
+      // QueuesController (#1026); sending and checking are public, above.
+      {
+        method: 'GET',
+        path: /^\/api\/requests$/,
+        access: supervisor,
+        run: () => this.customerRequests.pending(),
+      },
+      {
+        method: 'POST',
+        path: new RegExp(`^/api/requests/${ID}/ticket$`),
+        access: supervisor,
+        status: 201,
+        run: ({ user, params: [requestId], body }) =>
+          this.customerRequests.turnIntoTicket(
+            requestId,
+            readTurnIntoTicket(body),
+            user,
+            this.now()
+          ),
+      },
+      {
+        method: 'POST',
+        path: new RegExp(`^/api/requests/${ID}/dismiss$`),
+        access: supervisor,
+        status: 204,
+        run: async ({ user, params: [requestId], body }) => {
+          await this.customerRequests.dismiss(
+            requestId,
+            readDismissal(body),
+            user,
+            this.now()
+          );
+          return null;
+        },
+      },
+      {
+        method: 'GET',
+        path: /^\/api\/queues$/,
+        access: supervisor,
+        run: () => this.customerRequests.queues(),
       },
       // ReportsController
       {

@@ -180,6 +180,12 @@ export interface PendingRequest {
   description: string;
   where: string | null;
   createdAt: IsoDateTime;
+  /**
+   * The queue its category suggests, which Turn into ticket starts on;
+   * `null` when the category suggests none. The supervisor may choose
+   * another.
+   */
+  suggestedQueueId: string | null;
   possibleDuplicates: {
     openTickets: TicketDto[];
     earlierRequests: EarlierRequest[];

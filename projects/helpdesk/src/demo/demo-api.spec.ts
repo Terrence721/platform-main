@@ -3,6 +3,8 @@
 // other specs use cannot load; the real browser and Node both can.
 import {
   isFinished,
+  type PendingRequest,
+  type QueueSummary,
   type ReportsResponse,
   SIGN_IN_FAILED_MESSAGE,
   type TeamListing,
@@ -285,6 +287,8 @@ describe('DemoApi', { timeout: 60_000 }, () => {
       });
       expect((await call('GET', '/api/teams/mine')).status).toBe(403);
       expect((await call('GET', '/api/teams')).status).toBe(403);
+      expect((await call('GET', '/api/requests')).status).toBe(403);
+      expect((await call('GET', '/api/queues')).status).toBe(403);
       expect((await call('GET', '/api/reports')).status).toBe(403);
     });
 
@@ -298,6 +302,64 @@ describe('DemoApi', { timeout: 60_000 }, () => {
 
   describe('as a supervisor', () => {
     beforeAll(() => signIn('chris.taylor'));
+
+    // New requests (#1026), as in the API's CustomerRequestsController.
+    describe('New requests', () => {
+      const pending = async () =>
+        (await call('GET', '/api/requests')).body as PendingRequest[];
+
+      it('lists the seeded requests, oldest first, each with its suggested queue', async () => {
+        const { status, body } = await call('GET', '/api/requests');
+        const waiting = body as PendingRequest[];
+
+        expect(status).toBe(200);
+        expect(waiting.length).toBeGreaterThanOrEqual(4);
+        expect(waiting[0].reference).toBe('R-1001');
+        expect(
+          waiting.find(({ category }) => category === 'billing')
+            ?.suggestedQueueId
+        ).toBe('billing');
+      });
+
+      it('lists the queues a request can become a ticket in', async () => {
+        const { status, body } = await call('GET', '/api/queues');
+
+        expect(status).toBe(200);
+        expect((body as QueueSummary[]).map(({ id }) => id)).toContain(
+          'billing'
+        );
+      });
+
+      it('turns one into a new, unassigned ticket (201), and it leaves the list', async () => {
+        const [first] = await pending();
+
+        const { status, body } = await call(
+          'POST',
+          `/api/requests/${first.id}/ticket`,
+          { queueId: 'billing', priority: 'high' }
+        );
+
+        expect(status).toBe(201);
+        expect(body).toMatchObject({
+          subject: first.subject,
+          status: 'new',
+          priority: 'high',
+          assignee: null,
+        });
+        expect((await pending()).map(({ id }) => id)).not.toContain(first.id);
+      });
+
+      it('dismisses one (204), and refuses to decide it again (409)', async () => {
+        const [first] = await pending();
+        const dismiss = () =>
+          call('POST', `/api/requests/${first.id}/dismiss`, {
+            reason: 'spam',
+          });
+
+        expect(await dismiss()).toEqual({ status: 204, body: null });
+        expect((await dismiss()).status).toBe(409);
+      });
+    });
 
     it('shows the team the supervisor leads', async () => {
       const { status, body } = await call('GET', '/api/teams/mine');

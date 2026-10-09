@@ -7,6 +7,7 @@ import {
   SIGN_IN_FAILED_MESSAGE,
 } from '@helpdesk/contract';
 import {
+  AttachmentsService,
   CustomerRequestsService,
   type Database,
   DEFAULT_SEED_PASSWORD,
@@ -111,7 +112,11 @@ export class DemoApi {
     this.teams = new TeamsService(database);
     this.accounts = new UsersService(database);
     this.reports = new ReportsService(database);
-    this.customerRequests = new CustomerRequestsService(database);
+    // Images are refused until a canvas redraws them here (#1026, B5).
+    this.customerRequests = new CustomerRequestsService(
+      database,
+      new AttachmentsService(database)
+    );
     this.routes = this.defineRoutes();
   }
 

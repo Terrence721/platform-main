@@ -23,6 +23,10 @@ import {
   Optional,
 } from '@nestjs/common';
 import { and, asc, desc, eq, inArray, ne } from 'drizzle-orm';
+import {
+  AttachmentsService,
+  type PreparedFile,
+} from '../attachments/attachments.service';
 import { DATABASE, type Database } from '../database/database-token';
 import { customers, queues, requests, tickets } from '../database/schema';
 import { SLA_MINUTES } from '../database/seed/generate';
@@ -73,6 +77,8 @@ export const ALREADY_DECIDED = 'Someone has decided this request already.';
 export class CustomerRequestsService {
   constructor(
     @Inject(DATABASE) private readonly database: Database,
+    @Inject(AttachmentsService)
+    private readonly attachments: AttachmentsService,
     // Named, as an optional parameter's recorded type is only `Object`.
     @Optional() @Inject(LiveHub) private readonly live?: LiveHub
   ) {}
@@ -86,30 +92,36 @@ export class CustomerRequestsService {
   }
 
   /**
-   * Keeps a request, pending, and answers with its reference. The customer
-   * agreed to what is kept as they sent it, at `now`. Its fields are
-   * already read and checked (`readCustomerRequest`); spam checks are the
-   * API's.
+   * Keeps a request, pending, with the files sent with it, and answers with
+   * its reference: the request and its files together, or neither. The
+   * customer agreed to what is kept as they sent it, at `now`. Its fields
+   * are already read and checked (`readCustomerRequest`), and its files
+   * (`AttachmentsService.prepare`); spam checks are the API's.
    */
   async send(
     request: CreateRequestRequest,
-    now = new Date()
+    now = new Date(),
+    files: readonly PreparedFile[] = []
   ): Promise<CreateRequestResponse> {
-    const [row] = await this.database
-      .insert(requests)
-      .values({
-        name: request.name,
-        email: request.email,
-        category: request.category,
-        impact: request.impact,
-        subject: request.subject,
-        description: request.description,
-        where: request.where,
-        consentedAt: now,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .returning({ requestNumber: requests.requestNumber });
+    const row = await this.database.transaction(async (tx) => {
+      const [kept] = await tx
+        .insert(requests)
+        .values({
+          name: request.name,
+          email: request.email,
+          category: request.category,
+          impact: request.impact,
+          subject: request.subject,
+          description: request.description,
+          where: request.where,
+          consentedAt: now,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning({ id: requests.id, requestNumber: requests.requestNumber });
+      await this.attachments.store(tx, kept.id, files, now);
+      return kept;
+    });
     this.requestsChanged();
     return { reference: formatRequestReference(row.requestNumber) };
   }
@@ -162,8 +174,8 @@ export class CustomerRequestsService {
   }
 
   /**
-   * Every request still waiting, oldest first, each with the queue its
-   * category suggests (if that queue exists) and what might make it a
+   * Every request still waiting, oldest first, each with its files, the
+   * queue its category suggests (if that queue exists) and what might make it a
    * duplicate: the same customer's open tickets (most urgent first) and
    * their other requests (newest first), matched by email.
    */
@@ -177,6 +189,7 @@ export class CustomerRequestsService {
       this.database.select({ id: queues.id }).from(queues),
     ]);
     const queueIds = new Set(queueRows.map(({ id }) => id));
+    const files = await this.attachments.listFor(waiting.map(({ id }) => id));
     const suggestedQueueFor = (category: RequestCategory) => {
       const queueId = SUGGESTED_QUEUE[category];
       return queueId !== null && queueIds.has(queueId) ? queueId : null;
@@ -199,8 +212,7 @@ export class CustomerRequestsService {
           where: request.where,
           createdAt: request.createdAt.toISOString(),
           suggestedQueueId: suggestedQueueFor(request.category),
-          // No request carries files yet: the attachments table comes next.
-          attachments: [],
+          attachments: files.get(request.id) ?? [],
           possibleDuplicates: { openTickets, earlierRequests },
         };
       })

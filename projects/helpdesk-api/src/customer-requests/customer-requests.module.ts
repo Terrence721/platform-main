@@ -1,4 +1,4 @@
-import { CustomerRequestsService } from '@helpdesk/server';
+import { AttachmentsService, CustomerRequestsService } from '@helpdesk/server';
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { CustomerRequestsController } from './customer-requests.controller';
@@ -11,10 +11,12 @@ import { RequestLimits } from './request-limits';
  * become a ticket in. AuthModule brings the guard the supervisors'
  * routes are behind; the database and the live hub come from the global
  * DatabaseModule and LiveModule. One RequestLimits for the whole API.
+ * AttachmentsService keeps requests' files; until sharp redraws images
+ * here (#1026, B4), it refuses images.
  */
 @Module({
   imports: [AuthModule],
   controllers: [CustomerRequestsController, QueuesController],
-  providers: [CustomerRequestsService, RequestLimits],
+  providers: [AttachmentsService, CustomerRequestsService, RequestLimits],
 })
 export class CustomerRequestsModule {}

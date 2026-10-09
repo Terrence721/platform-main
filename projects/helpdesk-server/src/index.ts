@@ -6,6 +6,10 @@
  * each change. The NestJS API (helpdesk-api) wires them to HTTP; the
  * in-browser demo (#942) runs the same checks and services against PGlite.
  */
+export * from './lib/attachments/attachments.service';
+export * from './lib/attachments/file-name';
+export * from './lib/attachments/file-type';
+export * from './lib/attachments/image-re-encoder';
 export * from './lib/auth/password';
 export * from './lib/customer-requests/customer-requests.service';
 export * from './lib/database/database-token';

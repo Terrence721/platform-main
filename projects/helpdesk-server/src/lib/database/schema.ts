@@ -1,4 +1,7 @@
 import {
+  ATTACHMENT_FILE_NAME_MAX_LENGTH,
+  ATTACHMENT_MAX_BYTES,
+  ATTACHMENT_MEDIA_TYPES,
   DISMISS_REASONS,
   REQUEST_CATEGORIES,
   REQUEST_EMAIL_MAX_LENGTH,
@@ -21,6 +24,7 @@ import {
   // The repo's id-blacklist rule bans the name `boolean`.
   boolean as booleanColumn,
   check,
+  customType,
   index,
   integer,
   pgEnum,
@@ -49,6 +53,20 @@ export const requestCategoryEnum = pgEnum(
 export const requestImpactEnum = pgEnum('request_impact', REQUEST_IMPACTS);
 export const requestStatusEnum = pgEnum('request_status', REQUEST_STATUSES);
 export const dismissReasonEnum = pgEnum('dismiss_reason', DISMISS_REASONS);
+export const attachmentMediaTypeEnum = pgEnum(
+  'attachment_media_type',
+  ATTACHMENT_MEDIA_TYPES
+);
+
+/**
+ * A file's bytes. Drizzle has no `bytea` column of its own; a `Uint8Array`
+ * suits both drivers: node-postgres (the API) sends one as bytes and reads
+ * back a `Buffer`, which is one; PGlite (the demo, the specs) takes and
+ * gives one as it is. No Node `Buffer` here: the demo runs in a browser.
+ */
+const bytea = customType<{ data: Uint8Array; driverData: Uint8Array }>({
+  dataType: () => 'bytea',
+});
 
 /**
  * Created when the row is added; `updatedAt` also moves on every update made
@@ -269,5 +287,46 @@ export const requests = pgTable(
       'requests_dismissed_check',
       sql`(${table.status} = 'dismissed') = (${table.dismissReason} is not null)`
     ),
+  ]
+);
+
+/**
+ * The files a customer added to a request (#1026), kept whole in the
+ * database: no file store to run or pay for, and the demo's PGlite holds
+ * them too. A ticket made from the request reaches them through it. Staff
+ * open them only as downloads. Never changed once kept.
+ */
+export const attachments = pgTable(
+  'attachments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** Requests are never deleted, so neither are their files. */
+    requestId: uuid('request_id')
+      .notNull()
+      .references(() => requests.id),
+    /** As the customer named it, made safe to show and to save. */
+    fileName: varchar('file_name', {
+      length: ATTACHMENT_FILE_NAME_MAX_LENGTH,
+    }).notNull(),
+    /** Decided from the bytes, never from the name or the browser. */
+    mediaType: attachmentMediaTypeEnum('media_type').notNull(),
+    /** In bytes; kept beside the bytes so lists need not read them. */
+    size: integer('size').notNull(),
+    content: bytea('content').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    // One request's files, oldest first.
+    index('attachments_request_created_idx').on(
+      table.requestId,
+      table.createdAt
+    ),
+    check(
+      'attachments_size_check',
+      sql`${table.size} = octet_length(${table.content}) and ${table.size} between 1 and ${sql.raw(String(ATTACHMENT_MAX_BYTES))}`
+    ),
+    check('attachments_file_name_check', sql`${table.fileName} <> ''`),
   ]
 );

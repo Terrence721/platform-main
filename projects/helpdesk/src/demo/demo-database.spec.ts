@@ -36,6 +36,7 @@ describe('startDemoDatabase', { timeout: 60_000 }, () => {
       '0003_ticket_finished_at.sql',
       '0004_drop_unused_reporting_views.sql',
       '0005_customer_requests.sql',
+      '0006_attachments.sql',
     ]);
   });
 
@@ -46,6 +47,7 @@ describe('startDemoDatabase', { timeout: 60_000 }, () => {
     );
 
     expect(rows.map(({ name }) => name)).toEqual([
+      'attachments',
       'customers',
       'queues',
       'requests',
@@ -62,6 +64,8 @@ describe('startDemoDatabase', { timeout: 60_000 }, () => {
       teams: 4,
       tickets: 1000,
       messages: expect.any(Number),
+      // R-1001's screenshot, decoded in the page as the API decodes it.
+      attachments: 1,
     });
     expect(demo.summary.messages).toBeGreaterThan(0);
   });

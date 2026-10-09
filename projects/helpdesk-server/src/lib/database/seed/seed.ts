@@ -3,6 +3,7 @@ import { count, eq } from 'drizzle-orm';
 import { hashPassword } from '../../auth/password';
 import type { Database } from '../database-token';
 import {
+  attachments,
   customers,
   queues,
   requests,
@@ -31,9 +32,19 @@ export interface SeedSummary {
   messages: number;
   /** Customers' requests waiting in New requests. */
   requests: number;
+  /** The files sent with those requests. */
+  attachments: number;
   /** A couple of user IDs per role, to sign in with. */
   examples: Record<SeedUser['role'], string[]>;
   milliseconds: number;
+}
+
+/**
+ * Bytes from base64, with `atob`: this code also runs in the browser (the
+ * demo), which has no Node `Buffer`.
+ */
+function bytesOf(base64: string): Uint8Array {
+  return Uint8Array.from(atob(base64), (character) => character.charCodeAt(0));
 }
 
 /** A time `minutes` from `now`; negative minutes are in the past. */
@@ -170,17 +181,40 @@ export async function seedDatabase(
     const oldestFirst = [...SEED_REQUESTS].sort(
       (a, b) => b.createdMinutesAgo - a.createdMinutesAgo
     );
-    await tx.insert(requests).values(
-      oldestFirst.map(({ createdMinutesAgo, ...request }) => {
-        const sentAt = minutesFrom(now, -createdMinutesAgo);
+    const stored = await tx
+      .insert(requests)
+      .values(
+        oldestFirst.map(
+          ({ createdMinutesAgo, attachments: _files, ...request }) => {
+            const sentAt = minutesFrom(now, -createdMinutesAgo);
+            return {
+              ...request,
+              consentedAt: sentAt,
+              createdAt: sentAt,
+              updatedAt: sentAt,
+            };
+          }
+        )
+      )
+      .returning({ id: requests.id, requestNumber: requests.requestNumber });
+    // Numbered in the order given, so the n-th number is the n-th request.
+    stored.sort((a, b) => a.requestNumber - b.requestNumber);
+    const files = oldestFirst.flatMap((request, index) =>
+      (request.attachments ?? []).map(({ fileName, mediaType, base64 }) => {
+        const content = bytesOf(base64);
         return {
-          ...request,
-          consentedAt: sentAt,
-          createdAt: sentAt,
-          updatedAt: sentAt,
+          requestId: stored[index].id,
+          fileName,
+          mediaType,
+          size: content.length,
+          content,
+          createdAt: minutesFrom(now, -request.createdMinutesAgo),
         };
       })
     );
+    if (files.length > 0) {
+      await tx.insert(attachments).values(files);
+    }
   });
 
   const idsOf = (role: SeedUser['role']) =>
@@ -199,6 +233,10 @@ export async function seedDatabase(
       0
     ),
     requests: SEED_REQUESTS.length,
+    attachments: SEED_REQUESTS.reduce(
+      (total, request) => total + (request.attachments?.length ?? 0),
+      0
+    ),
     examples: {
       admin: idsOf('admin'),
       supervisor: idsOf('supervisor'),

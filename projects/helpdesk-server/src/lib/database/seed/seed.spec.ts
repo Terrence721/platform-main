@@ -5,7 +5,13 @@ import { migrate } from 'drizzle-orm/pglite/migrator';
 import { fileURLToPath } from 'url';
 import { verifyPassword } from '../../auth/password';
 import type { Database } from '../database-token';
-import { requests, ticketMessages, tickets, users } from '../schema';
+import {
+  attachments,
+  requests,
+  ticketMessages,
+  tickets,
+  users,
+} from '../schema';
 import {
   DEFAULT_SEED_PASSWORD,
   minutesFrom,
@@ -196,5 +202,35 @@ describe('seedDatabase into a fresh database', { timeout: 60_000 }, () => {
         consentedAt: minutesFrom(now, -request.createdMinutesAgo),
       }))
     );
+  });
+
+  // New requests shows a file once thumbnails come (#1026): R-1001's
+  // screenshot of the export, a real PNG, counted in the summary.
+  it("attaches the story's screenshot to its request", async () => {
+    const stored = await database
+      .select({
+        requestNumber: requests.requestNumber,
+        fileName: attachments.fileName,
+        mediaType: attachments.mediaType,
+        size: attachments.size,
+        content: attachments.content,
+      })
+      .from(attachments)
+      .innerJoin(requests, eq(attachments.requestId, requests.id));
+
+    expect(summary.attachments).toBe(1);
+    expect(stored).toHaveLength(1);
+    const [screenshot] = stored;
+    expect(screenshot).toMatchObject({
+      requestNumber: 1001,
+      fileName: 'orders-export.png',
+      mediaType: 'image/png',
+      size: screenshot.content.length,
+    });
+    // PNG's signature, then a few KB at most.
+    expect([...screenshot.content.subarray(0, 8)]).toEqual([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+    ]);
+    expect(screenshot.size).toBeLessThan(20_000);
   });
 });

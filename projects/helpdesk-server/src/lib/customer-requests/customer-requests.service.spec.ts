@@ -249,6 +249,27 @@ describe('CustomerRequestsService', { timeout: 60_000 }, () => {
   });
 
   describe('pending', () => {
+    // Turn into ticket starts on it (#1026).
+    it('suggests the queue each category goes to, if there is one', async () => {
+      await sentAt({ category: 'bug' }, 30);
+      await sentAt({ category: 'billing' }, 20);
+      // No Accounts queue here; Other goes to none.
+      await sentAt({ category: 'account' }, 10);
+      await sentAt({ category: 'other' }, 5);
+
+      expect(
+        (await service.pending()).map(({ category, suggestedQueueId }) => [
+          category,
+          suggestedQueueId,
+        ])
+      ).toEqual([
+        ['bug', 'technical'],
+        ['billing', 'billing'],
+        ['account', null],
+        ['other', null],
+      ]);
+    });
+
     it('lists the requests still waiting, oldest first', async () => {
       await sentAt({ subject: 'Newer' }, 5);
       const decided = await sentAt({ subject: 'Decided' }, 20);
@@ -296,6 +317,16 @@ describe('CustomerRequestsService', { timeout: 60_000 }, () => {
         openTickets: [],
         earlierRequests: [],
       });
+    });
+  });
+
+  // Turn into ticket's choices.
+  describe('queues', () => {
+    it('lists every queue, by name', async () => {
+      expect(await service.queues()).toEqual([
+        { id: 'billing', name: 'Billing' },
+        { id: 'technical', name: 'Technical support' },
+      ]);
     });
   });
 

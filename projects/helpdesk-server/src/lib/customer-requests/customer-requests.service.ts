@@ -8,6 +8,8 @@ import {
   OPEN_WORK_STATUSES,
   parseRequestReference,
   type PendingRequest,
+  type QueueSummary,
+  type RequestCategory,
   type RequestStatusResponse,
   type TicketDto,
   type TurnIntoTicketRequest,
@@ -32,6 +34,20 @@ import {
   selectTickets,
   toTicketDto,
 } from '../tickets/ticket-dto';
+
+/**
+ * The queue each category goes to, by the seed's queue ids; `null` for
+ * Other, which suggests none. Queues are data, so this lives here rather
+ * than in the contract, and a suggestion is kept only if its queue exists.
+ */
+export const SUGGESTED_QUEUE: Readonly<Record<RequestCategory, string | null>> =
+  {
+    account: 'accounts',
+    billing: 'billing',
+    bug: 'technical',
+    feature: 'product',
+    other: null,
+  };
 
 /** The answer for a request that is not there, or not one. */
 export const NO_SUCH_REQUEST = 'No such request.';
@@ -146,16 +162,25 @@ export class CustomerRequestsService {
   }
 
   /**
-   * Every request still waiting, oldest first, each with what might make
-   * it a duplicate: the same customer's open tickets (most urgent first)
-   * and their other requests (newest first), matched by email.
+   * Every request still waiting, oldest first, each with the queue its
+   * category suggests (if that queue exists) and what might make it a
+   * duplicate: the same customer's open tickets (most urgent first) and
+   * their other requests (newest first), matched by email.
    */
   async pending(): Promise<PendingRequest[]> {
-    const waiting = await this.database
-      .select()
-      .from(requests)
-      .where(eq(requests.status, 'pending'))
-      .orderBy(asc(requests.createdAt), asc(requests.requestNumber));
+    const [waiting, queueRows] = await Promise.all([
+      this.database
+        .select()
+        .from(requests)
+        .where(eq(requests.status, 'pending'))
+        .orderBy(asc(requests.createdAt), asc(requests.requestNumber)),
+      this.database.select({ id: queues.id }).from(queues),
+    ]);
+    const queueIds = new Set(queueRows.map(({ id }) => id));
+    const suggestedQueueFor = (category: RequestCategory) => {
+      const queueId = SUGGESTED_QUEUE[category];
+      return queueId !== null && queueIds.has(queueId) ? queueId : null;
+    };
     return Promise.all(
       waiting.map(async (request) => {
         const [openTickets, earlierRequests] = await Promise.all([
@@ -173,6 +198,7 @@ export class CustomerRequestsService {
           description: request.description,
           where: request.where,
           createdAt: request.createdAt.toISOString(),
+          suggestedQueueId: suggestedQueueFor(request.category),
           possibleDuplicates: { openTickets, earlierRequests },
         };
       })
@@ -283,6 +309,14 @@ export class CustomerRequestsService {
         .where(eq(requests.id, requestId));
     });
     this.requestsChanged();
+  }
+
+  /** Every queue, by name: Turn into ticket's choices. */
+  queues(): Promise<QueueSummary[]> {
+    return this.database
+      .select({ id: queues.id, name: queues.name })
+      .from(queues)
+      .orderBy(asc(queues.name));
   }
 
   /** The open tickets of the customer with this email, most urgent first. */

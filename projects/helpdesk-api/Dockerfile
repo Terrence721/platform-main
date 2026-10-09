@@ -6,8 +6,9 @@
 # The container migrates the database at DATABASE_URL, seeds it when
 # HELPDESK_SEED=true and it has no users yet, then serves the API on 3000.
 
-# Build: install the workspace and build the API, as CI does. Node matches
-# .node-version.
+# Build: install the workspace and build the API, as CI does. Node is the
+# same major version as .node-version (24), at its newest on the day of the
+# build, so each build gets its fixes.
 FROM node:24-alpine AS build
 WORKDIR /repo
 RUN corepack enable

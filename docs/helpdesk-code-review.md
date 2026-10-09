@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 9, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 60 of 63)
+**Last Updated: October 9, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 61 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -908,3 +908,9 @@ The in-browser demo's bar along the bottom of the page, added by `main.demo.ts` 
 **Low · Test coverage** — 1 fix ([issue #1278](https://github.com/Terrence721/platform-main/issues/1278))
 
 Brings a reload on a demo page back to that page. GitHub Pages serves only real files, so reloading `/platform-main/helpdesk/agent` lands on the site's `404.html`, not a row of its own and reviewed here as the other half: it sends the visitor back to the demo with the page in `?route=`, path, query and fragment, and gives any other missing page a plain "Page not found". Before the app starts, `restoreRoute` puts the page back in the address bar, under the base from `document.baseURI`, so the router opens it; a demo address that matches no page goes on to the landing page, by the catch-all route. It holds, under its spec: a reload coming back to its page; an ordinary visit left alone; and a route without its slash, `//example.com/` or a full address ignored. It cannot lead to another site, as the demo's base always goes in front and `replaceState` refuses another origin. The spec titled "keeps its query and fragment" checked only a fragment; it now checks a route with both, and failed against a copy, outside the checkout, that drops the query. Noted, not changed: the demo's path is written out in `404.html` and in the Pages workflow's `--base-href`, as a static page cannot read the build's base; both sit beside comments saying why.
+
+### [`helpdesk/src/main.demo.ts`](https://github.com/Terrence721/platform-main/blob/d51b960/projects/helpdesk/src/main.demo.ts)
+
+**Medium · CI** — 1 fix; **Low · Documentation** — 1 fix ([issue #1280](https://github.com/Terrence721/platform-main/issues/1280))
+
+The demo build's entry point, used instead of `main.ts`: the same app, with the demo's backend, database and API beside it, and the banner. It holds: after a reload on Pages, the page put back before the router reads the address; the demo's providers after the app's own, so its backend is the one used; PGlite, the seed and the services loaded on their own, outside the first download, requests waiting for them, and a failed start logged and shown by the banner; live updates off through an event source of `null`, which the live updates expect; the banner outside the app, the page's end kept clear of it as it wraps; and the migrations read from where the build copies them. Its comment had the services as the API's; they are the server library's, and it now says so. The larger gap: nothing built the demo before a merge. Every pull request check builds the default configuration only, and the demo was built only by the Pages workflow after a push to main, so a change that broke it would pass every check and then fail the deploy, the live demo staying on its old version. In a scratch worktree whose Nest stand-in lacked `Optional`, the default build passed and the demo build failed. The build job now builds the demo too, which passes here and leaves the source tree as it was. Noted, not changed: if the app itself fails to start, the page is blank but for the console, as noted for `main.ts`.

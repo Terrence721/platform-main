@@ -108,6 +108,13 @@ jobs:
       - name: Run build
         run: yarn nx affected -t build
 
+      # The in-browser demo (#942) is otherwise built only by the Pages
+      # workflow, after a merge. Building it here catches a change that
+      # breaks it, such as a server import its browser stand-ins lack, before
+      # the merge (#1280).
+      - name: Build the Helpdesk demo
+        run: yarn nx build helpdesk -c demo
+
       # The Helpdesk's migrations are generated from its schema. A schema
       # change without its migration makes this write a new one, which the
       # next step then reports (#1053). drizzle-kit generates offline: it

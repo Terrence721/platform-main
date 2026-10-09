@@ -14,6 +14,10 @@ import { provideMockStore } from '@ngrx/store/testing';
 import { of } from 'rxjs';
 import { ReportsDialog } from '../reports/reports.dialog';
 import { INITIAL_REPORT_PICK } from '../reports/reports.store';
+import {
+  NEW_REQUESTS_API,
+  QUEUES_API,
+} from '../new-requests/new-requests.store';
 import { initialSessionState } from '../session/session.feature';
 import { Sounds } from '../sound/sounds';
 import { TicketConversationDialog } from '../tickets/ticket-conversation.dialog';
@@ -109,13 +113,21 @@ describe('SupervisorPage', () => {
     fixture.detectChanges();
     const page = fixture.nativeElement as HTMLElement;
     const http = TestBed.inject(HttpTestingController);
-    const texts = (selector: string) =>
-      [...page.querySelectorAll(selector)].map((element) =>
-        element.textContent?.trim()
+    // New requests has its own spec: here, none wait.
+    http.expectOne(NEW_REQUESTS_API).flush([]);
+    http.expectOne(QUEUES_API).flush([]);
+    fixture.detectChanges();
+    /** The page's own elements, not New requests' (it has its own spec). */
+    const own = (selector: string) =>
+      [...page.querySelectorAll(selector)].filter(
+        (element) => !element.closest('hd-new-requests')
       );
+    const texts = (selector: string) =>
+      own(selector).map((element) => element.textContent?.trim());
     return {
       page,
       http,
+      own,
       texts,
       text: (selector: string) => texts(selector)[0],
       /** Answers the page's request for the team, then renders. */
@@ -182,6 +194,22 @@ describe('SupervisorPage', () => {
     expect(text('.eyebrow')).toBe('Supervisor');
     expect(text('h1')).toBe('My team');
     expect(text('.greeting')).toBe('Signed in as Chris Taylor');
+  });
+
+  it("shows New requests above the team's work", () => {
+    const { page, answer } = render();
+    answer(atlas);
+
+    const section = page.querySelector('hd-new-requests');
+    expect(section?.querySelector('h2')?.textContent?.trim()).toBe(
+      'New requests · 0'
+    );
+    const team = [...page.querySelectorAll('h2')].find(
+      (heading) => heading.textContent?.trim() === 'Atlas'
+    );
+    expect(section && team && section.compareDocumentPosition(team)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING
+    );
   });
 
   it('shows a spinner while the team loads', () => {
@@ -432,11 +460,11 @@ describe('SupervisorPage', () => {
   });
 
   it('says when the team could not be loaded, and tries again', () => {
-    const { answer, page, http, detectChanges } = render();
+    const { answer, page, own, http, detectChanges } = render();
 
     answer(null, 500);
 
-    const message = page.querySelector('.message');
+    const [message] = own('.message');
     expect(message?.getAttribute('role')).toBe('alert');
     expect(message?.textContent).toContain("Your team couldn't be loaded.");
 

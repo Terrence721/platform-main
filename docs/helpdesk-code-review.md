@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 50 of 63)
+**Last Updated: October 8, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 51 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -846,3 +846,11 @@ The gap, noted at the role guard's review: no route caught an address that match
 **Low · Documentation** — 1 fix; **Low · Maintainability** — 1 fix ([issue #1256](https://github.com/Terrence721/platform-main/issues/1256))
 
 The app's providers, each piece tested where it lives and all of it started by the e2e tests. It holds: zoneless change detection; HTTP over `fetch` with the session-ended interceptor; the router, whose anchor links stop short of the sticky toolbar, measured each time as it is shorter on phones; router state in the store; the session feature and all seven session effects, listed by name as the module also exports constants and a helper; @ngrx/data for the capabilities; and the devtools, log-only outside development, with passwords hidden. Its comment had @ngrx/data's cache waiting for "admin data once there is some"; admin data came, in a signal store, so it now says the cache is for the capabilities. And `withFetch()`, spotted in the editor during the review, is deprecated in Angular 22.2, where fetch is the default backend; it goes, changing nothing (the demo backend's spec uses it too, for its own review). Noted, not changed: no spec would catch a new session effect left off the list, as NgRx has no public way to tell an effect from another export, but a missing core one would break the e2e sign-in journeys.
+
+### [`helpdesk/src/app/app.component.ts`](https://github.com/Terrence721/platform-main/blob/959a519/projects/helpdesk/src/app/app.component.ts)
+
+**Low · Accessibility** — 1 fix ([issue #1258](https://github.com/Terrence721/platform-main/issues/1258))
+
+The app shell: the sticky toolbar and the routed page. It holds, under its spec: the logo leading home, to the landing page or a signed-in user's own page; the page keeping its own `h1`; signed out, the landing sections, the current one marked, and Sign in, neither shown until the start-up check answers; signed in, who it is, the sound toggle reporting its state, and Sign out; and on a narrow screen, signed out, only the logo and Sign in.
+
+Signed in, a narrow screen had no rule, and jsdom has no layout to show it, so the toolbar was measured in Chromium on the demo build: its content ran to 463–496 px on 360 px and 412 px screens, and at 360 px Sign out was off the screen, reached only by scrolling the page sideways. Below 600 px the toolbar now leaves out who is signed in, which their own page says; measured again, it ends at 344 px of 360 and 396 of 412, though at 320 px it is still 14 px over. A new e2e test signs in as the supervisor, the longest name and role, at 360 px, and expects Sign out wholly on screen. The measuring also found the role pages' tables wider than a phone, scrolling the whole page sideways, for a follow-up.

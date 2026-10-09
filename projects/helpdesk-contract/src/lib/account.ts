@@ -1,9 +1,20 @@
 import { Role } from './roles';
+import type { PersonSummary } from './ticket-api';
 
 /** A team, as an account shows it. */
 export interface TeamSummary {
   id: string;
   name: string;
+}
+
+/**
+ * A team as `GET /api/teams` lists it for an admin: every team, one with
+ * no accounts included, so Team accounts and the team choices never lose
+ * it (#1210).
+ */
+export interface TeamListing extends TeamSummary {
+  /** The supervisor who leads it; `null` while none does. */
+  lead: PersonSummary | null;
 }
 
 /**

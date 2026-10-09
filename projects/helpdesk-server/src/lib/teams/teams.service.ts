@@ -1,6 +1,7 @@
 import {
   OPEN_WORK_STATUSES,
   type PersonSummary,
+  type TeamListing,
   type TeamMember,
   type TeamOverview,
 } from '@helpdesk/contract';
@@ -14,7 +15,10 @@ import {
   toTicketDto,
 } from '../tickets/ticket-dto';
 
-/** Reads a team's members and workload, for its supervisor. */
+/**
+ * Reads the teams: every one with its lead, for an admin; and a team's
+ * members and workload, for its supervisor.
+ */
 @Injectable()
 export class TeamsService {
   constructor(@Inject(DATABASE) private readonly database: Database) {}
@@ -48,6 +52,33 @@ export class TeamsService {
         .orderBy(...MOST_URGENT_FIRST),
     ]);
     return { ...team, members, unassigned: unassigned.map(toTicketDto) };
+  }
+
+  /**
+   * Every team by name, each with the supervisor who leads it (`null`
+   * while none does): one with no accounts too, which the accounts alone
+   * would not show (#1210). For an admin's Team accounts.
+   */
+  async all(): Promise<TeamListing[]> {
+    const rows = await this.database
+      .select({
+        id: teams.id,
+        name: teams.name,
+        leadId: users.id,
+        leadName: users.name,
+      })
+      .from(teams)
+      // A left join, so a team with no lead still comes back.
+      .leftJoin(users, eq(users.id, teams.supervisorId))
+      .orderBy(asc(teams.name));
+    return rows.map(({ id, name, leadId, leadName }) => ({
+      id,
+      name,
+      lead:
+        leadId === null || leadName === null
+          ? null
+          : { id: leadId, name: leadName },
+    }));
   }
 
   /**

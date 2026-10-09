@@ -3,6 +3,7 @@ import type {
   HistorySummary,
   PersonSummary,
   Role,
+  TeamListing,
   TeamOverview,
   TicketDto,
 } from '@helpdesk/contract';
@@ -59,6 +60,16 @@ const atlas: TeamOverview = {
 
 const benny: PersonSummary = { id: 'benny.lind', name: 'Benny Lind' };
 
+/** Every team: Atlas led by Chris, and Comet with nobody on it (#1210). */
+const allTeams: TeamListing[] = [
+  {
+    id: 'atlas',
+    name: 'Atlas',
+    lead: { id: 'chris.taylor', name: 'Chris Taylor' },
+  },
+  { id: 'comet', name: 'Comet', lead: null },
+];
+
 const memberTicket = { id: 'ticket-1312', ticketNumber: 1312 } as TicketDto;
 
 const memberSummary: HistorySummary = {
@@ -71,6 +82,7 @@ const memberSummary: HistorySummary = {
 
 describe('/api/teams', () => {
   const teams = {
+    all: vi.fn(async () => allTeams),
     overviewFor: vi.fn(async (): Promise<TeamOverview | null> => atlas),
     /** Chris leads Benny; nobody else leads anyone here. */
     agentLedBy: vi.fn(async (supervisorId: string, userId: string) =>
@@ -119,6 +131,31 @@ describe('/api/teams', () => {
 
   /** GET /mine, signed in as `role`, or signed out. */
   const mine = (role: Role | null) => get('/mine', role);
+
+  // Team accounts lists the teams themselves, so one emptied of its
+  // accounts is not lost (#1210).
+  describe('GET /', () => {
+    it('answers an admin with every team and its lead, one with no accounts too', async () => {
+      const response = await get('', 'admin');
+
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual(allTeams);
+      expect(teams.all).toHaveBeenCalledOnce();
+    });
+
+    it('answers 401 when signed out, without reading the teams', async () => {
+      expect((await get('', null)).status).toBe(401);
+      expect(teams.all).not.toHaveBeenCalled();
+    });
+
+    it.each(['agent', 'supervisor'] as const)(
+      'answers 403 to anyone but an admin (%s), without reading the teams',
+      async (role) => {
+        expect((await get('', role)).status).toBe(403);
+        expect(teams.all).not.toHaveBeenCalled();
+      }
+    );
+  });
 
   describe('GET mine', () => {
     it("answers a supervisor with their own team's overview", async () => {

@@ -5,7 +5,6 @@ import {
   HttpErrorResponse,
   HttpResponse,
   provideHttpClient,
-  withFetch,
 } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom, of } from 'rxjs';
@@ -33,7 +32,7 @@ describe('DemoBackend', () => {
     network.handle.mockClear();
     TestBed.configureTestingModule({
       providers: [
-        provideHttpClient(withFetch()),
+        provideHttpClient(),
         { provide: HttpBackend, useClass: DemoBackend },
         { provide: DEMO_API, useValue: ready },
         { provide: FetchBackend, useValue: network },

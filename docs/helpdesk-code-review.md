@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 9, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 54 of 63)
+**Last Updated: October 9, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 55 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -872,3 +872,9 @@ The demo build's stand-in for Node's `util`, which `tsconfig.demo.json` points t
 **Low · Documentation** — 2 fixes; **Low · Tests** — 1 fix ([issue #1266](https://github.com/Terrence721/platform-main/issues/1266))
 
 The demo build's stand-in for Node's `crypto`, with exactly what the server library's `auth/password.ts` imports: `randomBytes` from the browser's own generator, a quick `scrypt` whose key is marked as not a real one, and `timingSafeEqual`, over bytes that print as Node's `Buffer` does. It holds, under its spec: base64 and hex as Node prints them, random salts of the size asked for, and a key of the length asked for, with or without the cost options, through `promisify` as the password helpers call it. Its comments had `hashPassword` in the API and its cost options passed by the API; both are the server library's, and they now say so. They also had demo sign-in checking only the published demo password; an account made with Create Account during the visit signs in with its own, which the demo API keeps in memory, and the comment now says both. Its spec held `promisify`'s rejection test, which belongs to the util stand-in and which `util-shim.spec.ts` had just repeated; it is now only there, and this spec names crypto alone. Noted, not changed: the stand-in key keeps only about the first 26 characters of a password, and `timingSafeEqual` answers false where Node throws on different lengths; neither matters, as the demo never checks a stored hash.
+
+### [`helpdesk/src/demo/nest-shim.ts`](https://github.com/Terrence721/platform-main/blob/6f52d53/projects/helpdesk/src/demo/nest-shim.ts)
+
+**Low · Documentation** — 2 fixes; **Low · Test coverage** — 1 fix ([issue #1268](https://github.com/Terrence721/platform-main/issues/1268))
+
+The demo build's stand-in for `@nestjs/common`, with everything the server library's eight files take from it: `Injectable`, `Inject` and `Optional`, which do nothing as the demo creates the services itself, and the HTTP exceptions, which the in-browser API answers with by their `getStatus()` and `message`. It holds, under its spec: each exception with its status and Nest's default message, an `HttpException` and an `Error`, named after its class; and a decorated service left as it is. Its header had the services as the API's; they are the server library's, and it now says so. The 401's comment had only "nobody is signed in"; a refused sign-in is a 401 too, in the API and the demo, and it now says both. The spec ran `Injectable` and `Inject` but not `Optional`, which three services use for the live events the demo leaves out; it runs all three now, and failed against a copy, outside the checkout, whose `Optional` throws.

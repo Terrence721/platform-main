@@ -11,7 +11,8 @@ import { canMatchRole } from './session/role-match.guard';
 
 /**
  * The app's top-level routes, each page lazy-loaded. The public landing page
- * is the first page. Each role then has its own page, which only that role
+ * is the first page, and Report an issue, for customers, is open to anyone
+ * too. Each role then has its own page, which only that role
  * can open: anyone else is sent to their own page, or, signed out, to the
  * landing page with the sign-in popup open. Any other address goes to the
  * landing page. A page's state and effects are registered on its route, so
@@ -33,6 +34,12 @@ export const routes: Routes = [
       ),
     ],
     title: 'Helpdesk',
+  },
+  // Customers have no account, so anyone may open it (#1026).
+  {
+    path: 'report',
+    loadComponent: () => import('./report/report.page'),
+    title: 'Report an issue · Helpdesk',
   },
   {
     path: 'agent',

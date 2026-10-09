@@ -14,7 +14,8 @@ import { Sounds } from './sound/sounds';
 /**
  * The app shell: the toolbar and the routed page below it. Pages lay out
  * their own content, so the shell adds no padding around them. Signed out,
- * the toolbar offers the landing page's sections and Sign in; signed in, it
+ * the toolbar offers the landing page's sections, Report an issue (for
+ * customers, #1026) and Sign in; signed in, it
  * shows who is signed in, a speaker that mutes the help desk's sounds (or
  * turns them back on), and Sign out. Until the start-up session check
  * answers, it shows neither, so a reload does not flash Sign in.
@@ -87,6 +88,10 @@ import { Sounds } from './sound/sounds';
                   {{ section.label }}
                 </a>
               }
+              <!-- For customers, who have no account to sign in with. -->
+              <a class="report-link" matButton="outlined" routerLink="/report"
+                >Report<span class="long"> an issue</span></a
+              >
               <button matButton="filled" type="button" (click)="signIn.open()">
                 <mat-icon>login</mat-icon>
                 Sign in
@@ -193,6 +198,20 @@ import { Sounds } from './sound/sounds';
        is signed in is left to their own page, which says so. */
     @media (max-width: 600px) {
       .who {
+        display: none;
+      }
+      /* Signed out, a phone keeps the logo, Report and Sign in: the link
+         shows "Report", still read as "Report an issue", and Sign in its
+         word alone (#1026). */
+      .report-link .long {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+      nav mat-icon {
         display: none;
       }
     }

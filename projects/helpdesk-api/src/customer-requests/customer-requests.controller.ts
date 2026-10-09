@@ -11,6 +11,7 @@ import {
 } from '@helpdesk/contract';
 import {
   CustomerRequestsService,
+  NO_MATCHING_REQUEST,
   readCustomerRequest,
   readDismissal,
   readTurnIntoTicket,
@@ -46,10 +47,6 @@ interface VisitorRequest {
 interface HeaderResponse {
   setHeader(name: string, value: string): void;
 }
-
-/** The answer when a reference and an email do not belong together. */
-export const NO_MATCHING_REQUEST =
-  'No request matches that reference and email.';
 
 /**
  * Customer requests (/api/requests, #1026). Anyone may send one and check

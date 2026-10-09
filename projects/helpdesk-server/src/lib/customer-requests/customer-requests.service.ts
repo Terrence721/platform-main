@@ -36,6 +36,13 @@ import {
 /** The answer for a request that is not there, or not one. */
 export const NO_SUCH_REQUEST = 'No such request.';
 
+/**
+ * The answer when a reference and an email do not belong together, the
+ * same as for no such reference (the API's and the demo's).
+ */
+export const NO_MATCHING_REQUEST =
+  'No request matches that reference and email.';
+
 /** The answer for deciding a request someone has decided already. */
 export const ALREADY_DECIDED = 'Someone has decided this request already.';
 

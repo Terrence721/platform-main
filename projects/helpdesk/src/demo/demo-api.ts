@@ -7,12 +7,15 @@ import {
   SIGN_IN_FAILED_MESSAGE,
 } from '@helpdesk/contract';
 import {
+  CustomerRequestsService,
   type Database,
   DEFAULT_SEED_PASSWORD,
   historySince,
+  NO_MATCHING_REQUEST,
   NO_TEAM_MESSAGE,
   readAssigneeId,
   readCreateAccount,
+  readCustomerRequest,
   readMessage,
   readSignIn,
   readStatus,
@@ -86,6 +89,7 @@ export class DemoApi {
   private readonly teams: TeamsService;
   private readonly accounts: UsersService;
   private readonly reports: ReportsService;
+  private readonly customerRequests: CustomerRequestsService;
   /** Who is signed in; `null` until someone signs in. */
   private signedIn: string | null = null;
   /**
@@ -105,6 +109,7 @@ export class DemoApi {
     this.teams = new TeamsService(database);
     this.accounts = new UsersService(database);
     this.reports = new ReportsService(database);
+    this.customerRequests = new CustomerRequestsService(database);
     this.routes = this.defineRoutes();
   }
 
@@ -126,6 +131,25 @@ export class DemoApi {
         const user =
           this.signedIn === null ? null : await this.activeUser(this.signedIn);
         return { status: 200, body: { user } };
+      }
+      // The public Report an issue page (#1026), open to anyone, as in the
+      // API's CustomerRequestsController; one visitor, so no limits.
+      if (request.method === 'POST' && path === '/api/requests') {
+        const sent = readCustomerRequest(request.body);
+        return {
+          status: 201,
+          body: await this.customerRequests.send(sent, this.now()),
+        };
+      }
+      if (request.method === 'GET' && path === '/api/requests/status') {
+        const answer = await this.customerRequests.statusOf(
+          url.searchParams.get('reference') ?? '',
+          url.searchParams.get('email') ?? ''
+        );
+        if (answer === null) {
+          throw new NotFoundException(NO_MATCHING_REQUEST);
+        }
+        return { status: 200, body: answer };
       }
       for (const route of this.routes) {
         const match = route.method === request.method && route.path.exec(path);

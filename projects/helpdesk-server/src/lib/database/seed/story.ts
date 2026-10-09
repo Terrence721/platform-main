@@ -1,4 +1,5 @@
 import type {
+  AttachmentMediaType,
   RequestCategory,
   RequestImpact,
   Role,
@@ -6,6 +7,7 @@ import type {
   TicketPriority,
   TicketStatus,
 } from '@helpdesk/contract';
+import { ORDERS_EXPORT_PNG_BASE64 } from './orders-export-screenshot';
 
 // The hand-written part of the seed: the people and tickets that tell the
 // Helpdesk's story, the same on every run. generate.ts adds the volume
@@ -259,12 +261,22 @@ export interface SeedRequest {
   description: string;
   where: string | null;
   createdMinutesAgo: number;
+  /** The files sent with it; none if absent. */
+  attachments?: readonly SeedAttachment[];
+}
+
+/** A file sent with a request: its name, type, and bytes as base64. */
+export interface SeedAttachment {
+  fileName: string;
+  mediaType: AttachmentMediaType;
+  base64: string;
 }
 
 /**
  * New requests' first visitors, all pending. Grace Hopper writes again
  * about the double charge her open ticket is already about, so New requests
- * shows a possible duplicate; the others are new to the help desk.
+ * shows a possible duplicate; the others are new to the help desk. Mei
+ * Chen sends a screenshot, so New requests has a file to show.
  */
 export const SEED_REQUESTS: readonly SeedRequest[] = [
   {
@@ -277,6 +289,13 @@ export const SEED_REQUESTS: readonly SeedRequest[] = [
       'Exporting the orders report gives a file with exactly 1,000 rows; we have about 4,300 orders this month.',
     where: 'Reports > Orders > Export',
     createdMinutesAgo: 3 * HOUR,
+    attachments: [
+      {
+        fileName: 'orders-export.png',
+        mediaType: 'image/png',
+        base64: ORDERS_EXPORT_PNG_BASE64,
+      },
+    ],
   },
   {
     name: 'Grace Hopper',

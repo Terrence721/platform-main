@@ -29,8 +29,8 @@ async function readMigration(path: string): Promise<string> {
 
 /**
  * The demo's API, once its database is migrated and seeded. Loaded on its
- * own (dynamic import()), so PGlite, the seed and the API's services are
- * not part of the app's first download; requests wait for it.
+ * own (dynamic import()), so PGlite, the seed and the server library's
+ * services are not part of the app's first download; requests wait for it.
  */
 const demoApi: Promise<DemoApi> = Promise.all([
   import('./demo/demo-database'),

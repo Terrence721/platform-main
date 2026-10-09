@@ -199,6 +199,8 @@ export class CustomerRequestsService {
           where: request.where,
           createdAt: request.createdAt.toISOString(),
           suggestedQueueId: suggestedQueueFor(request.category),
+          // No request carries files yet: the attachments table comes next.
+          attachments: [],
           possibleDuplicates: { openTickets, earlierRequests },
         };
       })

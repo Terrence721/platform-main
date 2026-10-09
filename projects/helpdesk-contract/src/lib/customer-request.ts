@@ -1,3 +1,4 @@
+import type { AttachmentSummary } from './attachment';
 import type { TicketPriority, TicketStatus } from './ticket';
 import type { IsoDateTime, PersonSummary, TicketDto } from './ticket-api';
 
@@ -186,6 +187,8 @@ export interface PendingRequest {
    * another.
    */
   suggestedQueueId: string | null;
+  /** The files the customer added, oldest first; none if they added none. */
+  attachments: AttachmentSummary[];
   possibleDuplicates: {
     openTickets: TicketDto[];
     earlierRequests: EarlierRequest[];

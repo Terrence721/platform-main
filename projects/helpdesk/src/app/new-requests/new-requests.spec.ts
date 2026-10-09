@@ -38,6 +38,7 @@ const first = {
   where: null,
   createdAt: '2026-10-09T09:00:00.000Z',
   suggestedQueueId: 'billing',
+  attachments: [],
   possibleDuplicates: { openTickets: [], earlierRequests: [] },
 } as PendingRequest;
 const again = {

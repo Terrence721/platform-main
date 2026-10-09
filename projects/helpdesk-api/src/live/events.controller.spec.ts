@@ -1,5 +1,5 @@
 import type { CurrentUser, LiveEvent } from '@helpdesk/contract';
-import { LiveEvents } from '@helpdesk/server';
+import { LiveHub } from '@helpdesk/server';
 import { INestApplication, type MessageEvent } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import cookieParser from 'cookie-parser';
@@ -52,7 +52,7 @@ const unassignedWork = {
 
 describe('/api/events', () => {
   let app: INestApplication;
-  let live: LiveEvents;
+  let live: LiveHub;
   let base: string;
   /** Streams to close after each test. */
   const open: AbortController[] = [];
@@ -62,7 +62,7 @@ describe('/api/events', () => {
       controllers: [EventsController],
       providers: [
         AuthGuard,
-        LiveEvents,
+        LiveHub,
         { provide: AuthService, useValue: fakeAuth },
       ],
     }).compile();
@@ -71,7 +71,7 @@ describe('/api/events', () => {
     app.setGlobalPrefix('api');
     app.use(cookieParser());
     await app.listen(0);
-    live = app.get(LiveEvents);
+    live = app.get(LiveHub);
     const { port } = app.getHttpServer().address() as AddressInfo;
     base = `http://localhost:${port}/api/events`;
   });

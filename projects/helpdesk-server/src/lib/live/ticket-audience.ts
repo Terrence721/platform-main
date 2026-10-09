@@ -1,7 +1,7 @@
 import { eq, inArray } from 'drizzle-orm';
 import type { Database } from '../database/database-token';
 import { tickets, users } from '../database/schema';
-import type { LiveAudience } from './live-events';
+import type { LiveAudience } from './live-hub';
 
 /**
  * Who a change to a ticket concerns, read after the change: whoever holds

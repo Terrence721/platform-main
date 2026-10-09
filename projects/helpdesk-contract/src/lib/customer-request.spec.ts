@@ -13,7 +13,7 @@ import {
   REQUEST_IMPACTS,
   REQUEST_STATUSES,
   SUGGESTED_PRIORITY,
-} from './request';
+} from './customer-request';
 import { TICKET_PRIORITIES } from './ticket';
 
 describe('customer requests', () => {

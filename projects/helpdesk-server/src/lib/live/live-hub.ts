@@ -67,7 +67,7 @@ export function concerns(audience: LiveAudience, user: CurrentUser): boolean {
  * (PostgreSQL's LISTEN/NOTIFY), so every process hears every write.
  */
 @Injectable()
-export class LiveEvents {
+export class LiveHub {
   private readonly notices = new Subject<LiveNotice>();
   /** The user IDs whose streams must end, as their accounts change. */
   private readonly ended = new Subject<string>();

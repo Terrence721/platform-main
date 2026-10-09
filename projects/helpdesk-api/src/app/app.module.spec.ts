@@ -1,5 +1,5 @@
 import {
-  LiveEvents,
+  LiveHub,
   TicketMessagesService,
   TicketsService,
   UsersService,
@@ -13,17 +13,16 @@ import { LiveModule } from '../live/live.module';
 import { TicketsController } from '../tickets/tickets.controller';
 import { AppModule } from './app.module';
 
-/** The `LiveEvents` this service or controller was given, if any. */
+/** The `LiveHub` this service or controller was given, if any. */
 function liveEventsOf(
   moduleRef: TestingModule,
   holder: Type<unknown>
-): LiveEvents | undefined {
-  return (moduleRef.get(holder, { strict: false }) as { live?: LiveEvents })
-    .live;
+): LiveHub | undefined {
+  return (moduleRef.get(holder, { strict: false }) as { live?: LiveHub }).live;
 }
 
-// The services that publish take LiveEvents as optional, since the
-// in-browser demo builds them without it. So in the API a second LiveEvents,
+// The services that publish take LiveHub as optional, since the
+// in-browser demo builds them without it. So in the API a second LiveHub,
 // or none, would start without a word, and what they publish would never
 // reach /api/events: no live updates, and a deactivated person's stream
 // left open (#1073).
@@ -41,10 +40,10 @@ describe('AppModule', () => {
     await moduleRef.close();
   });
 
-  it('gives every service that publishes the LiveEvents /api/events listens to', () => {
+  it('gives every service that publishes the LiveHub /api/events listens to', () => {
     const listened = liveEventsOf(moduleRef, EventsController);
 
-    expect(listened).toBeInstanceOf(LiveEvents);
+    expect(listened).toBeInstanceOf(LiveHub);
     for (const publisher of [
       TicketsService,
       TicketMessagesService,
@@ -54,11 +53,11 @@ describe('AppModule', () => {
     }
   });
 
-  it('would show a module that provides a LiveEvents of its own', async () => {
+  it('would show a module that provides a LiveHub of its own', async () => {
     @Module({
       imports: [AuthModule],
       controllers: [TicketsController],
-      providers: [TicketsService, TicketMessagesService, LiveEvents],
+      providers: [TicketsService, TicketMessagesService, LiveHub],
     })
     class WrongTicketsModule {}
     @Module({ imports: [DatabaseModule, LiveModule, WrongTicketsModule] })
@@ -68,7 +67,7 @@ describe('AppModule', () => {
     }).compile();
 
     try {
-      expect(liveEventsOf(wrong, TicketsService)).toBeInstanceOf(LiveEvents);
+      expect(liveEventsOf(wrong, TicketsService)).toBeInstanceOf(LiveHub);
       expect(liveEventsOf(wrong, TicketsService)).not.toBe(
         liveEventsOf(wrong, EventsController)
       );

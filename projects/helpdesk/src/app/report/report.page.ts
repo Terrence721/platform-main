@@ -100,7 +100,12 @@ type Field = keyof typeof MESSAGES;
           <h2>We've got it. Your reference is {{ store.reference() }}.</h2>
           <p>Keep it: with your email, it's how you check on your request.</p>
           <div class="actions">
-            <a matButton="filled" routerLink="/report">Check my request</a>
+            <a
+              matButton="filled"
+              routerLink="/report/status"
+              [queryParams]="{ reference: store.reference() }"
+              >Check my request</a
+            >
             <button matButton="outlined" type="button" (click)="another()">
               Report another issue
             </button>

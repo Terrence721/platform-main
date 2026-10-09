@@ -6,6 +6,7 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  Optional,
   UnauthorizedException,
 } from './nest-shim';
 
@@ -39,6 +40,7 @@ describe('the demo stand-in for @nestjs/common', () => {
 
     expect(Injectable()(Service)).toBeUndefined();
     expect(Inject(Symbol('TOKEN'))(Service, undefined, 0)).toBeUndefined();
+    expect(Optional()(Service, undefined, 0)).toBeUndefined();
     expect(new Service()).toBeInstanceOf(Service);
   });
 });

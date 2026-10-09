@@ -1,9 +1,9 @@
 // The demo build's stand-in for @nestjs/common (tsconfig.demo.json points
-// the import here). The API's services run in the browser in the demo
-// (#942), and all they take from Nest is the decorators below and the HTTP
-// exceptions; Nest itself needs Node. The demo creates the services itself,
-// so the decorators do nothing; the exceptions keep Nest's status and
-// message, which the in-browser API sends back as the real API would.
+// the import here). The server library's services run in the browser in the
+// demo (#942), and all they take from Nest is the decorators below and the
+// HTTP exceptions; Nest itself needs Node. The demo creates the services
+// itself, so the decorators do nothing; the exceptions keep Nest's status
+// and message, which the in-browser API sends back as the real API would.
 
 /** Marks a class as a service; nothing to do outside Nest. */
 export function Injectable(): ClassDecorator {
@@ -45,7 +45,7 @@ export class BadRequestException extends HttpException {
   }
 }
 
-/** 401: nobody is signed in. */
+/** 401: nobody is signed in, or a sign-in was refused. */
 export class UnauthorizedException extends HttpException {
   constructor(message = 'Unauthorized') {
     super(message, 401);

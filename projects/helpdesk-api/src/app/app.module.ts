@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
+import { CustomerRequestsModule } from '../customer-requests/customer-requests.module';
 import { DatabaseModule } from '../database/database.module';
 import { LiveModule } from '../live/live.module';
 import { ReportsModule } from '../reports/reports.module';
@@ -13,8 +14,9 @@ import { HealthController } from './health.controller';
  * every feature; signing in (/api/auth) comes from AuthModule, tickets
  * (/api/tickets) from TicketsModule, teams (/api/teams) from TeamsModule,
  * accounts (/api/users) from UsersModule, the Reports page's figures
- * (/api/reports) from ReportsModule, and live updates (/api/events) from
- * LiveModule. Each further feature arrives as its own module in `imports`.
+ * (/api/reports) from ReportsModule, customer requests (/api/requests) from
+ * CustomerRequestsModule, and live updates (/api/events) from LiveModule.
+ * Each further feature arrives as its own module in `imports`.
  */
 @Module({
   imports: [
@@ -25,6 +27,7 @@ import { HealthController } from './health.controller';
     TeamsModule,
     UsersModule,
     ReportsModule,
+    CustomerRequestsModule,
   ],
   controllers: [HealthController],
 })

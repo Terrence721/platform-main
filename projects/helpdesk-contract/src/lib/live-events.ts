@@ -24,8 +24,19 @@ export interface AccountsChangedEvent {
   type: 'accounts';
 }
 
+/**
+ * A customer sent a request, or a supervisor decided one (#1026): New
+ * requests should load again.
+ */
+export interface RequestsChangedEvent {
+  type: 'requests';
+}
+
 export type LiveEvent =
-  TicketChangedEvent | MessageAddedEvent | AccountsChangedEvent;
+  | TicketChangedEvent
+  | MessageAddedEvent
+  | AccountsChangedEvent
+  | RequestsChangedEvent;
 
 /** Whether a value read off the stream is a live event this app knows. */
 export function isLiveEvent(value: unknown): value is LiveEvent {
@@ -33,7 +44,7 @@ export function isLiveEvent(value: unknown): value is LiveEvent {
     return false;
   }
   const { type, ticketId } = value as Record<string, unknown>;
-  if (type === 'accounts') {
+  if (type === 'accounts' || type === 'requests') {
     return true;
   }
   return (

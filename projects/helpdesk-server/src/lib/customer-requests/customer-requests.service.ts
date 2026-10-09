@@ -54,6 +54,14 @@ export class CustomerRequestsService {
     @Optional() @Inject(LiveHub) private readonly live?: LiveHub
   ) {}
 
+  /** Tells every supervisor's New requests to load again. */
+  private requestsChanged(): void {
+    this.live?.publish({
+      event: { type: 'requests' },
+      audience: { kind: 'requests' },
+    });
+  }
+
   /**
    * Keeps a request, pending, and answers with its reference. The customer
    * agreed to what is kept as they sent it, at `now`. Its fields are
@@ -79,6 +87,7 @@ export class CustomerRequestsService {
         updatedAt: now,
       })
       .returning({ requestNumber: requests.requestNumber });
+    this.requestsChanged();
     return { reference: formatRequestReference(row.requestNumber) };
   }
 
@@ -220,6 +229,7 @@ export class CustomerRequestsService {
         audience: await ticketAudience(this.database, ticketId),
       });
     }
+    this.requestsChanged();
     const [row] = await selectTickets(this.database).where(
       eq(tickets.id, ticketId)
     );
@@ -265,6 +275,7 @@ export class CustomerRequestsService {
         })
         .where(eq(requests.id, requestId));
     });
+    this.requestsChanged();
   }
 
   /** The open tickets of the customer with this email, most urgent first. */

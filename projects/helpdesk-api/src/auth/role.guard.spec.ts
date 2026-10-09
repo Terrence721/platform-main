@@ -228,18 +228,23 @@ const unguarded = (module: unknown) =>
 // the API's open routes are listed here, and a new one fails this spec
 // until it is given its roles or, if it is meant to be open, added below.
 describe('every route of the API', () => {
-  it('is for its roles only, except signing in and out, and health', () => {
+  it('is for its roles only, except signing in and out, health, and the public request form', () => {
     expect(unguarded(AppModule)).toEqual([
       'GET /auth/me',
       'GET /health',
+      // Customers have no account: sending a request and checking on it
+      // are open to anyone, within limits per address (#1026).
+      'GET /requests/status',
       'POST /auth/sign-in',
       'POST /auth/sign-out',
+      'POST /requests',
     ]);
   });
 
   it('is found, every one of them', () => {
-    // health 1, auth 3, events 1, reports 1, teams 4, tickets 8, users 3.
-    expect(routesOf(AppModule)).toHaveLength(21);
+    // health 1, auth 3, events 1, reports 1, requests 5, teams 4, tickets 8,
+    // users 3.
+    expect(routesOf(AppModule)).toHaveLength(26);
   });
 
   it('would show a route that forgot OnlyFor, in an imported module', () => {

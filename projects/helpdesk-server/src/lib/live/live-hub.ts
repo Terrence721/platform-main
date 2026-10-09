@@ -14,7 +14,8 @@ import {
  * Who an event concerns. For a ticket or its conversation: who held it
  * before and after the change, their teams, and whether it was or became
  * unassigned (work anyone may take). For accounts: the people who manage
- * them. It stays on the server: the browser only gets the event.
+ * them. For customer requests: the supervisors, who decide them (#1026).
+ * It stays on the server: the browser only gets the event.
  */
 export type LiveAudience =
   | {
@@ -26,7 +27,8 @@ export type LiveAudience =
       /** Whether it was unassigned before the change, or is after it. */
       unassigned: boolean;
     }
-  | { kind: 'accounts' };
+  | { kind: 'accounts' }
+  | { kind: 'requests' };
 
 /** An event and who it concerns, as the services publish it. */
 export interface LiveNotice {
@@ -39,11 +41,15 @@ export interface LiveNotice {
  * REST endpoints follow. Agents: unassigned work, and tickets they held
  * or now hold. Supervisors: unassigned work, and their team's tickets.
  * Admins and supervisors: account changes (a supervisor's team may have
- * changed). Admins see no tickets, so hear of none.
+ * changed). Every supervisor, whatever their team: customer requests,
+ * which they decide. Admins see no tickets, so hear of none.
  */
 export function concerns(audience: LiveAudience, user: CurrentUser): boolean {
   if (audience.kind === 'accounts') {
     return user.role === 'admin' || user.role === 'supervisor';
+  }
+  if (audience.kind === 'requests') {
+    return user.role === 'supervisor';
   }
   switch (user.role) {
     case 'agent':

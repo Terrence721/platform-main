@@ -176,8 +176,8 @@ function text(value: unknown): string {
  * The public form's body (#1026), checked one field at a time; the first
  * that is wrong is refused with 400 and says what is expected. Text is
  * trimmed, the email lower-cased (so the same customer matches however
- * they type it), and an empty "where" read as none. The honeypot and when
- * the form opened are passed on, for the API's spam checks to judge.
+ * they type it), and an empty "where" read as none. The honeypot and how
+ * long the form was open are passed on, for the API's spam checks to judge.
  */
 export function readCustomerRequest(body: unknown): CreateRequestRequest {
   const fields = (typeof body === 'object' && body !== null ? body : {}) as {
@@ -232,11 +232,12 @@ export function readCustomerRequest(body: unknown): CreateRequestRequest {
     );
   }
   const website = fields.website ?? '';
-  const openedAt = fields.openedAt;
+  const fillMilliseconds = fields.fillMilliseconds;
   if (
     typeof website !== 'string' ||
-    typeof openedAt !== 'string' ||
-    Number.isNaN(Date.parse(openedAt))
+    typeof fillMilliseconds !== 'number' ||
+    !Number.isFinite(fillMilliseconds) ||
+    fillMilliseconds < 0
   ) {
     throw new BadRequestException(
       'Something in the form went wrong. Reload the form and send it again.'
@@ -252,7 +253,7 @@ export function readCustomerRequest(body: unknown): CreateRequestRequest {
     where: where === '' ? null : where,
     consent: true,
     website,
-    openedAt,
+    fillMilliseconds,
   };
 }
 

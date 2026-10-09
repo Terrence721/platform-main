@@ -1,6 +1,9 @@
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { ExpressAdapter } from '@nestjs/platform-express';
+import {
+  ExpressAdapter,
+  type NestExpressApplication,
+} from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
 import { existsSync } from 'fs';
 import { AppModule } from './app/app.module';
@@ -20,11 +23,20 @@ const DEFAULT_PORT = 3000;
 async function bootstrap(): Promise<void> {
   // Express, named here rather than found by Nest at run time, so the build
   // sees it and lists it in the package.json the Docker image installs from.
-  const app = await NestFactory.create(AppModule, new ExpressAdapter(), {
-    // On closing, live updates streams are ended too: they never end on
-    // their own, so closing would otherwise wait for every open page.
-    forceCloseConnections: true,
-  });
+  const app = await NestFactory.create<NestExpressApplication>(
+    AppModule,
+    new ExpressAdapter(),
+    {
+      // On closing, live updates streams are ended too: they never end on
+      // their own, so closing would otherwise wait for every open page.
+      forceCloseConnections: true,
+    }
+  );
+  // Requests come through one proxy (nginx in Docker, the dev server's
+  // proxy in development): its X-Forwarded-For gives the visitor's address,
+  // which the public routes' limits count by (#1026). Only one hop is
+  // trusted, so a visitor cannot pass their own as an earlier one.
+  app.set('trust proxy', 1);
   // Closes the app on SIGTERM (`docker stop`) and Ctrl+C, so the database
   // connections are closed rather than cut. In the image Node is process 1,
   // which ignores SIGTERM without a handler, so Docker had to kill it.

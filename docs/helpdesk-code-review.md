@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 9, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 56 of 63)
+**Last Updated: October 9, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 57 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -884,3 +884,9 @@ The demo build's stand-in for `@nestjs/common`, with everything the server libra
 **Low · Documentation** — 2 fixes ([issue #1270](https://github.com/Terrence721/platform-main/issues/1270))
 
 Starts the in-browser demo's database: PostgreSQL in the page (PGlite), migrated with the real migrations, split at drizzle-kit's breakpoints as the real migrator splits them, and filled with the real seed, fresh on every visit as `yarn start:helpdesk` is on every run. It holds, under its spec: the journal read first, then each migration in its order; every table the real stack has; the seed's 48 users, 4 teams, 1000 tickets and their messages, due times counted from `now`; and the services answering from it. Its comments had the migrations, the seed and the services as the API's; they are the server library's, as the comment's own `helpdesk-server/drizzle` shows, and they now say so. `client` was "to close when the demo ends"; the demo never closes it, keeping it as long as the page is open, and only the specs do, which it now says. Noted, not changed: a migration failing partway leaves PGlite open, but the banner says the demo could not start and a reload starts over; and no table records the migrations run, as the real migrator's does, since every visit starts empty.
+
+### [`helpdesk/src/demo/demo-api.ts`](https://github.com/Terrence721/platform-main/blob/8d30b0d/projects/helpdesk/src/demo/demo-api.ts)
+
+**Low · Documentation** — 1 fix; **Low · Test coverage** — 1 fix ([issue #1272](https://github.com/Terrence721/platform-main/issues/1272))
+
+The in-browser demo's API: it answers the app's `/api` requests in the page, from the demo database, keeping each NestJS controller's rules. Checked route by route against the controllers, all 15 hold: method, path, the roles allowed, the status of a success (201 for a new account or reply), and the status and message of each refusal. It holds, under its spec: sign-in with one 401 for every refusal, sign-out (204), and "who is signed in" a 200 with `null` for nobody, as `AuthController`; 401 when nobody active is signed in, then 403 for a role a route is not for, as `AuthGuard` and `RoleGuard`; a refusal's body as Nest's, with `error` only when the message is not the default, and Nest's "Cannot GET …" for a route the API does not have; and each role's journeys. Its header had the services and request checks as the API's; they are the server library's, and it now says so. Three paths had no spec: the agent's Done list, a supervisor assigning (only an agent taking was tested), and an unexpected error becoming a 500 with Nest's body. A spec each now covers them; as the code already did all three, they were run against a copy in a scratch worktree with each path broken, where exactly those three failed. Noted, not changed: the demo has no live events, health check or sign-in rate limit, for one tab and one visitor; and it passes path parameters on without URL-decoding them, where Nest decodes them, which the app's IDs never need.

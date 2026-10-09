@@ -2,6 +2,7 @@
 // PGlite runs WebAssembly that the simulated browser (jsdom) the app's
 // other specs use cannot load; the real browser and Node both can.
 import {
+  isFinished,
   type ReportsResponse,
   SIGN_IN_FAILED_MESSAGE,
   type TeamOverview,
@@ -9,7 +10,7 @@ import {
   type TicketMessage,
   type UserAccount,
 } from '@helpdesk/contract';
-import { DEFAULT_SEED_PASSWORD } from '@helpdesk/server';
+import { DEFAULT_SEED_PASSWORD, UsersService } from '@helpdesk/server';
 import { readFile } from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { DemoApi, type DemoResponse } from './demo-api';
@@ -165,6 +166,26 @@ describe('DemoApi', { timeout: 60_000 }, () => {
       expect((changed.body as TicketDto).status).toBe('resolved');
     });
 
+    it("lists the agent's tickets finished in the last day (Done)", async () => {
+      const [ticket] = (await call('GET', '/api/tickets/mine'))
+        .body as TicketDto[];
+      await call('PUT', `/api/tickets/${ticket.id}/status`, {
+        status: 'resolved',
+      });
+
+      const { status, body } = await call('GET', '/api/tickets/mine/finished');
+
+      expect(status).toBe(200);
+      expect((body as TicketDto[]).map(({ id }) => id)).toContain(ticket.id);
+      expect(
+        (body as TicketDto[]).every(
+          (finished) =>
+            finished.assignee?.id === 'sam.rivera' &&
+            isFinished(finished.status)
+        )
+      ).toBe(true);
+    });
+
     it('adds a reply (201) that the conversation then shows', async () => {
       const [ticket] = (await call('GET', '/api/tickets/mine'))
         .body as TicketDto[];
@@ -223,6 +244,19 @@ describe('DemoApi', { timeout: 60_000 }, () => {
 
       expect(status).toBe(200);
       expect((body as TeamOverview).id).toBe('atlas');
+    });
+
+    it('assigns an unassigned ticket to an agent on the team', async () => {
+      const team = (await call('GET', '/api/teams/mine')).body as TeamOverview;
+      const [ticket] = team.unassigned;
+      const [agent] = team.members;
+
+      const assigned = await call('PUT', `/api/tickets/${ticket.id}/assignee`, {
+        assigneeId: agent.id,
+      });
+
+      expect(assigned.status).toBe(200);
+      expect((assigned.body as TicketDto).assignee?.id).toBe(agent.id);
     });
 
     it("shows a member's tickets and three-month history", async () => {
@@ -392,6 +426,23 @@ describe('DemoApi', { timeout: 60_000 }, () => {
         status: 409,
         body: { message: "You can't change your own account." },
       });
+    });
+
+    it('answers an unexpected error with a 500, as Nest does', async () => {
+      vi.spyOn(UsersService.prototype, 'list').mockRejectedValueOnce(
+        new Error('The database went away.')
+      );
+      const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      expect(await call('GET', '/api/users')).toEqual({
+        status: 500,
+        body: { statusCode: 500, message: 'Internal server error' },
+      });
+      expect(logged).toHaveBeenCalledWith(
+        'The demo API failed.',
+        expect.objectContaining({ message: 'The database went away.' })
+      );
+      logged.mockRestore();
     });
   });
 });

@@ -220,6 +220,20 @@ export function isRequestImpact(value: unknown): value is RequestImpact {
   return (REQUEST_IMPACTS as readonly unknown[]).includes(value);
 }
 
+/**
+ * Whether a value looks like an email address: something, `@`, and a
+ * domain with a dot, no spaces, within `REQUEST_EMAIL_MAX_LENGTH`. Only a
+ * check for typing mistakes, as the form and the API both run it; whether
+ * the address exists, nothing here can tell.
+ */
+export function isEmailAddress(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    value.length <= REQUEST_EMAIL_MAX_LENGTH &&
+    /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(value)
+  );
+}
+
 /** Whether a value, such as a request field, is a dismissal reason. */
 export function isDismissReason(value: unknown): value is DismissReason {
   return (DISMISS_REASONS as readonly unknown[]).includes(value);

@@ -6,7 +6,7 @@ import {
 import { TestBed } from '@angular/core/testing';
 import { MatDialog, type MatDialogConfig } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import type { CurrentUser, UserAccount } from '@helpdesk/contract';
+import type { CurrentUser, TeamListing, UserAccount } from '@helpdesk/contract';
 import { provideMockStore } from '@ngrx/store/testing';
 import { of } from 'rxjs';
 import { initialSessionState } from '../session/session.feature';
@@ -14,7 +14,11 @@ import AdminPage, { groupByTeam, plural, savedMessage } from './admin.page';
 import { CreateAccountDialog } from './create-account.dialog';
 import { ReportsDialog } from '../reports/reports.dialog';
 import { EditAccountDialog } from './edit-account.dialog';
-import { TEAM_ACCOUNTS_API, TeamAccountsStore } from './team-accounts.store';
+import {
+  TEAM_ACCOUNTS_API,
+  TEAMS_API,
+  TeamAccountsStore,
+} from './team-accounts.store';
 
 const alex: CurrentUser = {
   id: 'alex.morgan',
@@ -62,29 +66,49 @@ const ACCOUNTS: UserAccount[] = [
   },
 ];
 
-describe('groupByTeam', () => {
-  it('groups by team, teams by name, keeping the order within each', () => {
-    // Beacon's account comes first in the list; Atlas still leads.
-    const groups = groupByTeam([ACCOUNTS[2], ACCOUNTS[1], ACCOUNTS[3]]);
+/**
+ * As the API sends them: by name, with their leads. Comet has nobody on
+ * it: it is in no account's team, yet still a team (#1210).
+ */
+const TEAMS: TeamListing[] = [
+  { ...atlas, lead: { id: 'chris.taylor', name: 'Chris Taylor' } },
+  { ...beacon, lead: null },
+  { id: 'comet', name: 'Comet', lead: null },
+];
 
-    expect(
-      groups.map(({ name, accounts }) => [name, accounts.map(({ id }) => id)])
-    ).toEqual([
-      ['Atlas', ['chris.taylor', 'sam.rivera']],
-      ['Beacon', ['dee.parted']],
+describe('groupByTeam', () => {
+  /** Each group's team, lead and the user IDs in it. */
+  const summary = (teams: TeamListing[], accounts: UserAccount[]) =>
+    groupByTeam(teams, accounts).map(({ name, lead, accounts: people }) => [
+      name,
+      lead?.id ?? null,
+      people.map(({ id }) => id),
+    ]);
+
+  it('gives every team a group, in the teams order, keeping the order within each', () => {
+    // Beacon's account comes first in the list; the teams' order still wins.
+    expect(summary(TEAMS, [ACCOUNTS[2], ACCOUNTS[1], ACCOUNTS[3]])).toEqual([
+      ['Atlas', 'chris.taylor', ['chris.taylor', 'sam.rivera']],
+      ['Beacon', null, ['dee.parted']],
+      ['Comet', null, []],
+    ]);
+  });
+
+  // An emptied team stays, so it can be found and joined again (#1210).
+  it('keeps a team with nobody on it, empty', () => {
+    expect(summary(TEAMS, [])).toEqual([
+      ['Atlas', 'chris.taylor', []],
+      ['Beacon', null, []],
+      ['Comet', null, []],
     ]);
   });
 
   it('leaves out accounts with no team (admins)', () => {
-    const groups = groupByTeam(ACCOUNTS);
+    const groups = groupByTeam(TEAMS, ACCOUNTS);
 
     expect(groups.flatMap(({ accounts }) => accounts)).not.toContainEqual(
       expect.objectContaining({ id: 'alex.morgan' })
     );
-  });
-
-  it('has no groups when nobody is on a team', () => {
-    expect(groupByTeam([ACCOUNTS[0]])).toEqual([]);
   });
 });
 
@@ -165,11 +189,22 @@ describe('AdminPage', () => {
           ?.click(),
       text: (selector: string) =>
         page.querySelector(selector)?.textContent?.trim(),
-      /** Answers the page's request for the accounts, then renders. */
-      answer: (body: UserAccount[] | null, status = 200) => {
+      /**
+       * Answers the page's requests for the accounts and the teams, then
+       * renders. A failed one cancels the other.
+       */
+      answer: (
+        body: UserAccount[] | null,
+        status = 200,
+        teams: TeamListing[] = TEAMS
+      ) => {
+        const teamsCall = http.expectOne(TEAMS_API);
         http
           .expectOne(TEAM_ACCOUNTS_API)
           .flush(body, { status, statusText: status === 200 ? 'OK' : 'Error' });
+        if (status === 200) {
+          teamsCall.flush(teams);
+        }
         fixture.detectChanges();
       },
       /** Each team section: its heading, and the user IDs in its table. */
@@ -211,7 +246,7 @@ describe('AdminPage', () => {
     answer(ACCOUNTS);
 
     expect(text('.summary')?.replace(/\s+/g, ' ')).toBe(
-      '3 accounts in 2 teams, and 1 admin'
+      '3 accounts in 3 teams, and 1 admin'
     );
   });
 
@@ -223,7 +258,21 @@ describe('AdminPage', () => {
     expect(sections()).toEqual([
       ['Atlas · 2 accounts', ['chris.taylor', 'sam.rivera']],
       ['Beacon · 1 account · No lead', ['dee.parted']],
+      ['Comet · 0 accounts · No lead', []],
     ]);
+  });
+
+  // An emptied team stays on the page, so it can be joined again (#1210).
+  it('shows a team with nobody on it, saying so, with no table', () => {
+    const { page, answer } = render();
+
+    answer(ACCOUNTS);
+
+    const comet = page.querySelector('section.team[aria-label="Comet"]');
+    expect(comet?.querySelector('hd-accounts-table')).toBeNull();
+    expect(comet?.querySelector('.empty')?.textContent?.trim()).toBe(
+      'No accounts yet.'
+    );
   });
 
   it('says No lead only beside a team without one', () => {
@@ -235,7 +284,7 @@ describe('AdminPage', () => {
       [...page.querySelectorAll('section.team')].map((section) =>
         section.querySelector('.no-lead')?.textContent?.trim()
       )
-    ).toEqual([undefined, '· No lead']);
+    ).toEqual([undefined, '· No lead', '· No lead']);
   });
 
   describe('Admins', () => {
@@ -316,6 +365,7 @@ describe('AdminPage', () => {
     detectChanges();
     expect(page.querySelector('mat-spinner')).not.toBeNull();
     http.expectOne(TEAM_ACCOUNTS_API).flush(ACCOUNTS);
+    http.expectOne(TEAMS_API).flush(TEAMS);
   });
 
   describe('Create Account', () => {
@@ -355,6 +405,7 @@ describe('AdminPage', () => {
               teams: [
                 { id: 'atlas', name: 'Atlas', leadName: 'Chris Taylor' },
                 { id: 'beacon', name: 'Beacon', leadName: null },
+                { id: 'comet', name: 'Comet', leadName: null },
               ],
             },
           })
@@ -453,6 +504,7 @@ describe('AdminPage', () => {
             teams: [
               { id: 'atlas', name: 'Atlas', leadName: 'Chris Taylor' },
               { id: 'beacon', name: 'Beacon', leadName: null },
+              { id: 'comet', name: 'Comet', leadName: null },
             ],
           },
         })
@@ -486,6 +538,7 @@ describe('AdminPage', () => {
           releasedTickets: 3,
         });
       http.expectOne({ method: 'GET', url: TEAM_ACCOUNTS_API }).flush(ACCOUNTS);
+      http.expectOne(TEAMS_API).flush(TEAMS);
       closedWith = true;
 
       edit('Sam Rivera');

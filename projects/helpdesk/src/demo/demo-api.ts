@@ -220,6 +220,12 @@ export class DemoApi {
       // TeamsController
       {
         method: 'GET',
+        path: /^\/api\/teams$/,
+        access: ['admin'],
+        run: () => this.teams.all(),
+      },
+      {
+        method: 'GET',
         path: /^\/api\/teams\/mine$/,
         access: supervisor,
         run: async ({ user }) => {

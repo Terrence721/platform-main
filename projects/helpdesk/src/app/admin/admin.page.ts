@@ -8,7 +8,11 @@ import {
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import type { UserAccount } from '@helpdesk/contract';
+import type {
+  PersonSummary,
+  TeamListing,
+  UserAccount,
+} from '@helpdesk/contract';
 import { Store } from '@ngrx/store';
 import { openReports } from '../reports/open-reports';
 import { sessionFeature } from '../session/session.feature';
@@ -17,10 +21,12 @@ import type { CreateAccountData, TeamChoice } from './create-account.dialog';
 import type { EditAccountData } from './edit-account.dialog';
 import { TeamAccountsStore } from './team-accounts.store';
 
-/** One team's accounts. */
+/** One team, its lead, and its accounts. */
 export interface AccountGroup {
   id: string;
   name: string;
+  /** Who leads it; `null` while none does. */
+  lead: PersonSummary | null;
   accounts: UserAccount[];
 }
 
@@ -30,21 +36,19 @@ export function plural(count: number, noun: string): string {
 }
 
 /**
- * Groups accounts by team, teams by name. Each group keeps the accounts'
- * order (by name). Accounts with no team (admins) are left out: this page
- * is about the teams.
+ * One group per team, in the teams' order (by name), each with its
+ * accounts in theirs (by name). Every team has a group, one with nobody on
+ * it too, so an emptied team can still be found and joined (#1210).
+ * Accounts with no team (admins) are left out: this part is about teams.
  */
-export function groupByTeam(accounts: UserAccount[]): AccountGroup[] {
-  const groups = new Map<string, AccountGroup>();
-  for (const { team, ...rest } of accounts) {
-    if (team === null) {
-      continue;
-    }
-    const group = groups.get(team.id) ?? { ...team, accounts: [] };
-    group.accounts.push({ team, ...rest });
-    groups.set(team.id, group);
-  }
-  return [...groups.values()].sort((a, b) => a.name.localeCompare(b.name));
+export function groupByTeam(
+  teams: TeamListing[],
+  accounts: UserAccount[]
+): AccountGroup[] {
+  return teams.map((team) => ({
+    ...team,
+    accounts: accounts.filter((account) => account.team?.id === team.id),
+  }));
 }
 
 /**
@@ -55,10 +59,12 @@ export function groupByTeam(accounts: UserAccount[]): AccountGroup[] {
  * back. Create Account, beside the summary and at the bottom, opens a
  * popup that adds someone straight into their team's table. Each row's
  * Edit (not on the admin's own) opens a popup that changes the account's
- * role and team or deactivates it. A team without a lead says so.
- * Reports, beside Create Account, opens every team's charts. Only admins
- * get here (the route's `canMatchRole('admin')`). The page provides
- * `TeamAccountsStore`, which loads the accounts when the page opens.
+ * role and team or deactivates it. A team without a lead says so, and
+ * one with nobody on it says "No accounts yet", staying listed so it can
+ * be joined again (#1210). Reports, beside Create Account, opens every
+ * team's charts. Only admins get here (the route's
+ * `canMatchRole('admin')`). The page provides `TeamAccountsStore`, which
+ * loads the accounts and the teams when the page opens.
  */
 @Component({
   selector: 'hd-admin-page',
@@ -121,16 +127,22 @@ export function groupByTeam(accounts: UserAccount[]): AccountGroup[] {
                 <span class="count"
                   >· {{ plural(group.accounts.length, 'account') }}</span
                 >
-                @if (!hasLead(group)) {
+                @if (group.lead === null) {
                   <!-- The space inside: Angular drops the one between. -->
                   <span class="no-lead">&nbsp;· No lead</span>
                 }
               </h2>
-              <hd-accounts-table
-                [accounts]="group.accounts"
-                [signedInId]="user()?.id ?? null"
-                (edit)="openEditAccount($event)"
-              />
+              @if (group.accounts.length > 0) {
+                <hd-accounts-table
+                  [accounts]="group.accounts"
+                  [signedInId]="user()?.id ?? null"
+                  (edit)="openEditAccount($event)"
+                />
+              } @else {
+                <!-- Emptied, still a team: Create Account and Edit can add
+                     people to it again (#1210). -->
+                <p class="empty">No accounts yet.</p>
+              }
             </section>
           }
           @if (admins().length > 0) {
@@ -193,8 +205,12 @@ export function groupByTeam(accounts: UserAccount[]): AccountGroup[] {
     }
     .message,
     .summary,
-    .count {
+    .count,
+    .empty {
       color: var(--mat-sys-on-surface-variant);
+    }
+    .empty {
+      margin: 0;
     }
     .count,
     .no-lead {
@@ -223,7 +239,7 @@ export default class AdminPage {
   );
   /** The accounts on teams, one group per team. */
   protected readonly groups = computed(() =>
-    groupByTeam(this.store.entities())
+    groupByTeam(this.store.teams(), this.store.entities())
   );
   /** The admins, by name: on no team, so in a section of their own. */
   protected readonly admins = computed(() =>
@@ -235,10 +251,10 @@ export default class AdminPage {
   );
   /** The teams a new account can join, each with who leads it now. */
   protected readonly teamChoices = computed((): TeamChoice[] =>
-    this.groups().map(({ id, name, accounts }) => ({
+    this.store.teams().map(({ id, name, lead }) => ({
       id,
       name,
-      leadName: accounts.find(({ leadsTeam }) => leadsTeam)?.name ?? null,
+      leadName: lead?.name ?? null,
     }))
   );
   protected readonly plural = plural;
@@ -286,11 +302,6 @@ export default class AdminPage {
   /** Opens the Reports popup: every team's and the unassigned work. */
   protected openReports(): void {
     void openReports(this.injector);
-  }
-
-  /** Whether one of the team's accounts leads it. */
-  protected hasLead(group: AccountGroup): boolean {
-    return group.accounts.some(({ leadsTeam }) => leadsTeam);
   }
 
   /**

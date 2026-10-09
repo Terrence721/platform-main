@@ -19,7 +19,11 @@ import type { TeamChoice } from './create-account.dialog';
 import { EditAccountDialog } from './edit-account.dialog';
 import { NEVER } from 'rxjs';
 import { LiveUpdates } from '../live/live-updates';
-import { TEAM_ACCOUNTS_API, TeamAccountsStore } from './team-accounts.store';
+import {
+  TEAM_ACCOUNTS_API,
+  TEAMS_API,
+  TeamAccountsStore,
+} from './team-accounts.store';
 
 const TEAMS: TeamChoice[] = [
   { id: 'atlas', name: 'Team Atlas', leadName: 'Chris Taylor' },
@@ -90,8 +94,9 @@ describe('EditAccountDialog', () => {
     });
     const http = TestBed.inject(HttpTestingController);
     TestBed.inject(TeamAccountsStore);
-    // The page has its accounts already.
+    // The page has its accounts and teams already.
     http.expectOne({ method: 'GET', url: TEAM_ACCOUNTS_API }).flush([]);
+    http.expectOne({ method: 'GET', url: TEAMS_API }).flush([]);
 
     const fixture = TestBed.createComponent(EditAccountDialog);
     fixture.detectChanges();
@@ -153,6 +158,7 @@ describe('EditAccountDialog', () => {
   ) {
     put(http, userId).flush(response);
     http.expectOne({ method: 'GET', url: TEAM_ACCOUNTS_API }).flush([]);
+    http.expectOne({ method: 'GET', url: TEAMS_API }).flush([]);
   }
 
   it('shows the account as it is, with Save off until something changes', async () => {

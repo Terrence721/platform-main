@@ -9,7 +9,9 @@ import { eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
 import { fileURLToPath } from 'url';
+import { AttachmentsService } from '../attachments/attachments.service';
 import {
+  attachments,
   customers,
   queues,
   requests,
@@ -28,6 +30,13 @@ const REQUESTS_CHANGED = {
   event: { type: 'requests' },
   audience: { kind: 'requests' },
 };
+
+/** A text file, checked and ready to keep. */
+const ROWS_TXT = {
+  fileName: 'rows.txt',
+  mediaType: 'text/plain',
+  content: new TextEncoder().encode('Rows: 1,000\n'),
+} as const;
 
 /** "Now" for these tests. */
 const NOW = new Date('2026-10-09T12:00:00.000Z');
@@ -99,11 +108,16 @@ describe('CustomerRequestsService', { timeout: 60_000 }, () => {
     await database
       .insert(tickets)
       .values(ticket('resolved', 'An old question'));
-    service = new CustomerRequestsService(database, live as unknown as LiveHub);
+    service = new CustomerRequestsService(
+      database,
+      new AttachmentsService(database),
+      live as unknown as LiveHub
+    );
   });
 
   beforeEach(async () => {
     live.publish.mockClear();
+    await database.delete(attachments);
     await database.delete(requests);
   });
 
@@ -141,6 +155,40 @@ describe('CustomerRequestsService', { timeout: 60_000 }, () => {
         decidedById: null,
       });
       expect(`R-${row.requestNumber}`).toBe(reference);
+    });
+
+    // Checked and redrawn already (AttachmentsService.prepare), #1026.
+    it('keeps the files sent with it, with the request', async () => {
+      await service.send(sent(), NOW, [ROWS_TXT]);
+
+      const [request] = await database.select().from(requests);
+      expect(
+        await database
+          .select({
+            requestId: attachments.requestId,
+            fileName: attachments.fileName,
+            content: attachments.content,
+          })
+          .from(attachments)
+      ).toEqual([
+        {
+          requestId: request.id,
+          fileName: 'rows.txt',
+          content: ROWS_TXT.content,
+        },
+      ]);
+    });
+
+    it('keeps neither the request nor its files if a file cannot be kept', async () => {
+      const empty = { ...ROWS_TXT, content: new Uint8Array() };
+
+      await expect(
+        service.send(sent(), NOW, [ROWS_TXT, empty])
+      ).rejects.toThrow();
+
+      expect(await database.select().from(requests)).toEqual([]);
+      expect(await database.select().from(attachments)).toEqual([]);
+      expect(live.publish).not.toHaveBeenCalled();
     });
   });
 
@@ -270,11 +318,26 @@ describe('CustomerRequestsService', { timeout: 60_000 }, () => {
       ]);
     });
 
-    // Until requests carry files (#1026, Phase B).
-    it('lists no attachments yet', async () => {
-      await sentAt({}, 5);
+    it('lists the files each request came with', async () => {
+      await service.send(sent({ subject: 'With a file' }), NOW, [ROWS_TXT]);
+      await service.send(sent({ subject: 'Without' }), NOW);
 
-      expect((await service.pending())[0].attachments).toEqual([]);
+      expect(
+        (await service.pending()).map(({ subject, attachments }) => [
+          subject,
+          attachments.map(({ fileName, mediaType, size }) => ({
+            fileName,
+            mediaType,
+            size,
+          })),
+        ])
+      ).toEqual([
+        [
+          'With a file',
+          [{ fileName: 'rows.txt', mediaType: 'text/plain', size: 12 }],
+        ],
+        ['Without', []],
+      ]);
     });
 
     it('lists the requests still waiting, oldest first', async () => {

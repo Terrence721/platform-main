@@ -23,6 +23,12 @@ import { CustomerRequestsService } from './customer-requests.service';
 
 const MIGRATIONS = fileURLToPath(new URL('../../../drizzle', import.meta.url));
 
+/** What New requests hears: load again; for supervisors only. */
+const REQUESTS_CHANGED = {
+  event: { type: 'requests' },
+  audience: { kind: 'requests' },
+};
+
 /** "Now" for these tests. */
 const NOW = new Date('2026-10-09T12:00:00.000Z');
 
@@ -46,7 +52,7 @@ const sent = (changes: Partial<CreateRequestRequest> = {}) =>
     where: 'Invoice INV-2026-10',
     consent: true,
     website: '',
-    openedAt: '2026-10-09T11:58:00.000Z',
+    fillMilliseconds: 120_000,
     ...changes,
   }) satisfies CreateRequestRequest;
 
@@ -135,6 +141,49 @@ describe('CustomerRequestsService', { timeout: 60_000 }, () => {
         decidedById: null,
       });
       expect(`R-${row.requestNumber}`).toBe(reference);
+    });
+  });
+
+  describe('telling supervisors (#950)', () => {
+    it('tells them a request has arrived', async () => {
+      await service.send(sent(), NOW);
+
+      expect(live.publish).toHaveBeenCalledExactlyOnceWith(REQUESTS_CHANGED);
+    });
+
+    it('tells them a request was dismissed', async () => {
+      const id = await sentAt({}, 5);
+      live.publish.mockClear();
+
+      await service.dismiss(
+        id,
+        { reason: 'spam', duplicateOfTicketNumber: null },
+        chris,
+        NOW
+      );
+
+      expect(live.publish).toHaveBeenCalledExactlyOnceWith(REQUESTS_CHANGED);
+    });
+
+    it('tells them nothing when a decision is refused', async () => {
+      const id = await sentAt({}, 5);
+      await service.dismiss(
+        id,
+        { reason: 'spam', duplicateOfTicketNumber: null },
+        chris,
+        NOW
+      );
+      live.publish.mockClear();
+
+      await expect(
+        service.dismiss(
+          id,
+          { reason: 'spam', duplicateOfTicketNumber: null },
+          chris,
+          NOW
+        )
+      ).rejects.toThrow(ConflictException);
+      expect(live.publish).not.toHaveBeenCalled();
     });
   });
 
@@ -321,6 +370,8 @@ describe('CustomerRequestsService', { timeout: 60_000 }, () => {
           audience: expect.objectContaining({ unassigned: true }),
         })
       );
+      // And New requests, which it has left.
+      expect(live.publish).toHaveBeenCalledWith(REQUESTS_CHANGED);
     });
 
     it('refuses a request already decided (409), changing nothing', async () => {

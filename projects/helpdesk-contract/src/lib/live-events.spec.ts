@@ -5,6 +5,8 @@ describe('isLiveEvent', () => {
     [{ type: 'ticket', ticketId: 'ticket-1' }],
     [{ type: 'message', ticketId: 'ticket-1' }],
     [{ type: 'accounts' }],
+    // New requests changed (#1026).
+    [{ type: 'requests' }],
   ])('accepts %j', (value) => {
     expect(isLiveEvent(value)).toBe(true);
   });

@@ -86,6 +86,16 @@ describe('concerns', () => {
     ).toEqual([false, true, true, true]);
   });
 
+  // New requests is every supervisor's, whatever their team (#1026).
+  it('concerns every supervisor when a request arrives or is decided, nobody else', () => {
+    const audience: LiveAudience = { kind: 'requests' };
+    const noTeam: CurrentUser = { ...chris, id: 'old.lead', teamId: null };
+
+    expect(
+      [sam, chris, nina, noTeam, alex].map((user) => concerns(audience, user))
+    ).toEqual([false, true, true, true, false]);
+  });
+
   it('concerns a supervisor on no team only with unassigned work', () => {
     const noTeam: CurrentUser = { ...chris, id: 'old.lead', teamId: null };
 

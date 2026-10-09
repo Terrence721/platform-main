@@ -243,7 +243,7 @@ describe('readCustomerRequest', () => {
     where: 'Invoice INV-2026-10',
     consent: true,
     website: '',
-    openedAt: '2026-10-09T12:00:00.000Z',
+    fillMilliseconds: 45_000,
   };
 
   it('reads a good body', () => {
@@ -315,7 +315,13 @@ describe('readCustomerRequest', () => {
       'Agree to how your request is kept, to send it.',
     ],
     ['a honeypot that is not text', { website: 1 }, 'Reload the form'],
-    ['no time the form opened', { openedAt: 'soon' }, 'Reload the form'],
+    [
+      'no time taken to fill it in',
+      { fillMilliseconds: 'soon' },
+      'Reload the form',
+    ],
+    ['a negative time', { fillMilliseconds: -1 }, 'Reload the form'],
+    ['an endless time', { fillMilliseconds: Infinity }, 'Reload the form'],
   ])('refuses %s with 400', (_, changes, message) => {
     const body = changes === null ? null : { ...sent, ...changes };
 

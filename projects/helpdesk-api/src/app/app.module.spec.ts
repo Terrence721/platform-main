@@ -1,4 +1,5 @@
 import {
+  CustomerRequestsService,
   LiveHub,
   TicketMessagesService,
   TicketsService,
@@ -14,7 +15,7 @@ import { TicketsController } from '../tickets/tickets.controller';
 import { AppModule } from './app.module';
 
 /** The `LiveHub` this service or controller was given, if any. */
-function liveEventsOf(
+function liveHubOf(
   moduleRef: TestingModule,
   holder: Type<unknown>
 ): LiveHub | undefined {
@@ -41,15 +42,17 @@ describe('AppModule', () => {
   });
 
   it('gives every service that publishes the LiveHub /api/events listens to', () => {
-    const listened = liveEventsOf(moduleRef, EventsController);
+    const listened = liveHubOf(moduleRef, EventsController);
 
     expect(listened).toBeInstanceOf(LiveHub);
     for (const publisher of [
       TicketsService,
       TicketMessagesService,
       UsersService,
+      // New requests' events (#1026).
+      CustomerRequestsService,
     ]) {
-      expect(liveEventsOf(moduleRef, publisher)).toBe(listened);
+      expect(liveHubOf(moduleRef, publisher)).toBe(listened);
     }
   });
 
@@ -67,9 +70,9 @@ describe('AppModule', () => {
     }).compile();
 
     try {
-      expect(liveEventsOf(wrong, TicketsService)).toBeInstanceOf(LiveHub);
-      expect(liveEventsOf(wrong, TicketsService)).not.toBe(
-        liveEventsOf(wrong, EventsController)
+      expect(liveHubOf(wrong, TicketsService)).toBeInstanceOf(LiveHub);
+      expect(liveHubOf(wrong, TicketsService)).not.toBe(
+        liveHubOf(wrong, EventsController)
       );
     } finally {
       await wrong.close();

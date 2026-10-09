@@ -111,8 +111,10 @@ export function parseRequestReference(text: string): number | null {
  * field: name, email and subject required, the description required and
  * within the tickets' limits, `where` optional, and consent given. Two
  * fields catch spam without a paid service: `website`, which the form
- * hides, so a person leaves it empty; and `openedAt`, when the form
- * opened, as a person takes a few seconds to fill it in.
+ * hides, so a person leaves it empty; and `fillMilliseconds`, how long the
+ * form was open before it was sent, as a person takes a few seconds to
+ * fill it in. A duration the browser measures itself, not a time of day:
+ * a visitor's clock set wrong must not make their request look like spam.
  */
 export interface CreateRequestRequest {
   name: string;
@@ -127,7 +129,8 @@ export interface CreateRequestRequest {
   consent: boolean;
   /** Hidden from people: must be empty. */
   website: string;
-  openedAt: IsoDateTime;
+  /** How long the form was open before it was sent, in milliseconds. */
+  fillMilliseconds: number;
 }
 
 /** The answer to a new request: its reference, never any ticket data. */

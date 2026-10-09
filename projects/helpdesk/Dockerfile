@@ -7,8 +7,9 @@
 #
 # Compose runs it beside the API: `docker compose --profile full up`.
 
-# Build: install the workspace and build the app, as CI does. Node matches
-# .node-version.
+# Build: install the workspace and build the app, as CI does. Node is the
+# same major version as .node-version (24), at its newest on the day of the
+# build, so each build gets its fixes.
 FROM node:24-alpine AS build
 WORKDIR /repo
 RUN corepack enable
@@ -26,7 +27,10 @@ ENV NX_DAEMON=false NX_NO_CLOUD=true
 # be wasted.
 RUN yarn nx build helpdesk --skip-nx-cache --excludeTaskDependencies
 
-# Run: nginx as a non-root user, on 8080, with only the built files.
+# Run: nginx as a non-root user, on 8080, with only the built files. The
+# alpine tag, not a pinned version, on purpose: each build gets nginx's
+# newest release and its security fixes, which a pin, with nothing here to
+# update it, would miss; CI's e2e tests run against every build (#1284).
 FROM nginxinc/nginx-unprivileged:alpine
 COPY projects/helpdesk/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /repo/dist/projects/helpdesk/browser /usr/share/nginx/html

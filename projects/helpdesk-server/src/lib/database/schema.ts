@@ -1,4 +1,11 @@
 import {
+  DISMISS_REASONS,
+  REQUEST_CATEGORIES,
+  REQUEST_EMAIL_MAX_LENGTH,
+  REQUEST_IMPACTS,
+  REQUEST_NAME_MAX_LENGTH,
+  REQUEST_STATUSES,
+  REQUEST_WHERE_MAX_LENGTH,
   ROLES,
   TICKET_DESCRIPTION_MAX_LENGTH,
   TICKET_MESSAGE_KINDS,
@@ -13,6 +20,7 @@ import {
   type AnyPgColumn,
   // The repo's id-blacklist rule bans the name `boolean`.
   boolean as booleanColumn,
+  check,
   index,
   integer,
   pgEnum,
@@ -34,6 +42,13 @@ export const ticketMessageKindEnum = pgEnum(
   'ticket_message_kind',
   TICKET_MESSAGE_KINDS
 );
+export const requestCategoryEnum = pgEnum(
+  'request_category',
+  REQUEST_CATEGORIES
+);
+export const requestImpactEnum = pgEnum('request_impact', REQUEST_IMPACTS);
+export const requestStatusEnum = pgEnum('request_status', REQUEST_STATUSES);
+export const dismissReasonEnum = pgEnum('dismiss_reason', DISMISS_REASONS);
 
 /**
  * Created when the row is added; `updatedAt` also moves on every update made
@@ -186,6 +201,73 @@ export const ticketMessages = pgTable(
     index('ticket_messages_ticket_created_idx').on(
       table.ticketId,
       table.createdAt
+    ),
+  ]
+);
+
+/**
+ * What a customer sent in through the public form (#1026), waiting in
+ * supervisors' New requests until one turns it into a ticket or dismisses
+ * it. Never deleted: a decided request keeps who decided, when and how.
+ * The customer gets its number as `R-1001`, and checks on it with that and
+ * their email.
+ */
+export const requests = pgTable(
+  'requests',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** The number the customer sees, `R-1042`: unique, from 1001. */
+    requestNumber: integer('request_number')
+      .notNull()
+      .unique()
+      .generatedAlwaysAsIdentity({ startWith: 1001 }),
+    name: varchar('name', { length: REQUEST_NAME_MAX_LENGTH }).notNull(),
+    email: varchar('email', { length: REQUEST_EMAIL_MAX_LENGTH }).notNull(),
+    category: requestCategoryEnum('category').notNull(),
+    impact: requestImpactEnum('impact').notNull(),
+    // As long as a ticket's, which they become.
+    subject: varchar('subject', {
+      length: TICKET_SUBJECT_MAX_LENGTH,
+    }).notNull(),
+    description: varchar('description', {
+      length: TICKET_DESCRIPTION_MAX_LENGTH,
+    }).notNull(),
+    /** Where it happened, such as a page; `where` is an SQL keyword. */
+    where: varchar('where_happened', { length: REQUEST_WHERE_MAX_LENGTH }),
+    /** When the customer agreed to what is kept, and why. */
+    consentedAt: timestamp('consented_at', { withTimezone: true }).notNull(),
+    status: requestStatusEnum('status').notNull().default('pending'),
+    /** The ticket it became; tickets are never deleted. */
+    ticketId: uuid('ticket_id').references(() => tickets.id),
+    /** For a duplicate: the ticket it repeats. */
+    duplicateOfTicketId: uuid('duplicate_of_ticket_id').references(
+      () => tickets.id
+    ),
+    dismissReason: dismissReasonEnum('dismiss_reason'),
+    /** The supervisor who decided; accounts are deactivated, not deleted. */
+    decidedById: varchar('decided_by_id', {
+      length: USER_ID_MAX_LENGTH,
+    }).references(() => users.id),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    ...timestamps,
+  },
+  (table) => [
+    // New requests: the pending ones, oldest first.
+    index('requests_status_created_idx').on(table.status, table.createdAt),
+    // Possible duplicates: the same customer's other requests.
+    index('requests_email_idx').on(table.email),
+    // A decision is recorded whole, or not at all while pending.
+    check(
+      'requests_decided_check',
+      sql`(${table.status} = 'pending') = (${table.decidedById} is null and ${table.decidedAt} is null)`
+    ),
+    check(
+      'requests_ticket_check',
+      sql`(${table.status} = 'ticket') = (${table.ticketId} is not null)`
+    ),
+    check(
+      'requests_dismissed_check',
+      sql`(${table.status} = 'dismissed') = (${table.dismissReason} is not null)`
     ),
   ]
 );

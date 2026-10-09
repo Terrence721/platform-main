@@ -35,6 +35,7 @@ describe('startDemoDatabase', { timeout: 60_000 }, () => {
       '0002_reporting_views.sql',
       '0003_ticket_finished_at.sql',
       '0004_drop_unused_reporting_views.sql',
+      '0005_customer_requests.sql',
     ]);
   });
 
@@ -47,6 +48,7 @@ describe('startDemoDatabase', { timeout: 60_000 }, () => {
     expect(rows.map(({ name }) => name)).toEqual([
       'customers',
       'queues',
+      'requests',
       'teams',
       'ticket_messages',
       'tickets',

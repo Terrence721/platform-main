@@ -1,4 +1,11 @@
 import {
+  DISMISS_REASONS,
+  REQUEST_CATEGORIES,
+  REQUEST_EMAIL_MAX_LENGTH,
+  REQUEST_IMPACTS,
+  REQUEST_NAME_MAX_LENGTH,
+  REQUEST_STATUSES,
+  REQUEST_WHERE_MAX_LENGTH,
   ROLES,
   TICKET_DESCRIPTION_MAX_LENGTH,
   TICKET_MESSAGE_KINDS,
@@ -11,6 +18,11 @@ import {
 import { getTableColumns } from 'drizzle-orm';
 import { getTableConfig, PgColumn, PgTable } from 'drizzle-orm/pg-core';
 import {
+  dismissReasonEnum,
+  requestCategoryEnum,
+  requestImpactEnum,
+  requests,
+  requestStatusEnum,
   roleEnum,
   teams,
   ticketMessageKindEnum,
@@ -118,5 +130,61 @@ describe('schema: how the tables connect', () => {
     );
     expect(onDelete).toEqual({ ticket_id: 'cascade', author_id: 'no action' });
     expect(getTableColumns(ticketMessages).authorId.notNull).toBe(true);
+  });
+});
+
+// Customer requests (#1026), waiting for a supervisor's decision.
+describe('schema: customer requests', () => {
+  it('stores exactly the contract categories, impacts, statuses and dismissal reasons', () => {
+    expect(requestCategoryEnum.enumValues).toEqual(REQUEST_CATEGORIES);
+    expect(requestImpactEnum.enumValues).toEqual(REQUEST_IMPACTS);
+    expect(requestStatusEnum.enumValues).toEqual(REQUEST_STATUSES);
+    expect(dismissReasonEnum.enumValues).toEqual(DISMISS_REASONS);
+  });
+
+  it('starts every request pending', () => {
+    expect(getTableColumns(requests).status.default).toBe('pending');
+  });
+
+  it("limits a request's fields as the contract does, a ticket's where it becomes one", () => {
+    const { name, email, subject, description, where } =
+      getTableColumns(requests);
+
+    expect(lengthOf(name)).toBe(REQUEST_NAME_MAX_LENGTH);
+    expect(lengthOf(email)).toBe(REQUEST_EMAIL_MAX_LENGTH);
+    expect(lengthOf(subject)).toBe(TICKET_SUBJECT_MAX_LENGTH);
+    expect(lengthOf(description)).toBe(TICKET_DESCRIPTION_MAX_LENGTH);
+    expect(lengthOf(where)).toBe(REQUEST_WHERE_MAX_LENGTH);
+    expect(where.notNull).toBe(false);
+    expect(lengthOf(getTableColumns(requests).decidedById)).toBe(
+      USER_ID_MAX_LENGTH
+    );
+  });
+
+  it('numbers requests itself, as R-1001 and on', () => {
+    const { requestNumber } = getTableColumns(requests);
+
+    expect(requestNumber.generatedIdentity?.type).toBe('always');
+    expect(requestNumber.isUnique).toBe(true);
+  });
+
+  it('links a request to the ticket it became, the ticket it repeats, and who decided', () => {
+    expect(referencesOf(requests)).toEqual({
+      ticket_id: 'tickets',
+      duplicate_of_ticket_id: 'tickets',
+      decided_by_id: 'users',
+    });
+  });
+
+  it('keeps its decision consistent with its status, in the database itself', () => {
+    expect(
+      getTableConfig(requests)
+        .checks.map(({ name }) => name)
+        .sort()
+    ).toEqual([
+      'requests_decided_check',
+      'requests_dismissed_check',
+      'requests_ticket_check',
+    ]);
   });
 });

@@ -1,4 +1,6 @@
 import type {
+  RequestCategory,
+  RequestImpact,
   Role,
   TicketMessageKind,
   TicketPriority,
@@ -241,5 +243,72 @@ export const SHOWCASE_TICKETS: readonly SeedTicket[] = [
         minutesAgo: DAY,
       },
     ],
+  },
+];
+
+/**
+ * A request a customer sent through the public form (#1026), still waiting
+ * for a supervisor. Sent `createdMinutesAgo`, and agreed to then.
+ */
+export interface SeedRequest {
+  name: string;
+  email: string;
+  category: RequestCategory;
+  impact: RequestImpact;
+  subject: string;
+  description: string;
+  where: string | null;
+  createdMinutesAgo: number;
+}
+
+/**
+ * New requests' first visitors, all pending. Grace Hopper writes again
+ * about the double charge her open ticket is already about, so New requests
+ * shows a possible duplicate; the others are new to the help desk.
+ */
+export const SEED_REQUESTS: readonly SeedRequest[] = [
+  {
+    name: 'Mei Chen',
+    email: 'mei.chen@example.com',
+    category: 'bug',
+    impact: 'blocked',
+    subject: 'Export to CSV stops at 1,000 rows',
+    description:
+      'Exporting the orders report gives a file with exactly 1,000 rows; we have about 4,300 orders this month.',
+    where: 'Reports > Orders > Export',
+    createdMinutesAgo: 3 * HOUR,
+  },
+  {
+    name: 'Grace Hopper',
+    email: 'grace@example.com',
+    category: 'billing',
+    impact: 'slowed',
+    subject: 'Charged twice again?',
+    description:
+      'I see two charges for October on my statement. Is this the same problem as before?',
+    where: 'Invoice INV-2026-10',
+    createdMinutesAgo: 2 * HOUR,
+  },
+  {
+    name: 'Tom Herrera',
+    email: 'tom.herrera@example.com',
+    category: 'feature',
+    impact: 'question',
+    subject: 'Can invoices show our VAT number?',
+    description:
+      'Our accountant needs our VAT number on every invoice. Is there a setting for it?',
+    where: null,
+    createdMinutesAgo: 50,
+  },
+  {
+    name: 'Priya Nair',
+    email: 'priya.nair@example.com',
+    category: 'account',
+    impact: 'blocked',
+    subject: 'Locked out after changing my phone',
+    description:
+      'I changed phones and my sign-in codes now go to the old number. I cannot get into my account.',
+    where: 'Sign-in page',
+    createdMinutesAgo: 15,
   },
 ];

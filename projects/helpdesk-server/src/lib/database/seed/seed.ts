@@ -5,13 +5,14 @@ import type { Database } from '../database-token';
 import {
   customers,
   queues,
+  requests,
   teams,
   ticketMessages,
   tickets,
   users,
 } from '../schema';
 import { generateSeed, SeedData, SeedOptions } from './generate';
-import type { SeedTicket, SeedUser } from './story';
+import { SEED_REQUESTS, type SeedTicket, type SeedUser } from './story';
 
 /** The seeded users' password when HELPDESK_SEED_PASSWORD is not set. */
 export const DEFAULT_SEED_PASSWORD = 'helpdesk-dev-only';
@@ -28,6 +29,8 @@ export interface SeedSummary {
   tickets: number;
   /** Replies and internal notes, across all tickets. */
   messages: number;
+  /** Customers' requests waiting in New requests. */
+  requests: number;
   /** A couple of user IDs per role, to sign in with. */
   examples: Record<SeedUser['role'], string[]>;
   milliseconds: number;
@@ -161,6 +164,23 @@ export async function seedDatabase(
     )) {
       await tx.insert(ticketMessages).values(batch);
     }
+
+    // New requests' pending ones (#1026), oldest first, so the oldest is
+    // R-1001. Each customer agreed as they sent it.
+    const oldestFirst = [...SEED_REQUESTS].sort(
+      (a, b) => b.createdMinutesAgo - a.createdMinutesAgo
+    );
+    await tx.insert(requests).values(
+      oldestFirst.map(({ createdMinutesAgo, ...request }) => {
+        const sentAt = minutesFrom(now, -createdMinutesAgo);
+        return {
+          ...request,
+          consentedAt: sentAt,
+          createdAt: sentAt,
+          updatedAt: sentAt,
+        };
+      })
+    );
   });
 
   const idsOf = (role: SeedUser['role']) =>
@@ -178,6 +198,7 @@ export async function seedDatabase(
       (total, ticket) => total + ticket.messages.length,
       0
     ),
+    requests: SEED_REQUESTS.length,
     examples: {
       admin: idsOf('admin'),
       supervisor: idsOf('supervisor'),

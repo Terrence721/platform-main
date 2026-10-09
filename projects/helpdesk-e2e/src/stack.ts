@@ -53,14 +53,18 @@ export default async function stack(
   if (await answers(baseUrl)) {
     throw new Error(
       `A help desk already answers at ${baseUrl}. Stop it ` +
-        '(docker compose --profile full down) or set E2E_BASE_URL to ' +
-        'test it as it is.'
+        '(docker compose --profile full down --volumes) or set ' +
+        'E2E_BASE_URL to test it as it is.'
     );
   }
 
   const down = () => {
     compose('down', '--volumes');
   };
+  // A run cut short (a crash, a reboot) can leave stopped containers and its
+  // database behind. The API seeds only a database with no users, so the
+  // tests would run on what that run changed: clear it first (#1286).
+  down();
   if (!compose('up', '--build', '--detach', '--wait')) {
     compose('logs', 'api', 'app');
     down();

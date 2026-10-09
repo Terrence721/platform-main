@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 9, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` complete: 63 of 63)
+**Last Updated: October 9, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` complete: 63 of 63; `helpdesk-e2e` in progress: 1 of 2)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -926,3 +926,9 @@ The app image's web server: it serves the built app and passes `/api` to the API
 **Low · Documentation** — 1 fix; **Low · Maintainability** — 1 fix ([issue #1284](https://github.com/Terrence721/platform-main/issues/1284))
 
 The app's image, and the last of its 63 files: built in a Node stage, served by nginx. It holds: the install reused until the package list changes, Yarn's downloads cached across builds; `.dockerignore` keeping `node_modules`, build output, `.env` and `.git` out; only the app built, the NgRx modules compiled from their source; a run stage with only the built files and `nginx.conf`, nginx running as a non-root user on 8080; a health check on `127.0.0.1`, as `localhost` is IPv6 inside the container; and CI building the image and running every e2e test against it. Its line "Node matches .node-version" held only for the major version: `.node-version` says 24.15, while `node:24-alpine` is the newest 24 on the day of the build (24.18 in the copy here). It now says that, and so does the same line in the API's `Dockerfile`, which that review missed. The nginx base is the moving `alpine` tag (1.31.6 today), with nothing saying whether on purpose; it stays, agreed with the repo owner, as a pin, with no Dependabot version updates here, would go stale and miss nginx's security fixes, and CI's e2e tests run against every build. The comment now says so; since `nginx.conf`'s review the version no longer shows.
+
+### [`helpdesk-e2e/src/stack.ts`](https://github.com/Terrence721/platform-main/blob/45d3273/projects/helpdesk-e2e/src/stack.ts)
+
+**Medium · Correctness** — 1 fix ([issue #1286](https://github.com/Terrence721/platform-main/issues/1286))
+
+Playwright's global setup: it starts the whole help desk in Docker Compose before the run and removes it, database included, after. It holds: a help desk already answering stops the run with a message, rather than tests running on its old data, which caught a stack an interrupted run had left up during this audit; `up --build --wait` gives fresh images and every service healthy, and the app must then answer through to `/api/health`; a failed start prints the API's and app's logs, removes the stack and says why; and `E2E_BASE_URL` leaves a running stack as it is. The gap was in its promise that every run starts from a fresh seed. The API seeds only a database with no users, so a run cut short (a crash, a reboot) that left its containers stopped and its database behind passed the guard, nothing answering, and the next run tested what the last one had changed; the guard's own advice, `down` without `--volumes`, left the database too. Shown on the real stack: with the containers stopped, the volume kept and Sam's account made inactive in it, Sam's sign-in test failed. Leftovers are now cleared before the stack starts, the advice says `--volumes`, and the same test then passes on a fresh seed. Noted, not changed: a killed run never reaches its teardown, so the stack stays up until the next run's guard reports it.

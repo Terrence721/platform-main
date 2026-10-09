@@ -101,6 +101,12 @@ function sortValue(account: UserAccount, column: Column): string | number {
     </table>
   `,
   styles: `
+    /* Wider than a phone, the table scrolls sideways on its own, leaving
+       the page the width of the screen (#1262). */
+    :host {
+      display: block;
+      overflow-x: auto;
+    }
     /* The role as a pill: supervisors green, agents blue, admins purple.
        light-dark() keeps each readable in the light and the dark theme. */
     .role {

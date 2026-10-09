@@ -1,5 +1,6 @@
 import {
   canTransition,
+  isTicketPriority,
   isTicketStatus,
   TICKET_PRIORITIES,
   TICKET_STATUS_TRANSITIONS,
@@ -31,6 +32,20 @@ describe('ticket statuses and priorities', () => {
       'low' | 'normal' | 'high' | 'urgent'
     >();
   });
+});
+
+// For Turn into ticket (#1026), whose body names one.
+describe('isTicketPriority', () => {
+  it.each(TICKET_PRIORITIES)('accepts the priority %s', (priority) => {
+    expect(isTicketPriority(priority)).toBe(true);
+  });
+
+  it.each([['asap'], ['High'], [''], [null], [undefined], [1], [{}]])(
+    'rejects %j',
+    (value) => {
+      expect(isTicketPriority(value)).toBe(false);
+    }
+  );
 });
 
 describe('isTicketStatus', () => {

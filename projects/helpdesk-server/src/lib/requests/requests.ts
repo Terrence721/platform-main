@@ -2,14 +2,26 @@ import {
   ACCOUNT_NAME_MAX_LENGTH,
   type AddTicketMessageRequest,
   type CreateAccountRequest,
+  type CreateRequestRequest,
+  type DismissRequestRequest,
+  isDismissReason,
+  isEmailAddress,
+  isRequestCategory,
+  isRequestImpact,
   isRole,
   isTicketMessageKind,
+  isTicketPriority,
   isTicketStatus,
   isUserId,
   PASSWORD_MAX_LENGTH,
   PASSWORD_MIN_LENGTH,
+  REQUEST_NAME_MAX_LENGTH,
+  REQUEST_WHERE_MAX_LENGTH,
+  TICKET_DESCRIPTION_MAX_LENGTH,
   TICKET_MESSAGE_MAX_LENGTH,
+  TICKET_SUBJECT_MAX_LENGTH,
   type TicketStatus,
+  type TurnIntoTicketRequest,
   type UpdateAccountRequest,
 } from '@helpdesk/contract';
 import { BadRequestException } from '@nestjs/common';
@@ -153,6 +165,142 @@ export function readUpdateAccount(body: unknown): UpdateAccountRequest {
     throw new BadRequestException('Say whether the account is active.');
   }
   return { role: fields.role, teamId, active: fields.active };
+}
+
+/** A body's field as trimmed text; anything that is not text, empty. */
+function text(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+/**
+ * The public form's body (#1026), checked one field at a time; the first
+ * that is wrong is refused with 400 and says what is expected. Text is
+ * trimmed, the email lower-cased (so the same customer matches however
+ * they type it), and an empty "where" read as none. The honeypot and when
+ * the form opened are passed on, for the API's spam checks to judge.
+ */
+export function readCustomerRequest(body: unknown): CreateRequestRequest {
+  const fields = (typeof body === 'object' && body !== null ? body : {}) as {
+    [field in keyof CreateRequestRequest]?: unknown;
+  };
+  const name = text(fields.name);
+  if (name === '' || name.length > REQUEST_NAME_MAX_LENGTH) {
+    throw new BadRequestException(
+      `Enter your name, up to ${REQUEST_NAME_MAX_LENGTH} characters.`
+    );
+  }
+  const email = text(fields.email).toLowerCase();
+  if (!isEmailAddress(email)) {
+    throw new BadRequestException(
+      'Enter your email address, such as dana@example.com.'
+    );
+  }
+  if (!isRequestCategory(fields.category)) {
+    throw new BadRequestException('Choose what it is about.');
+  }
+  if (!isRequestImpact(fields.impact)) {
+    throw new BadRequestException('Say how much this is affecting you.');
+  }
+  const subject = text(fields.subject);
+  if (subject === '' || subject.length > TICKET_SUBJECT_MAX_LENGTH) {
+    throw new BadRequestException(
+      `Enter a subject, up to ${TICKET_SUBJECT_MAX_LENGTH} characters.`
+    );
+  }
+  const description = text(fields.description);
+  if (
+    description === '' ||
+    description.length > TICKET_DESCRIPTION_MAX_LENGTH
+  ) {
+    throw new BadRequestException(
+      `Describe the problem, up to ${TICKET_DESCRIPTION_MAX_LENGTH} characters.`
+    );
+  }
+  const whereGiven = fields.where ?? null;
+  const where = whereGiven === null ? '' : text(whereGiven);
+  if (
+    (whereGiven !== null && typeof whereGiven !== 'string') ||
+    where.length > REQUEST_WHERE_MAX_LENGTH
+  ) {
+    throw new BadRequestException(
+      `Keep where it happened to ${REQUEST_WHERE_MAX_LENGTH} characters or fewer.`
+    );
+  }
+  if (fields.consent !== true) {
+    throw new BadRequestException(
+      'Agree to how your request is kept, to send it.'
+    );
+  }
+  const website = fields.website ?? '';
+  const openedAt = fields.openedAt;
+  if (
+    typeof website !== 'string' ||
+    typeof openedAt !== 'string' ||
+    Number.isNaN(Date.parse(openedAt))
+  ) {
+    throw new BadRequestException(
+      'Something in the form went wrong. Reload the form and send it again.'
+    );
+  }
+  return {
+    name,
+    email,
+    category: fields.category,
+    impact: fields.impact,
+    subject,
+    description,
+    where: where === '' ? null : where,
+    consent: true,
+    website,
+    openedAt,
+  };
+}
+
+/** A Turn into ticket body: its queue and priority, or 400. */
+export function readTurnIntoTicket(body: unknown): TurnIntoTicketRequest {
+  const fields = (typeof body === 'object' && body !== null ? body : {}) as {
+    queueId?: unknown;
+    priority?: unknown;
+  };
+  const queueId = text(fields.queueId);
+  if (queueId === '') {
+    throw new BadRequestException('Choose a queue.');
+  }
+  if (!isTicketPriority(fields.priority)) {
+    throw new BadRequestException('Choose low, normal, high or urgent.');
+  }
+  return { queueId, priority: fields.priority };
+}
+
+/**
+ * A Dismiss body: why; for a duplicate, and only then, the number of the
+ * ticket it repeats. Anything else is refused with 400.
+ */
+export function readDismissal(body: unknown): DismissRequestRequest {
+  const fields = (typeof body === 'object' && body !== null ? body : {}) as {
+    reason?: unknown;
+    duplicateOfTicketNumber?: unknown;
+  };
+  if (!isDismissReason(fields.reason)) {
+    throw new BadRequestException(
+      'Choose spam, already reported, or not a support request.'
+    );
+  }
+  const ticketNumber = fields.duplicateOfTicketNumber ?? null;
+  if (fields.reason !== 'duplicate') {
+    if (ticketNumber !== null) {
+      throw new BadRequestException('Only a duplicate repeats a ticket.');
+    }
+    return { reason: fields.reason, duplicateOfTicketNumber: null };
+  }
+  if (
+    typeof ticketNumber !== 'number' ||
+    !Number.isInteger(ticketNumber) ||
+    ticketNumber < 1
+  ) {
+    throw new BadRequestException('Give the number of the ticket it repeats.');
+  }
+  return { reason: 'duplicate', duplicateOfTicketNumber: ticketNumber };
 }
 
 /** How far back a team member's history goes. */

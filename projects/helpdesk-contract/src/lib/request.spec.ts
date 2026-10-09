@@ -3,6 +3,7 @@ import {
   DISMISS_REASONS,
   formatRequestReference,
   isDismissReason,
+  isEmailAddress,
   isRequestCategory,
   isRequestImpact,
   parseRequestReference,
@@ -50,6 +51,31 @@ describe('customer requests', () => {
     for (const value of ['', 'BUG', 'other ', null, undefined, 1, {}]) {
       expect(guard(value)).toBe(false);
     }
+  });
+
+  describe('an email address', () => {
+    it.each(['dana@example.com', 'dana.whitfield+billing@mail.example.co.uk'])(
+      'takes %j',
+      (email) => {
+        expect(isEmailAddress(email)).toBe(true);
+      }
+    );
+
+    it.each([
+      '',
+      'dana',
+      'dana@',
+      '@example.com',
+      'dana@example',
+      'dana @example.com',
+      'dana@@example.com',
+      'dana@example..com',
+      `${'a'.repeat(250)}@example.com`,
+      null,
+      42,
+    ])('refuses %j', (email) => {
+      expect(isEmailAddress(email)).toBe(false);
+    });
   });
 
   describe('the reference a customer gets', () => {

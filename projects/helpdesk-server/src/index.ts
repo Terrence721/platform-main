@@ -7,6 +7,7 @@
  * in-browser demo (#942) runs the same checks and services against PGlite.
  */
 export * from './lib/auth/password';
+export * from './lib/customer-requests/customer-requests.service';
 export * from './lib/database/database-token';
 export * from './lib/database/schema';
 export * from './lib/database/seed/generate';

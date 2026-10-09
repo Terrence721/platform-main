@@ -4,9 +4,12 @@ import {
   historySince,
   readAssigneeId,
   readCreateAccount,
+  readCustomerRequest,
+  readDismissal,
   readMessage,
   readSignIn,
   readStatus,
+  readTurnIntoTicket,
   readUpdateAccount,
 } from './requests';
 
@@ -224,5 +227,161 @@ describe('historySince', () => {
     ],
   ])('starts at the end of the earlier month from %s', (_, now, since) => {
     expect(historySince(new Date(now))).toEqual(new Date(since));
+  });
+});
+
+// Customer requests (#1026): the public form's body, and a supervisor's
+// decision on one.
+describe('readCustomerRequest', () => {
+  const sent = {
+    name: 'Dana Whitfield',
+    email: 'dana@example.com',
+    category: 'billing',
+    impact: 'blocked',
+    subject: 'Charged twice',
+    description: 'My card was charged twice this month.',
+    where: 'Invoice INV-2026-10',
+    consent: true,
+    website: '',
+    openedAt: '2026-10-09T12:00:00.000Z',
+  };
+
+  it('reads a good body', () => {
+    expect(readCustomerRequest(sent)).toEqual(sent);
+  });
+
+  it('trims every text, lower-cases the email, and reads an empty where as none', () => {
+    expect(
+      readCustomerRequest({
+        ...sent,
+        name: '  Dana Whitfield ',
+        email: ' Dana@Example.COM ',
+        subject: ' Charged twice ',
+        description: '\nMy card was charged twice this month.\n',
+        where: '   ',
+      })
+    ).toEqual({ ...sent, where: null });
+  });
+
+  it('reads a missing where and honeypot as none and empty', () => {
+    const { where: _, website: __, ...rest } = sent;
+
+    expect(readCustomerRequest(rest)).toEqual({
+      ...sent,
+      where: null,
+      website: '',
+    });
+  });
+
+  // The honeypot is the API's to judge; a filled one is passed on.
+  it('passes on a filled honeypot as it is', () => {
+    expect(
+      readCustomerRequest({ ...sent, website: 'spam.example' }).website
+    ).toBe('spam.example');
+  });
+
+  it.each([
+    ['no body', null, 'Enter your name'],
+    ['no name', { name: '  ' }, 'Enter your name, up to 100 characters.'],
+    ['a name too long', { name: 'x'.repeat(101) }, 'Enter your name'],
+    [
+      'an email that is not one',
+      { email: 'dana' },
+      'Enter your email address, such as dana@example.com.',
+    ],
+    ['no category', { category: 'urgent' }, 'Choose what it is about.'],
+    ['no impact', { impact: 'very' }, 'Say how much this is affecting you.'],
+    ['no subject', { subject: '' }, 'Enter a subject, up to 200 characters.'],
+    ['a subject too long', { subject: 'x'.repeat(201) }, 'Enter a subject'],
+    [
+      'no description',
+      { description: ' ' },
+      'Describe the problem, up to 10000 characters.',
+    ],
+    [
+      'a description too long',
+      { description: 'x'.repeat(10_001) },
+      'Describe the problem',
+    ],
+    [
+      'a where too long',
+      { where: 'x'.repeat(201) },
+      'Keep where it happened to 200 characters or fewer.',
+    ],
+    ['a where that is not text', { where: 5 }, 'Keep where it happened'],
+    [
+      'no consent',
+      { consent: false },
+      'Agree to how your request is kept, to send it.',
+    ],
+    ['a honeypot that is not text', { website: 1 }, 'Reload the form'],
+    ['no time the form opened', { openedAt: 'soon' }, 'Reload the form'],
+  ])('refuses %s with 400', (_, changes, message) => {
+    const body = changes === null ? null : { ...sent, ...changes };
+
+    expect(() => readCustomerRequest(body)).toThrow(message);
+    expect(() => readCustomerRequest(body)).toThrow(BadRequestException);
+  });
+});
+
+describe('readTurnIntoTicket', () => {
+  it('reads the queue and the priority', () => {
+    expect(
+      readTurnIntoTicket({ queueId: 'billing', priority: 'high' })
+    ).toEqual({ queueId: 'billing', priority: 'high' });
+  });
+
+  it.each([
+    ['no body', null, 'Choose a queue.'],
+    ['no queue', { queueId: '', priority: 'high' }, 'Choose a queue.'],
+    [
+      'an unknown priority',
+      { queueId: 'billing', priority: 'asap' },
+      'Choose low, normal, high or urgent.',
+    ],
+  ])('refuses %s with 400', (_, body, message) => {
+    expect(() => readTurnIntoTicket(body)).toThrow(message);
+    expect(() => readTurnIntoTicket(body)).toThrow(BadRequestException);
+  });
+});
+
+describe('readDismissal', () => {
+  it('reads a reason, with no ticket for anything but a duplicate', () => {
+    expect(readDismissal({ reason: 'spam' })).toEqual({
+      reason: 'spam',
+      duplicateOfTicketNumber: null,
+    });
+  });
+
+  it('reads a duplicate with the ticket it repeats', () => {
+    expect(
+      readDismissal({ reason: 'duplicate', duplicateOfTicketNumber: 1002 })
+    ).toEqual({ reason: 'duplicate', duplicateOfTicketNumber: 1002 });
+  });
+
+  it.each([
+    [
+      'no reason',
+      { reason: 'boring' },
+      'Choose spam, already reported, or not a support request.',
+    ],
+    [
+      'a duplicate with no ticket',
+      { reason: 'duplicate' },
+      'Give the number of the ticket it repeats.',
+    ],
+    [
+      'a duplicate of no real number',
+      { reason: 'duplicate', duplicateOfTicketNumber: 1.5 },
+      'Give the number of the ticket it repeats.',
+    ],
+    [
+      'a ticket for spam',
+      { reason: 'spam', duplicateOfTicketNumber: 1002 },
+      'Only a duplicate repeats a ticket.',
+    ],
+  ])('refuses %s with 400', (_, body, message) => {
+    expect(() => readDismissal(body)).toThrow(message);
+    expect(() => readDismissal(body)).toThrow(BadRequestException);
   });
 });

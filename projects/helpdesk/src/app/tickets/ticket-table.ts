@@ -183,6 +183,12 @@ interface TicketRow {
     </mat-menu>
   `,
   styles: `
+    /* Wider than a phone, the table scrolls sideways on its own, leaving
+       the page the width of the screen (#1262). */
+    :host {
+      display: block;
+      overflow-x: auto;
+    }
     mat-chip {
       text-transform: capitalize;
     }

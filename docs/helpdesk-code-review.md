@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable-next-line MD036 -->
 
-**Last Updated: October 9, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 59 of 63)
+**Last Updated: October 9, 2026** (`helpdesk-contract` complete: 11 of 11; `helpdesk-server` complete: 23 of 23; `helpdesk-api` complete: 24 of 24; `helpdesk` in progress: 60 of 63)
 
 > [!CAUTION]
 > This is a simulation of real-world code review.
@@ -902,3 +902,9 @@ The demo's `HttpBackend`: the app's `/api` requests go to the in-page demo API, 
 **No findings** ([issue #1276](https://github.com/Terrence721/platform-main/issues/1276))
 
 The in-browser demo's bar along the bottom of the page, added by `main.demo.ts` and unknown to the app. It holds, under its spec: what the demo is, and "Preparing the demo…" as a status while its database starts, the spinner hidden from screen readers; then a button per role, and the password; a button signing in through the API and reporting it with the app's own Signed In action, so the app plays its tone and opens the role's page as after any sign-in; the buttons disabled meanwhile; and an alert when signing in fails or the demo cannot start. It keeps its own copies of the password and the three accounts, so the server code stays out of the app's first download, and a spec holds both to the seed's. Noted, not changed: a failed banner sign-in plays no error tone, as the banner shows its own message rather than the app's Sign In Failed action; and "any user ID and the password …" is about the seed's accounts, every one of them active when the page opens.
+
+### [`helpdesk/src/demo/restore-route.ts`](https://github.com/Terrence721/platform-main/blob/81d2901/projects/helpdesk/src/demo/restore-route.ts), with [`404.html`](https://github.com/Terrence721/platform-main/blob/81d2901/projects/helpdesk/src/demo/404.html)
+
+**Low · Test coverage** — 1 fix ([issue #1278](https://github.com/Terrence721/platform-main/issues/1278))
+
+Brings a reload on a demo page back to that page. GitHub Pages serves only real files, so reloading `/platform-main/helpdesk/agent` lands on the site's `404.html`, not a row of its own and reviewed here as the other half: it sends the visitor back to the demo with the page in `?route=`, path, query and fragment, and gives any other missing page a plain "Page not found". Before the app starts, `restoreRoute` puts the page back in the address bar, under the base from `document.baseURI`, so the router opens it; a demo address that matches no page goes on to the landing page, by the catch-all route. It holds, under its spec: a reload coming back to its page; an ordinary visit left alone; and a route without its slash, `//example.com/` or a full address ignored. It cannot lead to another site, as the demo's base always goes in front and `replaceState` refuses another origin. The spec titled "keeps its query and fragment" checked only a fragment; it now checks a route with both, and failed against a copy, outside the checkout, that drops the query. Noted, not changed: the demo's path is written out in `404.html` and in the Pages workflow's `--base-href`, as a static page cannot read the build's base; both sit beside comments saying why.

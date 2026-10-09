@@ -20,6 +20,9 @@ describe('restoreRoute', () => {
     expect(after(`${BASE}?route=${encodeURIComponent('/#roles')}`)).toBe(
       '/platform-main/helpdesk/#roles'
     );
+    expect(
+      after(`${BASE}?route=${encodeURIComponent('/agent?tab=done#top')}`)
+    ).toBe('/platform-main/helpdesk/agent?tab=done#top');
   });
 
   it('leaves an ordinary visit alone', () => {

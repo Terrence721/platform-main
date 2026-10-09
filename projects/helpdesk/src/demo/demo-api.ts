@@ -33,10 +33,11 @@ import {
 } from './nest-shim';
 
 // The in-browser demo's API (#942): answers the app's /api requests in the
-// page, from the demo database, with the API's own services and request
-// checks. Each route keeps its NestJS controller's rules: who may call it
-// (@OnlyFor), what it calls, and the status and message of a refusal. The
-// session lives in memory, so it ends on reload with everything else.
+// page, from the demo database, with the server library's own services and
+// request checks. Each route keeps its NestJS controller's rules: who may
+// call it (@OnlyFor), what it calls, and the status and message of a
+// refusal. The session lives in memory, so it ends on reload with
+// everything else.
 
 /** A request as the app sent it. */
 export interface DemoRequest {

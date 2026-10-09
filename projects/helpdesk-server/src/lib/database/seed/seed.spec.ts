@@ -5,7 +5,7 @@ import { migrate } from 'drizzle-orm/pglite/migrator';
 import { fileURLToPath } from 'url';
 import { verifyPassword } from '../../auth/password';
 import type { Database } from '../database-token';
-import { ticketMessages, tickets, users } from '../schema';
+import { requests, ticketMessages, tickets, users } from '../schema';
 import {
   DEFAULT_SEED_PASSWORD,
   minutesFrom,
@@ -13,7 +13,7 @@ import {
   SeedSummary,
   ticketRow,
 } from './seed';
-import { SHOWCASE_TICKETS } from './story';
+import { SEED_REQUESTS, SHOWCASE_TICKETS } from './story';
 
 const now = new Date('2026-10-03T12:00:00.000Z');
 const MIGRATIONS = fileURLToPath(
@@ -162,6 +162,38 @@ describe('seedDatabase into a fresh database', { timeout: 60_000 }, () => {
         body: message.body,
         authorId: message.authorId,
         createdAt: minutesFrom(now, -message.minutesAgo),
+      }))
+    );
+  });
+
+  // New requests has something to show (#1026): the story's requests,
+  // waiting, the oldest R-1001.
+  it('stores the pending requests, oldest first, and counts them in the summary', async () => {
+    const stored = await database
+      .select({
+        requestNumber: requests.requestNumber,
+        email: requests.email,
+        subject: requests.subject,
+        status: requests.status,
+        createdAt: requests.createdAt,
+        consentedAt: requests.consentedAt,
+      })
+      .from(requests)
+      .orderBy(asc(requests.requestNumber));
+    const oldestFirst = [...SEED_REQUESTS].sort(
+      (a, b) => b.createdMinutesAgo - a.createdMinutesAgo
+    );
+
+    expect(summary.requests).toBe(SEED_REQUESTS.length);
+    expect(stored).toEqual(
+      oldestFirst.map((request, index) => ({
+        requestNumber: 1001 + index,
+        email: request.email,
+        subject: request.subject,
+        status: 'pending',
+        createdAt: minutesFrom(now, -request.createdMinutesAgo),
+        // They agreed as they sent it.
+        consentedAt: minutesFrom(now, -request.createdMinutesAgo),
       }))
     );
   });

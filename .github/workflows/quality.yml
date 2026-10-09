@@ -175,6 +175,28 @@ jobs:
       - name: Install dependencies
         run: yarn install --immutable
 
+      # The base images first, a few tries each: registries throttle pulls
+      # made without an account by address, and the runners share theirs
+      # (#1318, #1322). Listed from each Dockerfile's FROM lines and from
+      # compose.yaml, so a change there is followed. The build below then
+      # uses these copies.
+      - name: Pull the base images
+        run: |
+          images=$( (grep -hoP '^FROM \K\S+' projects/helpdesk/Dockerfile projects/helpdesk-api/Dockerfile; docker compose config --images) | grep / | sort -u)
+          for image in $images; do
+            for attempt in 1 2 3 4 5; do
+              if docker pull --quiet "$image"; then
+                break
+              fi
+              if [ "$attempt" = 5 ]; then
+                echo "::error::Could not pull $image after 5 tries."
+                exit 1
+              fi
+              echo "Pulling $image failed; trying again in $((attempt * 10)) s."
+              sleep $((attempt * 10))
+            done
+          done
+
       # Builds the API and app images and starts them with the database, as
       # `docker compose --profile full up` does on a machine; --wait returns
       # once all three report healthy (the API after migrating and seeding).

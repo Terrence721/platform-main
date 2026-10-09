@@ -270,6 +270,13 @@ describe('CustomerRequestsService', { timeout: 60_000 }, () => {
       ]);
     });
 
+    // Until requests carry files (#1026, Phase B).
+    it('lists no attachments yet', async () => {
+      await sentAt({}, 5);
+
+      expect((await service.pending())[0].attachments).toEqual([]);
+    });
+
     it('lists the requests still waiting, oldest first', async () => {
       await sentAt({ subject: 'Newer' }, 5);
       const decided = await sentAt({ subject: 'Decided' }, 20);

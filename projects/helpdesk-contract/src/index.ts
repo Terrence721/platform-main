@@ -4,9 +4,11 @@
  * `@helpdesk/contract`. It covers tickets (statuses, priorities, the workflow
  * and the API's requests and responses) and their replies and notes, roles,
  * accounts and signing in, teams, reports, live events, and the requests
- * customers send in. Every file in `lib/` is exported from here.
+ * customers send in, with their attachments. Every file in `lib/` is
+ * exported from here.
  */
 export * from './lib/account';
+export * from './lib/attachment';
 export * from './lib/auth';
 export * from './lib/live-events';
 export * from './lib/reports';

@@ -8,6 +8,7 @@ import {
 } from '@helpdesk/server';
 import { Module, type Type } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
+import { ClamAvScanner } from '../attachments/clam-av-scanner';
 import { SharpReEncoder } from '../attachments/sharp-re-encoder';
 import { AuthModule } from '../auth/auth.module';
 import { DatabaseModule } from '../database/database.module';
@@ -97,5 +98,35 @@ describe('AppModule', () => {
     expect(attachments).toBe(
       moduleRef.get(AttachmentsService, { strict: false })
     );
+  });
+
+  // The virus scan (#1293): off unless CLAMAV_HOST is set.
+  // cspell:ignore CLAMAV clamav
+  const scannerOf = (module: TestingModule) =>
+    (
+      module.get(AttachmentsService, { strict: false }) as unknown as {
+        scanner?: unknown;
+      }
+    ).scanner;
+
+  it('gives the attachments no virus scanner unless CLAMAV_HOST is set', () => {
+    expect(process.env['CLAMAV_HOST']).toBeUndefined();
+    expect(scannerOf(moduleRef)).toBeUndefined();
+  });
+
+  it('gives them a ClamAV scanner when CLAMAV_HOST is set', async () => {
+    process.env['CLAMAV_HOST'] = 'clamav';
+    try {
+      const scanning = await Test.createTestingModule({
+        imports: [AppModule],
+      }).compile();
+      try {
+        expect(scannerOf(scanning)).toBeInstanceOf(ClamAvScanner);
+      } finally {
+        await scanning.close();
+      }
+    } finally {
+      delete process.env['CLAMAV_HOST'];
+    }
   });
 });

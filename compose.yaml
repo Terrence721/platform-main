@@ -9,6 +9,11 @@
 # Dockerfile) and the app behind nginx (projects/helpdesk/Dockerfile).
 # Without the profile, Compose starts only the database, as
 # `yarn start:helpdesk` needs.
+#
+# The `scan` profile adds ClamAV, which scans every upload (#1293); with
+# `full`, the API is pointed at it when HELPDESK_CLAMAV_HOST=clamav, as
+# `yarn start:helpdesk:docker:scan` does. Off unless asked for.
+# ClamAV's own names: cspell:ignore clamav CLAMAV clamd clamdcheck
 name: helpdesk
 
 services:
@@ -45,7 +50,14 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      # With the scan profile, once ClamAV is ready; without it, ignored.
+      clamav:
+        condition: service_healthy
+        required: false
     environment:
+      # The virus scan (#1293): ClamAV's host when the scan profile is on
+      # (`yarn start:helpdesk:docker:scan` sets it); empty, it is off.
+      CLAMAV_HOST: ${HELPDESK_CLAMAV_HOST:-}
       # The database by its name on Compose's own network.
       DATABASE_URL: postgres://${HELPDESK_DB_USER:-helpdesk}:${HELPDESK_DB_PASSWORD:-helpdesk-dev-only}@db:5432/${HELPDESK_DB_NAME:-helpdesk}
       # Seeds an empty database on first start; restarts keep the data.
@@ -72,6 +84,23 @@ services:
       # localhost only. 8088, not 8080, which other local tools often hold;
       # HELPDESK_APP_PORT in .env picks another.
       - '127.0.0.1:${HELPDESK_APP_PORT:-8088}:8080'
+
+  # The optional virus scan (#1293): ClamAV, which scans every upload when
+  # the API is told its host. Off unless the `scan` profile is on, as it
+  # needs about 1 GB of memory and downloads its signatures each start (a
+  # minute or two). Its own image, from Docker Hub (Amazon's mirror carries
+  # only Docker's official images); pulled only with the profile. Not
+  # published: only the API reaches it, on Compose's network.
+  clamav:
+    profiles: [scan]
+    image: clamav/clamav:stable
+    healthcheck:
+      # The image's own check: clamd answers, its signatures loaded.
+      test: ['CMD', 'clamdcheck.sh']
+      interval: 10s
+      timeout: 5s
+      start_period: 5m
+      retries: 30
 
 volumes:
   helpdesk-db:

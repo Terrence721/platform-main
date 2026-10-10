@@ -284,6 +284,26 @@ describe('stackFor', () => {
     expect(FIRST_DOCKER_APP_PORT).toBe(8088);
   });
 
+  // The optional virus scan (#1293): the same, with ClamAV beside it.
+  // Its service's name: cspell:ignore CLAMAV clamav
+  it('runs it in Docker with the virus scan on, the API told where ClamAV is', () => {
+    expect(
+      stackFor('helpdesk-docker-scan', { app: 8088, api: 3000, db: 5435 })
+    ).toEqual([
+      {
+        name: 'helpdesk (Docker, virus scan on)',
+        command:
+          'docker compose --profile full --profile scan down --volumes' +
+          ' && docker compose --profile full --profile scan up --build --detach --wait',
+        env: { HELPDESK_APP_PORT: '8088', HELPDESK_CLAMAV_HOST: 'clamav' },
+        stopCommand:
+          'docker compose --profile full --profile scan down --volumes',
+        pageUrl: 'http://localhost:8088/',
+        ports: [8088, FIRST_API_PORT, 5435],
+      },
+    ]);
+  });
+
   it('publishes the Docker app on the port it was given', () => {
     const [helpdesk] = stackFor('helpdesk-docker', {
       app: 8089,

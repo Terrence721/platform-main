@@ -3,6 +3,7 @@ import {
   HttpBackend,
   HttpErrorResponse,
   type HttpEvent,
+  HttpHeaders,
   type HttpRequest,
   HttpResponse,
 } from '@angular/common/http';
@@ -28,7 +29,8 @@ function isApi(url: string): boolean {
  * sending), as Angular's own testing backend does, so the app, its
  * interceptors and its error handling stay exactly as they are. Answers
  * travel as JSON, as over the network: a refusal arrives as an
- * HttpErrorResponse with the API's own body and status.
+ * HttpErrorResponse with the API's own body and status. A file arrives
+ * as its bytes (a Blob) with its headers, as a download does.
  */
 @Injectable()
 export class DemoBackend implements HttpBackend {
@@ -50,7 +52,17 @@ export class DemoBackend implements HttpBackend {
         )
       )
     ).pipe(
-      map(({ status, body }) => {
+      map(({ status, body, headers }) => {
+        // A customer's file (#1026): its bytes as they are, with its type
+        // and download name, as the API sends a download.
+        if (body instanceof Blob) {
+          return new HttpResponse({
+            status,
+            body,
+            headers: new HttpHeaders(headers),
+            url: request.url,
+          });
+        }
         // Through JSON and back, as over the network (Dates become text,
         // undefined fields disappear).
         const json: unknown =

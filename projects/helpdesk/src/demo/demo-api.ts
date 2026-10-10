@@ -3,6 +3,8 @@ import {
   isUserId,
   REPORT_AGENT_PARAM,
   REPORT_TEAM_PARAM,
+  REQUEST_FIELDS_PART,
+  REQUEST_FILES_PART,
   type Role,
   SIGN_IN_FAILED_MESSAGE,
 } from '@helpdesk/contract';
@@ -12,8 +14,10 @@ import {
   type Database,
   DEFAULT_SEED_PASSWORD,
   historySince,
+  type ImageReEncoder,
   NO_MATCHING_REQUEST,
   NO_TEAM_MESSAGE,
+  type PreparedFile,
   readAssigneeId,
   readCreateAccount,
   readCustomerRequest,
@@ -27,11 +31,14 @@ import {
   TeamsService,
   TicketMessagesService,
   TicketsService,
+  type UploadedFile,
   users,
   UsersService,
 } from '@helpdesk/server';
 import { eq } from 'drizzle-orm';
+import { CanvasReEncoder } from './canvas-re-encoder';
 import {
+  BadRequestException,
   ForbiddenException,
   HttpException,
   NotFoundException,
@@ -56,7 +63,64 @@ export interface DemoRequest {
 /** An answer, as the real API would have sent it. */
 export interface DemoResponse {
   status: number;
+  /** JSON, or a file's bytes as a Blob. */
   body: unknown;
+  /** For a file: its type and download name, as the API sends them. */
+  headers?: Record<string, string>;
+}
+
+/** A file a route answers with, sent as its bytes rather than JSON. */
+class FileDownload {
+  constructor(readonly file: PreparedFile) {}
+}
+
+/** As the API words a multipart send without its fields. */
+const FIELDS_PART = `Send the request's fields as JSON, in a "${REQUEST_FIELDS_PART}" part.`;
+
+/**
+ * The request's fields and files, as the API's CustomerRequestsController
+ * reads them: a JSON body as it is, with no files; a FormData body (the
+ * form's, with files) as the JSON in its `request` part and the files in
+ * its `files` parts. 400 if that part is missing or not JSON.
+ */
+async function sentWithFiles(
+  body: unknown
+): Promise<{ fields: unknown; files: UploadedFile[] }> {
+  if (!(body instanceof FormData)) {
+    return { fields: body, files: [] };
+  }
+  const part = body.get(REQUEST_FIELDS_PART);
+  let fields: unknown;
+  try {
+    fields = typeof part === 'string' ? JSON.parse(part) : undefined;
+  } catch {
+    // As for no part at all.
+  }
+  if (fields === undefined) {
+    throw new BadRequestException(FIELDS_PART);
+  }
+  const files = await Promise.all(
+    body
+      .getAll(REQUEST_FILES_PART)
+      .filter((value): value is File => typeof value !== 'string')
+      .map(async (file) => ({
+        name: file.name,
+        bytes: new Uint8Array(await file.arrayBuffer()),
+      }))
+  );
+  return { fields, files };
+}
+
+/** A download's headers, as the API's AttachmentsController sends them. */
+function downloadHeaders({
+  fileName,
+  mediaType,
+}: PreparedFile): Record<string, string> {
+  return {
+    'content-type':
+      mediaType === 'text/plain' ? 'text/plain; charset=utf-8' : mediaType,
+    'content-disposition': `attachment; filename*=UTF-8''${encodeURIComponent(fileName)}`,
+  };
 }
 
 /** Who may call a route: these roles only (as the controller's @OnlyFor). */
@@ -93,6 +157,7 @@ export class DemoApi {
   private readonly accounts: UsersService;
   private readonly reports: ReportsService;
   private readonly customerRequests: CustomerRequestsService;
+  private readonly attachments: AttachmentsService;
   /** Who is signed in; `null` until someone signs in. */
   private signedIn: string | null = null;
   /**
@@ -105,17 +170,19 @@ export class DemoApi {
 
   constructor(
     private readonly database: Database,
-    private readonly now: () => Date = () => new Date()
+    private readonly now: () => Date = () => new Date(),
+    // The browser's canvas redraws images, as sharp does in the API.
+    reEncoder: ImageReEncoder = new CanvasReEncoder()
   ) {
     this.tickets = new TicketsService(database);
     this.messages = new TicketMessagesService(database);
     this.teams = new TeamsService(database);
     this.accounts = new UsersService(database);
     this.reports = new ReportsService(database);
-    // Images are refused until a canvas redraws them here (#1026, B5).
+    this.attachments = new AttachmentsService(database, reEncoder);
     this.customerRequests = new CustomerRequestsService(
       database,
-      new AttachmentsService(database)
+      this.attachments
     );
     this.routes = this.defineRoutes();
   }
@@ -142,10 +209,13 @@ export class DemoApi {
       // The public Report an issue page (#1026), open to anyone, as in the
       // API's CustomerRequestsController; one visitor, so no limits.
       if (request.method === 'POST' && path === '/api/requests') {
-        const sent = readCustomerRequest(request.body);
+        const { fields, files } = await sentWithFiles(request.body);
+        const sent = readCustomerRequest(fields);
+        const prepared =
+          files.length === 0 ? [] : await this.attachments.prepare(files);
         return {
           status: 201,
-          body: await this.customerRequests.send(sent, this.now()),
+          body: await this.customerRequests.send(sent, this.now(), prepared),
         };
       }
       if (request.method === 'GET' && path === '/api/requests/status') {
@@ -168,6 +238,16 @@ export class DemoApi {
             query: url.searchParams,
             body: request.body,
           });
+          if (body instanceof FileDownload) {
+            const { file } = body;
+            return {
+              status: 200,
+              body: new Blob([new Uint8Array(file.content)], {
+                type: file.mediaType,
+              }),
+              headers: downloadHeaders(file),
+            };
+          }
           return { status: route.status ?? 200, body };
         }
       }
@@ -315,6 +395,22 @@ export class DemoApi {
         access: ['admin'],
         run: ({ user, params: [userId], body }) =>
           this.accounts.update(userId, readUpdateAccount(body), user.id),
+      },
+      // AttachmentsController (#1026): who sees which file is the
+      // service's; admins, who work no tickets, get 403.
+      {
+        method: 'GET',
+        path: new RegExp(`^/api/attachments/${ID}$`),
+        access: agentOrSupervisor,
+        run: async ({ user, params: [id] }) =>
+          new FileDownload(await this.attachments.download(id, user)),
+      },
+      {
+        method: 'GET',
+        path: new RegExp(`^/api/tickets/${ID}/attachments$`),
+        access: agentOrSupervisor,
+        run: ({ user, params: [ticketId] }) =>
+          this.attachments.forTicket(ticketId, user),
       },
       // CustomerRequestsController's supervisors' routes, and
       // QueuesController (#1026); sending and checking are public, above.

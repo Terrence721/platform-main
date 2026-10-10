@@ -9,6 +9,7 @@
 export * from './lib/attachments/attachments.service';
 export * from './lib/attachments/file-name';
 export * from './lib/attachments/file-type';
+export * from './lib/attachments/file-scanner';
 export * from './lib/attachments/image-re-encoder';
 export * from './lib/auth/password';
 export * from './lib/customer-requests/customer-requests.service';

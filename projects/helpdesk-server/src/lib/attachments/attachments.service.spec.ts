@@ -1,6 +1,10 @@
 import { PGlite } from '@electric-sql/pglite';
 import { ATTACHMENT_MAX_BYTES, type CurrentUser } from '@helpdesk/contract';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
@@ -14,8 +18,15 @@ import {
   users,
 } from '../database/schema';
 import { NOT_YOURS } from '../tickets/ticket-access';
-import { AttachmentsService, NO_SUCH_FILE } from './attachments.service';
+import {
+  AttachmentsService,
+  NO_SUCH_FILE,
+  SCAN_UNAVAILABLE,
+} from './attachments.service';
+import { eicarTestFile, type FileScanner } from './file-scanner';
 import type { ImageReEncoder } from './image-re-encoder';
+
+// The virus scan's test file: cspell:ignore eicar Eicar
 
 const MIGRATIONS = fileURLToPath(new URL('../../../drizzle', import.meta.url));
 
@@ -244,6 +255,72 @@ describe('AttachmentsService', { timeout: 60_000 }, () => {
           },
         ])
       ).rejects.toThrow('"tool.exe" isn\'t');
+    });
+  });
+
+  // The optional virus scan (#1293): with a scanner, each file is scanned
+  // as sent, before any is redrawn; if it can't scan, nothing gets in.
+  describe('with a virus scanner', () => {
+    /** Flags the EICAR test file, as ClamAV does; passes the rest. */
+    const scanner = { scan: vi.fn<FileScanner['scan']>() };
+    let scanning: AttachmentsService;
+    const infected = () => ({ name: 'notes.txt', bytes: eicarTestFile() });
+
+    beforeEach(() => {
+      scanner.scan.mockReset();
+      scanner.scan.mockImplementation(async (file) =>
+        Buffer.from(file).equals(Buffer.from(eicarTestFile()))
+          ? { clean: false, threat: 'Eicar-Test-Signature' }
+          : { clean: true }
+      );
+      scanning = new AttachmentsService(database, reEncoder, scanner);
+    });
+
+    it('scans each file as it was sent, before redrawing any, and keeps them if clean', async () => {
+      const prepared = await scanning.prepare([
+        { name: 'shot.png', bytes: SENT_PNG },
+        { name: 'rows.txt', bytes: TEXT },
+      ]);
+
+      expect(prepared.map(({ fileName }) => fileName)).toEqual([
+        'shot.png',
+        'rows.txt',
+      ]);
+      expect(scanner.scan.mock.calls).toEqual([[SENT_PNG], [TEXT]]);
+      expect(scanner.scan.mock.invocationCallOrder[1]).toBeLessThan(
+        reEncoder.reEncode.mock.invocationCallOrder[0]
+      );
+    });
+
+    it('refuses an infected file by name, redrawing nothing', async () => {
+      await expect(
+        scanning.prepare([{ name: 'shot.png', bytes: SENT_PNG }, infected()])
+      ).rejects.toThrow(
+        new BadRequestException('"notes.txt" didn\'t pass the virus check.')
+      );
+      expect(reEncoder.reEncode).not.toHaveBeenCalled();
+    });
+
+    it("refuses the files while it can't scan, saying to try again", async () => {
+      scanner.scan.mockRejectedValue(new Error('connect ECONNREFUSED'));
+
+      await expect(
+        scanning.prepare([{ name: 'rows.txt', bytes: TEXT }])
+      ).rejects.toThrow(new ServiceUnavailableException(SCAN_UNAVAILABLE));
+      expect(SCAN_UNAVAILABLE).toBe(
+        "Files can't be checked right now. Please try again in a few minutes."
+      );
+    });
+
+    it('scans no file that is refused anyway, and nothing when none are sent', async () => {
+      await expect(
+        scanning.prepare([
+          { name: 'tool.exe', bytes: new Uint8Array([0x4d, 0x5a, 0x90, 0]) },
+        ])
+      ).rejects.toThrow(BadRequestException);
+      await scanning.prepare([]);
+
+      expect(scanner.scan).not.toHaveBeenCalled();
     });
   });
 

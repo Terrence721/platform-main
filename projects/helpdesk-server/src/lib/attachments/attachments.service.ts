@@ -12,17 +12,27 @@ import {
   Injectable,
   NotFoundException,
   Optional,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { asc, eq, inArray } from 'drizzle-orm';
 import { DATABASE, type Database } from '../database/database-token';
 import { attachments, requests } from '../database/schema';
 import { lockWorkable, type Transaction, UUID } from '../tickets/ticket-access';
 import { safeFileName } from './file-name';
+import {
+  FILE_SCANNER,
+  type FileScanner,
+  type ScanResult,
+} from './file-scanner';
 import { detectMediaType } from './file-type';
 import { IMAGE_RE_ENCODER, type ImageReEncoder } from './image-re-encoder';
 
 /** The same answer for no file and for one the user may not open. */
 export const NO_SUCH_FILE = 'No such file.';
+
+/** When the virus scan is on but can't scan: nothing gets in meanwhile. */
+export const SCAN_UNAVAILABLE =
+  "Files can't be checked right now. Please try again in a few minutes.";
 
 /** A file as it arrives: the name the customer gave it, and its bytes. */
 export interface UploadedFile {
@@ -67,14 +77,20 @@ export class AttachmentsService {
     // Without one, images are refused, never kept as they were sent.
     @Optional()
     @Inject(IMAGE_RE_ENCODER)
-    private readonly reEncoder?: ImageReEncoder
+    private readonly reEncoder?: ImageReEncoder,
+    // Only when the virus scan is switched on (#1293).
+    @Optional()
+    @Inject(FILE_SCANNER)
+    private readonly scanner?: FileScanner
   ) {}
 
   /**
    * Checks the files a customer sent, all before any image is drawn, and
    * answers with them ready to keep; 400, naming the file, for the first
-   * one that won't do. An image is drawn anew, then checked for size
-   * again, as drawing can make it larger.
+   * one that won't do. With a virus scanner (#1293), each is scanned as
+   * sent: infected is a 400 naming it, and a scanner that can't scan is a
+   * 503, so no file gets in without a scan. An image is then drawn anew, and
+   * checked for size again, as drawing can make it larger.
    */
   async prepare(files: readonly UploadedFile[]): Promise<PreparedFile[]> {
     if (files.length > ATTACHMENTS_MAX_COUNT) {
@@ -94,6 +110,21 @@ export class AttachmentsService {
       }
       return { name, bytes, mediaType };
     });
+    if (this.scanner !== undefined) {
+      for (const { name, bytes } of checked) {
+        let result: ScanResult;
+        try {
+          result = await this.scanner.scan(bytes);
+        } catch {
+          throw new ServiceUnavailableException(SCAN_UNAVAILABLE);
+        }
+        if (!result.clean) {
+          throw new BadRequestException(
+            `${shownName(name)} didn't pass the virus check.`
+          );
+        }
+      }
+    }
     const prepared: PreparedFile[] = [];
     for (const { name, bytes, mediaType } of checked) {
       let content = bytes;

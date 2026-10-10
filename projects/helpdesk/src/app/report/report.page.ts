@@ -36,6 +36,7 @@ import {
   TICKET_DESCRIPTION_MAX_LENGTH,
   TICKET_SUBJECT_MAX_LENGTH,
 } from '@helpdesk/contract';
+import { AttachmentPicker } from './attachment-picker';
 import { ReportStore } from './report.store';
 
 /** A field that must hold more than spaces. */
@@ -82,6 +83,7 @@ type Field = keyof typeof MESSAGES;
 @Component({
   selector: 'hd-report-page',
   imports: [
+    AttachmentPicker,
     MatButtonModule,
     MatCheckboxModule,
     MatFormFieldModule,
@@ -235,6 +237,8 @@ type Field = keyof typeof MESSAGES;
             <mat-hint>Optional: a page, an order or account number.</mat-hint>
             <mat-error>{{ messages.where }}</mat-error>
           </mat-form-field>
+          <!-- Screenshots and the like, sent with the request (#1026). -->
+          <hd-attachment-picker [(files)]="files" />
           <!-- People never see this field, so they leave it empty; programs
                that fill in every field give themselves away (#1026). -->
           <div class="honeypot" aria-hidden="true">
@@ -362,6 +366,8 @@ type Field = keyof typeof MESSAGES;
 })
 export default class ReportPage {
   protected readonly store = inject(ReportStore);
+  /** The files attached, sent with the request (#1026). */
+  protected readonly files = signal<readonly File[]>([]);
   protected readonly messages = MESSAGES;
   protected readonly categories = REQUEST_CATEGORIES;
   protected readonly categoryLabels = REQUEST_CATEGORY_LABELS;
@@ -441,17 +447,20 @@ export default class ReportPage {
     const value = this.form.getRawValue();
     const where = value.where.trim();
     this.store.send({
-      name: value.name.trim(),
-      email: value.email.trim().toLowerCase(),
-      // Checked just above: required, so chosen.
-      category: value.category as RequestCategory,
-      impact: value.impact as RequestImpact,
-      subject: value.subject.trim(),
-      description: value.description.trim(),
-      where: where === '' ? null : where,
-      consent: true,
-      website: value.website,
-      fillMilliseconds: Math.round(performance.now() - this.openedAt),
+      request: {
+        name: value.name.trim(),
+        email: value.email.trim().toLowerCase(),
+        // Checked just above: required, so chosen.
+        category: value.category as RequestCategory,
+        impact: value.impact as RequestImpact,
+        subject: value.subject.trim(),
+        description: value.description.trim(),
+        where: where === '' ? null : where,
+        consent: true,
+        website: value.website,
+        fillMilliseconds: Math.round(performance.now() - this.openedAt),
+      },
+      files: this.files(),
     });
   }
 
@@ -464,6 +473,7 @@ export default class ReportPage {
   /** Back to an empty form, for another issue. */
   protected another(): void {
     this.form.reset();
+    this.files.set([]);
     this.tried.set(false);
     this.openedAt = performance.now();
     this.store.reset();

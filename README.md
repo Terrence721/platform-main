@@ -78,13 +78,15 @@ The code review covered all 270 source files, each with its own issue and pull r
 
 A real help desk built on the modules, so every module does real work in a real app ([#303](https://github.com/Terrence721/platform-main/issues/303)). [How It Fits Together](docs/how-it-fits-together.md) shows how the parts connect.
 
-| Project             | What it is                                                                                    |
-| ------------------- | --------------------------------------------------------------------------------------------- |
-| `helpdesk`          | The Angular app: a page per role (agent, supervisor, admin), reports, live updates and sounds |
-| `helpdesk-contract` | The types and rules the app and the API share                                                 |
-| `helpdesk-api`      | The NestJS API: sign-in, roles, tickets, teams, accounts, reports, live updates               |
-| `helpdesk-server`   | The API's services, the PostgreSQL schema and migrations (Drizzle), and the seed data         |
-| `helpdesk-e2e`      | Playwright end-to-end tests against the real stack, run on every pull request                 |
+| Project             | What it is                                                                                                                                           |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `helpdesk`          | The Angular app: a page per role (agent, supervisor, admin), the public Report an issue and Check my request pages, reports, live updates and sounds |
+| `helpdesk-contract` | The types and rules the app and the API share                                                                                                        |
+| `helpdesk-api`      | The NestJS API: sign-in, roles, tickets, teams, accounts, customer requests and their files, reports, live updates                                   |
+| `helpdesk-server`   | The API's services, the PostgreSQL schema and migrations (Drizzle), and the seed data                                                                |
+| `helpdesk-e2e`      | Playwright end-to-end tests against the real stack, run on every pull request                                                                        |
+
+Customers report an issue on the public site with no account, and can attach up to three screenshots or files; pictures are redrawn on arrival, which removes hidden data such as a photo's location ([#1026](https://github.com/Terrence721/platform-main/issues/1026)). Each request gets a reference the customer can check with their email. Supervisors see new requests, with their files and possible duplicates, and turn each into a ticket or dismiss it; the Reports popup counts them.
 
 It runs with only Docker installed ([#20](https://github.com/Terrence721/platform-main/issues/20)), and a [live demo](https://terrence721.github.io/platform-main/helpdesk/) runs entirely in the browser.
 

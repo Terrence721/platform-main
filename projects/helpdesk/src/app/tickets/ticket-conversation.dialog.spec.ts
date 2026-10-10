@@ -5,9 +5,14 @@ import {
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import type { TicketDto, TicketMessage } from '@helpdesk/contract';
+import type {
+  AttachmentSummary,
+  TicketDto,
+  TicketMessage,
+} from '@helpdesk/contract';
 import { NEVER, Subject } from 'rxjs';
 import { provideMockStore } from '@ngrx/store/testing';
+import { ticketAttachmentsApi } from '../attachments/attachment-files';
 import { type LiveUpdate, LiveUpdates } from '../live/live-updates';
 import { initialSessionState } from '../session/session.feature';
 import { messagesApi, ticketApi } from './ticket-api-paths';
@@ -57,8 +62,15 @@ const note: TicketMessage = {
 describe('TicketConversationDialog', () => {
   afterEach(() => TestBed.inject(HttpTestingController).verify());
 
-  /** Opens the popup for `shown`, answering its load with `messages`. */
-  function render(shown: TicketDto = ticket, messages = [reply, note]) {
+  /**
+   * Opens the popup for `shown`, answering its load with `messages`, and
+   * its files with `files` (none, unless it came from a request with some).
+   */
+  function render(
+    shown: TicketDto = ticket,
+    messages = [reply, note],
+    files: AttachmentSummary[] | 'unreadable' = []
+  ) {
     /** The live updates the popup hears, sent by the test. */
     const live = new Subject<LiveUpdate>();
     TestBed.configureTestingModule({
@@ -89,6 +101,15 @@ describe('TicketConversationDialog', () => {
     http
       .expectOne({ method: 'GET', url: messagesApi(shown.id) })
       .flush(messages);
+    const filesCall = http.expectOne({
+      method: 'GET',
+      url: ticketAttachmentsApi(shown.id),
+    });
+    if (files === 'unreadable') {
+      filesCall.flush(null, { status: 404, statusText: 'Not Found' });
+    } else {
+      filesCall.flush(files);
+    }
     fixture.detectChanges();
 
     const text = (selector: string) =>
@@ -337,6 +358,49 @@ describe('TicketConversationDialog', () => {
     });
   });
 
+  // A ticket made from a request with files (#1026), as designed: in the
+  // customer's first message, under what they wrote.
+  describe("the customer's files", () => {
+    const steps: AttachmentSummary = {
+      id: 'file-1',
+      fileName: 'steps.txt',
+      mediaType: 'text/plain',
+      size: 214,
+    };
+    const filesIn = (dialog: HTMLElement) =>
+      dialog.querySelector('.conversation li.customer hd-customer-files');
+
+    it('lists them in the first message, under what the customer wrote', () => {
+      const { dialog } = render(ticket, [reply, note], [steps]);
+
+      const files = filesIn(dialog);
+      expect(
+        [...(files?.querySelectorAll('li .name') ?? [])].map((name) =>
+          name.textContent?.trim()
+        )
+      ).toEqual(['steps.txt']);
+      expect(
+        dialog
+          .querySelector('.conversation li.customer .body')
+          ?.compareDocumentPosition(files as Node)
+      ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    });
+
+    it('shows none for a ticket that came from no request', () => {
+      const { dialog } = render();
+
+      expect(filesIn(dialog)?.querySelector('li') ?? null).toBeNull();
+    });
+
+    it("carries on without them when they can't be read", () => {
+      const { dialog } = render(ticket, [reply, note], 'unreadable');
+
+      expect(filesIn(dialog)?.querySelector('li') ?? null).toBeNull();
+      expect(dialog.querySelector('[role="alert"]')).toBeNull();
+      expect(dialog.querySelectorAll('.conversation > li')).toHaveLength(3);
+    });
+  });
+
   it('says when the conversation could not be loaded, and tries again', () => {
     TestBed.configureTestingModule({
       providers: [
@@ -364,6 +428,7 @@ describe('TicketConversationDialog', () => {
     const http = TestBed.inject(HttpTestingController);
 
     http.expectOne(API).flush(null, { status: 500, statusText: 'Error' });
+    http.expectOne(ticketAttachmentsApi(ticket.id)).flush([]);
     fixture.detectChanges();
     const alert = dialog.querySelector('[role="alert"]');
     expect(alert?.textContent).toContain(

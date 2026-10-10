@@ -14,6 +14,7 @@ import {
   REQUEST_IMPACT_LABELS,
   type TicketDto,
 } from '@helpdesk/contract';
+import { CustomerFiles } from '../attachments/customer-files';
 import { Sounds } from '../sound/sounds';
 import { minuteClock } from '../tickets/minute-clock';
 import type { DismissRequestData } from './dismiss-request.dialog';
@@ -41,15 +42,16 @@ export function timeAgo(at: string, now: Date): string {
 
 /**
  * Supervisors' New requests (#1026): what customers reported, oldest
- * first, one card each, with what might make it a duplicate (the same
- * customer's open tickets and earlier requests). Turn into ticket and
+ * first, one card each, with the files they sent and what might make it
+ * a duplicate (the same customer's open tickets and earlier requests).
+ * Turn into ticket and
  * Dismiss open their popups; after a decision a snack bar says what became
  * of the request. Shown on the supervisor page, which provides
  * `NewRequestsStore`, so the popups decide through the same store.
  */
 @Component({
   selector: 'hd-new-requests',
-  imports: [MatButtonModule, MatProgressSpinnerModule],
+  imports: [CustomerFiles, MatButtonModule, MatProgressSpinnerModule],
   template: `
     <section aria-labelledby="new-requests-title">
       <h2 id="new-requests-title">
@@ -76,6 +78,8 @@ export function timeAgo(at: string, now: Date): string {
               <h3>{{ request.subject }}</h3>
               <p class="from">{{ from(request) }}</p>
               <p class="description">{{ request.description }}</p>
+              <!-- Shows nothing for a request without files. -->
+              <hd-customer-files [files]="request.attachments" />
               @if (duplicates(request); as duplicates) {
                 <p class="duplicates">
                   <strong>Possible duplicates:</strong> {{ duplicates }}

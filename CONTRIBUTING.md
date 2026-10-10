@@ -53,6 +53,14 @@ yarn e2e:helpdesk
 
 Installs Chromium if it's missing, starts a fresh stack (its own seeded database), runs every spec, and removes the stack again, data included. The stack's start-up is `src/stack.ts`, Playwright's global setup. It refuses to start when a help desk already answers on port 8088, so a test never runs against old data by mistake. To test a stack that's already running, set `E2E_BASE_URL=http://localhost:8088`: the tests then use it as it is, and nothing is started or removed.
 
+**The virus scan ([#1293](https://github.com/Terrence721/platform-main/issues/1293)):** `virus-scan.spec.ts` attaches the standard antivirus test file, harmless but flagged by every virus scanner, and checks that the request is refused and never reaches a supervisor. It needs ClamAV, so it's skipped unless you ask for it:
+
+```shell
+E2E_SCAN=1 yarn e2e:helpdesk   # in PowerShell: $env:E2E_SCAN = '1'; yarn e2e:helpdesk
+```
+
+The stack then starts with Compose's `scan` profile and the API pointed at ClamAV. The start takes a few minutes longer while ClamAV loads its signatures. CI leaves the scan off, so run this after changing anything around attachments.
+
 **From VS Code:** the Playwright extension (recommended in `.vscode/extensions.json`) lists the specs in the Testing view. Clicking ▶ doesn't start the stack by itself, so:
 
 1. In the Playwright panel, under Setup, click **Run global setup**, and wait for it to finish: a minute or two once the images are built, longer the first time. `docker ps` then shows the three `helpdesk-` containers as healthy.

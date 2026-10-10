@@ -514,7 +514,13 @@ An admin's page, **Team accounts**, has one table per team (its lead marked "Sup
 **Summary:** anyone can try every role in their browser, with nothing to install.
 
 - **Main flow:** open the [live demo](https://terrence721.github.io/platform-main/helpdesk/). The bar at the bottom says "Preparing the demo…" while it loads, then offers **Try it as** Agent, Supervisor or Admin.
-- **Expected result:** the app as in UC-1 to UC-23, with the real services running in the page against an in-browser database, fresh on every visit. It refuses what the real API refuses. Reloading any page keeps you on it.
+- **Expected result:** every page and every role, as in UC-1 to UC-21, with the Helpdesk's real services and rules running in the page against an in-browser PostgreSQL (PGlite), with the same migrations and seed data. Its field checks and role rules refuse what the real API refuses. Pictures are redrawn by the browser's canvas, dropping hidden data, and downloads work. Sounds for your own actions play, and **Mute** works.
+- **What it leaves out:**
+  - **Live updates** (UC-22): one tab, nobody to tell. Another tab or browser has its own database and sees none of your changes, and the arrival tone (UC-23) never plays.
+  - **Anything lasting:** the data and the sign-in live in the tab's memory. A reload or a new visit starts over, signed out, with fresh data. Signing out and in as someone else within one visit keeps your changes.
+  - **Rate and spam limits:** one visitor, so no limit on requests, checks or failed sign-ins, and no spam checks. The field checks (UC-2, UC-3) still apply.
+  - **The virus scan** (UC-24): files are never scanned.
+  - **Sessions and the web server:** no 8-hour session cookie (you stay signed in until you sign out or reload), and no nginx headers, caching or gzip.
 
 ### UC-26 Use it on a phone
 

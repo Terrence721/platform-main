@@ -7,6 +7,8 @@ import {
 import type {
   AgentReport,
   CurrentUser,
+  DismissReason,
+  RequestStatus,
   Role,
   TeamReport,
   TicketPriority,
@@ -19,6 +21,7 @@ import { fileURLToPath } from 'url';
 import {
   customers,
   queues,
+  requests,
   teams,
   ticketMessages,
   tickets,
@@ -231,6 +234,28 @@ const TICKETS: TicketFixture[] = [
   },
 ];
 
+/**
+ * Customer requests (#1026), around the 30-day (720 h) window: status,
+ * hours since it arrived, and when it was decided (and why, if dismissed).
+ * Received in the window: 1, 3, 5 and 6. Turned into tickets in it: 3 and
+ * 4. Dismissed in it: 5 (spam) and 6 (already reported); 7 was decided
+ * before it. Waiting now: 1 and 2, whenever they arrived. Decided in the
+ * window after 4, 200, 1 and 10 hours: a median of 7.
+ */
+const REQUESTS: [
+  RequestStatus,
+  number,
+  { hoursAgo: number; reason?: DismissReason }?,
+][] = [
+  ['pending', 5],
+  ['pending', 800],
+  ['ticket', 10, { hoursAgo: 6 }],
+  ['ticket', 900, { hoursAgo: 700 }],
+  ['dismissed', 3, { hoursAgo: 2, reason: 'spam' }],
+  ['dismissed', 30, { hoursAgo: 20, reason: 'duplicate' }],
+  ['dismissed', 1000, { hoursAgo: 900, reason: 'spam' }],
+];
+
 /** A row with nothing in it: a team with no tickets. */
 const EMPTY = {
   openByPriority: { low: 0, normal: 0, high: 0, urgent: 0 },
@@ -356,20 +381,53 @@ describe('ReportsService', { timeout: 60_000 }, () => {
       }
     }
 
+    const [{ id: ticketId }] = await database
+      .select({ id: tickets.id })
+      .from(tickets)
+      .limit(1);
+    for (const [status, createdHoursAgo, decided] of REQUESTS) {
+      await database.insert(requests).values({
+        name: 'Dana Whitfield',
+        email: 'dana.whitfield@example.com',
+        category: 'billing',
+        impact: 'blocked',
+        subject: 'Charged twice',
+        description: 'Charged twice.',
+        where: null,
+        consentedAt: hoursAgo(createdHoursAgo),
+        createdAt: hoursAgo(createdHoursAgo),
+        updatedAt: hoursAgo(createdHoursAgo),
+        status,
+        ...(decided && {
+          decidedById: 'chris.taylor',
+          decidedAt: hoursAgo(decided.hoursAgo),
+          ...(status === 'ticket'
+            ? { ticketId }
+            : { dismissReason: decided.reason }),
+        }),
+      });
+    }
+
     service = new ReportsService(database);
   });
 
   afterAll(() => client.close());
 
-  // Until the requests view is read (#1026, Phase C).
-  it('counts no customer requests yet, whoever it is for', async () => {
-    for (const scope of ['all', { teamId: 'atlas' }] as const) {
+  // Customer requests (#1026): the same whoever the report is for, as a
+  // request belongs to no team. See REQUESTS for how each one counts.
+  it('counts customer requests over the window, and those waiting now, whoever it is for', async () => {
+    for (const scope of [
+      'all',
+      { teamId: 'atlas' },
+      { agentId: 'sam.rivera' },
+    ] as const) {
       expect((await service.report(scope, now)).requests).toEqual({
-        received: 0,
-        turnedIntoTickets: 0,
-        dismissed: { spam: 0, duplicate: 0, 'not-support': 0 },
-        waiting: 0,
-        medianHoursToDecision: null,
+        received: 4,
+        turnedIntoTickets: 2,
+        dismissed: { spam: 1, duplicate: 1, 'not-support': 0 },
+        waiting: 2,
+        // Decided in the window after 1, 4, 10 and 200 hours.
+        medianHoursToDecision: 7,
       });
     }
   });

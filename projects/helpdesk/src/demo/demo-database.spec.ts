@@ -37,6 +37,7 @@ describe('startDemoDatabase', { timeout: 60_000 }, () => {
       '0004_drop_unused_reporting_views.sql',
       '0005_customer_requests.sql',
       '0006_attachments.sql',
+      '0007_reporting_requests.sql',
     ]);
   });
 

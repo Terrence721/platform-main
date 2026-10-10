@@ -9,6 +9,7 @@ import {
   type ReportFigures,
   type ReportScope,
   type ReportsResponse,
+  type RequestsReport,
   type TeamReport,
 } from '@helpdesk/contract';
 import {
@@ -22,6 +23,7 @@ import { and, asc, eq, inArray, isNull, or, type SQL, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { DATABASE, type Database } from '../database/database-token';
 import {
+  reportingRequests,
   reportingTeams,
   reportingTickets as t,
   reportingUsers,
@@ -248,16 +250,7 @@ export class ReportsService {
       asOf: now.toISOString(),
       since: since.toISOString(),
       scope,
-      // None counted yet: the requests view comes next (#1026, C2).
-      requests: {
-        received: 0,
-        turnedIntoTickets: 0,
-        dismissed: Object.fromEntries(
-          DISMISS_REASONS.map((reason) => [reason, 0])
-        ) as Record<DismissReason, number>,
-        waiting: 0,
-        medianHoursToDecision: null,
-      },
+      requests: await this.requestsReport(since),
     };
 
     if (typeof scope === 'object' && 'agentId' in scope) {
@@ -313,6 +306,47 @@ export class ReportsService {
         },
       ],
       agents: agents.map(({ report }) => report),
+    };
+  }
+
+  /**
+   * Customer requests' figures (#1026), from the requests view: received
+   * since `since`; turned into tickets and dismissed (by why) since then;
+   * waiting now, whenever they arrived; and the median hours from arrival
+   * to a decision, for those decided since then. The same for every scope.
+   */
+  private async requestsReport(since: Date): Promise<RequestsReport> {
+    const r = reportingRequests;
+    const decidedInWindow = sql`${r.decidedAt} >= ${since}`;
+    const [figures] = await this.database
+      .select({
+        received: countWhere(sql`${r.createdAt} >= ${since}`),
+        turnedIntoTickets: countWhere(
+          sql`${r.status} = 'ticket' and ${decidedInWindow}`
+        ),
+        waiting: countWhere(sql`${r.status} = 'pending'`),
+        medianHoursToDecision: medianWhere(
+          sql`extract(epoch from (${r.decidedAt} - ${r.createdAt})) / 3600`,
+          decidedInWindow
+        ),
+      })
+      .from(r);
+    const dismissed = await this.database
+      .select({ reason: r.dismissReason, count: countWhere(sql`true`) })
+      .from(r)
+      .where(and(eq(r.status, 'dismissed'), decidedInWindow))
+      .groupBy(r.dismissReason);
+    const byReason = new Map(
+      dismissed.map(({ reason, count }) => [reason, count])
+    );
+    return {
+      received: figures.received,
+      turnedIntoTickets: figures.turnedIntoTickets,
+      dismissed: Object.fromEntries(
+        DISMISS_REASONS.map((reason) => [reason, byReason.get(reason) ?? 0])
+      ) as Record<DismissReason, number>,
+      waiting: figures.waiting,
+      medianHoursToDecision: roundHours(figures.medianHoursToDecision),
     };
   }
 

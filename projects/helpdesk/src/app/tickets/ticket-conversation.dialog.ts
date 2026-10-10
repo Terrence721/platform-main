@@ -16,11 +16,15 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import {
+  type AttachmentSummary,
   formatTicketNumber,
   isFinished,
   TICKET_MESSAGE_MAX_LENGTH,
   type TicketMessageKind,
 } from '@helpdesk/contract';
+import { catchError, of } from 'rxjs';
+import { AttachmentFiles } from '../attachments/attachment-files';
+import { CustomerFiles } from '../attachments/customer-files';
 import { slaLabel } from './sla-label';
 import { STATUS_LABELS } from './status-labels';
 import { minuteClock } from './minute-clock';
@@ -28,7 +32,8 @@ import { TicketConversationStore } from './ticket-conversation.store';
 
 /**
  * One ticket, opened from its subject: its details, then its conversation
- * (the customer's description first, then each reply and internal note,
+ * (the customer's description first, with any files they sent with the
+ * request it came from (#1026), then each reply and internal note,
  * oldest first; notes tinted, as only staff see them), then a box to write
  * a Reply or an Internal note. A closed ticket is final, so it shows the
  * conversation without the box. While open, the details follow the
@@ -39,6 +44,7 @@ import { TicketConversationStore } from './ticket-conversation.store';
 @Component({
   selector: 'hd-ticket-conversation-dialog',
   imports: [
+    CustomerFiles,
     DatePipe,
     MatButtonModule,
     MatDialogModule,
@@ -98,6 +104,8 @@ import { TicketConversationStore } from './ticket-conversation.store';
             {{ ticket().createdAt | date: 'd MMM, HH:mm' }}
           </p>
           <p class="body">{{ ticket().description }}</p>
+          <!-- Shows nothing for a ticket from no request, or no files. -->
+          <hd-customer-files [files]="customerFiles()" />
         </li>
         @for (message of store.messages(); track message.id) {
           <li [class]="message.kind">
@@ -245,6 +253,18 @@ export class TicketConversationDialog {
   protected readonly store = inject(TicketConversationStore);
   /** The ticket as last read: it follows changes while open (#982). */
   protected readonly ticket = this.store.ticket;
+  /**
+   * The files of the request the ticket came from (#1026), read once as
+   * the popup opens; none if it came from none. If they can't be read
+   * (the ticket just taken by someone else, say), the popup carries on
+   * without them: the conversation says what matters.
+   */
+  protected readonly customerFiles = toSignal(
+    inject(AttachmentFiles)
+      .forTicket(this.ticket().id)
+      .pipe(catchError(() => of<AttachmentSummary[]>([]))),
+    { initialValue: [] }
+  );
   protected readonly maxLength = TICKET_MESSAGE_MAX_LENGTH;
   protected readonly ticketNumber = computed(() =>
     formatTicketNumber(this.ticket().ticketNumber)

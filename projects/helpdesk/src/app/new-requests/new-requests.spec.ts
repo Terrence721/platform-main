@@ -183,6 +183,38 @@ describe('NewRequests', () => {
     );
   });
 
+  // As designed (#1026): under the description, only on cards with files.
+  it("shows the customer's files under the description, only where there are some", () => {
+    const { answer, cards } = render();
+    answer([
+      first,
+      {
+        ...again,
+        attachments: [
+          {
+            id: 'file-1',
+            fileName: 'steps.txt',
+            mediaType: 'text/plain',
+            size: 214,
+          },
+        ],
+      },
+    ]);
+
+    expect(cards()[0].querySelector('hd-customer-files li')).toBeNull();
+    const files = cards()[1].querySelector('hd-customer-files');
+    expect(
+      [...(files?.querySelectorAll('li .name') ?? [])].map((name) =>
+        name.textContent?.trim()
+      )
+    ).toEqual(['steps.txt']);
+    expect(
+      cards()[1]
+        .querySelector('.description')
+        ?.compareDocumentPosition(files as Node)
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
   it('says so when no request waits', () => {
     const { section, answer, text } = render();
     answer([]);

@@ -85,3 +85,31 @@ export const reportingTickets = reporting
 from public.tickets t
 left join public.users assignee on assignee.id = t.assignee_id`
   );
+
+/**
+ * Every customer request (#1026), keyed by its number: where it is up to,
+ * what it is about, when it arrived and when it was decided (`null` while
+ * it waits), and why it was dismissed (`null` otherwise). Nothing about
+ * who sent it: no name, email, description or files.
+ */
+export const reportingRequests = reporting
+  .view('requests', {
+    requestNumber: integer('request_number').notNull(),
+    status: text('status').notNull(),
+    category: text('category').notNull(),
+    impact: text('impact').notNull(),
+    createdAt: at('created_at').notNull(),
+    decidedAt: at('decided_at'),
+    dismissReason: text('dismiss_reason'),
+  })
+  .as(
+    sql`select
+  request_number,
+  status::text as status,
+  category::text as category,
+  impact::text as impact,
+  created_at,
+  decided_at,
+  dismiss_reason::text as dismiss_reason
+from public.requests`
+  );

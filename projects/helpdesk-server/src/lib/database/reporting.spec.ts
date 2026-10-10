@@ -4,8 +4,13 @@ import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
 import { fileURLToPath } from 'url';
 import type { Database } from './database-token';
-import { reportingTeams, reportingTickets, reportingUsers } from './reporting';
-import { teams, ticketMessages, tickets, users } from './schema';
+import {
+  reportingRequests,
+  reportingTeams,
+  reportingTickets,
+  reportingUsers,
+} from './reporting';
+import { requests, teams, ticketMessages, tickets, users } from './schema';
 import { seedDatabase, type SeedSummary } from './seed/seed';
 
 const now = new Date('2026-10-05T12:00:00.000Z');
@@ -55,6 +60,16 @@ describe('the reporting views', { timeout: 60_000 }, () => {
     // Only the views the Reports popup reads: the Power BI report's queues
     // and messages views are gone (#1049).
     expect(await viewColumns()).toEqual({
+      // Customer requests (#1026): no name, email, description or files.
+      requests: [
+        'request_number integer',
+        'status text',
+        'category text',
+        'impact text',
+        `created_at ${at}`,
+        `decided_at ${at}`,
+        'dismiss_reason text',
+      ],
       teams: ['team_id text', 'name text', 'lead_id character varying'],
       tickets: [
         'ticket_number integer',
@@ -79,7 +94,7 @@ describe('the reporting views', { timeout: 60_000 }, () => {
     });
   });
 
-  it('has one row per team, user and ticket', async () => {
+  it('has one row per team, user, ticket and customer request', async () => {
     const rows = async (view: string) =>
       (
         await client.query<{ rows: number }>(
@@ -90,6 +105,30 @@ describe('the reporting views', { timeout: 60_000 }, () => {
     expect(await rows('teams')).toBe(summary.teams);
     expect(await rows('users')).toBe(summary.users);
     expect(await rows('tickets')).toBe(summary.tickets);
+    expect(await rows('requests')).toBe(summary.requests);
+  });
+
+  it('copies each customer request, by number, with no decision while it waits', async () => {
+    const copied = await database
+      .select()
+      .from(reportingRequests)
+      .orderBy(asc(reportingRequests.requestNumber));
+    const kept = await database
+      .select()
+      .from(requests)
+      .orderBy(asc(requests.requestNumber));
+
+    expect(copied).toEqual(
+      kept.map((request) => ({
+        requestNumber: request.requestNumber,
+        status: 'pending',
+        category: request.category,
+        impact: request.impact,
+        createdAt: request.createdAt,
+        decidedAt: null,
+        dismissReason: null,
+      }))
+    );
   });
 
   it('names each team and its lead', async () => {

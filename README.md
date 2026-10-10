@@ -111,7 +111,7 @@ docker compose --profile full up --build   # database + API + app, then open htt
 docker compose --profile full down --volumes   # stop it and delete its data
 ```
 
-On a machine with this repo's tools installed, `yarn start:helpdesk:docker` does the same and opens the app in its own window; closing it stops everything. The first build takes a few minutes; later ones reuse the installed packages. Sign in as `alex.morgan` (admin), `chris.taylor` (supervisor) or `sam.rivera` (agent), password `helpdesk-dev-only`.
+On a machine with this repo's tools installed, `yarn start:helpdesk:docker` does the same and opens the app in its own window; closing it stops everything. The first build takes a few minutes; later ones reuse the installed packages. `yarn start:helpdesk:docker:scan` also runs ClamAV, which checks every file a customer attaches for viruses ([#1293](https://github.com/Terrence721/platform-main/issues/1293)); it is off otherwise, as ClamAV takes a few minutes to load its signatures. Sign in as `alex.morgan` (admin), `chris.taylor` (supervisor) or `sam.rivera` (agent), password `helpdesk-dev-only`.
 
 To work on it, with instant reload:
 
@@ -127,7 +127,7 @@ To test it end to end, in a real browser against the real API and database:
 yarn e2e:helpdesk   # starts a fresh stack in Docker, runs the Playwright tests in Chromium, then removes it
 ```
 
-The tests sign in as each role, walk through each role's work, and check live updates in two browsers at once. CI runs them on every pull request. To test a stack that's already running, set `E2E_BASE_URL=http://localhost:8088` and the tests use it as it is. [CONTRIBUTING.md](./CONTRIBUTING.md#end-to-end-tests-helpdesk) covers running them from VS Code.
+The tests sign in as each role, walk through each role's work, and check live updates in two browsers at once. CI runs them on every pull request. To test a stack that's already running, set `E2E_BASE_URL=http://localhost:8088` and the tests use it as it is. With `E2E_SCAN=1` the stack runs ClamAV too, and one more test checks that an attached test virus is refused. [CONTRIBUTING.md](./CONTRIBUTING.md#end-to-end-tests-helpdesk) covers running them from VS Code.
 
 The full-suite [HTML test report](https://terrence721.github.io/platform-main/) is deployed to GitHub Pages on every push to `main` (grows as more modules and test cases are added) — or see the [at-a-glance summary](https://terrence721.github.io/platform-main/summary.html) for just the pass/fail/slow breakdown. To generate either locally instead, run `yarn build && yarn test:report && yarn test:summary`, then `yarn test:report:view` to serve and open them.
 

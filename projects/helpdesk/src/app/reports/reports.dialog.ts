@@ -13,6 +13,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import {
+  DISMISS_REASON_LABELS,
+  DISMISS_REASONS,
   OPEN_WORK_STATUSES,
   REPORT_WINDOW_DAYS,
   type ReportAgentChoice,
@@ -242,6 +244,29 @@ export function pickFrom(value: string): ReportPick {
                 </section>
               }
             }
+            <!-- Customer requests (#1026): the same whoever the report is
+                 about, as a request belongs to no team. -->
+            <section class="requests wide" aria-labelledby="requests-title">
+              <h3 id="requests-title">Customer requests</h3>
+              <p class="requests-scope">
+                All customer requests · last {{ windowDays }} days
+              </p>
+              <ul class="tiles" aria-label="Customer requests">
+                @for (tile of requestTiles(); track tile.label) {
+                  <li class="tile">
+                    <span class="value">{{ tile.value }}</span>
+                    <span class="label">{{ tile.label }}</span>
+                    <span class="hint">{{ tile.hint }}</span>
+                  </li>
+                }
+              </ul>
+              <p class="dismissed">
+                <strong>Dismissed: {{ dismissed().total }}</strong>
+                @for (reason of dismissed().reasons; track reason.label) {
+                  · {{ reason.label }} {{ reason.count }}
+                }
+              </p>
+            </section>
           </div>
         }
       }
@@ -297,10 +322,26 @@ export function pickFrom(value: string): ReportPick {
       grid-template-columns: repeat(2, 1fr);
       gap: 1rem;
     }
-    .chart-card {
+    .chart-card,
+    .requests {
       padding: 0.75rem;
       border: 1px solid var(--mat-sys-outline-variant);
       border-radius: 0.75rem;
+    }
+    .requests-scope,
+    .dismissed {
+      margin: 0 0 0.5rem;
+      font: var(--mat-sys-body-medium);
+      color: var(--mat-sys-on-surface-variant);
+    }
+    .requests .tiles {
+      margin: 0 0 0.75rem;
+    }
+    .dismissed {
+      margin: 0;
+    }
+    .dismissed strong {
+      color: var(--mat-sys-on-surface);
     }
     h3 {
       margin: 0 0 0.25rem;
@@ -422,6 +463,50 @@ export class ReportsDialog {
         hint: `in the last ${REPORT_WINDOW_DAYS} days`,
       },
     ];
+  });
+
+  /**
+   * Customer requests' tiles (#1026): received, made tickets, waiting now,
+   * and the median time to a decision ("–" when nothing was decided).
+   */
+  protected readonly requestTiles = computed((): Tile[] => {
+    const requests = this.store.report()?.requests;
+    const median = requests?.medianHoursToDecision ?? null;
+    return [
+      {
+        label: 'Received',
+        value: `${requests?.received ?? 0}`,
+        hint: 'sent through Report an issue',
+      },
+      {
+        label: 'Turned into tickets',
+        value: `${requests?.turnedIntoTickets ?? 0}`,
+        hint: 'decided in the window',
+      },
+      {
+        label: 'Waiting now',
+        value: `${requests?.waiting ?? 0}`,
+        hint: 'in New requests',
+      },
+      {
+        label: 'Median to a decision',
+        value: median === null ? '–' : `${median} h`,
+        hint: 'from arrival to a ticket or dismissal',
+      },
+    ];
+  });
+
+  /** Customer requests dismissed: in all, and by every reason. */
+  protected readonly dismissed = computed(() => {
+    const counts = this.store.report()?.requests.dismissed;
+    const reasons = DISMISS_REASONS.map((reason) => ({
+      label: DISMISS_REASON_LABELS[reason],
+      count: counts?.[reason] ?? 0,
+    }));
+    return {
+      total: reasons.reduce((total, { count }) => total + count, 0),
+      reasons,
+    };
   });
 
   /** Open work by status: a donut. */

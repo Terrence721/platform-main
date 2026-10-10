@@ -249,11 +249,14 @@ describe('ReportsDialog', () => {
         option.click();
         fixture.detectChanges();
       },
-      /** Each tile's lines (value, label, hint), joined by " | ". */
+      /**
+       * Each of the tiles across the top: its lines (value, label, hint),
+       * joined by " | ". Not the customer requests card's (#1026).
+       */
       tiles: () =>
-        [...dialog.querySelectorAll('.tile')].map((tile) =>
-          [...tile.children].map(tidy).join(' | ')
-        ),
+        [...dialog.querySelectorAll('.tile')]
+          .filter((tile) => !tile.closest('.requests'))
+          .map((tile) => [...tile.children].map(tidy).join(' | ')),
       /** Each chart's heading and the options it was given, in order. */
       charts: () =>
         fixture.debugElement.queryAll(By.css('.chart-card')).map((card) => ({
@@ -601,6 +604,88 @@ describe('ReportsDialog', () => {
       expect(options.series.map(({ name, data }) => [name, data])).toEqual([
         ['SLA met %', ['-', 50]],
         ['Median hours to resolve', ['-', 8]],
+      ]);
+    });
+  });
+
+  // Customer requests (#1026), as designed: one card after the charts, the
+  // same whoever the report is about.
+  describe('customer requests', () => {
+    const busy: ReportsResponse['requests'] = {
+      received: 12,
+      turnedIntoTickets: 7,
+      dismissed: { spam: 2, duplicate: 1, 'not-support': 0 },
+      waiting: 2,
+      medianHoursToDecision: 5.5,
+    };
+    /** The card's tiles, as the popup's own tiles are read. */
+    const requestTiles = (dialog: HTMLElement) =>
+      [...dialog.querySelectorAll('.requests .tile')].map((tile) =>
+        [...tile.children].map((part) => part.textContent?.trim())
+      );
+
+    it('says, under its heading, that it covers every request, whoever the report is for', () => {
+      const { dialog, text, answer } = render();
+      answer({ ...REPORT, requests: busy });
+
+      const card = dialog.querySelector('section.requests');
+      expect(card?.getAttribute('aria-labelledby')).toBe('requests-title');
+      expect(text('#requests-title')).toBe('Customer requests');
+      expect(text('.requests-scope')).toBe(
+        'All customer requests · last 30 days'
+      );
+      expect(card?.querySelector('ul')?.getAttribute('aria-label')).toBe(
+        'Customer requests'
+      );
+    });
+
+    it('shows what arrived, became tickets, waits, and how long a decision took', () => {
+      const { dialog, answer } = render();
+      answer({ ...REPORT, requests: busy });
+
+      expect(requestTiles(dialog)).toEqual([
+        ['12', 'Received', 'sent through Report an issue'],
+        ['7', 'Turned into tickets', 'decided in the window'],
+        ['2', 'Waiting now', 'in New requests'],
+        [
+          '5.5 h',
+          'Median to a decision',
+          'from arrival to a ticket or dismissal',
+        ],
+      ]);
+    });
+
+    it('counts what was dismissed, by every reason', () => {
+      const { text, answer } = render();
+      answer({ ...REPORT, requests: busy });
+
+      expect(text('.dismissed')).toBe(
+        'Dismissed: 3 · Spam 2 · Already reported 1 · Not a support request 0'
+      );
+    });
+
+    it('shows a dash for the median when nothing was decided', () => {
+      const { dialog, answer } = render();
+      answer(REPORT);
+
+      expect(requestTiles(dialog)[3][0]).toBe('–');
+    });
+
+    it("is there on an agent's report too", () => {
+      const { dialog, http, detectChanges } = render(chris, {
+        kind: 'agent',
+        agentId: 'sam.rivera',
+      });
+
+      http
+        .expectOne(({ params }) => params.get('agent') === 'sam.rivera')
+        .flush({ ...SAM_REPORT, requests: busy });
+      detectChanges();
+
+      expect(requestTiles(dialog)[0]).toEqual([
+        '12',
+        'Received',
+        'sent through Report an issue',
       ]);
     });
   });

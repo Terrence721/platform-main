@@ -4,6 +4,8 @@
 import {
   isFinished,
   type PendingRequest,
+  REQUEST_FIELDS_PART,
+  REQUEST_FILES_PART,
   type QueueSummary,
   type ReportsResponse,
   SIGN_IN_FAILED_MESSAGE,
@@ -25,6 +27,9 @@ const MIGRATIONS = fileURLToPath(
 
 const NOW = new Date('2026-10-04T12:00:00.000Z');
 
+/** A text file a visitor sends. */
+const ROWS = new TextEncoder().encode('Rows: 1,000\n');
+
 // One database for the whole file: the tests run in order, and later ones
 // build on what earlier ones did (a ticket taken, then answered).
 describe('DemoApi', { timeout: 60_000 }, () => {
@@ -36,7 +41,10 @@ describe('DemoApi', { timeout: 60_000 }, () => {
       (path) => readFile(MIGRATIONS + path, 'utf8'),
       NOW
     );
-    api = new DemoApi(demo.database, () => NOW);
+    // Node has no canvas: images are "redrawn" by keeping their first bytes.
+    api = new DemoApi(demo.database, () => NOW, {
+      reEncode: async (image) => image.slice(0, 8),
+    });
   });
 
   afterAll(() => demo.client.close());
@@ -79,6 +87,83 @@ describe('DemoApi', { timeout: 60_000 }, () => {
         body: {
           message: 'Enter your email address, such as dana@example.com.',
         },
+      });
+    });
+
+    // With files (#1026): FormData, as the form sends it to the API.
+    describe('with files', () => {
+      const PNG = new Uint8Array([
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0xde, 0xad,
+      ]);
+
+      /** FormData with `fields` as JSON (unless null) and these files. */
+      const form = (
+        files: { name: string; content: Uint8Array }[],
+        fields: unknown = sent
+      ) => {
+        const body = new FormData();
+        if (fields !== null) {
+          body.append(REQUEST_FIELDS_PART, JSON.stringify(fields));
+        }
+        for (const { name, content } of files) {
+          body.append(
+            REQUEST_FILES_PART,
+            new Blob([new Uint8Array(content)]),
+            name
+          );
+        }
+        return body;
+      };
+
+      it('keeps the files with the request, images redrawn', async () => {
+        const { status } = await call(
+          'POST',
+          '/api/requests',
+          form(
+            [
+              { name: 'rows.csv', content: ROWS },
+              { name: 'shot.png', content: PNG },
+            ],
+            { ...sent, subject: 'Export with files' }
+          )
+        );
+
+        expect(status).toBe(201);
+      });
+
+      it("refuses a file that won't do, in the API's words", async () => {
+        expect(
+          await call(
+            'POST',
+            '/api/requests',
+            form([
+              {
+                name: 'tool.exe',
+                content: new Uint8Array([0x4d, 0x5a, 0x90, 0]),
+              },
+            ])
+          )
+        ).toMatchObject({
+          status: 400,
+          body: {
+            message: '"tool.exe" isn\'t a PNG, JPEG, WebP, PDF or text file.',
+          },
+        });
+      });
+
+      it("refuses files without the request's fields, in the API's words", async () => {
+        expect(
+          await call(
+            'POST',
+            '/api/requests',
+            form([{ name: 'rows.csv', content: ROWS }], null)
+          )
+        ).toMatchObject({
+          status: 400,
+          body: {
+            message: 'Send the request\'s fields as JSON, in a "request" part.',
+          },
+        });
       });
     });
 
@@ -321,6 +406,58 @@ describe('DemoApi', { timeout: 60_000 }, () => {
         ).toBe('billing');
       });
 
+      // As the API's AttachmentsController (#1026).
+      it('lists the files a request came with, each a download', async () => {
+        const withFiles = (await pending()).find(
+          ({ subject }) => subject === 'Export with files'
+        );
+        expect(
+          withFiles?.attachments.map(({ fileName, mediaType, size }) => [
+            fileName,
+            mediaType,
+            size,
+          ])
+        ).toEqual([
+          ['rows.csv.txt', 'text/plain', ROWS.length],
+          ['shot.png', 'image/png', 8],
+        ]);
+
+        const download = await call(
+          'GET',
+          `/api/attachments/${withFiles?.attachments[0].id}`
+        );
+
+        expect(download.status).toBe(200);
+        expect(download.headers).toEqual({
+          'content-type': 'text/plain; charset=utf-8',
+          'content-disposition': `attachment; filename*=UTF-8''rows.csv.txt`,
+        });
+        expect(download.body).toBeInstanceOf(Blob);
+        expect(
+          new Uint8Array(await (download.body as Blob).arrayBuffer())
+        ).toEqual(ROWS);
+      });
+
+      it('answers 404 for no such file', async () => {
+        expect(await call('GET', '/api/attachments/not-a-file')).toMatchObject({
+          status: 404,
+          body: { message: 'No such file.' },
+        });
+      });
+
+      it("lists a team ticket's files: none, for one that came from no request", async () => {
+        const team = (await call('GET', '/api/teams/mine'))
+          .body as TeamOverview;
+        const busy = team.members.find(({ openTickets }) => openTickets > 0);
+        const [ticket] = (
+          await call('GET', `/api/teams/mine/members/${busy?.id}/tickets`)
+        ).body as TicketDto[];
+
+        expect(
+          await call('GET', `/api/tickets/${ticket.id}/attachments`)
+        ).toEqual({ status: 200, body: [] });
+      });
+
       it('lists the queues a request can become a ticket in', async () => {
         const { status, body } = await call('GET', '/api/queues');
 
@@ -463,6 +600,11 @@ describe('DemoApi', { timeout: 60_000 }, () => {
   describe('as an admin', () => {
     beforeAll(() => signIn('alex.morgan'));
 
+    // As the API's AttachmentsController: admins work no tickets (#1026).
+    it("refuses customers' files with 403", async () => {
+      expect((await call('GET', '/api/attachments/any')).status).toBe(403);
+    });
+
     it('lists every account', async () => {
       const { status, body } = await call('GET', '/api/users');
 
@@ -568,7 +710,10 @@ describe('DemoApi', { timeout: 60_000 }, () => {
       vi.spyOn(UsersService.prototype, 'list').mockRejectedValueOnce(
         new Error('The database went away.')
       );
-      const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+      // Heard, not printed: the failure is the point of the test.
+      const logged = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => undefined);
 
       expect(await call('GET', '/api/users')).toEqual({
         status: 500,

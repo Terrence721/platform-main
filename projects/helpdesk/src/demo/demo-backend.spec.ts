@@ -75,6 +75,46 @@ describe('DemoBackend', () => {
     ]);
   });
 
+  // Customers' files (#1026): bytes, not JSON, as the API sends them.
+  it("gives a file's bytes as the Blob they are, with its type and name", async () => {
+    const file = new Blob(['Rows: 1,000'], { type: 'text/plain' });
+    answer = {
+      status: 200,
+      body: file,
+      headers: {
+        'content-type': 'text/plain; charset=utf-8',
+        'content-disposition': "attachment; filename*=UTF-8''rows.txt",
+      },
+    };
+    const http = setUp();
+
+    const response = await firstValueFrom(
+      http.get('/api/attachments/file-1', {
+        responseType: 'blob',
+        observe: 'response',
+      })
+    );
+
+    expect(response.body).toBe(file);
+    expect(response.headers.get('content-type')).toBe(
+      'text/plain; charset=utf-8'
+    );
+    expect(response.headers.get('content-disposition')).toBe(
+      "attachment; filename*=UTF-8''rows.txt"
+    );
+  });
+
+  it('passes a form with files on as it is', async () => {
+    answer = { status: 201, body: { reference: 'R-1005' } };
+    const http = setUp();
+    const form = new FormData();
+    form.append('request', '{}');
+
+    await firstValueFrom(http.post('/api/requests', form));
+
+    expect(asked[0].body).toBe(form);
+  });
+
   it('turns a refusal into the HttpErrorResponse the app expects', async () => {
     answer = {
       status: 409,

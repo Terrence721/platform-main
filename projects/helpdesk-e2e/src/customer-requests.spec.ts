@@ -7,7 +7,6 @@ import {
   type Page,
   test,
 } from '@playwright/test';
-import { readFile } from 'fs/promises';
 import sharp from 'sharp';
 import { PASSWORD, rowOf, signInAs, snackBar } from './support';
 
@@ -99,7 +98,13 @@ async function downloadsRedrawnPhoto(page: Page, button: Locator) {
     button.click(),
   ]);
   expect(download.suggestedFilename()).toBe('phone photo.jpg');
-  const bytes = await readFile(await download.path());
+  // Read as a stream: path() refuses when the browser is connected to, as
+  // the VS Code extension does with Show browser on.
+  const chunks: Buffer[] = [];
+  for await (const chunk of await download.createReadStream()) {
+    chunks.push(chunk as Buffer);
+  }
+  const bytes = Buffer.concat(chunks);
   const { format, width, height } = await sharp(bytes).metadata();
   expect({ format, width, height }).toEqual({
     format: 'jpeg',

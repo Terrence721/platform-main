@@ -1,6 +1,8 @@
 import {
   type AgentReport,
   type CurrentUser,
+  DISMISS_REASONS,
+  type DismissReason,
   OPEN_WORK_STATUSES,
   REPORT_WINDOW_DAYS,
   type ReportChoices,
@@ -246,6 +248,16 @@ export class ReportsService {
       asOf: now.toISOString(),
       since: since.toISOString(),
       scope,
+      // None counted yet: the requests view comes next (#1026, C2).
+      requests: {
+        received: 0,
+        turnedIntoTickets: 0,
+        dismissed: Object.fromEntries(
+          DISMISS_REASONS.map((reason) => [reason, 0])
+        ) as Record<DismissReason, number>,
+        waiting: 0,
+        medianHoursToDecision: null,
+      },
     };
 
     if (typeof scope === 'object' && 'agentId' in scope) {

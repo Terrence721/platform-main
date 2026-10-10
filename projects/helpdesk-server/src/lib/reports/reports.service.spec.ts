@@ -361,6 +361,19 @@ describe('ReportsService', { timeout: 60_000 }, () => {
 
   afterAll(() => client.close());
 
+  // Until the requests view is read (#1026, Phase C).
+  it('counts no customer requests yet, whoever it is for', async () => {
+    for (const scope of ['all', { teamId: 'atlas' }] as const) {
+      expect((await service.report(scope, now)).requests).toEqual({
+        received: 0,
+        turnedIntoTickets: 0,
+        dismissed: { spam: 0, duplicate: 0, 'not-support': 0 },
+        waiting: 0,
+        medianHoursToDecision: null,
+      });
+    }
+  });
+
   describe('for every team (an admin)', () => {
     it('says when, over which window, and for whom', async () => {
       const report = await service.report('all', now);

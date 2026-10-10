@@ -3,8 +3,9 @@ import { CAPABILITIES } from './capability';
 describe('CAPABILITIES', () => {
   it('lists the six capabilities in the order the page shows them', () => {
     expect(CAPABILITIES.map(({ title }) => title)).toEqual([
-      'Tickets and priorities',
-      'Deadlines you can see',
+      // How requests arrive (#1026): the public Report an issue page.
+      'Customers report issues',
+      'Tickets, priorities and deadlines',
       'Replies and internal notes',
       'Clear ownership',
       'Live updates',

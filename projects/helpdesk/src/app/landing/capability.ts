@@ -13,18 +13,18 @@ export const CAPABILITY = 'Capability';
 /** What Helpdesk does, in the order the landing page shows it. */
 export const CAPABILITIES: readonly Capability[] = [
   {
-    id: 'tickets',
-    icon: 'confirmation_number',
-    title: 'Tickets and priorities',
+    id: 'customer-requests',
+    icon: 'contact_support',
+    title: 'Customers report issues',
     summary:
-      'Every request gets a number, a priority and a due time. Agents see their own work most urgent first, beside the work nobody holds yet.',
+      'Customers describe a problem on the site, no account needed, and can attach screenshots. They get a reference to check on it, and a supervisor turns each one into a ticket or dismisses it.',
   },
   {
-    id: 'deadlines',
-    icon: 'schedule',
-    title: 'Deadlines you can see',
+    id: 'tickets',
+    icon: 'confirmation_number',
+    title: 'Tickets, priorities and deadlines',
     summary:
-      'Each ticket carries its SLA due time and shows the time left, so overdue work is marked and the most urgent comes first.',
+      'Every request gets a number, a priority and a due time. Agents see their own work most urgent first, with the time left on each, so overdue work stands out.',
   },
   {
     id: 'replies-and-notes',
@@ -52,6 +52,6 @@ export const CAPABILITIES: readonly Capability[] = [
     icon: 'admin_panel_settings',
     title: 'Accounts and reports in the same app',
     summary:
-      "Admins create accounts, change roles and teams, and deactivate people; supervisors and admins see each team's reports.",
+      "Admins create accounts, change roles and teams, and deactivate people; supervisors and admins see each team's reports, and how customer requests are handled.",
   },
 ];

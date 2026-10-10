@@ -72,3 +72,14 @@ export class ConflictException extends HttpException {
     super(message, 409);
   }
 }
+
+/**
+ * 503: something it relies on is down; try again later. Thrown by the
+ * virus scan (#1293), which the demo never has, but the shared service
+ * imports it.
+ */
+export class ServiceUnavailableException extends HttpException {
+  constructor(message = 'Service Unavailable') {
+    super(message, 503);
+  }
+}

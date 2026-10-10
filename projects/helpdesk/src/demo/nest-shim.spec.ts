@@ -7,6 +7,7 @@ import {
   Injectable,
   NotFoundException,
   Optional,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from './nest-shim';
 
@@ -17,6 +18,8 @@ describe('the demo stand-in for @nestjs/common', () => {
     [ForbiddenException, 403, 'Forbidden'],
     [NotFoundException, 404, 'Not Found'],
     [ConflictException, 409, 'Conflict'],
+    // The virus scan's, when switched on (#1293); the demo has no scanner.
+    [ServiceUnavailableException, 503, 'Service Unavailable'],
   ] as const)(
     '%o answers with its status and message, as Nest does',
     (Exception, status, message) => {

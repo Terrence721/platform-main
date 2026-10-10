@@ -53,6 +53,13 @@ const REPORT: ReportsResponse = {
   teams: [],
   agents: [],
   choices: { teams: [], agents: [] },
+  requests: {
+    received: 0,
+    turnedIntoTickets: 0,
+    dismissed: { spam: 0, duplicate: 0, 'not-support': 0 },
+    waiting: 0,
+    medianHoursToDecision: null,
+  },
 };
 
 describe('/api/reports', () => {

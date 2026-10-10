@@ -1,3 +1,4 @@
+import type { DismissReason } from './customer-request';
 import type { TicketPriority, TicketStatus } from './ticket';
 import type { IsoDateTime } from './ticket-api';
 
@@ -113,6 +114,27 @@ export interface ReportChoices {
 }
 
 /**
+ * Customer requests' figures (#1026). The same for every scope: a request
+ * belongs to no team until it becomes a ticket, and every supervisor sees
+ * all of New requests. All but `waiting` cover the report's window.
+ */
+export interface RequestsReport {
+  /** Sent through the Report an issue page in the window. */
+  received: number;
+  /** Turned into tickets in the window. */
+  turnedIntoTickets: number;
+  /** Dismissed in the window, by why; every reason listed. */
+  dismissed: Record<DismissReason, number>;
+  /** Waiting in New requests now, whenever they arrived. */
+  waiting: number;
+  /**
+   * Median hours from arrival to a decision (a ticket, or a dismissal),
+   * for requests decided in the window; `null` if none was.
+   */
+  medianHoursToDecision: number | null;
+}
+
+/**
  * The Reports popup's data (GET /api/reports, optionally `?team=` or
  * `?agent=`), for supervisors and admins. Open work is as of now; finished
  * work and reply times cover the window since `since`.
@@ -138,4 +160,6 @@ export interface ReportsResponse {
   agents: AgentReport[];
   /** What the caller may pick next. */
   choices: ReportChoices;
+  /** Customer requests, the same whoever the report is about. */
+  requests: RequestsReport;
 }

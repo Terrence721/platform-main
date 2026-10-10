@@ -9,7 +9,7 @@
 [![CodeQL](https://github.com/Terrence721/platform-main/actions/workflows/codeql.yml/badge.svg)](https://github.com/Terrence721/platform-main/actions/workflows/codeql.yml)
 [![security](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Terrence721/Terrence721/main/badges/platform-main.json)](https://github.com/Terrence721/platform-main/security)
 
-Last updated: October 6, 2026
+Last updated: October 10, 2026
 
 This repository is a personal demonstration workspace: real, MIT-licensed NgRx source added module by module, with specific pieces **redesigned by choice** — not copied verbatim — where the goal is to show a defensible, different architectural call instead of reproducing an existing one.
 
@@ -86,7 +86,9 @@ A real help desk built on the modules, so every module does real work in a real 
 | `helpdesk-server`   | The API's services, the PostgreSQL schema and migrations (Drizzle), and the seed data                                                                |
 | `helpdesk-e2e`      | Playwright end-to-end tests against the real stack, run on every pull request                                                                        |
 
-Customers report an issue on the public site with no account, and can attach up to three screenshots or files; pictures are redrawn on arrival, which removes hidden data such as a photo's location ([#1026](https://github.com/Terrence721/platform-main/issues/1026)). Each request gets a reference the customer can check with their email. Supervisors see new requests, with their files and possible duplicates, and turn each into a ticket or dismiss it; the Reports popup counts them.
+Customers report an issue on the public site with no account, and can attach up to three screenshots or files; pictures are redrawn on arrival, which removes hidden data such as a photo's location ([#1026](https://github.com/Terrence721/platform-main/issues/1026)). Each request gets a reference the customer can check with their email. Supervisors see new requests, with their files and possible duplicates, and turn each into a ticket or dismiss it; the Reports popup counts them. Files can also be checked for viruses by ClamAV, switched on with Docker Compose ([#1293](https://github.com/Terrence721/platform-main/issues/1293)).
+
+Once the app was complete, its 123 source files were reviewed the same way as the modules, each with its own issue and pull request ([#1001](https://github.com/Terrence721/platform-main/issues/1001)); every finding is in [`docs/helpdesk-code-review.md`](docs/helpdesk-code-review.md).
 
 It runs with only Docker installed ([#20](https://github.com/Terrence721/platform-main/issues/20)), and a [live demo](https://terrence721.github.io/platform-main/helpdesk/) runs entirely in the browser.
 

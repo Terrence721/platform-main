@@ -428,7 +428,7 @@
 
 <div class="hero">
   <div class="wrap">
-    <p class="eyebrow">Portfolio Manifest — Updated 2026-10-06</p>
+    <p class="eyebrow">Portfolio Manifest — Updated 2026-10-10</p>
     <h1 class="name">Terrence&nbsp;Daniels</h1>
     <p class="role">Principal Frontend Engineer</p>
     <p class="thesis">
@@ -466,17 +466,17 @@
   <div class="wrap">
     <div class="manifest-row">
       <div class="manifest-cell">
-        <span class="v">1,253</span><span class="k">commits</span>
+        <span class="v">1,600</span><span class="k">commits</span>
       </div>
       <div class="manifest-cell">
-        <span class="v">9,188 + 11</span
+        <span class="v">10,187 + 24</span
         ><span class="k">Vitest + e2e tests</span>
       </div>
       <div class="manifest-cell">
         <span class="v">13/13</span><span class="k">modules ported</span>
       </div>
       <div class="manifest-cell">
-        <span class="v">270/270</span><span class="k">files reviewed</span>
+        <span class="v">424/424</span><span class="k">files reviewed</span>
       </div>
       <div class="manifest-cell">
         <span class="v">0</span><span class="k">lint errors</span>
@@ -691,21 +691,22 @@
     </p>
     <div class="twocol">
       <div class="card">
-        <h3>9,188 tests, 0 lint errors</h3>
+        <h3>10,187 tests, 0 lint errors</h3>
         <p>
           Across all 13 modules and the Helpdesk app, real assertions against
           real behavior — not snapshot tests, not compilation-only checks
-          passing for the wrong reason. On top of them, 11 Playwright tests
+          passing for the wrong reason. On top of them, 24 Playwright tests
           drive the Helpdesk in a real browser against the real API and
-          database: signing in as each role, a day's work for each role, and
-          live updates reaching a second browser. They run on every pull
-          request.
+          database: signing in as each role, a day's work for each role, live
+          updates reaching a second browser, and a customer reporting an issue
+          with a photo attached. All but the opt-in virus-scan test run on every
+          pull request.
         </p>
       </div>
       <div class="card">
         <h3>Live, self-updating dashboard</h3>
         <p>
-          A full interactive test report plus a per-module composition chart,
+          A full interactive test report plus a per-project summary chart,
           deployed to
           <a href="https://terrence721.github.io/platform-main/"
             >GitHub Pages</a
@@ -769,7 +770,15 @@
       >), tested end to end with Playwright on every pull request. You can
       <a href="https://terrence721.github.io/platform-main/helpdesk/"
         >try it in your browser</a
-      >, with no server.
+      >, with no server. Its own 123 source files were then reviewed the same
+      way (<a href="https://github.com/Terrence721/platform-main/issues/1001"
+        >#1001</a
+      >), which fixed, among others, a development secret that could sign
+      production sessions and a sign-in with no attempt limit. Customers can now
+      report an issue there with no account and attach files (<a
+        href="https://github.com/Terrence721/platform-main/issues/1026"
+        >#1026</a
+      >), with pictures redrawn to strip hidden data and an optional virus scan.
     </p>
   </section>
 

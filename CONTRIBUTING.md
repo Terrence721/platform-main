@@ -45,7 +45,7 @@ Starts the dev server and opens the app in a window of its own, using a separate
 
 ## End-to-end tests (Helpdesk)
 
-`projects/helpdesk-e2e` tests the whole help desk in Chromium with Playwright, against the real app, API and PostgreSQL that `docker compose --profile full up` runs. The specs cover signing in as each role, one journey per role (an agent, a supervisor, an admin), and live updates in two browsers at once (`live-updates.spec.ts`). CI's `Docker images (helpdesk)` job runs them against the stack it builds, and keeps the report as an artifact when one fails.
+`projects/helpdesk-e2e` tests the whole help desk in Chromium with Playwright, against the real app, API and PostgreSQL that `docker compose --profile full up` runs. The specs cover signing in as each role, one journey per role (an agent, a supervisor, an admin), customer requests and their files (`customer-requests.spec.ts`), live updates in two browsers at once (`live-updates.spec.ts`) and after the API restarts, a session that ends mid-shift, an admin emptying a team, phone layouts, and the web server's headers and caching. CI's `Docker images (helpdesk)` job runs them against the stack it builds, and keeps the report as an artifact when one fails.
 
 ```shell
 yarn e2e:helpdesk

@@ -75,17 +75,17 @@ Which module powers which part of the app is listed in the summary that closed t
 
 Five projects, each with one job:
 
-| Project             | Job                                                                                                                                                                                                  |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `helpdesk-contract` | The types and rules both sides share: tickets, roles, the ticket workflow, live events, report shapes. Imported by the app, the API and the server library alike, so the two ends can't drift apart. |
-| `helpdesk`          | The Angular app. Each page (agent, supervisor, admin) has its own signal store (`rxMethod`, `withEntities`); the session, the landing page and router state use the NgRx store and effects.          |
-| `helpdesk-api`      | The NestJS API: sign-in with a JWT cookie, role guards (`@OnlyFor`), and one module per feature (`auth`, `tickets`, `teams`, `users`, `reports`, `live`).                                            |
-| `helpdesk-server`   | The services behind the API, the Drizzle schema, the SQL migrations (`drizzle/`) and the seed. Plain TypeScript with no HTTP, so the same code also runs in the browser for the demo.                |
-| `helpdesk-e2e`      | Playwright tests against the real Docker Compose stack: sign-in, a journey per role, and live updates in two browsers at once.                                                                       |
+| Project             | Job                                                                                                                                                                                                                                     |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `helpdesk-contract` | The types and rules both sides share: tickets, roles, the ticket workflow, customer requests and their files, live events, report shapes. Imported by the app, the API and the server library alike, so the two ends can't drift apart. |
+| `helpdesk`          | The Angular app. Each page (agent, supervisor, admin) has its own signal store (`rxMethod`, `withEntities`); the session, the landing page and router state use the NgRx store and effects.                                             |
+| `helpdesk-api`      | The NestJS API: sign-in with a JWT cookie, role guards (`@OnlyFor`), and one module per feature (`auth`, `tickets`, `teams`, `users`, `customer-requests`, `attachments`, `reports`, `live`).                                           |
+| `helpdesk-server`   | The services behind the API, the Drizzle schema, the SQL migrations (`drizzle/`) and the seed. Plain TypeScript with no HTTP, so the same code also runs in the browser for the demo.                                                   |
+| `helpdesk-e2e`      | Playwright tests against the real Docker Compose stack: sign-in, a journey per role, customer requests and their files, live updates in two browsers at once, phones, and the web server's headers.                                     |
 
 ## Running it
 
-The browser only ever talks to its own origin. In development (`yarn start:helpdesk`) the Angular dev server on port 4200 forwards `/api/*` to the API on 3000. In Docker (`docker compose --profile full up`, or `yarn start:helpdesk:docker`) nginx on port 8088 serves the built app and forwards `/api/*` the same way. PostgreSQL runs in Docker Compose either way. In development the launcher wipes it, migrates and seeds it on every start; in Docker the API's container migrates it and seeds it when it's empty.
+The browser only ever talks to its own origin. In development (`yarn start:helpdesk`) the Angular dev server on port 4200 forwards `/api/*` to the API on 3000. In Docker (`docker compose --profile full up`, or `yarn start:helpdesk:docker`) nginx on port 8088 serves the built app and forwards `/api/*` the same way. PostgreSQL runs in Docker Compose either way. In development the launcher wipes it, migrates and seeds it on every start; in Docker the API's container migrates it and seeds it when it's empty. With `yarn start:helpdesk:docker:scan`, Compose also runs ClamAV, and the API checks every attached file with it before keeping it.
 
 **Live updates** flow the other way. When a ticket, a message or an account changes, the service publishes a notice (no ticket data) to an in-memory hub. The API streams the notices each person may see over server-sent events on `/api/events`. An open page that hears one reloads what it shows through the normal API, so the stream never bypasses the role checks.
 

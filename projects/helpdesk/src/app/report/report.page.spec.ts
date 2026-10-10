@@ -12,7 +12,10 @@ import { MatInputHarness } from '@angular/material/input/testing';
 import { MatRadioGroupHarness } from '@angular/material/radio/testing';
 import { MatSelectHarness } from '@angular/material/select/testing';
 import { provideRouter } from '@angular/router';
-import { TICKET_DESCRIPTION_MAX_LENGTH } from '@helpdesk/contract';
+import {
+  REQUEST_FILES_PART,
+  TICKET_DESCRIPTION_MAX_LENGTH,
+} from '@helpdesk/contract';
 import ReportPage from './report.page';
 import { REPORT_API } from './report.store';
 
@@ -286,6 +289,79 @@ describe('ReportPage', () => {
         page.querySelector<HTMLInputElement>('input[formControlName="name"]')
           ?.value
       ).toBe('');
+    });
+
+    // Attachments (#1026), as designed: between where it happened and the
+    // consent, sent with the form.
+    describe('with attachments', () => {
+      /** Chooses `files` in the page's attachment picker. */
+      const attach = (page: HTMLElement, ...files: File[]) => {
+        const picker = page.querySelector<HTMLInputElement>(
+          'hd-attachment-picker input[type=file]'
+        );
+        if (picker === null) {
+          throw new Error('No attachment picker on the page');
+        }
+        Object.defineProperty(picker, 'files', {
+          value: files,
+          configurable: true,
+        });
+        picker.dispatchEvent(new Event('change'));
+      };
+      const photo = () =>
+        new File(['photo'], 'Zoë photo.jpg', { type: 'image/jpeg' });
+
+      it('offers attachments after where it happened, before the consent', async () => {
+        const { page } = await render();
+        const where = page.querySelector('#where')?.closest('mat-form-field');
+        const picker = page.querySelector('hd-attachment-picker');
+        const consent = page.querySelector('.consent');
+
+        expect(picker).not.toBeNull();
+        expect(where?.compareDocumentPosition(picker as Node)).toBe(
+          Node.DOCUMENT_POSITION_FOLLOWING
+        );
+        expect(picker?.compareDocumentPosition(consent as Node)).toBe(
+          Node.DOCUMENT_POSITION_FOLLOWING
+        );
+      });
+
+      it('sends the files chosen with the form', async () => {
+        const { page, fixture, fillAll, wait, send, http } = await render();
+        await fillAll();
+        attach(page, photo());
+        fixture.detectChanges();
+        wait(45_000);
+
+        await send();
+
+        const body = http.expectOne(REPORT_API).request.body as FormData;
+        expect(body).toBeInstanceOf(FormData);
+        expect(
+          body.getAll(REQUEST_FILES_PART).map((file) => (file as File).name)
+        ).toEqual(['Zoë photo.jpg']);
+      });
+
+      it('starts another issue with no files', async () => {
+        const { page, fixture, fillAll, wait, send, http } = await render();
+        await fillAll();
+        attach(page, photo());
+        fixture.detectChanges();
+        wait(45_000);
+        await send();
+        http
+          .expectOne(REPORT_API)
+          .flush(
+            { reference: 'R-1042' },
+            { status: 201, statusText: 'Created' }
+          );
+        fixture.detectChanges();
+
+        page.querySelector<HTMLButtonElement>('.sent button')?.click();
+        fixture.detectChanges();
+
+        expect(page.querySelector('hd-attachment-picker li')).toBeNull();
+      });
     });
 
     it('says why sending failed, as an alert, keeping what was written', async () => {

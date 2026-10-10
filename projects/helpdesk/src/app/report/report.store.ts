@@ -1,8 +1,10 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
-import type {
-  CreateRequestRequest,
-  CreateRequestResponse,
+import {
+  type CreateRequestRequest,
+  type CreateRequestResponse,
+  REQUEST_FIELDS_PART,
+  REQUEST_FILES_PART,
 } from '@helpdesk/contract';
 import { tapResponse } from '@ngrx/operators';
 import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
@@ -51,6 +53,32 @@ function failureMessage(error: unknown): string {
   return apiErrorMessage(error, SEND_UNAVAILABLE_MESSAGE);
 }
 
+/** What the page sends: the form's fields, and the files attached. */
+export interface ReportToSend {
+  request: CreateRequestRequest;
+  files: readonly File[];
+}
+
+/**
+ * The body a report is sent as: the fields as JSON when no file is
+ * attached; with files, multipart (#1026), as the API takes them: the
+ * fields as JSON in the `request` part, each file in a `files` part.
+ */
+function bodyOf({
+  request,
+  files,
+}: ReportToSend): CreateRequestRequest | FormData {
+  if (files.length === 0) {
+    return request;
+  }
+  const form = new FormData();
+  form.append(REQUEST_FIELDS_PART, JSON.stringify(request));
+  for (const file of files) {
+    form.append(REQUEST_FILES_PART, file, file.name);
+  }
+  return form;
+}
+
 /**
  * The Report an issue page's store (#1026): sends the public form and
  * keeps where that is up to, and the reference it gets back. Provided by
@@ -65,12 +93,15 @@ export const ReportStore = signalStore(
     error: null as string | null,
   }),
   withMethods((store, http = inject(HttpClient)) => ({
-    /** Sends the form; a second send while one is on its way is ignored. */
-    send: rxMethod<CreateRequestRequest>(
+    /**
+     * Sends the form, with any files the customer attached; a second send
+     * while one is on its way is ignored.
+     */
+    send: rxMethod<ReportToSend>(
       pipe(
         tap(() => patchState(store, { sendState: 'sending', error: null })),
-        exhaustMap((request) =>
-          http.post<CreateRequestResponse>(REPORT_API, request).pipe(
+        exhaustMap((report) =>
+          http.post<CreateRequestResponse>(REPORT_API, bodyOf(report)).pipe(
             tapResponse({
               next: ({ reference }) =>
                 patchState(store, { sendState: 'sent', reference }),

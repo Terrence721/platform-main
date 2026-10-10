@@ -16,6 +16,7 @@
     "check:versions": "npx tsx scripts/check-version-ranges.ts",
     "start:helpdesk": "npx tsx scripts/start-app.ts helpdesk",
     "start:helpdesk:docker": "npx tsx scripts/start-app.ts helpdesk-docker",
+    "start:helpdesk:docker:scan": "npx tsx scripts/start-app.ts helpdesk-docker-scan",
     "e2e:helpdesk": "playwright install chromium && nx e2e helpdesk-e2e",
     "db:reset": "docker compose down --volumes db",
     "db:generate": "drizzle-kit generate --config projects/helpdesk-api/drizzle.config.ts",

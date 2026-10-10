@@ -25,7 +25,9 @@ import {
 // when that window is closed, on Ctrl+C, or when any of its servers stops,
 // then checks that every port they held is free again.
 // Usage: npx tsx scripts/start-app.ts <app>   (e.g. `yarn start:helpdesk`;
-// `helpdesk-docker`, as `yarn start:helpdesk:docker`, runs it in Docker)
+// `helpdesk-docker`, as `yarn start:helpdesk:docker`, runs it in Docker;
+// `helpdesk-docker-scan`, as `yarn start:helpdesk:docker:scan`, with the
+// virus scan on)
 
 const app = process.argv[2] ?? '';
 if (!/^[a-z0-9-]+$/.test(app)) {
@@ -78,7 +80,7 @@ async function main(): Promise<void> {
   // In Docker the app is published from 8088 (or HELPDESK_APP_PORT in .env)
   // on; the dev server's search starts at 4200.
   const appPort = await findFreePort(
-    app === 'helpdesk-docker'
+    app.startsWith('helpdesk-docker')
       ? Number(process.env['HELPDESK_APP_PORT'] ?? FIRST_DOCKER_APP_PORT)
       : FIRST_PORT
   );

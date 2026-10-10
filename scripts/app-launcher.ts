@@ -53,27 +53,36 @@ export interface StackServer {
  * database (Docker Compose), then its API, then the app, whose dev server
  * forwards /api to the API (see projects/helpdesk/proxy.conf.mjs);
  * `helpdesk-docker` runs all three as containers instead (compose.yaml's
- * `full` profile), from images built from the source, on `ports.app`; any
+ * `full` profile), from images built from the source, on `ports.app`;
+ * `helpdesk-docker-scan` the same with the virus scan on (#1293); any
  * other app runs on its own.
  */
 export function stackFor(
   app: string,
   ports: { app: number; api: number; db: number }
 ): StackServer[] {
-  if (app === 'helpdesk-docker') {
+  if (app === 'helpdesk-docker' || app === 'helpdesk-docker-scan') {
+    // With the virus scan (#1293): ClamAV too (compose.yaml's `scan`
+    // profile), and the API told where it is.
+    // Its service's name: cspell:ignore CLAMAV clamav
+    const scan = app === 'helpdesk-docker-scan';
+    const compose = scan
+      ? 'docker compose --profile full --profile scan'
+      : 'docker compose --profile full';
     return [
       {
-        name: 'helpdesk (Docker)',
+        name: scan ? 'helpdesk (Docker, virus scan on)' : 'helpdesk (Docker)',
         // Builds both images (quick when only code changed) and starts the
-        // database, the API and the app; ready once all three are healthy.
+        // database, the API and the app; ready once all are healthy.
         // Every run starts from fresh seed data, as with `yarn
         // start:helpdesk`: whatever an earlier run left is removed first.
-        command:
-          'docker compose --profile full down --volumes' +
-          ' && docker compose --profile full up --build --detach --wait',
-        env: { HELPDESK_APP_PORT: String(ports.app) },
+        command: `${compose} down --volumes && ${compose} up --build --detach --wait`,
+        env: {
+          HELPDESK_APP_PORT: String(ports.app),
+          ...(scan && { HELPDESK_CLAMAV_HOST: 'clamav' }),
+        },
         // Closing the app deletes the containers and their data.
-        stopCommand: 'docker compose --profile full down --volumes',
+        stopCommand: `${compose} down --volumes`,
         pageUrl: `http://localhost:${ports.app}/`,
         // compose.yaml publishes the API on 3000 and the database on db.
         ports: [ports.app, FIRST_API_PORT, ports.db],

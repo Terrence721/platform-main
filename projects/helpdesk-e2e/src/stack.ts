@@ -72,8 +72,18 @@ async function answers(baseUrl: string): Promise<boolean> {
 export default async function stack(
   config: FullConfig
 ): Promise<(() => void) | undefined> {
-  if (process.env['E2E_BASE_URL'] !== undefined) {
-    return undefined;
+  const requestedBaseUrl = process.env['E2E_BASE_URL'];
+  if (requestedBaseUrl !== undefined) {
+    if (await answers(requestedBaseUrl)) {
+      return undefined;
+    }
+    console.warn(
+      `Ignoring E2E_BASE_URL=${requestedBaseUrl} because it does not answer, ` +
+        'and managing a freshly started stack instead.'
+    );
+    Reflect.deleteProperty(process.env, 'E2E_BASE_URL');
+    const fallback = `http://localhost:${process.env['HELPDESK_APP_PORT'] ?? '8088'}`;
+    config.projects[0].use.baseURL = fallback;
   }
   const baseUrl = String(config.projects[0].use.baseURL);
   // Let any stack already answering here be put away first, so a run always

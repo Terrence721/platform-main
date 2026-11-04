@@ -35,6 +35,22 @@ yarn vitest <relative path> --watch
 yarn test:scripts
 ```
 
+### Schematic unit tests need a build first
+
+Schematic specs read their `collection.json` and `migration.json` from
+`dist/modules/...`, which Nx generates at build time. Run the module's build
+before running its schematic tests, e.g. `yarn nx build component`, or build
+everything with `yarn build`.
+
+### Coverage is reported per project
+
+Vitest coverage is collected and reported for the project under test, not
+across the whole workspace. A helper module such as
+`schematics-core/testing` can show 0% in its own coverage even though its
+functions are exercised by the consuming modules' tests, which report that
+coverage under their own projects. Treat a 0% helper as a reporting artifact
+unless it is reported by the project that owns the relevant tests.
+
 ## Running the Helpdesk app
 
 ```shell

@@ -222,6 +222,17 @@ export default defineConfig(({ mode }) => {
       // disk.
       extensions: ['.ts', '.mts', '.mjs', '.js', '.jsx', '.tsx', '.json'],
     },
+    server: {
+      watch: {
+        ignored: [
+          '**/test-results/**',
+          '**/coverage/**',
+          '**/dist/**',
+          '**/.angular/cache/**',
+          '**/node_modules/.vite-temp/**',
+        ],
+      },
+    },
     define: {
       'import.meta.vitest': mode !== 'production',
     },

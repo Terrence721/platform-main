@@ -11,16 +11,6 @@ import { join } from 'path';
 
 const repoRoot = join(__dirname, '..', '..', '..');
 
-/**
- * Whether this run has the virus scan on (#1293): E2E_SCAN=1 starts the
- * stack with ClamAV (compose.yaml's `scan` profile) and the API pointed at
- * it, and runs virus-scan.spec.ts, which is skipped otherwise. Slower to
- * start, as ClamAV loads its signatures, so off unless asked for.
- */
-export function scanOn(): boolean {
-  return process.env['E2E_SCAN'] === '1';
-}
-
 /** Runs `docker compose --profile full ...` here; false if it failed. */
 export function compose(...args: string[]): boolean {
   return composeWith({}, ...args);
@@ -30,29 +20,25 @@ export function compose(...args: string[]): boolean {
  * Runs `docker compose --profile full ...` here with `env` added to the
  * environment, which Compose reads (such as HELPDESK_JWT_SECRET); false if
  * it failed.
+ *
+ * The scan profile is always on (#1293): ClamAV comes up with the stack and
+ * the API is pointed at it, so virus-scan.spec.ts runs in every suite.
  */
 export function composeWith(
   env: Record<string, string>,
   ...args: string[]
 ): boolean {
-  // With the scan, ClamAV too, and the API told where it is.
-  // Its service's name: cspell:ignore CLAMAV clamav
-  const scan = scanOn();
+  // ClamAV too, and the API told where it is. Its service's name:
+  // cspell:ignore CLAMAV clamav
   const result = spawnSync(
     'docker',
-    [
-      'compose',
-      '--profile',
-      'full',
-      ...(scan ? ['--profile', 'scan'] : []),
-      ...args,
-    ],
+    ['compose', '--profile', 'full', '--profile', 'scan', ...args],
     {
       cwd: repoRoot,
       stdio: 'inherit',
       env: {
         ...process.env,
-        ...(scan && { HELPDESK_CLAMAV_HOST: 'clamav' }),
+        HELPDESK_CLAMAV_HOST: 'clamav',
         ...env,
       },
     }

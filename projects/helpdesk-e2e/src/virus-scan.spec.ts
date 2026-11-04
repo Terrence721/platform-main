@@ -1,11 +1,9 @@
 import type { PendingRequest } from '@helpdesk/contract';
 import { expect, test } from '@playwright/test';
 import { PASSWORD } from './support';
-import { scanOn } from './stack';
 
-// The optional virus scan (#1293), with real ClamAV: only when the stack
-// was started with it (E2E_SCAN=1); otherwise skipped, so the usual run
-// stays as fast as it was.
+// The virus scan (#1293), with real ClamAV: the stack always starts it now,
+// so this spec runs in every suite. ClamAV loads its signatures at start.
 // The test file's own name: cspell:ignore EICAR
 
 /**
@@ -25,9 +23,6 @@ function eicarTestFile(): Buffer {
   expect(file).toHaveLength(68);
   return file;
 }
-
-// eslint-disable-next-line playwright/no-skipped-test -- off unless asked for (E2E_SCAN=1), and reported as skipped.
-test.skip(!scanOn(), 'The virus scan is off: run with E2E_SCAN=1.');
 
 test('a visitor attaching the test virus is told it failed the check, and nothing is kept', async ({
   page,

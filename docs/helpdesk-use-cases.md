@@ -507,7 +507,7 @@ An admin's page, **Team accounts**, has one table per team (its lead marked "Sup
   - **An infected file:** the request is refused, naming the file: "… didn't pass the virus check."; nothing is kept.
   - **The scan is on but can't check**, because ClamAV is unreachable or answers oddly: "Files can't be checked right now. Please try again in a few minutes." No file is kept unchecked.
 - **Rules:** files are scanned as sent, before any picture is redrawn. Requests with no files are unaffected.
-- **Checked by:** `virus-scan.spec.ts`, run with `E2E_SCAN=1`.
+- **Checked by:** `virus-scan.spec.ts` (ClamAV is on in the e2e stack).
 
 ### UC-25 Try the demo
 
@@ -623,7 +623,7 @@ An admin's page, **Team accounts**, has one table per team (its lead marked "Sup
 | UC-21    | unit specs only                                           | `GET /api/reports`                            |
 | UC-22    | `live-updates.spec.ts`, `api-restart.spec.ts`             | `GET /api/events`                             |
 | UC-23    | `live-updates.spec.ts` (arrival tone)                     | none                                          |
-| UC-24    | `virus-scan.spec.ts` (`E2E_SCAN=1`)                       | `POST /api/requests`                          |
+| UC-24    | `virus-scan.spec.ts`                                      | `POST /api/requests`                          |
 | UC-25    | none (the demo's own unit specs)                          | answered in the page                          |
 | UC-26    | `phone.spec.ts`                                           | none                                          |
 

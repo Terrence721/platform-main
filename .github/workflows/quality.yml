@@ -202,8 +202,12 @@ jobs:
       # Builds the API and app images and starts them with the database, as
       # `docker compose --profile full up` does on a machine; --wait returns
       # once all three report healthy (the API after migrating and seeding).
+      # ClamAV comes up too (the scan profile), so the e2e suite can exercise
+      # the virus scan (#1293); HELPDESK_CLAMAV_HOST points the API at it.
       - name: Build and start the whole help desk
-        run: docker compose --profile full up --build --detach --wait
+        run: docker compose --profile full --profile scan up --build --detach --wait
+        env:
+          HELPDESK_CLAMAV_HOST: clamav
 
       - name: Check the API answers and the seed signs in
         run: |

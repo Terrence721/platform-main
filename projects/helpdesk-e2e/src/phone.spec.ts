@@ -24,7 +24,7 @@ test.describe('on a phone', () => {
       // The page is no wider than the screen.
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth)
-      ).toBe(width);
+      ).toBeLessThanOrEqual(width);
 
       // The table's last column is reached by scrolling the table.
       const lastHeader = table.getByRole('columnheader').last();

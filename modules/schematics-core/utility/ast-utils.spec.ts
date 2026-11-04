@@ -100,3 +100,79 @@ describe('ast-utils', () => {
     });
   });
 });
+
+import {
+  findNodes,
+  getSourceNodes,
+  insertAfterLastOccurrence,
+  getContentOfKeyLiteral,
+  containsProperty,
+} from './ast-utils';
+
+describe('findNodes', () => {
+  it('finds nodes of the requested syntax kind', () => {
+    const sourceFile = parse('const a = 1; const b = 2;');
+
+    expect(
+      findNodes(sourceFile, ts.SyntaxKind.VariableDeclaration)
+    ).toHaveLength(2);
+    expect(
+      findNodes(sourceFile, ts.SyntaxKind.VariableDeclaration, 1)
+    ).toHaveLength(1);
+  });
+});
+
+describe('getSourceNodes', () => {
+  it('returns the source file and all of its child nodes', () => {
+    const sourceFile = parse('const value = 1;');
+
+    const nodes = getSourceNodes(sourceFile);
+
+    expect(nodes[0]).toBe(sourceFile);
+    expect(nodes.length).toBeGreaterThan(1);
+  });
+});
+
+describe('insertAfterLastOccurrence', () => {
+  it('returns an insert change positioned after the last node', () => {
+    const sourceFile = parse('items(a, b);');
+    const nodes = findNodes(sourceFile, ts.SyntaxKind.Identifier);
+    const change = insertAfterLastOccurrence(
+      nodes,
+      ' /* inserted */',
+      '/test.ts',
+      0
+    );
+
+    expect(change).toBeInstanceOf(InsertChange);
+    expect((change as InsertChange).toAdd).toBe(' /* inserted */');
+  });
+});
+
+describe('getContentOfKeyLiteral', () => {
+  it('returns identifier text and string literal values', () => {
+    const sourceFile = parse('const demo = { foo: "bar" };');
+
+    const identifiers = findNodes(sourceFile, ts.SyntaxKind.Identifier);
+    const property = identifiers.find(
+      (node) => node.getText(sourceFile) === 'foo'
+    );
+    const stringLiteral = findNodes(sourceFile, ts.SyntaxKind.StringLiteral)[0];
+
+    expect(getContentOfKeyLiteral(sourceFile, property!)).toBe('foo');
+    expect(getContentOfKeyLiteral(sourceFile, stringLiteral)).toBe('bar');
+  });
+});
+
+describe('containsProperty', () => {
+  it('detects whether an object literal has a property', () => {
+    const sourceFile = parse('const obj = { present: true };');
+    const objectLiteral = findNodes(
+      sourceFile,
+      ts.SyntaxKind.ObjectLiteralExpression
+    )[0] as ts.ObjectLiteralExpression;
+
+    expect(containsProperty(objectLiteral, 'present')).toBe(true);
+    expect(containsProperty(objectLiteral, 'missing')).toBe(false);
+  });
+});

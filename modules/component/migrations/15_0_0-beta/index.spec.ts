@@ -9,7 +9,7 @@ import { createPackageJson } from '@ngrx/schematics-core/testing/create-package'
 import { waitForAsync } from '@angular/core/testing';
 
 describe('Component Migration 15_0_0-beta', () => {
-  let appTree: UnitTestTree;
+  let appTree = new UnitTestTree(Tree.empty());
   const collectionPath = path.join(
     process.cwd(),
     'dist/modules/component/migrations/migration.json'
@@ -159,11 +159,13 @@ describe('Component Migration 15_0_0-beta', () => {
   });
 
   describe('imports and usages', () => {
-    const runMigration = async (input: string) => {
+    const runMigration = async (
+      input: string
+    ): Promise<{ file: string; logs: logging.LogEntry[] }> => {
       appTree.create('./main.ts', input);
       const runner = new SchematicTestRunner('schematics', collectionPath);
       const logs: logging.LogEntry[] = [];
-      runner.logger.subscribe((entry) => logs.push(entry));
+      runner.logger.subscribe((entry: logging.LogEntry) => logs.push(entry));
       const newTree = await runner.runSchematic(
         `ngrx-${pkgName}-migration-15-beta`,
         {},

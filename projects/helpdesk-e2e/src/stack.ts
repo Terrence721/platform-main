@@ -76,18 +76,14 @@ export default async function stack(
     return undefined;
   }
   const baseUrl = String(config.projects[0].use.baseURL);
-  // Something there already would be tested instead, with its old data.
-  if (await answers(baseUrl)) {
-    throw new Error(
-      `A help desk already answers at ${baseUrl}. Stop it ` +
-        '(docker compose --profile full down --volumes) or set ' +
-        'E2E_BASE_URL to test it as it is.'
-    );
-  }
-
+  // Let any stack already answering here be put away first, so a run always
+  // starts from a fresh seed instead of refusing to start.
   const down = () => {
     compose('down', '--volumes');
   };
+  if (await answers(baseUrl)) {
+    down();
+  }
   // A run cut short (a crash, a reboot) can leave stopped containers and its
   // database behind. The API seeds only a database with no users, so the
   // tests would run on what that run changed: clear it first (#1286).

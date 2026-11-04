@@ -2,9 +2,12 @@ import type { TSESLint, TSESTree } from '@typescript-eslint/utils';
 import { Linter } from 'eslint';
 import { parser } from 'typescript-eslint';
 import {
+  capitalize,
+  escapeText,
   getImportAddFix,
   getImportDeclarations,
   getImportRemoveFix,
+  getLast,
   getNgRxStores,
   getRawText,
   isVariableOfClass,
@@ -178,5 +181,33 @@ describe('getRawText', () => {
 
   it('has no text for a template literal with expressions', () => {
     expect(rawKey('({ [`fooReducer${x}`]: 1 })')).toEqual(['null']);
+  });
+});
+
+describe('capitalize', () => {
+  it('upper-cases the first character and leaves the rest unchanged', () => {
+    expect(capitalize('store')).toBe('Store');
+    expect(capitalize('Store')).toBe('Store');
+  });
+});
+
+describe('getLast', () => {
+  it('returns the last item of a non-empty array', () => {
+    expect(getLast([1, 2, 3])).toBe(3);
+    expect(getLast(['single'])).toBe('single');
+  });
+
+  it('returns undefined for an empty array', () => {
+    expect(getLast([])).toBeUndefined();
+  });
+});
+
+describe('escapeText', () => {
+  it('escapes regex metacharacters', () => {
+    expect(escapeText('a.b*c?d')).toBe('a\\.b\\*c\\?d');
+  });
+
+  it('leaves ordinary text unchanged', () => {
+    expect(escapeText('Store')).toBe('Store');
   });
 });

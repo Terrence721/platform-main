@@ -41,6 +41,8 @@
     "nx/brace-expansion": "^5.0.12",
     "nx/axios": "^1.20.0",
     "nx/undici": "^7.30.1",
+    "jsdom/undici": "^8.12.2",
+    "node-gyp/undici": "^8.12.2",
     "compare-func/dot-prop": "^4.2.1",
     "xmlbuilder2/js-yaml": "^4.3.2",
     "qs": "^6.17.1",

@@ -83,15 +83,28 @@ jobs:
     name: Record deployment intent
     runs-on: ubuntu-latest
     needs: publish
+    environment:
+      name: production
+      url: ${{ github.event.inputs.deploy_url }}
     steps:
       - name: Produce the deployment summary
         run: |
           echo "Deploy the API and app images with the tag above."
           echo "Run database migrations as a controlled step:"
-          echo "  yarn db:generate"
           echo "  yarn db:migrate"
           echo "Then smoke-test /api/health."
+          echo "Run yarn deploy:verify with DEPLOY_URL set to the deployed base URL."
           echo "Roll back by redeploying the previous published tag."
+      - name: Verify the deployed health endpoint
+        if: ${{ github.event.inputs.deploy_url != '' }}
+        run: |
+          for attempt in $(seq 1 30); do
+            if curl -fsS "${{ github.event.inputs.deploy_url }}/api/health"; then
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
 
   smoke:
     name: Post-deploy smoke test

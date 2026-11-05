@@ -35,7 +35,7 @@ jobs:
         run: >
           docker run --rm
           -v /var/run/docker.sock:/var/run/docker.sock
-          aquasecurity/trivy:0.56.2
+          aquasec/trivy:0.56.2
           image --exit-code 1 --severity HIGH,CRITICAL
           helpdesk-api:ci
 
@@ -46,6 +46,6 @@ jobs:
         run: >
           docker run --rm
           -v /var/run/docker.sock:/var/run/docker.sock
-          aquasecurity/trivy:0.56.2
+          aquasec/trivy:0.56.2
           image --exit-code 1 --severity HIGH,CRITICAL
           helpdesk-app:ci

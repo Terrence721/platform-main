@@ -1,0 +1,37 @@
+# TLS-terminating reverse proxy for the Helpdesk.
+#
+# Use it beside compose.yaml (and compose.production.yaml in production):
+#
+#   docker compose -f compose.yaml -f compose.production.yaml \
+#     -f compose.tls.yaml up --build -d
+#
+# Caddy provisions certificates for DOMAIN and renews them; the app container
+# is reached on Compose's private network and is not published itself.
+services:
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:80/']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  app:
+    # The proxy reaches the app on the Compose network; do not publish it.
+    ports: []
+
+volumes:
+  caddy_data:
+  caddy_config:

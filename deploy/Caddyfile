@@ -1,0 +1,12 @@
+# TLS-terminating reverse proxy for the Helpdesk app (#production). Caddy
+# provisions and renews certificates automatically when DOMAIN is a public
+# name; for localhost it serves the built-in local-dev certificate.
+{$DOMAIN:localhost} {
+	reverse_proxy app:8080
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+}

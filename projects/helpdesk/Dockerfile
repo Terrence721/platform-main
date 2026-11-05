@@ -38,6 +38,11 @@ FROM public.ecr.aws/nginx/nginx-unprivileged:alpine
 COPY projects/helpdesk/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /repo/dist/projects/helpdesk/browser /usr/share/nginx/html
 EXPOSE 8080
+# Patch OS packages (expat etc.) in the final image before dropping
+# privileges, so the security scan does not flag already-fixed CVEs.
+USER root
+RUN apk upgrade --no-cache
+USER 101
 # 127.0.0.1, not localhost: inside the container localhost is IPv6 (::1),
 # and nginx.conf listens on IPv4 only.
 HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=3 \

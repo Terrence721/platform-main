@@ -9,6 +9,8 @@ import { TeamsModule } from '../teams/teams.module';
 import { TicketsModule } from '../tickets/tickets.module';
 import { UsersModule } from '../users/users.module';
 import { HealthController } from './health.controller';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { AuditInterceptor } from '../audit/audit.interceptor';
 
 /**
  * The Helpdesk API's root module. The database connection is shared by
@@ -33,5 +35,6 @@ import { HealthController } from './health.controller';
     AttachmentsModule,
   ],
   controllers: [HealthController],
+  providers: [{ provide: APP_INTERCEPTOR, useClass: AuditInterceptor }],
 })
 export class AppModule {}

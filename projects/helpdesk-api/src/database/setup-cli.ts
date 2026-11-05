@@ -20,8 +20,12 @@ async function main(): Promise<void> {
   const pool = new Pool({ connectionString: databaseUrl() });
   try {
     const database = drizzle(pool);
-    await migrate(database, { migrationsFolder: MIGRATIONS });
-    console.log('Migrations applied.');
+    if (process.env['HELPDESK_MIGRATE'] !== 'false') {
+      await migrate(database, { migrationsFolder: MIGRATIONS });
+      console.log('Migrations applied.');
+    } else {
+      console.log('Migrations skipped (HELPDESK_MIGRATE=false).');
+    }
 
     if (process.env['HELPDESK_SEED'] !== 'true') {
       return;

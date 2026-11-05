@@ -180,6 +180,16 @@ jobs:
       # (#1318, #1322). Listed from each Dockerfile's FROM lines and from
       # compose.yaml, so a change there is followed. The build below then
       # uses these copies.
+      - name: Use the local environment defaults
+        run: |
+          cp .env.example .env
+          printf 'HELPDESK_JWT_SECRET=%s\n' "$(openssl rand -base64 32)" >> .env
+          # Docker Compose reads .env, but export it as well so the required
+          # variables are visible even when interpolation runs late.
+          set -a
+          . ./.env
+          set +a
+
       - name: Pull the base images
         run: |
           images=$( (grep -hoP '^FROM \K\S+' projects/helpdesk/Dockerfile projects/helpdesk-api/Dockerfile; docker compose config --images) | grep / | sort -u)
@@ -204,16 +214,6 @@ jobs:
       # once all three report healthy (the API after migrating and seeding).
       # ClamAV comes up too (the scan profile), so the e2e suite can exercise
       # the virus scan (#1293); HELPDESK_CLAMAV_HOST points the API at it.
-      - name: Use the local environment defaults
-        run: |
-          cp .env.example .env
-          printf 'HELPDESK_JWT_SECRET=%s\n' "$(openssl rand -base64 32)" >> .env
-          # Docker Compose reads .env, but export it as well so the required
-          # variables are visible even when interpolation runs late.
-          set -a
-          . ./.env
-          set +a
-
       - name: Build and start the whole help desk
         run: docker compose --profile full --profile scan up --build --detach --wait
         env:

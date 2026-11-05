@@ -196,6 +196,7 @@ jobs:
         run: |
           cp .env.example .env
           printf 'HELPDESK_JWT_SECRET=%s\n' "$(openssl rand -base64 32)" >> .env
+          printf 'HELPDESK_SEED_PASSWORD=%s\n' "$(openssl rand -base64 24)" >> .env
           # Docker Compose reads .env, but export it as well so the required
           # variables are visible even when interpolation runs late.
           set -a

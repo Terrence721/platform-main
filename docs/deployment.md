@@ -184,6 +184,15 @@ confirming Angular and Material no longer require it.
 - Keep the database and app as single instances unless the shared limiters
   above have been exercised.
 
+## First deployment checklist
+
+- Set `HELPDESK_SEED=false` and provide `HELPDESK_BOOTSTRAP_ADMIN_USER_ID`
+  and `HELPDESK_BOOTSTRAP_ADMIN_PASSWORD` for the initial administrator.
+- Provide all real secrets (JWT, DB, seed/bootstrap password) from a
+  secret manager.
+- Run migrations, verify `/api/health`, and store the first backup.
+- Confirm restore drills against the rotated secrets after the first deploy.
+
 ## Operator responsibilities
 
 - Terminate TLS in the reverse proxy or load balancer in front of the app;

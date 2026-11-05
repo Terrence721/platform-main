@@ -60,8 +60,11 @@ services:
       CLAMAV_HOST: ${HELPDESK_CLAMAV_HOST:-}
       # The database by its name on Compose's own network.
       DATABASE_URL: postgres://${HELPDESK_DB_USER:-helpdesk}:${HELPDESK_DB_PASSWORD:?Set HELPDESK_DB_PASSWORD (copy .env.example to .env; never reuse the development value in production)}@db:5432/${HELPDESK_DB_NAME:-helpdesk}
-      # Seeds an empty database on first start; restarts keep the data.
-      HELPDESK_SEED: 'true'
+      # Seeds an empty database on first start; restarts keep the data. Defaults
+      # to on for a fresh stack; set HELPDESK_SEED=false in .env (or in the
+      # environment) once the database is seeded, so a later wipe does not
+      # silently bring back demo data in a long-running deployment.
+      HELPDESK_SEED: ${HELPDESK_SEED:-true}
       HELPDESK_SEED_PASSWORD: ${HELPDESK_SEED_PASSWORD:?Set HELPDESK_SEED_PASSWORD (copy .env.example to .env; never reuse the development value in production)}
       # Unset by default: the API then signs sessions with a random secret
       # made at each start (it refuses the published development one).

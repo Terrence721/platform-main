@@ -182,10 +182,11 @@ export class RedisRequestLimits implements RequestLimiter {
   async send(address: string): Promise<void> {
     const key = redisKey('sends', address);
     const now = Date.now();
-    let recent: number[] = [];
     try {
       const values = await this.redis.lrange(key, 0, -1);
-      recent = values.map(Number).filter((at) => at > now - SEND_WINDOW_MS);
+      const recent = values
+        .map(Number)
+        .filter((at) => at > now - SEND_WINDOW_MS);
       if (recent.length >= MAX_SENDS) {
         const until = recent[recent.length - MAX_SENDS] + SEND_WINDOW_MS;
         throw new TooManyRequestsException(

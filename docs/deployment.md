@@ -10,6 +10,8 @@ docker compose -f compose.yaml -f compose.production.yaml up --build -d
 
 ## Requirements
 
+- Set `NODE_ENV=production`; cookie `Secure` and several production-only
+  checks depend on it.
 - Set `HELPDESK_DB_PASSWORD`, `HELPDESK_DB_USER`, `HELPDESK_DB_NAME` and
   `HELPDESK_JWT_SECRET` before starting; they have no development defaults
   in this override.

@@ -208,6 +208,11 @@ jobs:
         run: |
           cp .env.example .env
           printf 'HELPDESK_JWT_SECRET=%s\n' "$(openssl rand -base64 32)" >> .env
+          # Docker Compose reads .env, but export it as well so the required
+          # variables are visible even when interpolation runs late.
+          set -a
+          . ./.env
+          set +a
 
       - name: Build and start the whole help desk
         run: docker compose --profile full --profile scan up --build --detach --wait

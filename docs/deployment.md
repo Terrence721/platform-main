@@ -65,6 +65,25 @@ Rollback:
 2. Restore the pre-deployment database backup.
 3. Confirm `/api/health` and a sign-in.
 
+## Secret management
+
+Production should inject secrets at runtime rather than from `.env`:
+
+- Store `HELPDESK_DB_PASSWORD`, `HELPDESK_SEED_PASSWORD`, and
+  `HELPDESK_JWT_SECRET` in a secret manager.
+- Mount or inject them into the API container as environment variables.
+- Rotate `HELPDESK_JWT_SECRET` deliberately; rotation signs everyone out.
+- Keep `HELPDESK_SEED_PASSWORD` out of the image and CI logs.
+
+Example Compose convention:
+
+```shell
+docker compose -f compose.yaml -f compose.production.yaml up -d
+```
+
+In Kubernetes, use a Secret or external secret provider and mount it as
+environment variables.
+
 ## Observability and SLOs
 
 - Nginx emits JSON access logs with request time, status, upstream, and

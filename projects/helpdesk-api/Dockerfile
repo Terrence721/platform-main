@@ -43,6 +43,7 @@ RUN corepack enable \
     'enableImmutableInstalls: false' 'enableTelemetry: false' > .yarnrc.yml \
   && yarn install \
   && rm -rf .yarn .yarnrc.yml yarn.lock /root/.cache /root/.yarn
+RUN npm install -g npm@latest --silent
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=10s --timeout=3s --start-period=30s --retries=3 \

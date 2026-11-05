@@ -1,0 +1,22 @@
+# Production override for the Helpdesk stack.
+#
+# Use it beside compose.yaml:
+#
+#   docker compose -f compose.yaml -f compose.production.yaml up --build -d
+#
+# It keeps the database and API off the host (they are still reachable on
+# Compose's private network) and leaves TLS to a reverse proxy or load
+# balancer in front of the app. No database or API port should be
+# published in production.
+services:
+  db:
+    ports: []
+
+  api:
+    ports: []
+
+  app:
+    # Expose the app's nginx behind TLS termination owned by the proxy or
+    # load balancer in front of it.
+    ports:
+      - '80:8080'

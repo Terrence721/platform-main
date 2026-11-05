@@ -1,6 +1,4 @@
 import { SESSION_HOURS } from '@helpdesk/contract';
-import { Logger } from '@nestjs/common';
-import { randomBytes } from 'crypto';
 
 /**
  * The sign-in secret for local development only. It is published in this
@@ -18,11 +16,11 @@ export const SESSION_COOKIE = 'helpdesk_session';
 export const SESSION_MS = SESSION_HOURS * 60 * 60 * 1000;
 
 /**
- * The secret JWTs are signed with: HELPDESK_JWT_SECRET, or, when it is not
- * set, the development one. In production (NODE_ENV=production, as in the
- * Docker image) an unset secret is instead a random one made at start-up,
- * so sessions end when the API restarts; and the published development
- * secret, or one shorter than 32 characters, stops the API from starting.
+ * The secret JWTs are signed with: HELPDEASK_JWT_SECRET, or, when it is not
+ * set outside production, the development one. In production
+ * (NODE_ENV=production, as in the Docker image) HELPDESK_JWT_SECRET must be
+ * set, and the published development secret, or one shorter than 32
+ * characters, stops the API from starting.
  */
 export function jwtSecret(env: NodeJS.ProcessEnv = process.env): string {
   const secret = env['HELPDESK_JWT_SECRET'];
@@ -30,12 +28,10 @@ export function jwtSecret(env: NodeJS.ProcessEnv = process.env): string {
     return secret || DEV_JWT_SECRET;
   }
   if (!secret) {
-    new Logger('Auth').warn(
-      'HELPDESK_JWT_SECRET is not set: signing sessions with a random ' +
-        'secret, so everyone is signed out when the API restarts. Set a ' +
-        'long, random one to keep sessions across restarts.'
+    throw new Error(
+      'HELPDESK_JWT_SECRET must be set in production: sessions would be ' +
+        'signed with a random secret that changes on every restart.'
     );
-    return randomBytes(MIN_JWT_SECRET_LENGTH).toString('base64url');
   }
   if (secret === DEV_JWT_SECRET) {
     throw new Error(

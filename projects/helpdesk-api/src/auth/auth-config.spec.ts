@@ -34,16 +34,10 @@ describe('jwtSecret', () => {
     ).toBe(secret);
   });
 
-  it('creates a random secret when production has none', () => {
-    const onError = vi
-      .spyOn(console, 'warn')
-      .mockImplementation(() => undefined);
-
-    const secret = jwtSecret({ NODE_ENV: 'production' });
-
-    expect(secret).not.toBe('helpdesk-dev-only-jwt-secret');
-    expect(secret.length).toBeGreaterThanOrEqual(32);
-    onError.mockRestore();
+  it('requires HELPDESK_JWT_SECRET in production', () => {
+    expect(() => jwtSecret({ NODE_ENV: 'production' })).toThrow(
+      'HELPDESK_JWT_SECRET must be set in production'
+    );
   });
 });
 

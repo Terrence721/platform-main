@@ -73,11 +73,19 @@ export default async function stack(
     config.projects[0].use.baseURL = fallback;
   }
   const baseUrl = String(config.projects[0].use.baseURL);
-  // The container image runs in production, where HELPDESK_JWT_SECRET must be
-  // set; a run that has none generates a throw-away one so the stack starts
-  // without requiring the developer to edit .env (#1105).
+  // The container image runs in production, where HELPDESK_JWT_SECRET must
+  // be set; a run that has none generates a throw-away one so the stack
+  // starts without requiring the developer to edit .env (#1105).
   if (!process.env['HELPDESK_JWT_SECRET']) {
     process.env['HELPDESK_JWT_SECRET'] = randomBytes(32).toString('base64url');
+  }
+  // Likewise, the published development seed password is rejected by the
+  // production image; generate a per-run one when none is configured.
+  if (
+    !process.env['HELPDESK_SEED_PASSWORD'] ||
+    process.env['HELPDESK_SEED_PASSWORD'] === 'helpdesk-dev-only'
+  ) {
+    process.env['HELPDESK_SEED_PASSWORD'] = randomBytes(16).toString('hex');
   }
   // Let any stack already answering here be put away first, so a run always
   // starts from a fresh seed instead of refusing to start.

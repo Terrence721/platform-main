@@ -76,6 +76,12 @@ export function stackFor(
       process.env['HELPDESK_JWT_SECRET'] ||
       randomBytes(32).toString('base64url');
     process.env['HELPDESK_JWT_SECRET'] = jwtSecret;
+    const seedPassword =
+      process.env['HELPDESK_SEED_PASSWORD'] &&
+      process.env['HELPDESK_SEED_PASSWORD'] !== 'helpdesk-dev-only'
+        ? process.env['HELPDESK_SEED_PASSWORD']
+        : randomBytes(16).toString('hex');
+    process.env['HELPDESK_SEED_PASSWORD'] = seedPassword;
     return [
       {
         name: scan ? 'helpdesk (Docker, virus scan on)' : 'helpdesk (Docker)',

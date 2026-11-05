@@ -84,6 +84,24 @@ docker compose -f compose.yaml -f compose.production.yaml up -d
 In Kubernetes, use a Secret or external secret provider and mount it as
 environment variables.
 
+## Content Security Policy rollout
+
+The app currently sends `frame-ancestors 'none'` in an enforced
+`Content-Security-Policy` and a broader report-only policy as
+`Content-Security-Policy-Report-Only`.
+
+Before enforcing the full policy:
+
+1. Add a report endpoint or connect browser reports to monitoring.
+2. Exercise the real app, including scripts, styles, images, fonts,
+   live updates and customer-uploaded previews.
+3. Review violations and remove false positives.
+4. Replace the report-only header with the enforced policy.
+
+Where the enforced policy becomes the app-blocking header, the
+`'unsafe-inline'` in `style-src` should be removed only after
+confirming Angular and Material no longer require it.
+
 ## Observability and SLOs
 
 - Nginx emits JSON access logs with request time, status, upstream, and

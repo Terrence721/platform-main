@@ -30,6 +30,17 @@ async function main(): Promise<void> {
     if (process.env['HELPDESK_SEED'] !== 'true') {
       return;
     }
+    const seedPassword =
+      process.env['HELPDESK_SEED_PASSWORD'] || DEFAULT_SEED_PASSWORD;
+    if (
+      process.env['NODE_ENV'] === 'production' &&
+      seedPassword === DEFAULT_SEED_PASSWORD
+    ) {
+      throw new Error(
+        'HELPDESK_SEED_PASSWORD must be set in production; the published ' +
+          'development password cannot be used to seed.'
+      );
+    }
     const [{ existing }] = await database
       .select({ existing: count() })
       .from(users);
@@ -37,9 +48,7 @@ async function main(): Promise<void> {
       console.log('Already seeded; leaving the data as it is.');
       return;
     }
-    const summary = await seedDatabase(database, {
-      password: process.env['HELPDESK_SEED_PASSWORD'] || DEFAULT_SEED_PASSWORD,
-    });
+    const summary = await seedDatabase(database, { password: seedPassword });
     console.log(
       `Seeded ${summary.users} users, ${summary.tickets} tickets and ` +
         `${summary.messages} messages.`

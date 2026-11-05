@@ -20,3 +20,11 @@ services:
     # load balancer in front of it.
     ports:
       - '80:8080'
+
+  clamav:
+    deploy:
+      resources:
+        limits:
+          memory: 1.5g
+        reservations:
+          memory: 1g

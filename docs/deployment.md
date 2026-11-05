@@ -107,6 +107,15 @@ environment variables.
 - Sticky sessions are not sufficient: counters and buckets must be
   shared rather than per-process.
 
+## Edge and ClamAV notes
+
+- Put nginx behind a WAF or load balancer and rate-limit the public routes
+  and file uploads there.
+- Keep the ClamAV profile on only where uploads are scanned; give it at
+  least 1 GB of memory and the 5-minute startup period in compose.yaml.
+- Confirm ClamAV health before a deploy that relies on scanning.
+- Tune upload-size and part limits together with the API's multer config.
+
 ## Operational notes
 
 - The database volume is `helpdesk-db`; back it up before upgrades.

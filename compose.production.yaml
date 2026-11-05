@@ -10,7 +10,14 @@
 # published in production.
 services:
   db:
+    restart: unless-stopped
     ports: []
+
+  api:
+    restart: unless-stopped
+
+  app:
+    restart: unless-stopped
 
   api:
     ports: []

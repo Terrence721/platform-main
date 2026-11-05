@@ -1,0 +1,51 @@
+name: Container security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  scan:
+    name: Scan container images
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: '.node-version'
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Build the API image
+        run: docker build -f projects/helpdesk-api/Dockerfile -t helpdesk-api:ci .
+
+      - name: Scan the API image
+        run: >
+          docker run --rm
+          -v /var/run/docker.sock:/var/run/docker.sock
+          aquasecurity/trivy:0.56.2
+          image --exit-code 1 --severity HIGH,CRITICAL
+          helpdesk-api:ci
+
+      - name: Build the app image
+        run: docker build -f projects/helpdesk/Dockerfile -t helpdesk-app:ci .
+
+      - name: Scan the app image
+        run: >
+          docker run --rm
+          -v /var/run/docker.sock:/var/run/docker.sock
+          aquasecurity/trivy:0.56.2
+          image --exit-code 1 --severity HIGH,CRITICAL
+          helpdesk-app:ci

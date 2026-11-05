@@ -30,8 +30,11 @@ jobs:
             -h localhost -U helpdesk -d helpdesk-drill \
             -Fc --no-owner --no-privileges -f helpdesk-drill.dump
 
-          createdb -h localhost -U helpdesk -p 5432 helpdesk-drill-restore \
-            || true
+          PGPASSWORD=helpdesk-drill-password psql \
+            -h localhost -U helpdesk -p 5432 -d postgres \
+            -c 'DROP DATABASE IF EXISTS "helpdesk-drill-restore";' \
+            -c 'CREATE DATABASE "helpdesk-drill-restore";'
+
           PGPASSWORD=helpdesk-drill-password pg_restore \
             --clean --if-exists --no-owner --no-privileges \
             -h localhost -U helpdesk -d helpdesk-drill-restore \

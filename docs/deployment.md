@@ -27,6 +27,44 @@ docker compose -f compose.yaml -f compose.production.yaml up --build -d
   scaling.
 - Keep ClamAV behind the proxy/network; it is not publicly exposed.
 
+## Database operations
+
+Back up the database before deploys and upgrades:
+
+```shell
+pg_dump -Fc --no-owner --no-privileges \
+  "$DATABASE_URL" \
+  -f "helpdesk-$(date +%Y%m%dT%H%M%S).dump"
+```
+
+Restore test the backup in staging before relying on it:
+
+```shell
+pg_restore --clean --if-exists --no-owner --no-privileges \
+  -d "$DATABASE_URL" helpdesk-*.dump
+```
+
+Within Docker Compose, run the same commands against the `db` service:
+
+```shell
+docker compose exec -T db pg_dump -Fc --no-owner --no-privileges \
+  -U "$POSTGRES_USER" -d "$POSTGRES_DB" > helpdesk.dump
+```
+
+Migration workflow:
+
+1. Change the Drizzle schema.
+2. Run `yarn db:generate`, which compares the schema with the last snapshot.
+3. Commit the generated migration and snapshot.
+4. CI checks that the source tree is unchanged after generation.
+5. Deploy code and migration together.
+
+Rollback:
+
+1. Deploy the previous application image.
+2. Restore the pre-deployment database backup.
+3. Confirm `/api/health` and a sign-in.
+
 ## Operational notes
 
 - The database volume is `helpdesk-db`; back it up before upgrades.

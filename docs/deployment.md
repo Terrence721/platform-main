@@ -165,6 +165,18 @@ confirming Angular and Material no longer require it.
 - Confirm ClamAV health before a deploy that relies on scanning.
 - Tune upload-size and part limits together with the API's multer config.
 
+## Production deployment validation
+
+- Exercise the TLS override before relying on it:
+  `docker compose -f compose.yaml -f compose.production.yaml -f compose.tls.yaml up --build -d`
+  with `DOMAIN` set to a real name, then confirm Caddy receives a
+  certificate and the app loads over HTTPS.
+- For horizontal scaling, run two API containers against one Redis instance:
+  `REDIS_URL=redis://redis:6379 docker compose --profile full --profile cache up --scale api=2 --build`
+  and verify shared sign-in and request limits hold across both.
+- Keep the database and app as single instances unless the shared limiters
+  above have been exercised.
+
 ## Operator responsibilities
 
 - Terminate TLS in the reverse proxy or load balancer in front of the app;

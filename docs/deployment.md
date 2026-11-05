@@ -122,6 +122,31 @@ confirming Angular and Material no longer require it.
   least 30 days.
 - Add metrics and tracing for the NestJS API before high-scale use.
 
+## Dependency updates
+
+- The lockfile (`yarn.lock`) is the source of truth; builds install with
+  `--immutable`, so update dependencies by editing `package.json` and
+  regenerating the lockfile, then commit both together.
+- Keep module-to-module version ranges in sync (`yarn check:versions`).
+- Review security advisories from Dependabot and the container-security
+  workflow before merging dependency PRs; upgrade Node and base images
+  consciously, as major versions change behaviour.
+
+## Secret rotation runbooks
+
+`HELPDESK_JWT_SECRET`: generating a new value signs every session out.
+
+1. Generate a long random value (`openssl rand -base64 48`).
+2. Store it in the secret manager.
+3. Update the value and restart the API; users sign in again.
+4. Keep the previous value only long enough to finish a rollback.
+
+`HELPDESK_DB_PASSWORD` and `HELPDESK_SEED_PASSWORD`:
+
+1. Rotate in the secret manager first.
+2. Update the database role (`ALTER USER ... PASSWORD`) and restart the API.
+3. Keep `HELPDESK_SEED=false`, so a later restart does not re-seed.
+
 ## Scaling notes
 
 - The API is currently a single-instance service: `SignInLimits` keeps

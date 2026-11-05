@@ -8,6 +8,7 @@ import { AuthService } from './auth.service';
 import {
   FAILED_SIGN_IN_WINDOW_MS,
   MAX_FAILED_SIGN_INS,
+  InMemorySignInLimits,
   SignInLimits,
 } from './sign-in-limits';
 
@@ -36,7 +37,10 @@ describe('/api/auth', () => {
   beforeEach(async () => {
     const moduleRef = await Test.createTestingModule({
       controllers: [AuthController],
-      providers: [{ provide: AuthService, useValue: fakeAuth }, SignInLimits],
+      providers: [
+        { provide: AuthService, useValue: fakeAuth },
+        { provide: SignInLimits, useClass: InMemorySignInLimits },
+      ],
     }).compile();
     app = moduleRef.createNestApplication({ logger: false });
     // As main.ts sets the app up.

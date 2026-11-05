@@ -26,21 +26,28 @@ jobs:
     steps:
       - name: Create and restore a test backup
         run: |
-          PGPASSWORD=helpdesk-drill-password pg_dump \
-            -h localhost -U helpdesk -d helpdesk-drill \
-            -Fc --no-owner --no-privileges -f helpdesk-drill.dump
+          run_pg() {
+            docker run --rm --network host \
+              -v "$GITHUB_WORKSPACE:/work" \
+              -e PGPASSWORD=helpdesk-drill-password \
+              public.ecr.aws/docker/library/postgres:18-alpine "$@"
+          }
 
-          PGPASSWORD=helpdesk-drill-password psql \
+          run_pg pg_dump \
+            -h localhost -U helpdesk -d helpdesk-drill \
+            -Fc --no-owner --no-privileges -f /work/helpdesk-drill.dump
+
+          run_pg psql \
             -h localhost -U helpdesk -p 5432 -d postgres \
             -c 'DROP DATABASE IF EXISTS "helpdesk-drill-restore";' \
             -c 'CREATE DATABASE "helpdesk-drill-restore";'
 
-          PGPASSWORD=helpdesk-drill-password pg_restore \
+          run_pg pg_restore \
             --clean --if-exists --no-owner --no-privileges \
             -h localhost -U helpdesk -d helpdesk-drill-restore \
-            helpdesk-drill.dump
+            /work/helpdesk-drill.dump
 
-          PGPASSWORD=helpdesk-drill-password psql \
+          run_pg psql \
             -h localhost -U helpdesk -d helpdesk-drill-restore \
             -c "SELECT 1;" >/dev/null
 

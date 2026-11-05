@@ -54,6 +54,26 @@ async function main(): Promise<void> {
       }
     }
 
+    // Production deployments need at least one administrator: either the demo
+    // seed or a one-time bootstrap account. Fail fast instead of starting with
+    // a database nobody can sign in to.
+    if (
+      process.env['NODE_ENV'] === 'production' &&
+      process.env['HELPDESK_SEED'] !== 'true' &&
+      !(bootstrapUserId && bootstrapPassword)
+    ) {
+      const [{ existingUsers }] = await database
+        .select({ existingUsers: count() })
+        .from(users);
+      if (!existingUsers) {
+        throw new Error(
+          'No administrator is provisioned: set HELPDESK_SEED=true for the ' +
+            'first deployment seed, or HELPDESK_BOOTSTRAP_ADMIN_USER_ID and ' +
+            'HELPDESK_BOOTSTRAP_ADMIN_PASSWORD. See docs/deployment.md.'
+        );
+      }
+    }
+
     if (process.env['HELPDESK_SEED'] !== 'true') {
       return;
     }

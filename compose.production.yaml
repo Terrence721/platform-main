@@ -15,6 +15,10 @@ services:
 
   api:
     restart: unless-stopped
+    environment:
+      # Production defaults to no demo seed. Set HELPDESK_SEED=true on the
+      # first deployment if you want the demo users, then back to false.
+      HELPDESK_SEED: ${HELPDESK_SEED:-false}
 
   app:
     restart: unless-stopped

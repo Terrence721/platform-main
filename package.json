@@ -32,7 +32,8 @@
     "lint": "nx run-many --target=lint --all",
     "spell": "cspell --no-progress --gitignore \"**/*\"",
     "eslint-plugin:update": "npx tsx modules/eslint-plugin/scripts/generate-config.ts",
-    "postinstall": "husky"
+    "postinstall": "husky",
+    "deploy:verify": "npx tsx scripts/verify-deployment.ts"
   },
   "engines": {
     "node": "^22.22.3 || ^24.15.0 || >=26.0.0",

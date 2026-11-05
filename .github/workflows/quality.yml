@@ -234,10 +234,13 @@ jobs:
 
       - name: Check the API answers and the seed signs in
         run: |
+          set -a
+          . ./.env
+          set +a
           curl --fail --silent http://localhost:3000/api/health
           curl --fail --silent --output /dev/null \
             --header 'content-type: application/json' \
-            --data '{"userId":"sam.rivera","password":"helpdesk-dev-only"}' \
+            --data "{\"userId\":\"sam.rivera\",\"password\":\"${HELPDESK_SEED_PASSWORD}\"}" \
             http://localhost:3000/api/auth/sign-in
 
       # The app's page from nginx, and the API through nginx's /api

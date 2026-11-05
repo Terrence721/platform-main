@@ -205,7 +205,9 @@ jobs:
       # ClamAV comes up too (the scan profile), so the e2e suite can exercise
       # the virus scan (#1293); HELPDESK_CLAMAV_HOST points the API at it.
       - name: Use the local environment defaults
-        run: cp .env.example .env
+        run: |
+          cp .env.example .env
+          printf 'HELPDESK_JWT_SECRET=%s\n' "$(openssl rand -base64 32)" >> .env
 
       - name: Build and start the whole help desk
         run: docker compose --profile full --profile scan up --build --detach --wait

@@ -4,17 +4,17 @@ import {
   MAX_FAILED_SIGN_INS,
   MAX_SIGN_INS_AT_ONCE,
   MAX_SIGN_INS_WAITING,
-  SignInLimits,
+  InMemorySignInLimits,
 } from './sign-in-limits';
 
 describe('SignInLimits', () => {
-  let limits: SignInLimits;
+  let limits: InMemorySignInLimits;
   let now: number;
 
   beforeEach(() => {
     now = Date.UTC(2026, 9, 7, 12);
     vi.spyOn(Date, 'now').mockImplementation(() => now);
-    limits = new SignInLimits();
+    limits = new InMemorySignInLimits();
   });
 
   afterEach(() => {

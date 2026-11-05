@@ -1,5 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
-import { existsSync } from 'fs';
+import { copyFileSync, existsSync } from 'fs';
 import { join } from 'path';
 
 // The help desk end to end (#986): the real app, API and PostgreSQL, run
@@ -19,6 +19,10 @@ const output = join(
 // .env (copied from .env.example) can move the app off 8088; Docker
 // Compose reads the same file, so both agree.
 const envFile = join(repoRoot, '.env');
+const envExample = join(repoRoot, '.env.example');
+if (!existsSync(envFile) && existsSync(envExample)) {
+  copyFileSync(envExample, envFile);
+}
 if (existsSync(envFile)) {
   process.loadEnvFile(envFile);
 }

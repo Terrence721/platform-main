@@ -204,6 +204,9 @@ jobs:
       # once all three report healthy (the API after migrating and seeding).
       # ClamAV comes up too (the scan profile), so the e2e suite can exercise
       # the virus scan (#1293); HELPDESK_CLAMAV_HOST points the API at it.
+      - name: Use the local environment defaults
+        run: cp .env.example .env
+
       - name: Build and start the whole help desk
         run: docker compose --profile full --profile scan up --build --detach --wait
         env:

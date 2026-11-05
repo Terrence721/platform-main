@@ -25,7 +25,7 @@ services:
     environment:
       POSTGRES_DB: ${HELPDESK_DB_NAME:-helpdesk}
       POSTGRES_USER: ${HELPDESK_DB_USER:-helpdesk}
-      POSTGRES_PASSWORD: ${HELPDESK_DB_PASSWORD:-helpdesk-dev-only}
+      POSTGRES_PASSWORD: ${HELPDESK_DB_PASSWORD:?Set HELPDESK_DB_PASSWORD (copy .env.example to .env; never reuse the development value in production)}
     ports:
       # localhost only: the database is not reachable from other machines.
       # 5435, not PostgreSQL's usual 5432, so it can run beside other local
@@ -59,10 +59,10 @@ services:
       # (`yarn start:helpdesk:docker:scan` sets it); empty, it is off.
       CLAMAV_HOST: ${HELPDESK_CLAMAV_HOST:-}
       # The database by its name on Compose's own network.
-      DATABASE_URL: postgres://${HELPDESK_DB_USER:-helpdesk}:${HELPDESK_DB_PASSWORD:-helpdesk-dev-only}@db:5432/${HELPDESK_DB_NAME:-helpdesk}
+      DATABASE_URL: postgres://${HELPDESK_DB_USER:-helpdesk}:${HELPDESK_DB_PASSWORD:?Set HELPDESK_DB_PASSWORD (copy .env.example to .env; never reuse the development value in production)}@db:5432/${HELPDESK_DB_NAME:-helpdesk}
       # Seeds an empty database on first start; restarts keep the data.
       HELPDESK_SEED: 'true'
-      HELPDESK_SEED_PASSWORD: ${HELPDESK_SEED_PASSWORD:-helpdesk-dev-only}
+      HELPDESK_SEED_PASSWORD: ${HELPDESK_SEED_PASSWORD:?Set HELPDESK_SEED_PASSWORD (copy .env.example to .env; never reuse the development value in production)}
       # Unset by default: the API then signs sessions with a random secret
       # made at each start (it refuses the published development one).
       HELPDESK_JWT_SECRET: ${HELPDESK_JWT_SECRET:-}

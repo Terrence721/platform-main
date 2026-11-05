@@ -109,6 +109,7 @@ yarn build   # ng-packagr build across all projects
 To run the Helpdesk app on any machine, with only Docker installed:
 
 ```shell
+cp .env.example .env   # unset HELPDESK_JWT_SECRET and change the dev passwords first for any real use
 docker compose --profile full up --build   # database + API + app, then open http://localhost:8088
 docker compose --profile full down --volumes   # stop it and delete its data
 ```

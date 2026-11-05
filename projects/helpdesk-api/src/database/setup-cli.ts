@@ -1,5 +1,10 @@
-import { DEFAULT_SEED_PASSWORD, seedDatabase, users } from '@helpdesk/server';
-import { count } from 'drizzle-orm';
+import {
+  DEFAULT_SEED_PASSWORD,
+  hashPassword,
+  seedDatabase,
+  users,
+} from '@helpdesk/server';
+import { count, eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { dirname, join } from 'path';
@@ -25,6 +30,28 @@ async function main(): Promise<void> {
       console.log('Migrations applied.');
     } else {
       console.log('Migrations skipped (HELPDESK_MIGRATE=false).');
+    }
+
+    const bootstrapUserId = process.env['HELPDESK_BOOTSTRAP_ADMIN_USER_ID'];
+    const bootstrapPassword = process.env['HELPDESK_BOOTSTRAP_ADMIN_PASSWORD'];
+    if (bootstrapUserId && bootstrapPassword) {
+      const [{ existing }] = await database
+        .select({ existing: count() })
+        .from(users)
+        .where(eq(users.id, bootstrapUserId));
+      if (!existing) {
+        const name =
+          process.env['HELPDESK_BOOTSTRAP_ADMIN_NAME'] || 'Administrator';
+        await database.insert(users).values({
+          id: bootstrapUserId,
+          name,
+          role: 'admin',
+          passwordHash: await hashPassword(bootstrapPassword),
+          active: true,
+          teamId: null,
+        });
+        console.log(`Bootstrapped administrator ${bootstrapUserId}.`);
+      }
     }
 
     if (process.env['HELPDESK_SEED'] !== 'true') {

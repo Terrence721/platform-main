@@ -8,7 +8,8 @@ import { expect, test } from '@playwright/test';
 const SECURITY_HEADERS = {
   'x-content-type-options': 'nosniff',
   'x-frame-options': 'DENY',
-  'content-security-policy': "frame-ancestors 'none'",
+  'content-security-policy':
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'",
   'referrer-policy': 'same-origin',
 };
 

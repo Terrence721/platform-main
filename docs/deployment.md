@@ -147,6 +147,13 @@ confirming Angular and Material no longer require it.
 2. Update the database role (`ALTER USER ... PASSWORD`) and restart the API.
 3. Keep `HELPDESK_SEED=false`, so a later restart does not re-seed.
 
+## Product and compliance checklist
+
+- Confirm the MIT license and branding are what you intend before external use.
+- Add privacy/data-retention documentation and any required legal notices.
+- Add audit logging for authentication and data changes.
+- Establish support/runbooks, SLA targets, and RPO/RTO with verified restore drills.
+
 ## Scaling notes
 
 - The API is currently a single-instance service: `SignInLimits` keeps

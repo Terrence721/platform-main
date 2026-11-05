@@ -27,12 +27,25 @@ export class TooManySignInsException extends HttpException {
 }
 
 /**
+ * The contract every sign-in limiter must satisfy. Multi-instance or shared
+ * backends (Redis, a gateway, the database) implement this instead of the
+ * in-memory one, so callers stay backend-agnostic.
+ */
+export interface SignInLimits {
+  secondsToWait(userId: string): number;
+  failed(userId: string): void;
+  succeeded(userId: string): void;
+  run<T>(check: () => Promise<T>): Promise<T>;
+}
+
+/**
  * Limits on signing in, against guessing passwords and against bursts that
  * would hold up everyone's sign-in. Kept in memory: the API runs as one
- * instance, and a restart starting the counts afresh is acceptable.
+ * instance, and a restart starting the counts afresh is acceptable. A
+ * shared backend must implement {@link SignInLimits} to replace it.
  */
 @Injectable()
-export class SignInLimits {
+export class InMemorySignInLimits implements SignInLimits {
   /** When each user ID's recent sign-ins failed, oldest first. */
   private readonly failures = new Map<string, number[]>();
   private running = 0;
@@ -111,3 +124,6 @@ export class SignInLimits {
 function keyOf(userId: string): string {
   return isUserId(userId) ? userId : MALFORMED;
 }
+
+/** Backwards-compatible name for the in-memory backend. */
+export { InMemorySignInLimits as SignInLimits };

@@ -65,6 +65,20 @@ Rollback:
 2. Restore the pre-deployment database backup.
 3. Confirm `/api/health` and a sign-in.
 
+## Observability and SLOs
+
+- Nginx emits JSON access logs with request time, status, upstream, and
+  body bytes.
+- API health is `/api/health`; monitor it from the proxy and alert on
+  repeated failures.
+- Suggested service-level objectives:
+  - 99.9% availability for `/api/health`
+  - 99% of sign-in and ticket operations under 1 second
+  - zero unhandled API exceptions in production
+- Export or retain the nginx and API logs in a central system for at
+  least 30 days.
+- Add metrics and tracing for the NestJS API before high-scale use.
+
 ## Operational notes
 
 - The database volume is `helpdesk-db`; back it up before upgrades.

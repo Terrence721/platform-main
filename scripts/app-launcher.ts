@@ -86,7 +86,6 @@ export function stackFor(
         command: `${compose} down --volumes && ${compose} up --build --detach --wait`,
         env: {
           HELPDESK_APP_PORT: String(ports.app),
-          HELPDESK_JWT_SECRET: jwtSecret,
           ...(scan && { HELPDESK_CLAMAV_HOST: 'clamav' }),
         },
         // Closing the app deletes the containers and their data.

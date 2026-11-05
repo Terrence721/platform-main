@@ -15,6 +15,9 @@ docker compose -f compose.yaml -f compose.production.yaml up --build -d
 - Set `HELPDESK_DB_PASSWORD`, `HELPDESK_DB_USER`, `HELPDESK_DB_NAME` and
   `HELPDESK_JWT_SECRET` before starting; they have no development defaults
   in this override.
+- The seed creates demo users, teams, tickets and messages; replace the
+  `HELPDESK_SEED_PASSWORD` and any demo accounts before exposing the
+  system to real users.
 - Leave `HELPDESK_SEED` true on the first deployment so the empty database is
   seeded, then set it to false afterwards; migrations still run every start,
   but seeding only runs while it is true.

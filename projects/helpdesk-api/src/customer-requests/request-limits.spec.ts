@@ -5,7 +5,7 @@ import {
   MAX_SENDS,
   MAX_STATUS_CHECKS,
   MIN_FILL_MS,
-  RequestLimits,
+  InMemoryRequestLimits,
   SEND_WINDOW_MS,
   STATUS_CHECK_WINDOW_MS,
   TooManyRequestsException,
@@ -37,13 +37,13 @@ describe('isLikelySpam', () => {
 });
 
 describe('RequestLimits', () => {
-  let limits: RequestLimits;
+  let limits: InMemoryRequestLimits;
   let now: number;
 
   beforeEach(() => {
     now = Date.UTC(2026, 9, 9, 12);
     vi.spyOn(Date, 'now').mockImplementation(() => now);
-    limits = new RequestLimits();
+    limits = new InMemoryRequestLimits();
   });
 
   afterEach(() => {

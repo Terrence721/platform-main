@@ -142,13 +142,13 @@ export class CustomerRequestsController {
     @Req() request: VisitorRequest,
     @Res({ passthrough: true }) response: HeaderResponse
   ): Promise<CreateRequestResponse> {
-    withRetryAfter(response, () => this.limits.send(addressOf(request)));
+    await withRetryAfter(response, () => this.limits.send(addressOf(request)));
     const sent = readCustomerRequest(fieldsOf(body, request));
     if (isLikelySpam(sent)) {
       return { reference: formatRequestReference(randomInt(1001, 1_000_000)) };
     }
     const received = files ?? [];
-    withRetryAfter(response, () =>
+    await withRetryAfter(response, () =>
       this.limits.sendBytes(
         addressOf(request),
         received.reduce((total, { buffer }) => total + buffer.byteLength, 0)
@@ -183,7 +183,9 @@ export class CustomerRequestsController {
     @Req() request: VisitorRequest,
     @Res({ passthrough: true }) response: HeaderResponse
   ): Promise<RequestStatusResponse> {
-    withRetryAfter(response, () => this.limits.statusCheck(addressOf(request)));
+    await withRetryAfter(response, () =>
+      this.limits.statusCheck(addressOf(request))
+    );
     const answer =
       typeof reference === 'string' && typeof email === 'string'
         ? await this.requests.statusOf(reference, email)
@@ -247,9 +249,12 @@ function addressOf(request: VisitorRequest): string {
 }
 
 /** Runs a limit; a refusal also says when to try again, as Retry-After. */
-function withRetryAfter(response: HeaderResponse, take: () => void): void {
+async function withRetryAfter(
+  response: HeaderResponse,
+  take: () => void | Promise<void>
+): Promise<void> {
   try {
-    take();
+    await take();
   } catch (error) {
     if (error instanceof TooManyRequestsException) {
       response.setHeader('Retry-After', String(error.retryAfterSeconds));

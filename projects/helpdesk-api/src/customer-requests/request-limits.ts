@@ -1,5 +1,6 @@
 import type { CreateRequestRequest } from '@helpdesk/contract';
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { Redis } from 'ioredis';
 
 // The public routes' spam checks (#1026), with no paid service: a honeypot
 // field, a minimum time to fill the form in, and limits per address.
@@ -45,13 +46,15 @@ export class TooManyRequestsException extends HttpException {
   }
 }
 
-/**
- * How many times each address used something in a sliding window. Kept in
- * memory, as the sign-in limits are: the API runs as one instance, and a
- * restart starting the counts afresh is acceptable.
- */
+export interface RequestLimiter {
+  send(address: string): void | Promise<void>;
+  sendBytes(address: string, bytes: number): void | Promise<void>;
+  statusCheck(address: string): void | Promise<void>;
+}
+
+// ---------------- in-memory backend ----------------
+
 class SlidingLimit {
-  /** When each address used it recently, oldest first. */
   private readonly uses = new Map<string, number[]>();
 
   constructor(
@@ -60,11 +63,6 @@ class SlidingLimit {
     private readonly message: string
   ) {}
 
-  /**
-   * Counts one use by `address`, or refuses it with 429 once it has had
-   * `max` in the window. A refused use does not count, so waiting out the
-   * window is always enough.
-   */
   take(address: string): void {
     const now = Date.now();
     const recent = (this.uses.get(address) ?? []).filter(
@@ -77,30 +75,18 @@ class SlidingLimit {
         this.message
       );
     }
-    // Re-added, so the Map's order stays oldest use first.
     this.uses.delete(address);
     this.uses.set(address, [...recent, now]);
-    this.forgetExpired(now);
-  }
-
-  /** Drops addresses whose last use is out of the window. */
-  private forgetExpired(now: number): void {
-    for (const [address, times] of this.uses) {
+    for (const [other, times] of this.uses) {
       if (times[times.length - 1] > now - this.windowMs) {
-        // The rest were used later, so are recent too.
-        return;
+        break;
       }
-      this.uses.delete(address);
+      this.uses.delete(other);
     }
   }
 }
 
-/**
- * How much each address sent in a sliding window: as SlidingLimit, but
- * each use counts by its amount (bytes of files), not as one.
- */
 class SlidingTotal {
-  /** What each address sent recently, and when, oldest first. */
   private readonly sent = new Map<string, { at: number; amount: number }[]>();
 
   constructor(
@@ -109,12 +95,6 @@ class SlidingTotal {
     private readonly message: string
   ) {}
 
-  /**
-   * Counts `amount` from `address`, or refuses it with 429 when it would
-   * take the window's total over `max`, saying how long until enough of
-   * the earlier ones are out of the window for it to fit. Nothing (0) is
-   * never refused or kept; a refused amount does not count.
-   */
   take(address: string, amount: number): void {
     if (amount <= 0) {
       return;
@@ -125,7 +105,6 @@ class SlidingTotal {
     );
     let total = recent.reduce((sum, { amount: sent }) => sum + sent, 0);
     if (total + amount > this.max) {
-      // The oldest leave the window first: wait until enough have.
       let until = now + this.windowMs;
       for (const { at, amount: sent } of recent) {
         total -= sent;
@@ -139,7 +118,6 @@ class SlidingTotal {
         this.message
       );
     }
-    // Re-added, so the Map's order stays oldest send first.
     this.sent.delete(address);
     this.sent.set(address, [...recent, { at: now, amount }]);
     for (const [other, entries] of this.sent) {
@@ -151,9 +129,8 @@ class SlidingTotal {
   }
 }
 
-/** The limits on the public routes, per visitor's address. */
 @Injectable()
-export class RequestLimits {
+export class InMemoryRequestLimits implements RequestLimiter {
   private readonly sends = new SlidingLimit(
     MAX_SENDS,
     SEND_WINDOW_MS,
@@ -164,25 +141,146 @@ export class RequestLimits {
     STATUS_CHECK_WINDOW_MS,
     'Too many checks from here. Please try again later.'
   );
-
   private readonly fileBytes = new SlidingTotal(
     MAX_FILE_BYTES,
     SEND_WINDOW_MS,
     'Too many files from here. Please try again later.'
   );
 
-  /** Counts a request sent from `address`, or refuses it with 429. */
   send(address: string): void {
     this.sends.take(address);
   }
-
-  /** Counts `bytes` of files sent from `address`, or refuses them with 429. */
   sendBytes(address: string, bytes: number): void {
     this.fileBytes.take(address, bytes);
   }
-
-  /** Counts a status check from `address`, or refuses it with 429. */
   statusCheck(address: string): void {
     this.statusChecks.take(address);
+  }
+}
+
+// ---------------- redis backend ----------------
+
+function redisKey(prefix: string, address: string): string {
+  return `helpdesk:rl:${prefix}:${encodeURIComponent(address || '')}`;
+}
+
+@Injectable()
+export class RedisRequestLimits implements RequestLimiter {
+  private readonly redis: Redis;
+  private readonly sendMsg =
+    'Too many requests from here. Please try again later.';
+  private readonly statusMsg =
+    'Too many checks from here. Please try again later.';
+  private readonly fileMsg =
+    'Too many files from here. Please try again later.';
+
+  constructor(url: string) {
+    this.redis = new Redis(url, { lazyConnect: true, maxRetriesPerRequest: 1 });
+    void this.redis.connect().catch(() => undefined);
+  }
+
+  async send(address: string): Promise<void> {
+    const key = redisKey('sends', address);
+    const now = Date.now();
+    let recent: number[] = [];
+    try {
+      const values = await this.redis.lrange(key, 0, -1);
+      recent = values.map(Number).filter((at) => at > now - SEND_WINDOW_MS);
+      if (recent.length >= MAX_SENDS) {
+        const until = recent[recent.length - MAX_SENDS] + SEND_WINDOW_MS;
+        throw new TooManyRequestsException(
+          Math.ceil((until - now) / 1000),
+          this.sendMsg
+        );
+      }
+      await this.redis.rpush(key, String(now));
+      await this.redis.ltrim(key, -MAX_SENDS * 4, -1);
+      await this.redis.pexpire(key, SEND_WINDOW_MS);
+    } catch (error) {
+      if (error instanceof TooManyRequestsException) throw error;
+      // fail open on redis outage
+    }
+  }
+
+  async sendBytes(address: string, bytes: number): Promise<void> {
+    if (bytes <= 0) return;
+    const key = redisKey('bytes', address);
+    const now = Date.now();
+    try {
+      const values = await this.redis.lrange(key, 0, -1);
+      const recent = values
+        .map((v) => {
+          const [amount, at] = v.split(':');
+          return { amount: Number(amount), at: Number(at) };
+        })
+        .filter((e) => e.at > now - SEND_WINDOW_MS);
+      const total = recent.reduce((s, e) => s + e.amount, 0);
+      if (total + bytes > MAX_FILE_BYTES) {
+        let until = now + SEND_WINDOW_MS;
+        let running = total;
+        for (const e of recent) {
+          running -= e.amount;
+          if (running + bytes <= MAX_FILE_BYTES) {
+            until = e.at + SEND_WINDOW_MS;
+            break;
+          }
+        }
+        throw new TooManyRequestsException(
+          Math.ceil((until - now) / 1000),
+          this.fileMsg
+        );
+      }
+      await this.redis.rpush(key, `${bytes}:${now}`);
+      await this.redis.ltrim(key, -MAX_SENDS * 8, -1);
+      await this.redis.pexpire(key, SEND_WINDOW_MS);
+    } catch (error) {
+      if (error instanceof TooManyRequestsException) throw error;
+    }
+  }
+
+  async statusCheck(address: string): Promise<void> {
+    const key = redisKey('status', address);
+    const now = Date.now();
+    try {
+      const values = await this.redis.lrange(key, 0, -1);
+      const recent = values
+        .map(Number)
+        .filter((at) => at > now - STATUS_CHECK_WINDOW_MS);
+      if (recent.length >= MAX_STATUS_CHECKS) {
+        const until =
+          recent[recent.length - MAX_STATUS_CHECKS] + STATUS_CHECK_WINDOW_MS;
+        throw new TooManyRequestsException(
+          Math.ceil((until - now) / 1000),
+          this.statusMsg
+        );
+      }
+      await this.redis.rpush(key, String(now));
+      await this.redis.ltrim(key, -MAX_STATUS_CHECKS * 4, -1);
+      await this.redis.pexpire(key, STATUS_CHECK_WINDOW_MS);
+    } catch (error) {
+      if (error instanceof TooManyRequestsException) throw error;
+    }
+  }
+}
+
+@Injectable()
+export class RequestLimits implements RequestLimiter {
+  private readonly backend: RequestLimiter;
+
+  constructor() {
+    const url = process.env['REDIS_URL'];
+    this.backend = url
+      ? new RedisRequestLimits(url)
+      : new InMemoryRequestLimits();
+  }
+
+  send(address: string): void | Promise<void> {
+    return this.backend.send(address);
+  }
+  sendBytes(address: string, bytes: number): void | Promise<void> {
+    return this.backend.sendBytes(address, bytes);
+  }
+  statusCheck(address: string): void | Promise<void> {
+    return this.backend.statusCheck(address);
   }
 }

@@ -29,6 +29,7 @@ import {
   MAX_SENDS,
   MAX_STATUS_CHECKS,
   MIN_FILL_MS,
+  InMemoryRequestLimits,
   RequestLimits,
 } from './request-limits';
 
@@ -109,7 +110,7 @@ describe('/api/requests', () => {
       controllers: [CustomerRequestsController],
       providers: [
         AuthGuard,
-        RequestLimits,
+        { provide: RequestLimits, useClass: InMemoryRequestLimits },
         { provide: AuthService, useValue: fakeAuth },
         { provide: CustomerRequestsService, useValue: service },
         { provide: AttachmentsService, useValue: attachments },

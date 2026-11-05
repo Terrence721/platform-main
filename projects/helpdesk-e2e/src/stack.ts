@@ -1,5 +1,6 @@
 import type { FullConfig } from '@playwright/test';
 import { spawnSync } from 'child_process';
+import { randomBytes } from 'crypto';
 import { join } from 'path';
 
 // Playwright's global setup (#986): starts the whole help desk in Docker
@@ -72,6 +73,12 @@ export default async function stack(
     config.projects[0].use.baseURL = fallback;
   }
   const baseUrl = String(config.projects[0].use.baseURL);
+  // The container image runs in production, where HELPDESK_JWT_SECRET must be
+  // set; a run that has none generates a throw-away one so the stack starts
+  // without requiring the developer to edit .env (#1105).
+  if (!process.env['HELPDESK_JWT_SECRET']) {
+    process.env['HELPDESK_JWT_SECRET'] = randomBytes(32).toString('base64url');
+  }
   // Let any stack already answering here be put away first, so a run always
   // starts from a fresh seed instead of refusing to start.
   const down = () => {

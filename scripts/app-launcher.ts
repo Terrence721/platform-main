@@ -1,5 +1,6 @@
 import { existsSync } from 'fs';
 import { createServer } from 'net';
+import { randomBytes } from 'crypto';
 
 /** The port the Angular dev server uses by default; the search starts here. */
 export const FIRST_PORT = 4200;
@@ -69,6 +70,12 @@ export function stackFor(
     const compose = scan
       ? 'docker compose --profile full --profile scan'
       : 'docker compose --profile full';
+    // The container image runs in production, where HELPDESK_JWT_SECRET must
+    // be set; use the one from .env or make a throw-away one for this run.
+    const jwtSecret =
+      process.env['HELPDESK_JWT_SECRET'] ||
+      randomBytes(32).toString('base64url');
+    process.env['HELPDESK_JWT_SECRET'] = jwtSecret;
     return [
       {
         name: scan ? 'helpdesk (Docker, virus scan on)' : 'helpdesk (Docker)',
@@ -79,6 +86,7 @@ export function stackFor(
         command: `${compose} down --volumes && ${compose} up --build --detach --wait`,
         env: {
           HELPDESK_APP_PORT: String(ports.app),
+          HELPDESK_JWT_SECRET: jwtSecret,
           ...(scan && { HELPDESK_CLAMAV_HOST: 'clamav' }),
         },
         // Closing the app deletes the containers and their data.

@@ -54,7 +54,14 @@ services:
       clamav:
         condition: service_healthy
         required: false
+      # Shared sign-in limiter store, when the cache profile is on.
+      redis:
+        condition: service_healthy
+        required: false
     environment:
+      # Shared sign-in limiter store, when the cache profile is on; unset, the
+      # API uses its in-memory backend.
+      REDIS_URL: ${REDIS_URL:-}
       # The virus scan (#1293): ClamAV's host when the scan profile is on
       # (`yarn start:helpdesk:docker:scan` sets it); empty, it is off.
       CLAMAV_HOST: ${HELPDESK_CLAMAV_HOST:-}
@@ -94,6 +101,17 @@ services:
   # minute or two). Its own image, from Docker Hub (Amazon's mirror carries
   # only Docker's official images); pulled only with the profile. Not
   # published: only the API reaches it, on Compose's network.
+  # Optional shared sign-in limiter store (#production hardening): Redis or
+  # any Valkey-compatible server. Off unless the cache profile is on.
+  redis:
+    profiles: [cache]
+    image: public.ecr.aws/docker/library/redis:7-alpine
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
   clamav:
     profiles: [scan]
     image: clamav/clamav:stable

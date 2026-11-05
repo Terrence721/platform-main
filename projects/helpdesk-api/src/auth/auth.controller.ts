@@ -62,7 +62,7 @@ export class AuthController {
     }
     const { userId, password } = readSignIn(body);
     try {
-      const wait = this.limits.secondsToWait(userId);
+      const wait = await this.limits.secondsToWait(userId);
       if (wait > 0) {
         throw new TooManySignInsException(wait);
       }

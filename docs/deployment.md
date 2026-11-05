@@ -140,6 +140,16 @@ confirming Angular and Material no longer require it.
 - Confirm ClamAV health before a deploy that relies on scanning.
 - Tune upload-size and part limits together with the API's multer config.
 
+## Operator responsibilities
+
+- Terminate TLS in the reverse proxy or load balancer in front of the app;
+  the portable stack publishes plain HTTP on port 80 for that proxy.
+- Apply rate limiting and brute-force protection at the edge, plus a WAF for
+  public routes and file uploads.
+- Add security headers, including a strict Content-Security-Policy, at the proxy.
+- Take database backups, test restores, and monitor `/api/health`.
+- Provide metrics, tracing and alerting for the NestJS API before high-scale use.
+
 ## Operational notes
 
 - The database volume is `helpdesk-db`; back it up before upgrades.

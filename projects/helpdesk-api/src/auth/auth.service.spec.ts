@@ -1,5 +1,4 @@
 import { hashPassword } from '@helpdesk/server';
-import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import type { Database } from '../database/database.module';
 import {
@@ -217,27 +216,13 @@ describe('auth config', () => {
     });
 
     // The development secret is published in this repository: anyone could
-    // sign a session with it, as any user.
-    it('never falls back to the published development secret', () => {
-      const warned = vi
-        .spyOn(Logger.prototype, 'warn')
-        .mockImplementation(() => undefined);
-      try {
-        for (const unset of [{}, { HELPDESK_JWT_SECRET: '' }]) {
-          const secret = jwtSecret({ NODE_ENV: 'production', ...unset });
-
-          expect(secret).not.toBe(DEV_JWT_SECRET);
-          expect(secret.length).toBeGreaterThanOrEqual(32);
-        }
-        // A new one on each start, and said so.
-        expect(jwtSecret({ NODE_ENV: 'production' })).not.toBe(
-          jwtSecret({ NODE_ENV: 'production' })
+    // sign a session with it, as any user. In production the secret is now
+    // required instead of falling back to a random one.
+    it('requires HELPDESK_JWT_SECRET in production', () => {
+      for (const unset of [{}, { HELPDESK_JWT_SECRET: '' }]) {
+        expect(() => jwtSecret({ NODE_ENV: 'production', ...unset })).toThrow(
+          /HELPDESK_JWT_SECRET must be set in production/
         );
-        expect(warned).toHaveBeenCalledWith(
-          expect.stringContaining('HELPDESK_JWT_SECRET')
-        );
-      } finally {
-        warned.mockRestore();
       }
     });
 

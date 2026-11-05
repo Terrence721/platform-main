@@ -98,6 +98,15 @@ environment variables.
   least 30 days.
 - Add metrics and tracing for the NestJS API before high-scale use.
 
+## Scaling notes
+
+- The API is currently a single-instance service: `SignInLimits` keeps
+  its sign-in counts in process memory.
+- Run exactly one API instance, or replace `SignInLimits` with a shared
+  backend such as Redis before scaling out.
+- Sticky sessions are not sufficient: counters and buckets must be
+  shared rather than per-process.
+
 ## Operational notes
 
 - The database volume is `helpdesk-db`; back it up before upgrades.
